@@ -58,7 +58,9 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
 previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently).
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's
+own `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside
+the component; `lr-sources-change` is the host-level report of that toggle.
 
 **Slots:** none.
 

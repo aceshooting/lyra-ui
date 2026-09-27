@@ -522,6 +522,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     this.commitSelection([...set]);
   }
 
+  /** The select-all checkbox is internal chrome: its toggle proposal and every alias of its
+   *  commit stay inside, and `lr-sources-change` is the one host-level report of the toggle. */
+  private stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private toggleSelectAll(): void {
     const all = this.allLeafIds();
     const selectedIds = new Set(this.normalizedSelectedSourceIds());
@@ -730,6 +736,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
                 aria-label=${this.localize('selectAllSources')}
                 .checked=${selectAllState === 'true'}
                 .indeterminate=${selectAllState === 'mixed'}
+                @lr-checkbox-toggle-request=${this.stopOwnedEvent}
+                @input=${this.stopOwnedEvent}
+                @lr-input=${this.stopOwnedEvent}
+                @change=${this.stopOwnedEvent}
                 @lr-change=${(event: Event) => {
                   event.stopPropagation();
                   this.toggleSelectAll();

@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './source-picker.js';
 import type { LyraSourcePicker, LyraSourceEntry } from './source-picker.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -1508,4 +1510,118 @@ it('collapses an expanded folder from its pointer disclosure without toggling se
     2
   );
   expect(el.selectedSourceIds).to.deep.equal([]);
+});
+
+describe('select-all checkbox containment', () => {
+  const CHECKBOX_EVENTS = ['lr-checkbox-toggle-request', 'input', 'change', 'lr-input', 'lr-change'];
+
+  function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    for (const name of CHECKBOX_EVENTS) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    return {
+      leaked,
+      stop: () => {
+        for (const name of CHECKBOX_EVENTS) {
+          el.removeEventListener(name, onHost);
+          document.removeEventListener(name, onDocument);
+        }
+      },
+    };
+  }
+
+  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-sources-change still reports', async () => {
+    const el = await fixture<LyraSourcePicker>(
+      html`<lr-source-picker .sources=${sources}></lr-source-picker>`
+    );
+    const selectAll = selectAllCheckbox(el);
+    await selectAll.updateComplete;
+    const proposals: CustomEvent<{ checked: boolean }>[] = [];
+    const onProposal = (event: Event): void => {
+      proposals.push(event as CustomEvent<{ checked: boolean }>);
+    };
+    const changes: string[][] = [];
+    const onChange = (event: Event): void => {
+      changes.push([
+        ...(event as CustomEvent<{ selectedSourceIds: string[] }>).detail.selectedSourceIds,
+      ]);
+    };
+    selectAll.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-sources-change', onChange);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      await resetMouse();
+      selectAll.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = checkboxBox(selectAll).getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => changes.length === 1, 'native pointer activation did not select every source');
+      await selectAll.updateComplete;
+
+      selectAll.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => changes.length === 2, 'keyboard activation did not clear the selection');
+    } finally {
+      await resetMouse();
+      stop();
+      selectAll.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-sources-change', onChange);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => event.detail.checked)).to.deep.equal([true, false]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal'
+    ).to.deep.equal([false, false]);
+    expect([...changes[0]!].sort()).to.deep.equal(['doc1', 'doc2', 'doc3']);
+    expect(changes[1]).to.deep.equal([]);
+  });
+
+  it('keeps a checkbox-level veto authoritative while containing the proposal', async () => {
+    const el = await fixture<LyraSourcePicker>(
+      html`<lr-source-picker .sources=${sources}></lr-source-picker>`
+    );
+    const selectAll = selectAllCheckbox(el);
+    await selectAll.updateComplete;
+    const vetoes: boolean[] = [];
+    const onProposal = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    let changes = 0;
+    const onChange = (): void => {
+      changes += 1;
+    };
+    selectAll.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-sources-change', onChange);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      selectAll.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a toggle');
+      await selectAll.updateComplete;
+      await el.updateComplete;
+    } finally {
+      stop();
+      selectAll.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-sources-change', onChange);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(changes).to.equal(0);
+    expect(el.selectedSourceIds).to.deep.equal([]);
+    expect(selectAll.checked).to.equal(false);
+  });
 });

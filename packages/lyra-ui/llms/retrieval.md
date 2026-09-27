@@ -1050,7 +1050,9 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
 previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently).
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's
+own `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside
+the component; `lr-sources-change` is the host-level report of that toggle.
 
 **Slots:** none.
 
@@ -2225,7 +2227,9 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch.
+  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch. It is the only
+  host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
+  `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.

@@ -163,21 +163,40 @@ export function canonicalizeLyraLocale(locale: string): string {
   return identity.storable ? identity.publicTag : 'en';
 }
 
+// Likely subtags are static per tag, so registration never invalidates this memo.
+const likelySubtagsCache = new Map<string, string[]>();
+
+/** The lowercase CLDR likely `[script, region]` of a lookup key via `Intl.Locale#maximize()`;
+ *  `''` when unknown (including the uncoded `Zzzz` script). A missing or throwing `Intl.Locale`
+ *  yields unknowns and is not cached. */
+function likelySubtags(key: string): string[] {
+  let likely = likelySubtagsCache.get(key);
+  if (!likely) {
+    try {
+      const { script = '', region = '' } = new Intl.Locale(key).maximize();
+      likely = [script === 'Zzzz' ? '' : script.toLowerCase(), region.toLowerCase()];
+    } catch {
+      return ['', ''];
+    }
+    if (key.length <= MAX_CACHEABLE_LOCALE_LENGTH) cacheBounded(likelySubtagsCache, key, likely);
+  }
+  return likely;
+}
+
 /**
  * Every registered catalog whose *base language* matches `subtags[0]` but which is not itself a
  * step of the requested tag's truncation chain — the reverse direction of BCP-47 lookup, and the
  * only way `lang="zh"` can reach a `zh-CN`-only catalog.
  *
- * Ordering is deterministic and independent of registration order, so the same page always
- * resolves the same way regardless of which translation module happened to be imported first:
+ * Ordering is deterministic and independent of registration order:
  *
- *   1. **Most shared subtags first.** A candidate scores one point per subtag of the requested
- *      tag it also carries, so `zh-Hant-TW` prefers a registered `zh-TW` over a registered
- *      `zh-CN` even though neither is a prefix of it.
- *   2. **Then alphabetically**, purely as a tie-break: with `zh-CN` and `zh-TW` both registered
- *      and a bare `zh` requested, `zh-CN` wins. This is an arbitrary-but-stable choice, not a
- *      claim that Simplified is the better default — an application that cares registers the
- *      regional tag it means, or offers `zh` itself.
+ *   1. **Same likely script** (explicit subtag, else `Intl.Locale#maximize()`): `zh-HK`, `zh-MO`
+ *      and `zh-Hant-CN` reach `zh-TW`; `zh`, `zh-SG` and `zh-Hans-HK` reach `zh-CN`. An unknown
+ *      script on either side never matches.
+ *   2. **Same likely region**, so a region-less tag reaches its CLDR default: bare `pt` -> `pt-BR`.
+ *   3. **Most shared subtags**, counting each occurrence (`pt-AO` -> `pt-PT`, `qaa-Hant-TW` ->
+ *      `qaa-TW`).
+ *   4. **Alphabetical**, as a stable tie-break.
  */
 function regionalFallbacks(
   requestedKey: string,
@@ -189,19 +208,29 @@ function regionalFallbacks(
   const language =
     separator === -1 ? requestedKey : requestedKey.slice(0, separator);
   if (!language) return [];
-  const requested = new Set(requestedKey.split('-'));
-  const score = (key: string): number =>
-    key.split('-').filter((subtag) => requested.has(subtag)).length;
-  return [...locales.keys()]
-    .filter(
-      (key) =>
-        wellFormedLocales.has(key) &&
-        !exactOnlyLocales.has(key) &&
-        (key === language || key.startsWith(`${language}-`)) &&
-        !isPrefixOf(key, requestedKey)
-    )
-    .sort((a, b) => score(b) - score(a) || (a < b ? -1 : a > b ? 1 : 0))
-    .slice(0, limit);
+  const requestedSubtags = new Set(requestedKey.split('-'));
+  const siblings = [...locales.keys()].filter(
+    (key) =>
+      wellFormedLocales.has(key) &&
+      !exactOnlyLocales.has(key) &&
+      (key === language || key.startsWith(`${language}-`)) &&
+      !isPrefixOf(key, requestedKey)
+  );
+  if (siblings.length < 2) return siblings;
+  const [script, region] = likelySubtags(requestedKey);
+  const rank = (key: string): number => {
+    const [keyScript, keyRegion] = likelySubtags(key);
+    return (
+      (script && keyScript === script ? 1e4 : 0) +
+      (region && keyRegion === region ? 1e3 : 0) +
+      key.split('-').filter((subtag) => requestedSubtags.has(subtag)).length
+    );
+  };
+  return siblings
+    .map((key) => [rank(key), key] as const)
+    .sort(([a, x], [b, y]) => b - a || (x < y ? -1 : x > y ? 1 : 0))
+    .slice(0, limit)
+    .map(([, key]) => key);
 }
 
 /** Whether `key` is one of the truncation steps of `requestedKey`. */
@@ -219,8 +248,9 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
  * registered, `zh-Hans-CN` resolves to `zh`.
  *
  * Both halves matter in practice, because the shipped catalogs are a mix: `fa` and `he` are base
- * tags reached from `fa-IR`/`he-IL` by truncation, while `pt-BR` and `zh-CN` are regional-only and
- * reachable from `pt`/`zh` only through the fallback half.
+ * tags reached from `fa-IR`/`he-IL` by truncation, while the Portuguese (`pt-BR`, `pt-PT`) and
+ * Chinese (`zh-CN`, `zh-TW`) catalogs are regional-only and reachable from `pt`/`zh` only through
+ * the fallback half.
  */
 function localeCandidates(locale: string): string[] {
   const identity = localeIdentity(locale);

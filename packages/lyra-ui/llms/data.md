@@ -4143,9 +4143,9 @@ button, while `error` is set.
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
-`lr-change` aliases, the tag combobox's lifecycle/filter/clear/invalid events, table pagination and
-priority-column visibility events, and the table's click-anywhere selection event stop at the
-component's translation boundary. The table is still in multiple-selection semantics so
+`lr-change` aliases, the checkboxes' `lr-checkbox-toggle-request` proposals, the tag combobox's
+lifecycle/filter/clear/invalid events, table pagination and priority-column visibility events, and
+the table's click-anywhere selection event stop at the component's translation boundary. The table is still in multiple-selection semantics so
 `selectedDocumentIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
 row activation opens the document. Listen for the document-library events above; one interaction
 emits one documented host contract without also leaking a composed child event.

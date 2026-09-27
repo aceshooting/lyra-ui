@@ -414,6 +414,15 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
   }
 
+  /** The shell dialog's lifecycle and dismissal proposals are internal to this viewer: `lr-close`
+   *  is its one documented dismissal report. Containment only stops propagation, so a proposal's
+   *  own default action and `defaultPrevented` state are unchanged. Like `onDialogClose`, it
+   *  leaves a registered renderer's own descendant dialog events on their composed path. */
+  private containShellEvent = (event: Event): void => {
+    if (event.target !== event.currentTarget) return;
+    event.stopPropagation();
+  };
+
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
     // Registered renderers may compose their own dialogs. Only translate the close emitted by
     // this viewer's direct shell; descendant dialog events keep their ordinary composed path.
@@ -462,6 +471,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         label=${this.localize('documentViewerLabel')}
         aria-label=${hostAriaLabel(this) ?? nothing}
         closable
+        @lr-show=${this.containShellEvent}
+        @lr-after-show=${this.containShellEvent}
+        @lr-initial-focus=${this.containShellEvent}
+        @lr-request-close=${this.containShellEvent}
+        @lr-hide=${this.containShellEvent}
+        @lr-after-hide=${this.containShellEvent}
         @lr-close=${this.onDialogClose}
       >
         <div part="body" aria-busy=${this.renderState.kind === 'loading' ? 'true' : 'false'}

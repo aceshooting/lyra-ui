@@ -245,6 +245,13 @@ it('resolves a region subtag past a 4-letter script subtag to its country (zh-Ha
   expect((await img(el)).getAttribute('src')).to.contain('tw.svg');
 });
 
+it('distinguishes region-less Traditional and Simplified Chinese tags by their script', async () => {
+  const traditional = (await fixture(html`<lr-flag language="zh-Hant"></lr-flag>`)) as LyraFlag;
+  const simplified = (await fixture(html`<lr-flag language="zh-Hans"></lr-flag>`)) as LyraFlag;
+  expect((await img(traditional)).getAttribute('src')).to.contain('tw.svg');
+  expect((await img(simplified)).getAttribute('src')).to.contain('cn.svg');
+});
+
 it('honors a custom label for accessibility', async () => {
   const el = (await fixture(html`<lr-flag country="fr" label="Français"></lr-flag>`)) as LyraFlag;
   expect((await img(el)).getAttribute('alt')).to.equal('Français');

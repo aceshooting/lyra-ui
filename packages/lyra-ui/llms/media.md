@@ -116,7 +116,15 @@ Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
 need different defaults). Only the table's own entries are eligible for base-language fallback;
-inherited object members such as `constructor` resolve to `undefined`. Also exported:
+inherited object members such as `constructor` resolve to `undefined`. A region-less tag whose
+script subtag implies a different likely region than its bare language takes that region instead of
+the table default, so Traditional and Simplified Chinese never share a flag: `zh-Hant` → `tw` while
+`zh` and `zh-Hans` → `cn`. The rule is not specific to Chinese: `zh-Hanb` and `zh-Bopo` → `tw`, and
+`kk-Arab` (Kazakh in Arabic script, as written in China) → `cn` rather than the `kk` default of `kz`;
+pass `country` when a different flag is wanted. A script that implies the language's own likely
+region keeps the table's convention (`en-Latn` → `gb`), a language with no table entry stays
+unresolved, and an engine without `Intl.Locale` likely-subtags data uses the table default. Also
+exported:
 `localeNativeName(tag: string): string`.
 
 `localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale

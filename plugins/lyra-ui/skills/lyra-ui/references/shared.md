@@ -2136,14 +2136,20 @@ category selection walks the same chain, so the two can never disagree:
    ceiling retains its exact tag, base language and English fallback without constructing an
    unbounded prefix ladder; malformed over-complex inherited input goes directly to English.
 2. **Then any registered, well-formed BCP-47 catalog sharing the base language**, which is how a
-   _regional-only_ catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"`
-   both find the shipped `zh-CN` catalog, while `lang="pt"` reaches `pt-BR` and an exact `lang="pt-PT"`
-   selects the European Portuguese catalog. Order within this
-   step is deterministic and independent of import order — most shared subtags first
-   (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
-   (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
-   the tie-break isn't the answer you want. Legacy/custom tags are exact/truncation-addressable
-   only and do not become regional siblings accidentally.
+   _regional-only_ catalog is reached from a less specific tag (`lang="zh"` finds `zh-CN`,
+   `lang="pt"` finds `pt-BR`). Order is deterministic and independent of import order:
+   1. **Same likely script** — the explicit script subtag, else CLDR likely subtags via
+      `Intl.Locale#maximize()`. `zh-Hant`, `zh-HK`, `zh-MO` and `zh-Hant-CN` reach Traditional
+      `zh-TW`; `zh`, `zh-Hans`, `zh-SG` and `zh-Hans-HK` reach Simplified `zh-CN`. An unknown
+      script (none, `Zzzz`, or no `Intl.Locale`) never matches.
+   2. **Same likely region** — a region-less tag reaches its CLDR default region: bare `pt` picks
+      `pt-BR` even with `pt-PT` imported.
+   3. **Most shared subtags**, counting each occurrence (`pt-AO` and `pt-MZ` pick `pt-PT`;
+      `qaa-Hant-TW` picks `qaa-TW` over `qaa-CN`).
+   4. **Alphabetical**, as a stable tie-break.
+
+   Register the regional tag you mean if the ordering isn't what you want. Legacy/custom tags are
+   exact/truncation-addressable only and never become regional siblings.
 3. **Then `en`**, always available through the built-in English defaults.
 
 Step 1 always beats step 2: with both `zh` and `zh-CN` registered, `zh-Hans-CN` resolves to `zh`.
@@ -2229,11 +2235,11 @@ import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direct
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // serves generic pt and pt-BR
-import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European Portuguese
+import "@aceshooting/lyra-ui/translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
+import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
 import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // serves zh, zh-Hans and zh-Hans-CN
-import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
+import "@aceshooting/lyra-ui/translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2245,10 +2251,11 @@ and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
-still makes each reachable from a less-specific language tag, while an exact `lang="de-CH"`,
-`lang="pt-PT"` or `lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
-`getRegisteredLyraLocales()`.
+`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs: an exact tag always selects
+its own catalog, and a less specific tag reaches one through step 2 only when nothing on its
+truncation walk answers first (with `de` imported, `lang="de-AT"` resolves to `de`, never `de-CH`).
+The same routing drives plural selection and `getLyraLocaleDirection()`. They are listed under
+their real tags in `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later

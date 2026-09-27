@@ -299,7 +299,11 @@ value, without suppressing the visible `name` heading.
   (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.) The name itself is not
   dialog-scoped in this library: nesting this viewer inside a consumer's own `<lr-dialog>` means
   that dialog's `lr-close` listener also observes this event — see `<lr-dialog>`'s own `lr-close`
-  section (in `overlays.md`) for the full list of emitters and the guard pattern.
+  section (in `overlays.md`) for the full list of emitters and the guard pattern. This `lr-close`
+  is not cancelable, and it is the viewer's only dismissal report: the shell dialog's own
+  `lr-show`, `lr-after-show`, `lr-initial-focus`, `lr-request-close`, `lr-hide`, and
+  `lr-after-hide` stay inside the viewer. A registered renderer's descendant dialog keeps those
+  events on their normal composed path.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per

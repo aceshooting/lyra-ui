@@ -6,6 +6,8 @@ import {
   waitUntil,
   aTimeout,
 } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './knowledge-graph-explorer.js';
 import type {
   LyraKnowledgeGraphExplorer,
@@ -2127,6 +2129,145 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(childCommits).to.equal(1);
     expect(wrapperCommits).to.equal(1);
     expect(el.hiddenTypes).to.deep.equal(['person']);
+  });
+
+  it('contains the canonical lr-visibility-change-request proposal from native pointer and keyboard activation', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item =
+      legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+    const proposalNames = [
+      'lr-visibility-change-request',
+      'lr-before-visibility-change',
+    ];
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const proposals: CustomEvent<{ hiddenTypes: string[] }>[] = [];
+    const notifications: string[][] = [];
+    legend.addEventListener('lr-visibility-change-request', (event) => {
+      proposals.push(event as CustomEvent<{ hiddenTypes: string[] }>);
+    });
+    el.addEventListener('lr-hidden-types-change', (event) => {
+      notifications.push([
+        ...(event as LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change'])
+          .detail.hiddenTypes,
+      ]);
+    });
+    for (const name of proposalNames) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    try {
+      await resetMouse();
+      item.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = item.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => el.hiddenTypes.join(',') === 'person',
+        'native pointer activation did not commit'
+      );
+
+      item.focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(
+        () => el.hiddenTypes.length === 0,
+        'keyboard activation did not commit'
+      );
+    } finally {
+      await resetMouse();
+      for (const name of proposalNames) {
+        el.removeEventListener(name, onHost);
+        document.removeEventListener(name, onDocument);
+      }
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(
+      proposals.map((event) => [...event.detail.hiddenTypes])
+    ).to.deep.equal([['person'], []]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal'
+    ).to.deep.equal([false, false]);
+    expect(notifications).to.deep.equal([['person'], []]);
+  });
+
+  it('keeps a legend-level veto of the canonical proposal authoritative while containing it', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item =
+      legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const vetoes: boolean[] = [];
+    let childCommits = 0;
+    let wrapperNotifications = 0;
+    legend.addEventListener('lr-visibility-change-request', (event) => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    });
+    legend.addEventListener('lr-visibility-change', () => (childCommits += 1));
+    el.addEventListener(
+      'lr-hidden-types-change',
+      () => (wrapperNotifications += 1)
+    );
+    el.addEventListener('lr-visibility-change-request', onHost);
+    document.addEventListener('lr-visibility-change-request', onDocument);
+    try {
+      item.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(
+        () => vetoes.length === 1,
+        'keyboard activation did not propose a change'
+      );
+      await el.updateComplete;
+      await legend.updateComplete;
+    } finally {
+      el.removeEventListener('lr-visibility-change-request', onHost);
+      document.removeEventListener('lr-visibility-change-request', onDocument);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(childCommits).to.equal(0);
+    expect(wrapperNotifications).to.equal(0);
+    expect(el.hiddenTypes).to.deep.equal([]);
+    expect(legend.hiddenTypes).to.deep.equal([]);
+    expect(item.getAttribute('aria-pressed')).to.equal('true');
   });
 
   it('emits lr-hidden-types-change with the updated array when a node type is toggled via the composed legend, and stays silent for a host assignment (bug regression)', async () => {

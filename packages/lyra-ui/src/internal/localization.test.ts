@@ -20,8 +20,10 @@ import '../translations/fa.js';
 import '../translations/he.js';
 import '../translations/it.js';
 import '../translations/pt-BR.js';
+import '../translations/pt-PT.js';
 import '../translations/ro.js';
 import '../translations/zh-CN.js';
+import '../translations/zh-TW.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
 import type { LyraMessage, LyraMessageKey } from './localization-types.js';
 
@@ -419,14 +421,29 @@ it('resolves Romanian messages and selects one/few/other catalog forms', async (
 });
 
 it('reaches a regional-only catalog from its bare base language and from a script-bearing tag', async () => {
-  // zh-CN and pt-BR are the only Chinese/Portuguese catalogs that ship; every one of these tags
-  // has to land on them rather than silently rendering English.
+  // Chinese and Portuguese ship only regional catalogs; every one of these tags has to land on one
+  // of them rather than silently rendering English.
   for (const tag of ['zh', 'zh-Hans', 'zh-Hans-CN', 'zh-CN']) {
     expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('关闭');
   }
   for (const tag of ['pt', 'pt-PT', 'pt-BR']) {
     expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('Fechar');
   }
+});
+
+it('sends a region-less tag to the sibling in its CLDR likely region', async () => {
+  // Both Portuguese catalogs are Latin script; bare `pt` maximizes to `pt-Latn-BR`.
+  expect(resolveLyraString(await localeHost('pt'), 'showPassword')).to.equal('Mostrar a senha');
+  expect(resolveLyraString(await localeHost('pt-PT'), 'showPassword')).to.equal('Mostrar a palavra-passe');
+  expect(resolveLyraString(await localeHost('pt-BR'), 'showPassword')).to.equal('Mostrar a senha');
+  // An explicit region matching neither sibling keeps the shared-subtag ranking.
+  expect(resolveLyraString(await localeHost('pt-AO'), 'showPassword')).to.equal('Mostrar a palavra-passe');
+  // Alphabetical order (KE) loses to the likely region (TZ).
+  registerLyraLocale('sw-KE', { 'x-region-probe': 'KE' });
+  registerLyraLocale('sw-TZ', { 'x-region-probe': 'TZ' });
+  expect(resolveLyraString(await localeHost('sw'), 'x-region-probe')).to.equal('TZ');
+  // Script still outranks region: zh-Hant-CN is Traditional even though CN is zh-CN's region.
+  expect(resolveLyraString(await localeHost('zh-Hant-CN'), 'close')).to.equal('關閉');
 });
 
 it('breaks a base-language fallback tie by shared subtags, then alphabetically -- never by registration order', async () => {
@@ -442,6 +459,90 @@ it('keeps an exact truncation-chain hit ahead of any regional sibling', async ()
   registerLyraLocale('qab', { 'x-exact-probe': 'BASE' });
   registerLyraLocale('qab-CN', { 'x-exact-probe': 'REGION' });
   expect(resolveLyraString(await localeHost('qab-Hans-CN'), 'x-exact-probe')).to.equal('BASE');
+});
+
+it('routes every Traditional-script Chinese tag to zh-TW and every Simplified one to zh-CN', async () => {
+  // Hong Kong and Macao write Traditional Chinese. Neither shares a subtag with zh-TW or zh-CN, so
+  // an alphabetical tie-break alone used to hand them the Simplified catalog.
+  for (const tag of ['zh-HK', 'zh-MO', 'zh-Hant', 'zh-Hant-HK', 'zh-Hant-MO', 'zh-Hant-CN', 'zh-TW', 'zh-Hant-TW']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('關閉');
+  }
+  for (const tag of ['zh', 'zh-Hans', 'zh-SG', 'zh-MY', 'zh-Hans-HK', 'zh-Hans-CN', 'zh-CN']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('关闭');
+  }
+});
+
+it('selects a pluralized message from the script-matched Chinese catalog', async () => {
+  const host = await localeHost('zh-HK');
+  expect(resolveLyraString(host, 'viewerSearchMatchCount', undefined, undefined, { count: 2 })).to.equal(
+    '2個匹配項',
+  );
+});
+
+it('ranks a script-matching regional sibling ahead of one sharing more subtags', async () => {
+  registerLyraLocale('qac-CN-1994', { 'x-script-rank-probe': 'SUBTAGS' });
+  registerLyraLocale('qac-Hans-CN-1994', { 'x-script-rank-probe': 'OTHER SCRIPT' });
+  registerLyraLocale('qac-Hant-TW', { 'x-script-rank-probe': 'SCRIPT' });
+  // `qac-CN-1994` and `qac-Hans-CN-1994` each share three subtags with the request and
+  // `qac-Hant-TW` only two, but only the last is written in the requested script. `qac-CN-1994`
+  // has no likely script at all, and an unknown script ranks like a different one.
+  expect(resolveLyraString(await localeHost('qac-Hant-CN-1994'), 'x-script-rank-probe')).to.equal('SCRIPT');
+  // Without a script match the ordering is unchanged: most shared subtags, then alphabetical.
+  expect(resolveLyraString(await localeHost('qac-CN'), 'x-script-rank-probe')).to.equal('SUBTAGS');
+});
+
+it('never boosts a regional sibling when either side has no known script', async () => {
+  registerLyraLocale('qad-Hant-CN', { 'x-unknown-script-probe': 'MORE SUBTAGS' });
+  registerLyraLocale('qad-TW', { 'x-unknown-script-probe': 'FEWER SUBTAGS' });
+  // Neither the request nor `qad-TW` has a likely script; two unknowns are not a match.
+  expect(resolveLyraString(await localeHost('qad-CN'), 'x-unknown-script-probe')).to.equal('MORE SUBTAGS');
+
+  registerLyraLocale('qae-Zzzz-TW', { 'x-unknown-script-probe': 'UNCODED' });
+  registerLyraLocale('qae-CN', { 'x-unknown-script-probe': 'ALPHABETICAL' });
+  // `Zzzz` is the code for an uncoded script, so it never matches itself.
+  expect(resolveLyraString(await localeHost('qae-Zzzz-CN'), 'x-unknown-script-probe')).to.equal('ALPHABETICAL');
+});
+
+it('keeps an exact truncation-chain hit ahead of a script-matching sibling', async () => {
+  registerLyraLocale('qaf', { 'x-exact-script-probe': 'BASE' });
+  registerLyraLocale('qaf-Hant-TW', { 'x-exact-script-probe': 'SIBLING' });
+  expect(resolveLyraString(await localeHost('qaf-Hant-HK'), 'x-exact-script-probe')).to.equal('BASE');
+  expect(resolveLyraString(await localeHost('zh-Hant-HK'), 'close')).to.equal('關閉');
+});
+
+it('reports the direction declared by the script-matching regional catalog', () => {
+  registerLyraLocale('pa-IN', { 'x-direction-script-probe': 'Gurmukhi' }, { dir: 'ltr' });
+  registerLyraLocale('pa-PK', { 'x-direction-script-probe': 'Shahmukhi' }, { dir: 'rtl' });
+  expect(getLyraLocaleDirection('pa-Arab')).to.equal('rtl');
+  expect(getLyraLocaleDirection('pa-Guru')).to.equal('ltr');
+  expect(getLyraLocaleDirection('pa')).to.equal('ltr');
+});
+
+it('falls back to the script-blind ordering when Intl.Locale is missing or throws', async () => {
+  registerLyraLocale('sr-BA', { 'x-no-intl-locale-probe': 'CYRL' });
+  registerLyraLocale('sr-ME', { 'x-no-intl-locale-probe': 'LATN' });
+  registerLyraLocale('yue-CN', { 'x-no-intl-locale-probe': 'HANS' });
+  registerLyraLocale('yue-HK', { 'x-no-intl-locale-probe': 'HANT' });
+  const missing = await localeHost('sr-Latn');
+  const throwing = await localeHost('yue-Hant');
+  const serbianControl = await localeHost('sr-Latn-AU');
+  const cantoneseControl = await localeHost('yue-Hant-AU');
+  const intl = Intl as unknown as { Locale: unknown };
+  const originalLocale = intl.Locale;
+  try {
+    intl.Locale = undefined;
+    // Only the request's explicit script subtag is known, which cannot match a candidate alone.
+    expect(resolveLyraString(missing, 'x-no-intl-locale-probe')).to.equal('CYRL');
+    intl.Locale = function ThrowingLocale(): never {
+      throw new RangeError('Intl.Locale is unavailable');
+    };
+    expect(resolveLyraString(throwing, 'x-no-intl-locale-probe')).to.equal('HANS');
+  } finally {
+    intl.Locale = originalLocale;
+  }
+  // A degraded lookup is not remembered once the platform can answer again.
+  expect(resolveLyraString(serbianControl, 'x-no-intl-locale-probe')).to.equal('LATN');
+  expect(resolveLyraString(cantoneseControl, 'x-no-intl-locale-probe')).to.equal('HANT');
 });
 
 it('selects plural categories through the same widened chain the messages use', async () => {

@@ -81,7 +81,11 @@ textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
 and re-emitted from `lr-prompt-input`; all composed interactions are suppressed while `disabled`,
-including a child event dispatched in the same turn that disables the host.
+including a child event dispatched in the same turn that disables the host. The one deliberate
+exception is the built-in voice picker's preview pair: its cancelable `lr-preview-request`
+(`{ voiceId, previewUrl? }`) and `lr-preview-change` (`{ voiceId }`) reach the host unchanged, so a
+host can play its own TTS preview (call `preventDefault()`) for catalog entries without a
+`previewUrl`, including plain-string catalogs.
 
 **Slots:** `controls`; `start` (attachment-control content before the textarea); `chips`; `end`
 (custom send/stop action); and `footer`. `start` replaces the default attachment trigger and `end`

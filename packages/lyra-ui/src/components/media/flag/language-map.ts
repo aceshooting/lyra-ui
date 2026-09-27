@@ -124,12 +124,34 @@ function mappedCountry(language: string): string | undefined {
 }
 
 /**
+ * The region a script subtag implies for its language when that differs from the region the bare
+ * language implies (`zh-Hant` → `tw`, while `zh` → `cn`), from CLDR likely subtags. `undefined`
+ * when the script adds no regional signal (`en-Latn`, `sr-Latn`) or the data is unavailable.
+ */
+function scriptImpliedRegion(locale: Intl.Locale): string | undefined {
+  if (!locale.script) return undefined;
+  const scriptRegion = locale.maximize().region;
+  const languageRegion = new Intl.Locale(locale.language).maximize().region;
+  return scriptRegion && ALPHA2_RE.test(scriptRegion) && scriptRegion !== languageRegion
+    ? scriptRegion.toLowerCase()
+    : undefined;
+}
+
+/**
  * Resolve a BCP-47-ish language tag to a flag country code.
  * A region subtag wins (`en-US` → `us`); otherwise the base language is mapped. The region subtag
  * isn't always in the second position -- a script subtag (e.g. `zh-Hant-TW`, ISO 15924, always 4
  * letters) can sit between the base language and the region, so every subtag after the base is
  * scanned for the first 2-letter alpha match rather than assuming it's always `parts[1]`. Base
  * language fallback accepts only the lookup table's own entries, never inherited object members.
+ *
+ * A region-less tag whose script implies a different likely region than its bare language does
+ * (`zh-Hant` → `tw`, where `zh` → `cn`) takes that region instead of the table default, so
+ * Traditional and Simplified Chinese never share one flag. The rule applies to every table
+ * language, not only Chinese: `kk-Arab` (Kazakh as written in China) takes `cn` over `kz`. The
+ * script only corrects a table default: a language with no table entry stays unresolved, and a
+ * script that implies the language's own likely region (`en-Latn`) keeps the table's convention
+ * (`gb`). Engines without `Intl.Locale` likely-subtags data fall back to the table default.
  */
 export function languageToCountry(language: string): string | undefined {
   if (typeof language !== 'string') return undefined;
@@ -138,7 +160,8 @@ export function languageToCountry(language: string): string | undefined {
   try {
     const locale = new Intl.Locale(normalized);
     if (locale.region && ALPHA2_RE.test(locale.region)) return locale.region.toLowerCase();
-    return mappedCountry(locale.language.toLowerCase());
+    const mapped = mappedCountry(locale.language.toLowerCase());
+    return mapped === undefined ? undefined : (scriptImpliedRegion(locale) ?? mapped);
   } catch {
     // Older engines or malformed input use the bounded structural fallback below.
   }

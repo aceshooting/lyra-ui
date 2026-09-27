@@ -1566,7 +1566,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         @change=${(e: Event) => this.onSelectChange(key, e)}
         @lr-change=${this.stopNestedControlEvent}
         @lr-show=${this.stopNestedControlEvent}
+        @lr-after-show=${this.stopNestedControlEvent}
         @lr-hide=${this.stopNestedControlEvent}
+        @lr-after-hide=${this.stopNestedControlEvent}
         @lr-option-change=${this.stopNestedControlEvent}
       >
         ${prop.enum.map((v) => html`<lr-option value=${v}>${v}</lr-option>`)}
@@ -1632,7 +1634,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         @change=${this.stopNestedControlEvent}
         @lr-change=${(e: Event) => this.onBooleanSelectChange(key, e)}
         @lr-show=${this.stopNestedControlEvent}
+        @lr-after-show=${this.stopNestedControlEvent}
         @lr-hide=${this.stopNestedControlEvent}
+        @lr-after-hide=${this.stopNestedControlEvent}
         @lr-option-change=${this.stopNestedControlEvent}
       >
         <lr-option value="">${this.localize('toolParamBooleanUnset')}</lr-option>

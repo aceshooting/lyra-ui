@@ -3952,6 +3952,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               .total=${this.serverUnknownTotal ? -1 : this.matchingTotalItems}
               .hasNext=${this.hasNext}
               .strings=${this.strings}
+              @lr-before-page-change=${this.stopOwnedEvent}
               @lr-activate=${this.stopOwnedEvent}
               @lr-page-change=${this.onPaginationChange}
             ></lr-pagination>`

@@ -41,7 +41,7 @@ const strings: LyraLocaleStrings = {
   chartTypeBar: 'Barras',
   chartTypeScatter: 'Dispersão',
   chartTypePie: 'Circular',
-  chartTypeDoughnut: 'Rosca',
+  chartTypeDoughnut: 'Anel',
   chartTypeRadar: 'Radar',
   chartTypePolarArea: 'Área polar',
   chartTypeBubble: 'Bolhas',

@@ -210,12 +210,13 @@ function functionSource(program, source, name) {
 /**
  * Fails a regional-only catalog whose base tag would render English.
  *
- * `pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs that ship, so `lang="pt"`,
- * `lang="pt-PT"`, `lang="zh"` and `lang="zh-Hans-CN"` reach them only through the base-language
- * widening half of `localeCandidates()` -- the plain BCP-47 truncation walk can only ever go from
- * more specific to less specific, never sideways into a region. Deleting that half type-checks,
- * passes every test that uses a base-tag catalog (`fa`, `he`, `de`), and silently renders English
- * for the two largest catalogs in the package; nothing else would notice.
+ * Portuguese and Chinese ship only regional catalogs (`pt-BR`, `pt-PT`, `zh-CN`, `zh-TW`), so
+ * `lang="pt"`, `lang="zh"`, `lang="zh-HK"` and `lang="zh-Hans-CN"` reach them only through the
+ * base-language widening half of `localeCandidates()` -- the plain BCP-47 truncation walk can only
+ * ever go from more specific to less specific, never sideways into a region. Deleting that half
+ * type-checks, passes every test that uses a base-tag catalog (`fa`, `he`, `de`), and silently
+ * renders English for a bare `pt` or `zh` and for every other Portuguese or Chinese tag whose
+ * truncation walk misses the shipped regional tags; nothing else would notice.
  *
  * So: whenever a base language ships only regional catalogs, `localeCandidates()` must still
  * contain the widening step. The check costs nothing while every catalog is a bare base tag.

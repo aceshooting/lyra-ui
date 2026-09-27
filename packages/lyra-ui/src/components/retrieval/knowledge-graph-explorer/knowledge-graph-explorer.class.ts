@@ -857,9 +857,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes });
   };
 
-  /** The composed legend owns this cancellable proposal. Contain it without changing whether its
-   * listeners accepted it, so the child can still assign, announce, and send its existing post event. */
-  private onBeforeVisibilityChange = (event: Event): void => {
+  /** The composed legend owns its cancellable proposal, both the canonical
+   * `lr-visibility-change-request` and its deprecated `lr-before-visibility-change` alias. Contain
+   * both names without changing whether its listeners accepted the proposal, so the child can still
+   * assign, announce, and send its existing post event. */
+  private onVisibilityChangeProposal = (event: Event): void => {
     event.stopPropagation();
   };
 
@@ -1064,7 +1066,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
             part="legend"
             .types=${model.nodeTypes}
             .hiddenTypes=${hiddenTypes}
-            @lr-before-visibility-change=${this.onBeforeVisibilityChange}
+            @lr-visibility-change-request=${this.onVisibilityChangeProposal}
+            @lr-before-visibility-change=${this.onVisibilityChangeProposal}
             @lr-visibility-change=${this.onVisibilityChange}
           ></lr-graph-legend>
         </div>

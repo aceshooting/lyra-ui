@@ -2186,14 +2186,20 @@ category selection walks the same chain, so the two can never disagree:
    ceiling retains its exact tag, base language and English fallback without constructing an
    unbounded prefix ladder; malformed over-complex inherited input goes directly to English.
 2. **Then any registered, well-formed BCP-47 catalog sharing the base language**, which is how a
-   _regional-only_ catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"`
-   both find the shipped `zh-CN` catalog, while `lang="pt"` reaches `pt-BR` and an exact `lang="pt-PT"`
-   selects the European Portuguese catalog. Order within this
-   step is deterministic and independent of import order — most shared subtags first
-   (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
-   (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
-   the tie-break isn't the answer you want. Legacy/custom tags are exact/truncation-addressable
-   only and do not become regional siblings accidentally.
+   _regional-only_ catalog is reached from a less specific tag (`lang="zh"` finds `zh-CN`,
+   `lang="pt"` finds `pt-BR`). Order is deterministic and independent of import order:
+   1. **Same likely script** — the explicit script subtag, else CLDR likely subtags via
+      `Intl.Locale#maximize()`. `zh-Hant`, `zh-HK`, `zh-MO` and `zh-Hant-CN` reach Traditional
+      `zh-TW`; `zh`, `zh-Hans`, `zh-SG` and `zh-Hans-HK` reach Simplified `zh-CN`. An unknown
+      script (none, `Zzzz`, or no `Intl.Locale`) never matches.
+   2. **Same likely region** — a region-less tag reaches its CLDR default region: bare `pt` picks
+      `pt-BR` even with `pt-PT` imported.
+   3. **Most shared subtags**, counting each occurrence (`pt-AO` and `pt-MZ` pick `pt-PT`;
+      `qaa-Hant-TW` picks `qaa-TW` over `qaa-CN`).
+   4. **Alphabetical**, as a stable tie-break.
+
+   Register the regional tag you mean if the ordering isn't what you want. Legacy/custom tags are
+   exact/truncation-addressable only and never become regional siblings.
 3. **Then `en`**, always available through the built-in English defaults.
 
 Step 1 always beats step 2: with both `zh` and `zh-CN` registered, `zh-Hans-CN` resolves to `zh`.
@@ -2279,11 +2285,11 @@ import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direct
 import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
 import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // serves generic pt and pt-BR
-import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European Portuguese
+import "@aceshooting/lyra-ui/translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
+import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
 import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // serves zh, zh-Hans and zh-Hans-CN
-import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional Chinese
+import "@aceshooting/lyra-ui/translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2295,10 +2301,11 @@ and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs. Step 2 of the lookup order above
-still makes each reachable from a less-specific language tag, while an exact `lang="de-CH"`,
-`lang="pt-PT"` or `lang="zh-TW"` selects its dedicated regional catalog. They are listed under their real tags in
-`getRegisteredLyraLocales()`.
+`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs: an exact tag always selects
+its own catalog, and a less specific tag reaches one through step 2 only when nothing on its
+truncation walk answers first (with `de` imported, `lang="de-AT"` resolves to `de`, never `de-CH`).
+The same routing drives plural selection and `getLyraLocaleDirection()`. They are listed under
+their real tags in `getRegisteredLyraLocales()`.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
@@ -11487,8 +11494,9 @@ errors and own/fieldset validation barring), `lr-submit` (`detail: { value, item
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
-Native and prefixed input/change events from the composed child controls are contained; consumers
-above the rubric receive only the rubric-owned aggregate event shape.
+Native and prefixed input/change events from the composed child controls are contained, as is a
+multiple-category checkbox group's `lr-checkbox-group-toggle-request` proposal; consumers above the
+rubric receive only the rubric-owned aggregate event shape.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can
@@ -16398,9 +16406,9 @@ button, while `error` is set.
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
-`lr-change` aliases, the tag combobox's lifecycle/filter/clear/invalid events, table pagination and
-priority-column visibility events, and the table's click-anywhere selection event stop at the
-component's translation boundary. The table is still in multiple-selection semantics so
+`lr-change` aliases, the checkboxes' `lr-checkbox-toggle-request` proposals, the tag combobox's
+lifecycle/filter/clear/invalid events, table pagination and priority-column visibility events, and
+the table's click-anywhere selection event stop at the component's translation boundary. The table is still in multiple-selection semantics so
 `selectedDocumentIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
 row activation opens the document. Listen for the document-library events above; one interaction
 emits one documented host contract without also leaking a composed child event.
@@ -29071,7 +29079,15 @@ Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
 need different defaults). Only the table's own entries are eligible for base-language fallback;
-inherited object members such as `constructor` resolve to `undefined`. Also exported:
+inherited object members such as `constructor` resolve to `undefined`. A region-less tag whose
+script subtag implies a different likely region than its bare language takes that region instead of
+the table default, so Traditional and Simplified Chinese never share a flag: `zh-Hant` → `tw` while
+`zh` and `zh-Hans` → `cn`. The rule is not specific to Chinese: `zh-Hanb` and `zh-Bopo` → `tw`, and
+`kk-Arab` (Kazakh in Arabic script, as written in China) → `cn` rather than the `kk` default of `kz`;
+pass `country` when a different flag is wanted. A script that implies the language's own likely
+region keeps the table's convention (`en-Latn` → `gb`), a language with no table entry stays
+unresolved, and an engine without `Intl.Locale` likely-subtags data uses the table default. Also
+exported:
 `localeNativeName(tag: string): string`.
 
 `localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale
@@ -34724,7 +34740,11 @@ value, without suppressing the visible `name` heading.
   (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.) The name itself is not
   dialog-scoped in this library: nesting this viewer inside a consumer's own `<lr-dialog>` means
   that dialog's `lr-close` listener also observes this event — see `<lr-dialog>`'s own `lr-close`
-  section (in `overlays.md`) for the full list of emitters and the guard pattern.
+  section (in `overlays.md`) for the full list of emitters and the guard pattern. This `lr-close`
+  is not cancelable, and it is the viewer's only dismissal report: the shell dialog's own
+  `lr-show`, `lr-after-show`, `lr-initial-focus`, `lr-request-close`, `lr-hide`, and
+  `lr-after-hide` stay inside the viewer. A registered renderer's descendant dialog keeps those
+  events on their normal composed path.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
@@ -41407,7 +41427,11 @@ textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
 and re-emitted from `lr-prompt-input`; all composed interactions are suppressed while `disabled`,
-including a child event dispatched in the same turn that disables the host.
+including a child event dispatched in the same turn that disables the host. The one deliberate
+exception is the built-in voice picker's preview pair: its cancelable `lr-preview-request`
+(`{ voiceId, previewUrl? }`) and `lr-preview-change` (`{ voiceId }`) reach the host unchanged, so a
+host can play its own TTS preview (call `preventDefault()`) for catalog entries without a
+`previewUrl`, including plain-string catalogs.
 
 **Slots:** `controls`; `start` (attachment-control content before the textarea); `chips`; `end`
 (custom send/stop action); and `footer`. `start` replaces the default attachment trigger and `end`
@@ -43294,8 +43318,9 @@ fired once up front at connect time and after every effective change; serializat
 publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
 generated native text/number inputs. The composed
 `<lr-select>` controls already bubble their own focus/blur bridges through the host.
-Nested control events (`input`, `change`, `lr-change`, select show/hide, and option mutation) are
-contained at the form boundary; consumers receive the single form-level `lr-input` contract.
+Nested control events (`input`, `change`, `lr-change`, the selects' `lr-show`/`lr-after-show`/
+`lr-hide`/`lr-after-hide`, and option mutation) are contained at the form boundary; consumers receive
+the single form-level `lr-input` contract.
 `lr-invalid` (no detail) is the bubbling/composed, cancelable alias emitted when the complete
 parameter form fails a native validity check; preventing it also prevents the native `invalid`
 event's default validation UI.
@@ -47161,7 +47186,9 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
 previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently).
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's
+own `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside
+the component; `lr-sources-change` is the host-level report of that toggle.
 
 **Slots:** none.
 
@@ -48336,7 +48363,9 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch.
+  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch. It is the only
+  host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
+  `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.

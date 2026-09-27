@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from '@web/test-runner-commands';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import "./document-library.js";
 import type {
   LyraDocumentLibrary,
@@ -1196,5 +1198,136 @@ describe("error state", () => {
     const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
     await (table as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe("lr-document-library contains the composed lr-checkbox's lr-checkbox-toggle-request", () => {
+  const CHECKBOX_EVENTS = ['lr-checkbox-toggle-request', 'input', 'change', 'lr-input', 'lr-change'];
+
+  type ToggleProposal = CustomEvent<{ checked: boolean }>;
+  type CheckboxEl = HTMLElement & {
+    checked: boolean;
+    readonly updateComplete: Promise<boolean>;
+  };
+
+  async function libraryWithCheckboxes(): Promise<{
+    el: LyraDocumentLibrary;
+    rowCheckbox: CheckboxEl;
+    headerCheckbox: CheckboxEl;
+  }> {
+    const el = await fixture<LyraDocumentLibrary>(
+      html`<lr-document-library .documents=${docs}></lr-document-library>`
+    );
+    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+      readonly updateComplete: Promise<boolean>;
+    };
+    await table.updateComplete;
+    // Sorted order: the first body row is Alpha (d1).
+    const rowCheckbox = table.shadowRoot!.querySelector('tbody lr-checkbox') as CheckboxEl;
+    const headerCheckbox = table.shadowRoot!.querySelector('thead lr-checkbox') as CheckboxEl;
+    await rowCheckbox.updateComplete;
+    await headerCheckbox.updateComplete;
+    return { el, rowCheckbox, headerCheckbox };
+  }
+
+  function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    for (const name of CHECKBOX_EVENTS) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    return {
+      leaked,
+      stop: () => {
+        for (const name of CHECKBOX_EVENTS) {
+          el.removeEventListener(name, onHost);
+          document.removeEventListener(name, onDocument);
+        }
+      },
+    };
+  }
+
+  it('keeps row and select-all toggle proposals inside for native pointer and keyboard activation while lr-selection-change still reports', async () => {
+    const { el, rowCheckbox, headerCheckbox } = await libraryWithCheckboxes();
+    const proposals: ToggleProposal[] = [];
+    const onProposal = (event: Event): void => {
+      proposals.push(event as ToggleProposal);
+    };
+    const selections: string[][] = [];
+    const onSelection = (event: Event): void => {
+      selections.push([...(event as CustomEvent<{ documentIds: string[] }>).detail.documentIds]);
+    };
+    rowCheckbox.addEventListener('lr-checkbox-toggle-request', onProposal);
+    headerCheckbox.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-selection-change', onSelection);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      await resetMouse();
+      rowCheckbox.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = rowCheckbox.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => selections.length === 1, 'native pointer activation did not select a row');
+
+      headerCheckbox.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => selections.length === 2, 'keyboard activation did not select every row');
+    } finally {
+      await resetMouse();
+      stop();
+      rowCheckbox.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      headerCheckbox.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-selection-change', onSelection);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => event.detail.checked)).to.deep.equal([true, true]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal'
+    ).to.deep.equal([false, false]);
+    expect(selections[0]).to.deep.equal(['d1']);
+    expect([...selections[1]!].sort()).to.deep.equal(['d1', 'd2', 'd3']);
+  });
+
+  it('keeps a checkbox-level veto authoritative while containing the proposal', async () => {
+    const { el, rowCheckbox } = await libraryWithCheckboxes();
+    const vetoes: boolean[] = [];
+    const onProposal = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    let selectionChanges = 0;
+    const onSelection = (): void => {
+      selectionChanges += 1;
+    };
+    rowCheckbox.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-selection-change', onSelection);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      rowCheckbox.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a toggle');
+      await rowCheckbox.updateComplete;
+      await el.updateComplete;
+    } finally {
+      stop();
+      rowCheckbox.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-selection-change', onSelection);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(selectionChanges).to.equal(0);
+    expect(el.selectedDocumentIds).to.deep.equal([]);
+    expect(rowCheckbox.checked).to.equal(false);
   });
 });

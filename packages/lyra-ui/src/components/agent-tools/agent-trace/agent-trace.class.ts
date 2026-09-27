@@ -201,9 +201,11 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     this.emit('lr-span-visibility-change', { hiddenKinds: [...this.hiddenKinds] });
   };
 
-  /** Keeps the composed legend's cancelable proposal within this wrapper without changing its
-   * default-prevented state. The child still owns the proposal, commit, and announcement. */
-  private onBeforeVisibilityChange = (event: Event): void => {
+  /** Keeps the composed legend's cancelable proposal within this wrapper under both its canonical
+   * `lr-visibility-change-request` name and its deprecated `lr-before-visibility-change` alias,
+   * without changing its default-prevented state. The child still owns the proposal, commit, and
+   * announcement. */
+  private onVisibilityChangeProposal = (event: Event): void => {
     event.stopPropagation();
   };
 
@@ -230,7 +232,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         .label=${this.localize('agentTraceFilterLabel')}
         .types=${types}
         .hiddenTypes=${this.hiddenKinds}
-        @lr-before-visibility-change=${this.onBeforeVisibilityChange}
+        @lr-visibility-change-request=${this.onVisibilityChangeProposal}
+        @lr-before-visibility-change=${this.onVisibilityChangeProposal}
         @lr-visibility-change=${this.onVisibilityChange}
       ></lr-graph-legend>
     `;

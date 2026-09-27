@@ -8,6 +8,7 @@ import type {
   PromptQueueChangeDetail,
   PromptQueueItem,
 } from '../prompt-queue/prompt-queue.class.js';
+import { sendKeys } from '@web/test-runner-commands';
 import "./prompt-input.js";
 import type {
   LyraPromptInput,
@@ -2096,4 +2097,44 @@ it('normalizes source, selected-source, and queue identities before rendering or
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('lr-source-picker') === null).to.be.true;
   expect(el.shadowRoot!.querySelector('lr-prompt-queue') === null).to.be.true;
+});
+
+describe('voice preview requests', () => {
+  it("lets the built-in voice picker's cancelable preview request reach the host so it can supply its own TTS", async () => {
+    const el = await fixture<LyraPromptInput>(html`<lr-prompt-input
+      .voiceCatalog=${['calm', 'bright']}
+      voice="calm"
+    ></lr-prompt-input>`);
+    const picker = el.shadowRoot!.querySelector('lr-voice-picker') as HTMLElement & {
+      readonly updateComplete: Promise<boolean>;
+    };
+    await picker.updateComplete;
+    const previewButton = picker.shadowRoot!.querySelector<HTMLElement>('[part~="preview-button"]')!;
+    const received: string[] = [];
+    const requests: CustomEvent<{ voiceId: string; previewUrl?: string }>[] = [];
+    const onHost = (event: Event): void => {
+      received.push('host');
+      requests.push(event as CustomEvent<{ voiceId: string; previewUrl?: string }>);
+      // A host that plays its own TTS takes over the preview.
+      event.preventDefault();
+    };
+    const onDocument = (): void => {
+      received.push('document');
+    };
+    el.addEventListener('lr-preview-request', onHost);
+    document.addEventListener('lr-preview-request', onDocument);
+    try {
+      previewButton.focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => received.length === 2, 'keyboard activation did not request a preview');
+    } finally {
+      el.removeEventListener('lr-preview-request', onHost);
+      document.removeEventListener('lr-preview-request', onDocument);
+    }
+
+    expect(received).to.deep.equal(['host', 'document']);
+    expect(requests.map((event) => event.detail.voiceId)).to.deep.equal(['calm']);
+    expect(requests.map((event) => event.cancelable)).to.deep.equal([true]);
+    expect(requests.map((event) => event.defaultPrevented)).to.deep.equal([true]);
+  });
 });

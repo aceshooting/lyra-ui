@@ -1218,6 +1218,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         part="scale"
         ?disabled=${disabled}
         ?required=${Boolean(k.required)}
+        @lr-checkbox-group-toggle-request=${this.stopChildEvent}
         @input=${this.stopChildEvent}
         @change=${this.stopChildEvent}
         @lr-input=${this.stopChildEvent}

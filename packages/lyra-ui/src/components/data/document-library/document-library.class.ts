@@ -838,6 +838,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       .checked=${allSelected}
       .indeterminate=${someSelected}
       aria-label=${this.localize('documentLibrarySelectAll')}
+      @lr-checkbox-toggle-request=${this.stopOwnedEvent}
       @input=${this.stopOwnedEvent}
       @lr-input=${this.stopOwnedEvent}
       @change=${this.stopOwnedEvent}
@@ -854,6 +855,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       aria-label=${this.localize('documentLibrarySelectDocument', undefined, {
         name: document.name,
       })}
+      @lr-checkbox-toggle-request=${this.stopOwnedEvent}
       @input=${this.stopOwnedEvent}
       @lr-input=${this.stopOwnedEvent}
       @change=${this.stopOwnedEvent}

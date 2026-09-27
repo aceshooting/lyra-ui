@@ -1,5 +1,6 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
+import { sendKeys } from '@web/test-runner-commands';
 import "./rubric-form.js";
 import type { LyraRubricForm, RubricKey } from "./rubric-form.js";
 import {
@@ -3066,5 +3067,147 @@ describe("category option icon", () => {
       .exist;
     expect(icon.hasAttribute("inert")).to.be.true;
     expect(icon.textContent).to.equal("★");
+  });
+});
+
+describe("lr-rubric-form contains the composed lr-checkbox-group's toggle proposal", () => {
+  const LEAK_EVENTS = [
+    'lr-checkbox-group-toggle-request',
+    'lr-checkbox-toggle-request',
+    'input',
+    'change',
+    'lr-change',
+  ];
+  const multipleKeys: RubricKey[] = [
+    {
+      key: 'tags',
+      type: 'category',
+      multiple: true,
+      options: [{ value: 'a' }, { value: 'b' }],
+    },
+  ];
+
+  type GroupProposal = CustomEvent<{ value: readonly string[] }>;
+  type CheckboxEl = HTMLElement & {
+    checked: boolean;
+    readonly updateComplete: Promise<boolean>;
+  };
+
+  async function multipleForm(): Promise<{
+    el: LyraRubricForm;
+    group: HTMLElement & { value: string[]; readonly updateComplete: Promise<boolean> };
+    options: CheckboxEl[];
+  }> {
+    const el = await fixture<LyraRubricForm>(
+      html`<lr-rubric-form .keys=${multipleKeys}></lr-rubric-form>`
+    );
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector('[data-key="tags"] lr-checkbox-group') as HTMLElement & {
+      value: string[];
+      readonly updateComplete: Promise<boolean>;
+    };
+    await group.updateComplete;
+    const options = [...group.querySelectorAll<CheckboxEl>('lr-checkbox')];
+    for (const option of options) await option.updateComplete;
+    return { el, group, options };
+  }
+
+  function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    for (const name of LEAK_EVENTS) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    return {
+      leaked,
+      stop: () => {
+        for (const name of LEAK_EVENTS) {
+          el.removeEventListener(name, onHost);
+          document.removeEventListener(name, onDocument);
+        }
+      },
+    };
+  }
+
+  it('keeps the proposal inside for native pointer and keyboard activation while lr-input still reports', async () => {
+    const { el, group, options } = await multipleForm();
+    const proposals: GroupProposal[] = [];
+    const onProposal = (event: Event): void => {
+      proposals.push(event as GroupProposal);
+    };
+    const reported: string[][] = [];
+    const onInput = (event: Event): void => {
+      const value = (event as CustomEvent<{ value: Record<string, unknown> }>).detail.value;
+      reported.push([...(value['tags'] as string[])]);
+    };
+    group.addEventListener('lr-checkbox-group-toggle-request', onProposal);
+    el.addEventListener('lr-input', onInput);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      await resetMouse();
+      options[0]!.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = options[0]!.shadowRoot!.querySelector<HTMLElement>('[part~="box"]')!.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => reported.length === 1, 'native pointer activation did not select an option');
+
+      options[1]!.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => reported.length === 2, 'keyboard activation did not select an option');
+    } finally {
+      await resetMouse();
+      stop();
+      group.removeEventListener('lr-checkbox-group-toggle-request', onProposal);
+      el.removeEventListener('lr-input', onInput);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => [...event.detail.value])).to.deep.equal([['a'], ['a', 'b']]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal'
+    ).to.deep.equal([false, false]);
+    expect(reported).to.deep.equal([['a'], ['a', 'b']]);
+  });
+
+  it('keeps a group-level veto authoritative while containing the proposal', async () => {
+    const { el, group, options } = await multipleForm();
+    const vetoes: boolean[] = [];
+    const onProposal = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    let inputs = 0;
+    const onInput = (): void => {
+      inputs += 1;
+    };
+    group.addEventListener('lr-checkbox-group-toggle-request', onProposal);
+    el.addEventListener('lr-input', onInput);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      options[0]!.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a toggle');
+      await options[0]!.updateComplete;
+      await el.updateComplete;
+    } finally {
+      stop();
+      group.removeEventListener('lr-checkbox-group-toggle-request', onProposal);
+      el.removeEventListener('lr-input', onInput);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(inputs).to.equal(0);
+    expect(options[0]!.checked).to.equal(false);
+    expect([...group.value]).to.deep.equal([]);
   });
 });

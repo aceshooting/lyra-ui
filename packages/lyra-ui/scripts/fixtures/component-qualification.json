@@ -1018,7 +1018,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -1032,21 +1031,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 391,
+              "line": 496,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "trace",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 401,
+              "line": 506,
               "test": "is accessible with a populated, multi-kind span set including handoffs",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 443,
+              "line": 548,
               "test": "is accessible with the matching composed trace-tree row active",
               "target": "el",
               "state": "populated"
@@ -1056,9 +1055,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -1066,7 +1070,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 392,
+              "line": 497,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -1083,7 +1087,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 382,
+              "line": 487,
               "kind": "320px allocation test signal"
             }
           ]
@@ -1163,7 +1167,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -15236,7 +15239,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -15250,14 +15252,14 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 180,
+              "line": 182,
               "test": "is accessible with populated, tagged, selected, sorted rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 1192,
+              "line": 1194,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
@@ -15267,9 +15269,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/document-library/document-library.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -15277,7 +15284,7 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 767,
+              "line": 769,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15294,7 +15301,7 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 783,
+              "line": 785,
               "kind": "320px allocation test signal"
             }
           ]
@@ -15374,7 +15381,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -15606,7 +15612,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "reducedMotion",
           "narrowAllocation",
@@ -15622,7 +15627,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.test.ts",
-              "line": 692,
+              "line": 693,
               "test": "is accessible when open with fallback content",
               "target": "el",
               "state": "open"
@@ -15632,9 +15637,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/document-viewer/document-viewer.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -15735,7 +15745,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
@@ -19991,7 +20000,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 407,
+              "line": 414,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -20011,7 +20020,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 882,
+              "line": 889,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26269,21 +26278,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1458,
+              "line": 1460,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1490,
+              "line": 1492,
               "test": "is accessible with search results, a pinned node, a path, and an open details popover",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1569,
+              "line": 1571,
               "test": "is accessible with detail-body and detail-actions slot content in the open details popover",
               "target": "el",
               "state": "populated"
@@ -26308,7 +26317,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1459,
+              "line": 1461,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26325,7 +26334,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 157,
+              "line": 159,
               "kind": "320px allocation test signal"
             }
           ]
@@ -36164,7 +36173,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 1563,
+              "line": 1564,
               "test": "is accessible with its composed controls populated",
               "target": "el",
               "state": "populated"
@@ -36178,7 +36187,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 359,
+              "line": 11,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -36189,7 +36198,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 61,
+              "line": 62,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40151,7 +40160,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
@@ -40164,28 +40172,28 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 285,
+              "line": 286,
               "test": "announces the error it already presents on mount when announce is set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1382,
+              "line": 1383,
               "test": "is accessible with a populated, selectable, metadata-carrying result set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1530,
+              "line": 1531,
               "test": "is accessible while grouped and virtualized",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1768,
+              "line": 1769,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -40195,9 +40203,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
+              "line": 11,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -40205,7 +40218,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1571,
+              "line": 1572,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40222,7 +40235,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1584,
+              "line": 1585,
               "kind": "320px allocation test signal"
             }
           ]
@@ -40319,7 +40332,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -40716,7 +40728,7 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "line": 941,
+              "line": 942,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -40730,7 +40742,7 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "line": 1549,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40741,7 +40753,7 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "line": 25,
+              "line": 26,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40758,7 +40770,7 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "line": 13,
+              "line": 14,
               "kind": "320px allocation test signal"
             }
           ]
@@ -42947,7 +42959,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 515,
+              "line": 517,
               "test": "is accessible with a mixed-selection tree",
               "target": "el",
               "state": "populated"
@@ -42972,7 +42984,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 786,
+              "line": 788,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42989,7 +43001,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 1452,
+              "line": 1454,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43052,7 +43064,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 539,
+              "line": 545,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50486,7 +50498,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1505,
+              "line": 1551,
               "test": "is accessible in a populated state with a required, unfilled field revealed",
               "target": "el",
               "state": "populated"
@@ -50518,7 +50530,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1558,
+              "line": 1604,
               "kind": "320px allocation test signal"
             }
           ]

@@ -957,6 +957,52 @@ it('contains nested control input/change aliases and emits only the form-level l
   expect(el.value).to.deep.equal({ mode: 'safe', confirm: true });
 });
 
+it('contains the enum and boolean selects\' whole show/hide lifecycle, not just its cancelable proposals', async () => {
+  const schema: FlatToolParamSchema = {
+    type: 'object',
+    properties: {
+      mode: { type: 'string', enum: ['fast', 'safe'] },
+      confirm: { type: 'boolean' },
+    },
+  };
+  const el = await fixture<LyraToolParamForm>(
+    html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`
+  );
+  const lifecycle = ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
+  const leaked: string[] = [];
+  const onHost = (event: Event): void => {
+    leaked.push(`host:${event.type}`);
+  };
+  const onDocument = (event: Event): void => {
+    leaked.push(`document:${event.type}`);
+  };
+  const seen: string[] = [];
+  const onSelect = (event: Event): void => {
+    seen.push(event.type);
+  };
+  const selects = ['mode', 'confirm'].map((key) => field(el, key).querySelector<LyraSelect>('lr-select')!);
+  for (const name of lifecycle) {
+    el.addEventListener(name, onHost);
+    document.addEventListener(name, onDocument);
+    for (const select of selects) select.addEventListener(name, onSelect);
+  }
+  try {
+    for (const select of selects) {
+      await select.show();
+      await select.hide();
+    }
+  } finally {
+    for (const name of lifecycle) {
+      el.removeEventListener(name, onHost);
+      document.removeEventListener(name, onDocument);
+      for (const select of selects) select.removeEventListener(name, onSelect);
+    }
+  }
+
+  expect(seen).to.deep.equal([...lifecycle, ...lifecycle]);
+  expect(leaked).to.deep.equal([]);
+});
+
 it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {
   const schema: FlatToolParamSchema = {
     type: 'object',

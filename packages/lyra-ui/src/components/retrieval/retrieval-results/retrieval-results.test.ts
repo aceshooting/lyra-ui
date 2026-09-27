@@ -8,6 +8,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.class.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
@@ -1917,4 +1918,123 @@ it('walks from a foreign-realm shadow descendant to its chunk host', async () =>
   } finally {
     iframe.remove();
   }
+});
+
+describe('row checkbox containment', () => {
+  const CHECKBOX_EVENTS = ['lr-checkbox-toggle-request', 'input', 'change', 'lr-input', 'lr-change'];
+
+  function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    for (const name of CHECKBOX_EVENTS) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    return {
+      leaked,
+      stop: () => {
+        for (const name of CHECKBOX_EVENTS) {
+          el.removeEventListener(name, onHost);
+          document.removeEventListener(name, onDocument);
+        }
+      },
+    };
+  }
+
+  function rowCheckbox(el: LyraRetrievalResults, chunkId: string): LyraCheckbox {
+    return el.shadowRoot!.querySelector<LyraCheckbox>(`lr-checkbox[data-chunk-id="${chunkId}"]`)!;
+  }
+
+  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-select still reports', async () => {
+    const el = await fixture<LyraRetrievalResults>(
+      html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`
+    );
+    await el.updateComplete;
+    const first = rowCheckbox(el, 'c2');
+    const second = rowCheckbox(el, 'c1');
+    await first.updateComplete;
+    const proposals: CustomEvent<{ checked: boolean }>[] = [];
+    const onProposal = (event: Event): void => {
+      proposals.push(event as CustomEvent<{ checked: boolean }>);
+    };
+    const selections: string[][] = [];
+    const onSelect = (event: Event): void => {
+      selections.push([...(event as CustomEvent<RetrievalResultsSelectDetail>).detail.chunkIds]);
+    };
+    first.addEventListener('lr-checkbox-toggle-request', onProposal);
+    second.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-select', onSelect);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      await resetMouse();
+      first.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = first.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => selections.length === 1, 'native pointer activation did not select a row');
+
+      second.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => selections.length === 2, 'keyboard activation did not select a row');
+    } finally {
+      await resetMouse();
+      stop();
+      first.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      second.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-select', onSelect);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => event.detail.checked)).to.deep.equal([true, true]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal'
+    ).to.deep.equal([false, false]);
+    expect(selections).to.deep.equal([['c2'], ['c2', 'c1']]);
+  });
+
+  it('keeps a checkbox-level veto authoritative while containing the proposal', async () => {
+    const el = await fixture<LyraRetrievalResults>(
+      html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`
+    );
+    await el.updateComplete;
+    const checkbox = rowCheckbox(el, 'c2');
+    await checkbox.updateComplete;
+    const vetoes: boolean[] = [];
+    const onProposal = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    let selects = 0;
+    const onSelect = (): void => {
+      selects += 1;
+    };
+    checkbox.addEventListener('lr-checkbox-toggle-request', onProposal);
+    el.addEventListener('lr-select', onSelect);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      checkbox.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a toggle');
+      await checkbox.updateComplete;
+      await el.updateComplete;
+    } finally {
+      stop();
+      checkbox.removeEventListener('lr-checkbox-toggle-request', onProposal);
+      el.removeEventListener('lr-select', onSelect);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(selects).to.equal(0);
+    expect(el.selectedChunkIds).to.deep.equal([]);
+    expect(checkbox.checked).to.equal(false);
+  });
 });

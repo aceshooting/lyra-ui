@@ -686,6 +686,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return { chunks: rows, groups };
   }
 
+  /** The row checkbox is internal selection chrome: its toggle proposal and every alias of its
+   *  commit stay inside, and `lr-select` is the one host-level report of the interaction. */
+  private stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private toggleSelect(chunk: RetrievalChunk): void {
     const next = new Set(this.normalizedSelectedChunkIds());
     if (next.has(chunk.id)) next.delete(chunk.id);
@@ -749,6 +755,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             aria-label=${this.localize('retrievalResultsSelectRow', undefined, {
               label: rowLabel,
             })}
+            @lr-checkbox-toggle-request=${this.stopOwnedEvent}
+            @input=${this.stopOwnedEvent}
+            @lr-input=${this.stopOwnedEvent}
+            @change=${this.stopOwnedEvent}
             @lr-change=${(event: Event) => {
               event.stopPropagation();
               this.toggleSelect(chunk);

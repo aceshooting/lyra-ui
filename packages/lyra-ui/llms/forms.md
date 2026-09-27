@@ -6315,8 +6315,9 @@ errors and own/fieldset validation barring), `lr-submit` (`detail: { value, item
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
-Native and prefixed input/change events from the composed child controls are contained; consumers
-above the rubric receive only the rubric-owned aggregate event shape.
+Native and prefixed input/change events from the composed child controls are contained, as is a
+multiple-category checkbox group's `lr-checkbox-group-toggle-request` proposal; consumers above the
+rubric receive only the rubric-owned aggregate event shape.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can

@@ -1,4 +1,5 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from '@web/test-runner-commands';
 import "./document-viewer.js";
 import {
   clearDocumentRenderers,
@@ -1239,5 +1240,157 @@ describe("renderer payload authority", () => {
     expect(el.shadowRoot!.querySelector("#reset-file")?.textContent).to.equal(
       "legacy-reset.lyra|application/x-legacy-reset|https://example.test/legacy-reset.lyra"
     );
+  });
+});
+
+describe('shell dialog lifecycle containment', () => {
+  const SHELL_EVENTS = [
+    'lr-show',
+    'lr-after-show',
+    'lr-initial-focus',
+    'lr-request-close',
+    'lr-hide',
+    'lr-after-hide',
+  ];
+
+  function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    for (const name of SHELL_EVENTS) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    return {
+      leaked,
+      stop: () => {
+        for (const name of SHELL_EVENTS) {
+          el.removeEventListener(name, onHost);
+          document.removeEventListener(name, onDocument);
+        }
+      },
+    };
+  }
+
+  it('keeps the shell dialog lifecycle and close proposals inside for a real open and Escape dismissal while lr-close still reports', async () => {
+    const el = await fixture<LyraDocumentViewer>(
+      html`<lr-document-viewer name="f"></lr-document-viewer>`
+    );
+    const dialog = el.shadowRoot!.querySelector('lr-dialog') as HTMLElement & {
+      open: boolean;
+    };
+    const shellEvents: Event[] = [];
+    const onShellEvent = (event: Event): void => {
+      shellEvents.push(event);
+    };
+    const closes: CustomEvent<DialogCloseReason>[] = [];
+    const onClose = (event: Event): void => {
+      closes.push(event as CustomEvent<DialogCloseReason>);
+    };
+    for (const name of SHELL_EVENTS) dialog.addEventListener(name, onShellEvent);
+    el.addEventListener('lr-close', onClose);
+    const { leaked, stop } = trackLeaks(el);
+    const seen = (type: string): boolean => shellEvents.some((event) => event.type === type);
+    try {
+      el.open = true;
+      await waitUntil(() => seen('lr-after-show'), 'the shell dialog did not finish opening', {
+        timeout: 3000,
+      });
+      await sendKeys({ press: 'Escape' });
+      await waitUntil(() => closes.length === 1, 'Escape did not close the viewer', {
+        timeout: 3000,
+      });
+      await waitUntil(() => seen('lr-after-hide'), 'the shell dialog did not finish closing', {
+        timeout: 3000,
+      });
+    } finally {
+      stop();
+      for (const name of SHELL_EVENTS) dialog.removeEventListener(name, onShellEvent);
+      el.removeEventListener('lr-close', onClose);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(shellEvents.map((event) => event.type)).to.include.members(SHELL_EVENTS);
+    expect(
+      shellEvents.filter((event) => event.defaultPrevented).map((event) => event.type),
+      'containment never cancels a shell proposal'
+    ).to.deep.equal([]);
+    expect(closes.map((event) => event.detail)).to.deep.equal(['escape']);
+    expect(closes.map((event) => event.cancelable)).to.deep.equal([false]);
+    expect(el.open).to.equal(false);
+    expect(dialog.open).to.equal(false);
+  });
+
+  it('keeps a shell-dialog veto authoritative while containing the proposal', async () => {
+    const el = await fixture<LyraDocumentViewer>(
+      html`<lr-document-viewer open name="f"></lr-document-viewer>`
+    );
+    const dialog = el.shadowRoot!.querySelector('lr-dialog') as HTMLElement & {
+      open: boolean;
+      readonly updateComplete: Promise<boolean>;
+    };
+    await dialog.updateComplete;
+    const vetoes: boolean[] = [];
+    const onHide = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    let closes = 0;
+    const onClose = (): void => {
+      closes += 1;
+    };
+    dialog.addEventListener('lr-hide', onHide);
+    el.addEventListener('lr-close', onClose);
+    const { leaked, stop } = trackLeaks(el);
+    try {
+      await sendKeys({ press: 'Escape' });
+      await waitUntil(() => vetoes.length === 1, 'Escape did not propose a close');
+      await el.updateComplete;
+    } finally {
+      stop();
+      dialog.removeEventListener('lr-hide', onHide);
+      el.removeEventListener('lr-close', onClose);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(closes).to.equal(0);
+    expect(el.open).to.equal(true);
+    expect(dialog.open).to.equal(true);
+  });
+
+  it('lets a registered renderer dialog keep its own lifecycle events on their composed path', async () => {
+    registerDocumentRenderer('application/x-dialog-renderer', {
+      render: () => html`<lr-dialog id="renderer-dialog"></lr-dialog>`,
+    });
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="nested-dialog"
+        mime-type="application/x-dialog-renderer"
+        src="https://example.test/nested"
+      ></lr-document-viewer>
+    `);
+    await el.updateComplete;
+    const rendererDialog = el.shadowRoot!.querySelector('#renderer-dialog') as HTMLElement;
+    const received: string[] = [];
+    const onHost = (event: Event): void => {
+      received.push(event.type);
+    };
+    for (const name of SHELL_EVENTS) el.addEventListener(name, onHost);
+    try {
+      for (const name of SHELL_EVENTS) {
+        rendererDialog.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+      }
+    } finally {
+      for (const name of SHELL_EVENTS) el.removeEventListener(name, onHost);
+    }
+
+    expect(received).to.deep.equal(SHELL_EVENTS);
+    expect(el.open).to.equal(true);
   });
 });

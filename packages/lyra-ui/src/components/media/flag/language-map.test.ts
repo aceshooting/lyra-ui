@@ -78,7 +78,8 @@ describe('localeNativeName', () => {
 
   it('does not mistake Unicode-extension or private-use tokens for regions', () => {
     expect(languageToCountry('en-u-ca-gregory')).to.equal('gb');
-    expect(languageToCountry('zh-Hant-u-nu-hanidec')).to.equal('cn');
+    // `nu` is a Unicode-extension key, not Niue; the script still selects Taiwan's flag.
+    expect(languageToCountry('zh-Hant-u-nu-hanidec')).to.equal('tw');
     expect(languageToCountry('en-x-ca')).to.equal('gb');
     expect(languageToCountry('x-ca')).to.equal(undefined);
   });
@@ -96,6 +97,8 @@ describe('localeNativeName', () => {
       expect(languageToCountry('en-x-ca')).to.equal('gb');
       expect(languageToCountry('x-ca')).to.equal(undefined);
       expect(languageToCountry(42 as never)).to.equal(undefined);
+      // Without likely-subtags data only the base-language default remains.
+      expect(languageToCountry('zh-Hant')).to.equal('cn');
     } finally {
       if (descriptor) Object.defineProperty(Intl, 'Locale', descriptor);
       else delete (Intl as { Locale?: typeof Intl.Locale }).Locale;
@@ -109,6 +112,34 @@ describe('localeNativeName', () => {
     expect(languageToCountry('')).to.equal(undefined);
     expect(languageToCountry('not a locale')).to.equal(undefined);
     expect(languageToCountry('en-..-ca')).to.equal('gb');
+  });
+
+  it('follows a script subtag to the region it implies when that differs from the base language', () => {
+    // Traditional Chinese is not written in mainland China, so the `zh` default of `cn` is wrong
+    // for a region-less Traditional tag, and `zh-Hans`/`zh-Hant` rows must not share one flag.
+    expect(languageToCountry('zh-Hant')).to.equal('tw');
+    expect(languageToCountry('zh-Hans')).to.equal('cn');
+    expect(languageToCountry('zh')).to.equal('cn');
+    // An explicit region still wins over the script.
+    expect(languageToCountry('zh-Hant-HK')).to.equal('hk');
+    expect(languageToCountry('zh-Hans-SG')).to.equal('sg');
+    // A script that implies the language's own likely region keeps the table's convention.
+    expect(languageToCountry('en-Latn')).to.equal('gb');
+    expect(languageToCountry('sr-Latn')).to.equal('rs');
+    // Only a table default is corrected; a language with no entry stays unresolved.
+    expect(languageToCountry('pa-Arab')).to.equal(undefined);
+  });
+
+  it('applies the script-implied region to every table language, not only Chinese', () => {
+    // Kazakh written in Arabic script is the Kazakh of China, not of Kazakhstan.
+    expect(languageToCountry('kk-Arab')).to.equal('cn');
+    expect(languageToCountry('kk-Cyrl')).to.equal('kz');
+    expect(languageToCountry('kk')).to.equal('kz');
+    // Han with Bopomofo, and Bopomofo itself, are written in Taiwan.
+    expect(languageToCountry('zh-Hanb')).to.equal('tw');
+    expect(languageToCountry('zh-Bopo')).to.equal('tw');
+    // Shavian's likely region (GB) differs from bare English's (US) but equals the table's own `gb`.
+    expect(languageToCountry('en-Shaw')).to.equal('gb');
   });
 
   it('never resolves inherited Object.prototype names as mapping entries', () => {

@@ -9176,6 +9176,121 @@ describe("lr-table contains the composed lr-pagination's lr-activate", () => {
   });
 });
 
+describe("lr-table contains the composed lr-pagination's lr-before-page-change", () => {
+  async function pagedTable(): Promise<{
+    el: LyraTable<Row>;
+    pagination: HTMLElement & { readonly updateComplete: Promise<boolean> };
+  }> {
+    const el = (await fixture(html`<lr-table page-size="1"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const pagination = el.shadowRoot!.querySelector('lr-pagination') as HTMLElement & {
+      readonly updateComplete: Promise<boolean>;
+    };
+    await pagination.updateComplete;
+    return { el, pagination };
+  }
+
+  it('keeps the proposal inside the table for native pointer and keyboard activation while lr-page-change still reports', async () => {
+    const { el, pagination } = await pagedTable();
+    const nextButton = pagination.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!;
+    const previousButton = pagination.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="previous-button"]',
+    )!;
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const proposals: CustomEvent<{ page: number }>[] = [];
+    const pageChanges: number[] = [];
+    const onProposal = (event: Event): void => {
+      proposals.push(event as CustomEvent<{ page: number }>);
+    };
+    const onPageChange = (event: Event): void => {
+      pageChanges.push((event as CustomEvent<{ page: number }>).detail.page);
+    };
+    pagination.addEventListener('lr-before-page-change', onProposal);
+    el.addEventListener('lr-page-change', onPageChange);
+    el.addEventListener('lr-before-page-change', onHost);
+    document.addEventListener('lr-before-page-change', onDocument);
+    try {
+      await resetMouse();
+      nextButton.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = nextButton.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => el.page === 2, 'native pointer activation did not move the page');
+      await pagination.updateComplete;
+
+      previousButton.focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.page === 1, 'keyboard activation did not move the page');
+    } finally {
+      await resetMouse();
+      pagination.removeEventListener('lr-before-page-change', onProposal);
+      el.removeEventListener('lr-page-change', onPageChange);
+      el.removeEventListener('lr-before-page-change', onHost);
+      document.removeEventListener('lr-before-page-change', onDocument);
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => event.detail.page)).to.deep.equal([2, 1]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal',
+    ).to.deep.equal([false, false]);
+    expect(pageChanges).to.deep.equal([2, 1]);
+  });
+
+  it('keeps a pagination-level veto authoritative while containing the proposal', async () => {
+    const { el, pagination } = await pagedTable();
+    const nextButton = pagination.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!;
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const vetoes: boolean[] = [];
+    let pageChanges = 0;
+    const onProposal = (event: Event): void => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    };
+    const onPageChange = (): void => {
+      pageChanges += 1;
+    };
+    pagination.addEventListener('lr-before-page-change', onProposal);
+    el.addEventListener('lr-page-change', onPageChange);
+    el.addEventListener('lr-before-page-change', onHost);
+    document.addEventListener('lr-before-page-change', onDocument);
+    try {
+      nextButton.focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a page');
+      await el.updateComplete;
+    } finally {
+      pagination.removeEventListener('lr-before-page-change', onProposal);
+      el.removeEventListener('lr-page-change', onPageChange);
+      el.removeEventListener('lr-before-page-change', onHost);
+      document.removeEventListener('lr-before-page-change', onDocument);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(pageChanges).to.equal(0);
+    expect(el.page).to.equal(1);
+  });
+});
+
 describe('row expand toggle accessible name', () => {
   const expandNameColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },

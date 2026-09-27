@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './agent-trace.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAgentTrace } from './agent-trace.js';
@@ -193,6 +194,110 @@ describe('lr-agent-trace', () => {
     expect(childCommits).to.equal(1);
     expect(wrapperCommits).to.equal(1);
     expect(el.hiddenKinds).to.deep.equal(['tool']);
+  });
+
+  it('contains the canonical lr-visibility-change-request proposal from native pointer and keyboard activation', async () => {
+    const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
+    const toolItem = [...legend.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="item"]')].find((item) =>
+      item.textContent!.includes('Tool'),
+    )!;
+    const proposalNames = ['lr-visibility-change-request', 'lr-before-visibility-change'];
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const proposals: CustomEvent<{ hiddenTypes: string[] }>[] = [];
+    const notifications: string[][] = [];
+    legend.addEventListener('lr-visibility-change-request', (event) => {
+      proposals.push(event as CustomEvent<{ hiddenTypes: string[] }>);
+    });
+    el.addEventListener('lr-span-visibility-change', (event) => {
+      notifications.push([...(event as CustomEvent<{ hiddenKinds: string[] }>).detail.hiddenKinds]);
+    });
+    for (const name of proposalNames) {
+      el.addEventListener(name, onHost);
+      document.addEventListener(name, onDocument);
+    }
+    try {
+      await resetMouse();
+      toolItem.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = toolItem.getBoundingClientRect();
+      await sendMouse({
+        type: 'click',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => el.hiddenKinds.join(',') === 'tool', 'native pointer activation did not commit');
+
+      toolItem.focus();
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.hiddenKinds.length === 0, 'keyboard activation did not commit');
+    } finally {
+      await resetMouse();
+      for (const name of proposalNames) {
+        el.removeEventListener(name, onHost);
+        document.removeEventListener(name, onDocument);
+      }
+    }
+
+    expect(leaked).to.deep.equal([]);
+    expect(proposals.map((event) => [...event.detail.hiddenTypes])).to.deep.equal([['tool'], []]);
+    expect(
+      proposals.map((event) => event.defaultPrevented),
+      'containment never cancels the child proposal',
+    ).to.deep.equal([false, false]);
+    expect(notifications).to.deep.equal([['tool'], []]);
+  });
+
+  it('keeps a legend-level veto of the canonical proposal authoritative while containing it', async () => {
+    const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
+    const toolItem = [...legend.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="item"]')].find((item) =>
+      item.textContent!.includes('Tool'),
+    )!;
+    const leaked: string[] = [];
+    const onHost = (event: Event): void => {
+      leaked.push(`host:${event.type}`);
+    };
+    const onDocument = (event: Event): void => {
+      leaked.push(`document:${event.type}`);
+    };
+    const vetoes: boolean[] = [];
+    let childCommits = 0;
+    let wrapperNotifications = 0;
+    legend.addEventListener('lr-visibility-change-request', (event) => {
+      event.preventDefault();
+      vetoes.push(event.defaultPrevented);
+    });
+    legend.addEventListener('lr-visibility-change', () => childCommits += 1);
+    el.addEventListener('lr-span-visibility-change', () => wrapperNotifications += 1);
+    el.addEventListener('lr-visibility-change-request', onHost);
+    document.addEventListener('lr-visibility-change-request', onDocument);
+    try {
+      toolItem.focus();
+      await sendKeys({ press: 'Space' });
+      await waitUntil(() => vetoes.length === 1, 'keyboard activation did not propose a change');
+      await el.updateComplete;
+      await legend.updateComplete;
+    } finally {
+      el.removeEventListener('lr-visibility-change-request', onHost);
+      document.removeEventListener('lr-visibility-change-request', onDocument);
+    }
+
+    expect(vetoes).to.deep.equal([true]);
+    expect(leaked).to.deep.equal([]);
+    expect(childCommits).to.equal(0);
+    expect(wrapperNotifications).to.equal(0);
+    expect(el.hiddenKinds).to.deep.equal([]);
+    expect(legend.hiddenTypes).to.deep.equal([]);
+    expect(toolItem.getAttribute('aria-pressed')).to.equal('true');
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    expect(tree.spans.map((span) => span.id)).to.include('search');
   });
 
   it('renders one handoff quick-jump entry per visible agent-kind span, composing lr-handoff-divider', async () => {
