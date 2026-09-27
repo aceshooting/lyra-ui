@@ -24,6 +24,9 @@ built-in return target is hidden or inert.
 - `lr-knowledge-graph-explorer` and `lr-agent-trace` stop leaking their inner legend's
   `lr-visibility-change-request`.
 - pt-PT: replace the remaining Brazilian "o app interativo" wording.
+- `lr-table`: combining `layout="fixed"` with priority columns must not freeze the page.
+- `lr-thread-list`: keep the row in its hover/focus state while its top-layer row menu is open, so a
+  hover-revealed menu trigger stays visible and the menu does not close (expose a menu-open row state).
 
 ## v22 plan
 
@@ -129,7 +132,10 @@ Awesome or Shoelace, and their defaults, never change.
 40. Next: `lr-conversation-tree`, `lr-state-history`, `lr-query-plan`, `lr-web-search-results`,
     `lr-suggested-edits`, `lr-prompt-library`, `lr-agent-card` with `lr-agent-picker`,
     `lr-diagram` (Mermaid), and `lr-guardrail-notice`.
-41. Later: `lr-schedule-editor`, `lr-share-dialog`, `lr-session-replay`, `lr-conversation-search`,
+41. Consumer-reported gaps: `lr-tool-call-block` gains a localized tool display name and an
+    incomplete/cancelled status; `lr-map` gains a fit-to-bounds API that does not fight its own
+    `center`/`zoom` updates.
+42. Later: `lr-schedule-editor`, `lr-share-dialog`, `lr-session-replay`, `lr-conversation-search`,
     `lr-image-generation`, `lr-read-aloud`, `lr-agent-team`, and reasoning-effort controls in
     `lr-model-settings-panel`.
 
