@@ -38,7 +38,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 
 ## Known limitations
 
-- Human review for this release covered ONLY the 9 captures whose baselines changed: charts-pie--default, charts-doughnut--default and charts-radar--default across the light, dark and RTL axes. Each diff image was inspected directly. Pie and doughnut changed in the legend row alone, where a single aggregate 'Browsers' entry became per-slice entries (the legendMode default moving from 'dataset' to 'auto'); the slices, labels and layout are pixel-identical. Radar changed in the polygon outline stroke and its vertex markers only, from the chart stroke-width consistency fix. Diff ratios were 0.09%-0.13%.
+- Human review for this change covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.
 - The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.
 - Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.
 - Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.
