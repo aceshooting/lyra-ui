@@ -187,11 +187,10 @@ structured points retain their y-value formatting.
   axes, `'r'` for a radar/polar-area ring, and `undefined` where there is no axis at all (a
   pie/doughnut slice). Two value axes usually exist precisely because they carry different units,
   so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
-  `label` and `seriesLabel` now reach the `tick`, `tooltip`, `legend` and `visual` surfaces as well
-  as the `table`, `export` and `spoken` ones they always reached, and indexes are reported in
-  source space — the same space the data table, the CSV export and `lr-point-click` use. Every one
-  of these fields was `undefined` before, so no existing formatter changes behaviour. A
-  `stackTotals`/`tableTotals` stack total is the exception in the other direction: it is a sum
+  `label` and `seriesLabel` reach the `tooltip`, `legend`, `visual`, `table`, `export` and `spoken`
+  surfaces, with indexes in source space — the same space the data table, the CSV export and
+  `lr-point-click` use. A `tick` call carries `axis` but none of those four. A
+  `stackTotals`/`tableTotals` stack total is also an exception: it is a sum
   *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
   and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
   series would make a unit-switching formatter render that one series' unit for a cross-series

@@ -33012,11 +33012,10 @@ structured points retain their y-value formatting.
   axes, `'r'` for a radar/polar-area ring, and `undefined` where there is no axis at all (a
   pie/doughnut slice). Two value axes usually exist precisely because they carry different units,
   so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
-  `label` and `seriesLabel` now reach the `tick`, `tooltip`, `legend` and `visual` surfaces as well
-  as the `table`, `export` and `spoken` ones they always reached, and indexes are reported in
-  source space — the same space the data table, the CSV export and `lr-point-click` use. Every one
-  of these fields was `undefined` before, so no existing formatter changes behaviour. A
-  `stackTotals`/`tableTotals` stack total is the exception in the other direction: it is a sum
+  `label` and `seriesLabel` reach the `tooltip`, `legend`, `visual`, `table`, `export` and `spoken`
+  surfaces, with indexes in source space — the same space the data table, the CSV export and
+  `lr-point-click` use. A `tick` call carries `axis` but none of those four. A
+  `stackTotals`/`tableTotals` stack total is also an exception: it is a sum
   *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
   and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
   series would make a unit-switching formatter render that one series' unit for a cross-series
@@ -34066,7 +34065,7 @@ bounded-alternative sampling notice)
 `--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
-re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
+re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `LyraBoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
 so `--lr-theme-color-chart-*` retheming reaches box plots too. That resolved color then layers two
 further per-series override tokens for the canvas paint, each wrapping modulo 8 like the underlying

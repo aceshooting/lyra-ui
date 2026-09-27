@@ -121,7 +121,7 @@ bounded-alternative sampling notice)
 `--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
-re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `BoxPlotSeries`
+re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `LyraBoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
 so `--lr-theme-color-chart-*` retheming reaches box plots too. That resolved color then layers two
 further per-series override tokens for the canvas paint, each wrapping modulo 8 like the underlying
