@@ -375,6 +375,15 @@ export const styles = css`
       var(--_lr-button-padding-block)
     );
   }
+  /* A detected icon-only label holds one glyph and no text, so the truncation clip above has
+     nothing to ellipsize. It still clipped paint, though: a glow drawn around the glyph (a
+     filter: drop-shadow halo such as gemstoneSelectedGlyphStyles paints) was cut to the label's
+     own rectangle and read as a square background behind the icon. Only this state releases paint
+     overflow. A text label -- including one beside a glowing glyph -- keeps the clip, and the
+     label's box and the square control are unchanged, so hit area and focus ring are unaffected. */
+  [part~="base"][data-icon-button] [part="label"] {
+    overflow: visible;
+  }
   /* Decorative dropdown chevron. chevronIcon() points right, so the glyph -- not the wrapping part
      -- is rotated down, matching lr-select's expand-icon; a down caret is direction-neutral, so
      nothing mirrors under RTL. */

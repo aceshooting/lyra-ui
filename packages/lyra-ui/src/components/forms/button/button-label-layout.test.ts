@@ -1,6 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './button.js';
 import type { LyraButton } from './button.class.js';
+import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from '../../../theme/gemstones.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 /** The rendered content box of `[part~="base"]`: the row the label, adornments and caret share. */
 function contentBox(el: LyraButton): { start: number; end: number; width: number } {
@@ -256,4 +258,148 @@ describe('lr-button slotted adornment truncation', () => {
       expectTruncatedInside(el.querySelector('#adornment') as HTMLElement, part, slot);
     });
   }
+});
+
+// A detected icon-only label holds a glyph, not text, so it has nothing to ellipsize. Clipping it
+// cut every glow painted around the glyph -- gemstoneSelectedGlyphStyles' drop-shadow halo
+// among them -- to the label's own rectangle, which read as a square background behind the gem.
+describe('lr-button: icon-only label paint overflow', () => {
+  const HALO = '0.42rem';
+  let sheet: HTMLStyleElement;
+
+  before(() => {
+    // The consumer composition: the shared halo stylesheet, applied to the light-DOM wrapper the
+    // consumer slots. The glyph fills its wrapper, as the gemstoneAccentPicker guide sizes it.
+    sheet = document.createElement('style');
+    sheet.textContent = `${gemstoneSelectedGlyphStyles.cssText}
+      [data-glyph] svg { inline-size: 100%; block-size: 100%; }`;
+    document.head.append(sheet);
+  });
+
+  after(() => {
+    sheet.remove();
+  });
+
+  /** A glowing gem in the default slot. `filter` is invisible to hit testing, so `[data-halo]` --
+   *  an absolutely positioned, paint-free child spanning the halo's extent -- is the geometry
+   *  probe: an ancestor's overflow clip removes whatever part of it falls outside the clip
+   *  rectangle from hit testing exactly as it removes the halo from painting. */
+  async function glowingIconButton(dir: 'ltr' | 'rtl'): Promise<LyraButton> {
+    return (await fixture(html`
+      <lr-button
+        appearance="plain"
+        aria-label="Accent: sapphire"
+        dir=${dir}
+        style=${`--lr-gemstone-selected-color: rgb(37 99 235); --lr-gemstone-selected-blur: ${HALO};`}
+        ><span
+          data-glyph
+          data-lr-gemstone-selected
+          aria-hidden="true"
+          style="display: inline-flex; position: relative; inline-size: 1.15rem; block-size: 1.15rem;"
+          >${gemstoneGlyph('rgb(37 99 235)')}<i
+            data-halo
+            style=${`position: absolute; inset: calc(-1 * ${HALO});`}
+          ></i></span
+      ></lr-button>
+    `)) as LyraButton;
+  }
+
+  function shadowPart(el: LyraButton, selector: string): HTMLElement {
+    return el.shadowRoot!.querySelector(selector) as HTMLElement;
+  }
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`lets a detected icon-only label paint its glyph's glow past the label box (${dir})`, async () => {
+      const el = await glowingIconButton(dir);
+      await el.updateComplete;
+      const base = shadowPart(el, '[part~="base"]');
+      const label = shadowPart(el, '[part="label"]');
+      const glyph = el.querySelector<HTMLElement>('[data-glyph]')!;
+
+      expect(base.hasAttribute('data-icon-button'), 'the gem is detected as icon-only').to.equal(
+        true
+      );
+      expect(getComputedStyle(glyph).filter, 'the shared halo is applied').to.contain(
+        'drop-shadow'
+      );
+      expect(getComputedStyle(label).overflowX, 'no inline clip on an icon-only label').to.equal(
+        'visible'
+      );
+      expect(getComputedStyle(label).overflowY, 'no block clip on an icon-only label').to.equal(
+        'visible'
+      );
+
+      // Both physical sides, so the inline-start and inline-end halves are each proved in both
+      // directions. Each point sits outside the label box, inside the halo, and inside the
+      // control's own box -- the only clip an icon-only label is still meant to answer to.
+      const labelBox = label.getBoundingClientRect();
+      const glyphBox = glyph.getBoundingClientRect();
+      const baseBox = base.getBoundingClientRect();
+      const y = glyphBox.top + glyphBox.height / 2;
+      for (const [side, x] of [
+        ['left', labelBox.left - 3],
+        ['right', labelBox.right + 3],
+      ] as const) {
+        expect(x > baseBox.left && x < baseBox.right, `${side} probe lies inside the control`).to.equal(
+          true
+        );
+        const hit = document.elementFromPoint(x, y);
+        expect(
+          hit?.hasAttribute('data-halo') ?? false,
+          `${side} halo is not clipped to the label (hit ${hit?.localName ?? 'nothing'})`
+        ).to.equal(true);
+      }
+    });
+  }
+
+  it('keeps the square icon-only hit area and the focus ring with the glow unclipped', async () => {
+    const el = await glowingIconButton('ltr');
+    await el.updateComplete;
+    const base = shadowPart(el, '[part~="base"]');
+    const box = base.getBoundingClientRect();
+    const floor = Number.parseFloat(getComputedStyle(base).minInlineSize);
+    expect(floor, 'the icon-button floor resolves to a length').to.be.greaterThan(0);
+    expect(box.width, 'inline hit area keeps the icon-button floor').to.be.at.least(floor - 0.5);
+    expect(box.height, 'block hit area keeps the icon-button floor').to.be.at.least(floor - 0.5);
+    expect(Math.abs(box.width - box.height), 'the control stays square').to.be.at.most(1.5);
+
+    await focusByKeyboard(el);
+    expect(base.matches(':focus-visible'), 'keyboard focus lands on the native control').to.equal(
+      true
+    );
+    expect(getComputedStyle(base).outlineStyle, 'the focus ring still paints').to.equal('solid');
+  });
+
+  it('still clips and ellipsizes a text label that overflows', async () => {
+    const el = (await fixture(html`
+      <lr-button appearance="plain" style="inline-size: 120px;"
+        >An accent colour label far too long to fit</lr-button
+      >
+    `)) as LyraButton;
+    await el.updateComplete;
+    const base = shadowPart(el, '[part~="base"]');
+    const label = shadowPart(el, '[part="label"]');
+    expect(base.hasAttribute('data-icon-button'), 'text is not icon-only').to.equal(false);
+    expect(getComputedStyle(label).overflowX).to.equal('hidden');
+    expect(getComputedStyle(label).textOverflow).to.equal('ellipsis');
+    expect(label.scrollWidth > label.clientWidth, 'the text really is truncated').to.equal(true);
+  });
+
+  it('still clips a glowing glyph that sits beside a visible text label', async () => {
+    const el = (await fixture(html`
+      <lr-button appearance="plain"
+        ><span data-glyph data-lr-gemstone-selected aria-hidden="true"
+          style="display: inline-flex; inline-size: 1.15rem; block-size: 1.15rem;"
+          >${gemstoneGlyph('rgb(37 99 235)')}</span
+        >Sapphire</lr-button
+      >
+    `)) as LyraButton;
+    await el.updateComplete;
+    const base = shadowPart(el, '[part~="base"]');
+    const label = shadowPart(el, '[part="label"]');
+    expect(base.hasAttribute('data-icon-button'), 'visible text is a real label').to.equal(false);
+    expect(getComputedStyle(label).overflowX, 'a text label keeps its truncation clip').to.equal(
+      'hidden'
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './icon-button.js';
 import type { LyraIconButton } from './icon-button.class.js';
+import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from '../../../theme/gemstones.js';
 
 function nativeControl(el: LyraIconButton): HTMLButtonElement {
   return el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="button"]')!;
@@ -100,4 +101,72 @@ describe('lr-icon-button: composition contract', () => {
     el.click();
     expect(el.getToolbarActions()[0]?.matchesEventPath(path)).to.equal(true);
   });
+});
+
+// The gemstoneAccentPicker trigger slots a glowing gem straight into this control. The slot has no
+// wrapper of its own and the native control declares no overflow, so the halo must reach past the
+// glyph box up to the control's own edge -- the lr-button icon-only label used to clip it.
+describe('lr-icon-button: slotted glyph glow', () => {
+  const HALO = '0.42rem';
+  let sheet: HTMLStyleElement;
+
+  before(() => {
+    sheet = document.createElement('style');
+    sheet.textContent = `${gemstoneSelectedGlyphStyles.cssText}
+      [data-glyph] svg { inline-size: 100%; block-size: 100%; }`;
+    document.head.append(sheet);
+  });
+
+  after(() => {
+    sheet.remove();
+  });
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`does not clip a slotted glyph's glow to the glyph box (${dir})`, async () => {
+      const el = (await fixture(html`
+        <lr-icon-button
+          label="Accent: sapphire"
+          dir=${dir}
+          style=${`--lr-gemstone-selected-color: rgb(37 99 235); --lr-gemstone-selected-blur: ${HALO};`}
+          ><span
+            data-glyph
+            data-lr-gemstone-selected
+            aria-hidden="true"
+            style="display: inline-flex; position: relative; inline-size: 1.15rem; block-size: 1.15rem;"
+            >${gemstoneGlyph('rgb(37 99 235)')}<i
+              data-halo
+              style=${`position: absolute; inset: calc(-1 * ${HALO});`}
+            ></i></span
+        ></lr-icon-button>
+      `)) as LyraIconButton;
+      await el.updateComplete;
+      const control = nativeControl(el);
+      const glyph = el.querySelector<HTMLElement>('[data-glyph]')!;
+      expect(getComputedStyle(glyph).filter, 'the shared halo is applied').to.contain('drop-shadow');
+      expect(getComputedStyle(control).overflowX, 'no inline clip on the native control').to.equal(
+        'visible'
+      );
+
+      // `filter` is invisible to hit testing, so the paint-free `[data-halo]` child spanning the
+      // halo's extent is the geometry probe: a clipping ancestor would drop it from hit testing
+      // exactly where it drops the halo from painting.
+      const glyphBox = glyph.getBoundingClientRect();
+      const controlBox = control.getBoundingClientRect();
+      const y = glyphBox.top + glyphBox.height / 2;
+      for (const [side, x] of [
+        ['left', glyphBox.left - 3],
+        ['right', glyphBox.right + 3],
+      ] as const) {
+        expect(
+          x > controlBox.left && x < controlBox.right,
+          `${side} probe lies inside the control`
+        ).to.equal(true);
+        const hit = document.elementFromPoint(x, y);
+        expect(
+          hit?.hasAttribute('data-halo') ?? false,
+          `${side} halo is not clipped (hit ${hit?.localName ?? 'nothing'})`
+        ).to.equal(true);
+      }
+    });
+  }
 });

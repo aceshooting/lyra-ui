@@ -2190,6 +2190,13 @@ plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
 In a constrained button the default label ellipsizes and each adornment wrapper is capped at 40%
 of the control. Fixed icons remain visible while unbroken labels or metadata cannot widen the row.
 
+A detected icon-only label (the `icon-button` state) has no text to ellipsize, so it does not clip
+paint. A glow drawn around the glyph extends past the label box instead of being cut to a square,
+for example `gemstoneSelectedGlyphStyles`' drop-shadow halo on a `data-lr-gemstone-selected`
+wrapper. A text label keeps the truncation clip, even beside a glowing glyph. The `start`/`end`
+wrappers always clip, so put a glowing glyph in the default slot on its own. Hit area, focus ring,
+and label box are unchanged.
+
 **CSS parts:** `base` (compatibility name for the internal control; use `button`),
 `button` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe link; it is
 the same node as `base`), `label`, `start`/`prefix` (the same wrapper), `end`/`suffix` (the same
@@ -2488,7 +2495,10 @@ sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts on
 set, so with `icon` left empty your content is the button's only child. That is what lets a
 complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — render at its own natural aspect ratio
 instead of being forced into a 1:1 box. Setting both `icon` and slotted content renders both, side
-by side; that is a valid composition, not a fallback.
+by side; that is a valid composition, not a fallback. No wrapper sits between the slot and the
+native control, and that control declares no overflow clip. A glow painted around slotted content
+therefore keeps its full silhouette instead of being cut to the glyph's box. The
+`gemstoneAccentPicker` trigger's `gemstoneSelectedGlyphStyles` halo relies on this.
 
 **Bare SVG geometry fallback:** slotted bare SVG _geometry_ (`path`, `circle`, `rect`, `line`,
 `polygon`, `polyline`, `ellipse`, `g`, `use`) with no `icon` set and no enclosing `<svg>` of its
@@ -4147,6 +4157,136 @@ class AccentTrigger extends LitElement {
   than an attribute, so it inherits through wrappers like the gap and hit-size hooks beside it;
   tuning the gap and hit size small enough to avoid wrapping is a guess that breaks at the next
   swatch added.
+
+### gemstoneAccentPicker — the signature accent selector
+
+`gemstoneAccentPicker` names the canonical composition of `lr-icon-button`, `lr-popover`, and
+`lr-swatch-picker mode="gemstone"`. It is a **pattern name, not an exported component or tag**.
+Use it for application accent selection: a glowing current-gem trigger, one compact
+“Gemstone: selected name” caption, and all nine canonical gemstones, in `GEMSTONE_KEYS` order, in
+one row. Localize the caption, trigger, dialog, radiogroup, and item names. Omit introductory copy
+and a second selected-name paragraph.
+
+The consuming Lit component imports these granular entries and lists
+`gemstoneSelectedGlyphStyles` in its `static styles` ahead of the CSS that follows.
+`components/forms/icon-button/icon-button-register.js` can replace `icon-button.js` when no icon
+button in the application uses `icon` or `src`:
+
+```ts
+import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';
+import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';
+import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
+import {
+  GEMSTONE_KEYS,
+  GEMSTONES,
+  gemstoneGlyph,
+  gemstoneSelectedGlyphStyles,
+  type GemstoneKey,
+} from '@aceshooting/lyra-ui/theme/gemstones.js';
+```
+
+`--accent-color`, `--caption-color`, and `--text-color` are application-owned theme tokens.
+`--lr-overlay-max-inline-size` lifts the popup's default 20rem cap so the 20rem palette plus the
+popover's own padding fits. Both `--lr-gemstone-selected-*` values reach the trigger glyph and the
+picker's checked glyph alike: a 0.42rem halo at 92% of the accent. Leave
+`--lr-gemstone-selected-shine-duration` unset to keep the default 1.8s shine. The
+`--lr-icon-button-*` values keep the trigger free of a rectangular fill at rest, on hover, and
+while pressed:
+
+```css
+.gemstone-accent-picker {
+  --lr-overlay-max-inline-size: 22rem;
+  --lr-gemstone-selected-color: color-mix(in srgb, var(--accent-color) 92%, transparent);
+  --lr-gemstone-selected-blur: .42rem;
+}
+.gemstone-accent-picker lr-icon-button {
+  --lr-icon-button-background: transparent;
+  --lr-icon-button-background-hover: transparent;
+  --lr-icon-button-background-active: transparent;
+  --lr-icon-button-border: none;
+}
+.gem { display: inline-flex; inline-size: 1.15rem; block-size: 1.15rem; }
+.gem svg { inline-size: 100%; block-size: 100%; }
+.palette {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  inline-size: 20rem;
+  padding: .3rem;
+}
+.heading {
+  margin: .2rem .3rem .5rem;
+  color: var(--caption-color);
+  font-size: .75rem;
+  font-weight: 600;
+}
+.name { color: var(--text-color); }
+.palette lr-swatch-picker {
+  padding: 0 .3rem .3rem;
+  --lr-swatch-picker-hit-size: 1.75rem;
+  --lr-swatch-picker-wrap: nowrap;
+  --lr-swatch-picker-gap: .25rem;
+}
+@media (max-width: 30rem) {
+  .palette { inline-size: auto; }
+  .palette lr-swatch-picker {
+    --lr-swatch-picker-hit-size: 1.5rem;
+    --lr-swatch-picker-gap: .125rem;
+  }
+}
+```
+
+At the default 16px root font size, `1.75rem`/`.25rem` give 28px targets with 4px gaps, and
+`1.5rem`/`.125rem` give 24px targets with 2px gaps. Below 30rem the palette shrinks to its row, so
+the popup fits a 320px viewport without scrolling. A `calc(100dvw - 2.5rem)` palette overflows the
+popup by 2px there. Apply `data-lr-gemstone-selected` to the transparent glyph wrapper, not the
+whole trigger, so the halo follows the gem's silhouette. The focus ring belongs to keyboard focus;
+do not add a permanent circular selection border. Leave the popover's default content padding and
+arrow intact.
+
+This Lit template assumes `selected` is a `GemstoneKey`. `accentLabel` names the dialog and the
+radiogroup. `triggerLabel(name)` (“Accent color: Ruby”), `captionLabel` (“Gemstone:”, with the
+locale's own separator), and `translateGemstone()` come from the application's catalog.
+`onAccentChange()` validates the string and updates application state:
+
+```ts
+// Build once per locale. A new array on every render re-creates every swatch and briefly blurs
+// the focused one.
+const items = GEMSTONE_KEYS.map((key) => ({
+  value: key,
+  color: GEMSTONES[key].fill,
+  label: translateGemstone(key),
+  gemstone: key,
+}));
+
+const name = translateGemstone(selected);
+html`
+  <lr-popover class="gemstone-accent-picker" placement="bottom-end"
+    popup-role="dialog" aria-label=${accentLabel}>
+    <lr-icon-button slot="trigger" label=${triggerLabel(name)}>
+      <span class="gem" data-lr-gemstone-selected aria-hidden="true">${gemstoneGlyph(GEMSTONES[selected].fill)}</span>
+    </lr-icon-button>
+    <div class="palette">
+      <p class="heading">${captionLabel} <span class="name">${name}</span></p>
+      <lr-swatch-picker mode="gemstone" aria-label=${accentLabel}
+        .items=${items} .value=${selected}
+        @lr-change=${(event: CustomEvent<{ value: string }>) => onAccentChange(event.detail.value)}>
+      </lr-swatch-picker>
+    </div>
+  </lr-popover>
+`;
+```
+
+The parts already supply the behavior, so do not re-implement it. The picker is a roving-tabindex
+`radiogroup` with `aria-checked` and a `:focus-visible` ring per swatch, and its Arrow keys swap
+under RTL. The popover keeps `bottom-end` on the logical end under RTL and returns focus to the
+trigger on Escape. `gemstoneSelectedGlyphStyles` stops the shine under
+`prefers-reduced-motion: reduce`. Verify 320px and desktop layouts, enlarged text, and both color
+modes. In a sidebar or settings panel, the caption and row may appear inline with the same glow
+and spacing; use the compact tier when the container is narrow and allow wrapping if even that
+tier cannot fit. Never shrink targets below 24px. Application theme application, default accent,
+validation, and persistence remain caller-owned.
 
 ---
 

@@ -150,6 +150,11 @@ function isVisuallyHidden(element: Element): boolean {
  * In a constrained row the default-slot label ellipsizes (set `wrap` for a multi-line label
  * instead), while each `start`/`end` adornment is capped at 40% of the control so unbroken
  * consumer content cannot force the button wider.
+ * A detected icon-only label has no text to ellipsize, so it does not clip paint: a glow drawn
+ * around the glyph (such as `gemstoneSelectedGlyphStyles`' drop-shadow halo on a
+ * `data-lr-gemstone-selected` wrapper) reaches past the label box instead of being cut to a
+ * square. A text label, including one beside a glowing glyph, keeps the truncation clip, and the
+ * `start`/`end` wrappers always clip, so slot a glowing glyph into the default slot on its own.
  * The label does **not** grow to fill a stretched button: icon and label centre together under
  * `--lr-button-justify`. A `with-caret` button, and one with an `end`/`suffix` adornment, keep the
  * old growing label so that trailing affordance stays pinned to the trailing content edge;
@@ -173,7 +178,8 @@ function isVisuallyHidden(element: Element): boolean {
  * @csspart base - Compatibility name for the internal control; use `button`.
  * @csspart button - The internal native `<button>` (or an `<a>` for a safe link). It is the same
  *   node as `base`. Circle and icon-only states retain the shared minimum icon-button target.
- * @csspart label - The default-slot label wrapper.
+ * @csspart label - The default-slot label wrapper. It clips and ellipsizes a text label; in the
+ *   detected icon-only state it leaves paint overflow visible so a glyph's glow is not cut off.
  * @csspart start - The `start` slot wrapper.
  * @csspart prefix - Shoelace alias for `start`; both names are on the same wrapper.
  * @csspart end - The `end` slot wrapper.

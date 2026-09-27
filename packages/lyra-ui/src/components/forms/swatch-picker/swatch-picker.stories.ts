@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
-import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones-data.js';
+import { LitElement, css, html, type TemplateResult } from 'lit';
+import {
+  GEMSTONE_KEYS,
+  GEMSTONES,
+  type GemstoneKey,
+} from '../../../theme/gemstones-data.js';
 import {
   gemstoneGlyph,
   gemstoneSelectedGlyphStyles,
@@ -8,6 +12,8 @@ import {
 import type { LyraSwatchPicker } from './swatch-picker.js';
 import type { LyraSizeStep } from '../../../internal/variants.js';
 import './swatch-picker.js';
+import '../icon-button/icon-button.js';
+import '../../overlays/overlay/popover.js';
 
 const accents = () => [
   { value: 'blue', color: 'var(--lr-color-brand)', label: 'Blue' },
@@ -242,6 +248,145 @@ export const GemstoneGlyphOutsidePicker: Story = {
       value="amethyst"
     ></lr-swatch-picker>
   `,
+};
+
+/** A stand-in for an application's own header component composing the documented
+ *  `gemstoneAccentPicker` pattern (`llms/forms.md`). The application owns the selected key, the
+ *  localized strings and the accent it applies (`--accent-color` here); the library parts stay
+ *  controlled. */
+const gemstoneAccentPickerTag = 'app-gemstone-accent-picker';
+const gemstoneName = (key: GemstoneKey): string =>
+  key[0]!.toUpperCase() + key.slice(1);
+
+class AppGemstoneAccentPicker extends LitElement {
+  static override styles = [
+    gemstoneSelectedGlyphStyles,
+    css`
+      :host {
+        display: inline-block;
+        --caption-color: var(--lr-color-text-quiet);
+        --text-color: var(--lr-color-text);
+      }
+      .gemstone-accent-picker {
+        --lr-overlay-max-inline-size: 22rem;
+        --lr-gemstone-selected-color: color-mix(
+          in srgb,
+          var(--accent-color) 92%,
+          transparent
+        );
+        --lr-gemstone-selected-blur: 0.42rem;
+      }
+      .gemstone-accent-picker lr-icon-button {
+        --lr-icon-button-background: transparent;
+        --lr-icon-button-background-hover: transparent;
+        --lr-icon-button-background-active: transparent;
+        --lr-icon-button-border: none;
+      }
+      .gem {
+        display: inline-flex;
+        inline-size: 1.15rem;
+        block-size: 1.15rem;
+      }
+      .gem svg {
+        inline-size: 100%;
+        block-size: 100%;
+      }
+      .palette {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        inline-size: 20rem;
+        padding: 0.3rem;
+      }
+      .heading {
+        margin: 0.2rem 0.3rem 0.5rem;
+        color: var(--caption-color);
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .name {
+        color: var(--text-color);
+      }
+      .palette lr-swatch-picker {
+        padding: 0 0.3rem 0.3rem;
+        --lr-swatch-picker-hit-size: 1.75rem;
+        --lr-swatch-picker-wrap: nowrap;
+        --lr-swatch-picker-gap: 0.25rem;
+      }
+      @media (max-width: 30rem) {
+        .palette {
+          inline-size: auto;
+        }
+        .palette lr-swatch-picker {
+          --lr-swatch-picker-hit-size: 1.5rem;
+          --lr-swatch-picker-gap: 0.125rem;
+        }
+      }
+    `,
+  ];
+
+  // Built once: a fresh array on every render would re-create every swatch and drop focus.
+  private readonly items = gemstoneAccents();
+  private selected: GemstoneKey = 'amethyst';
+
+  private readonly onAccentChange = (
+    event: CustomEvent<{ value: string }>
+  ): void => {
+    const next = GEMSTONE_KEYS.find((key) => key === event.detail.value);
+    if (next === undefined) return;
+    this.selected = next;
+    this.requestUpdate();
+  };
+
+  override render(): TemplateResult {
+    const name = gemstoneName(this.selected);
+    return html`
+      <lr-popover
+        class="gemstone-accent-picker"
+        placement="bottom-end"
+        popup-role="dialog"
+        aria-label="Accent color"
+        style="--accent-color: ${GEMSTONES[this.selected].fill}"
+      >
+        <lr-icon-button slot="trigger" label=${`Accent color: ${name}`}>
+          <span class="gem" data-lr-gemstone-selected aria-hidden="true"
+            >${gemstoneGlyph(GEMSTONES[this.selected].fill)}</span
+          >
+        </lr-icon-button>
+        <div class="palette">
+          <p class="heading">Gemstone: <span class="name">${name}</span></p>
+          <lr-swatch-picker
+            mode="gemstone"
+            aria-label="Accent color"
+            .items=${this.items}
+            .value=${this.selected}
+            @lr-change=${this.onAccentChange}
+          ></lr-swatch-picker>
+        </div>
+      </lr-popover>
+    `;
+  }
+}
+
+if (
+  typeof customElements !== 'undefined' &&
+  !customElements.get(gemstoneAccentPickerTag)
+) {
+  customElements.define(gemstoneAccentPickerTag, AppGemstoneAccentPicker);
+}
+
+export const GemstoneAccentPicker: Story = {
+  name: 'gemstoneAccentPicker composition (header trigger + popover)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The documented `gemstoneAccentPicker` pattern, composed by an application element rather than shipped as a tag: an `lr-icon-button` trigger showing the current gem with `gemstoneSelectedGlyphStyles` (0.42rem halo at 92% of the accent), an `lr-popover` dialog with one "Gemstone: name" caption, and all nine canonical gems in one `lr-swatch-picker mode="gemstone"` row -- 28px targets with 4px gaps, 24px with 2px gaps below 30rem. The picker stays controlled through `value` and `lr-change`; applying and persisting the accent stays with the application.',
+      },
+    },
+  },
+  render: () => html`<app-gemstone-accent-picker></app-gemstone-accent-picker>`,
 };
 
 export const NoSelection: Story = {
