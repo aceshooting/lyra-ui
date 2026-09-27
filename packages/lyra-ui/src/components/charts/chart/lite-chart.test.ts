@@ -4635,3 +4635,225 @@ it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).blockSize).to.equal('500px');
 });
+
+describe('bidi isolation of formatted labels', () => {
+  const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+
+  /** Viewport box of `needle`'s first rendered occurrence under `root`, measured through a DOM
+   *  Range so the bidi reordering the engine actually painted is what gets compared. SVG's own
+   *  getExtentOfChar() is no substitute: WebKit reports logical rather than visual positions and
+   *  Gecko mis-offsets every character after a bidi control. */
+  function renderedBox(root: Element, needle: string): DOMRect {
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      const index = node.data.indexOf(needle);
+      if (index < 0) continue;
+      const range = root.ownerDocument.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + needle.length);
+      return range.getBoundingClientRect();
+    }
+    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
+  }
+
+  const rateLabel = (value: number) => `${value} MiB/s`;
+
+  it('keeps a number-first formatted value tick in number-unit order under dir="rtl" without moving the axis', async () => {
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="line"
+      value-axis-gutter="auto"
+      style="inline-size: 480px"
+      .labels=${['Jan', 'Feb', 'Mar']}
+      .datasets=${[{ label: 'Throughput', data: [1.2, 2.4, 3.6] }]}
+      .tickFormat=${rateLabel}
+    ></lr-lite-chart>`);
+    const ticks = valueAxisLabels(el);
+    expect(ticks.length, 'value-axis ticks').to.be.greaterThan(1);
+    const plotRight = Math.max(
+      ...[...el.shadowRoot!.querySelectorAll<SVGLineElement>('[part="grid-line"]')].map(
+        (line) => line.x2.baseVal.value,
+      ),
+    );
+    for (const tick of ticks) {
+      const text = tick.textContent ?? '';
+      expect(text, 'the tick keeps the formatter string verbatim').to.match(/^\d[\d.]* MiB\/s$/);
+      const number = renderedBox(tick, text[0]!);
+      const unit = renderedBox(tick, 'MiB/s');
+      expect(number.left, `"${text}" paints its number before its unit`).to.be.below(unit.left);
+      // The value axis keeps its logical-start (right-hand under RTL) placement: the `end` anchor
+      // still resolves against the host's RTL direction, so the label grows rightward from its
+      // own x, clear of the plot's right edge. A flipped anchor would put it over the plot.
+      const box = tick.getBBox();
+      expect(box.x, `"${text}" is anchored at its own x`).to.be.closeTo(tick.x.baseVal[0]!.value, 0.5);
+      expect(box.x, `"${text}" stays in the right-hand gutter`).to.be.at.least(plotRight);
+    }
+    const categories = categoryAxisLabels(el);
+    const order = categories
+      .map((label) => ({ text: label.textContent, left: textGeometryBox(label).left }))
+      .sort((a, b) => a.left - b.left)
+      .map((label) => label.text);
+    expect(order, 'categories stay chronological left-to-right').to.deep.equal(['Jan', 'Feb', 'Mar']);
+    // The boundary ticks keep their interior-facing RTL anchors: the first grows rightward from its
+    // x, the last leftward. A flipped anchor would move either by its whole width; the 2px margin
+    // only absorbs Chromium's glyph box for `J`, which starts 1px before the pen position.
+    const first = categories[0]!;
+    const last = categories[categories.length - 1]!;
+    expect(first.getBBox().x, 'first category anchor').to.be.closeTo(first.x.baseVal[0]!.value, 2);
+    const lastBox = last.getBBox();
+    expect(lastBox.x + lastBox.width, 'last category anchor').to.be.closeTo(last.x.baseVal[0]!.value, 2);
+  });
+
+  it('keeps an Arabic-script formatted tick right-to-left under dir="rtl" (first-strong, not forced LTR)', async () => {
+    const unitWord = 'كيلوبايت';
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="line"
+      value-axis-gutter="auto"
+      style="inline-size: 480px"
+      .labels=${['Jan', 'Feb', 'Mar']}
+      .datasets=${[{ label: 'Throughput', data: [10, 20, 30] }]}
+      .tickFormat=${(value: number) => `${value} ${unitWord}`}
+    ></lr-lite-chart>`);
+    const ticks = valueAxisLabels(el).filter((tick) => (tick.textContent ?? '').startsWith('1'));
+    expect(ticks.length, 'a tick whose number starts with 1').to.be.greaterThan(0);
+    for (const tick of ticks) {
+      const text = tick.textContent ?? '';
+      const number = renderedBox(tick, '1');
+      const unit = renderedBox(tick, unitWord);
+      expect(number.left, `"${text}" reads right-to-left: number on the right`).to.be.above(unit.left);
+    }
+  });
+
+  it('keeps a number-first category tick in logical order under dir="rtl"', async () => {
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="bar"
+      style="inline-size: 480px"
+      .labels=${['9:00 AM', '10:00 AM', '11:00 AM']}
+      .datasets=${[{ label: 'Visits', data: [1, 2, 3] }]}
+    ></lr-lite-chart>`);
+    const labels = categoryAxisLabels(el);
+    expect(labels.map((label) => label.textContent)).to.deep.equal(['9:00 AM', '10:00 AM', '11:00 AM']);
+    for (const label of labels) {
+      const text = label.textContent ?? '';
+      expect(renderedBox(label, text[0]!).left, `"${text}" paints its time before AM`).to.be.below(
+        renderedBox(label, 'AM').left,
+      );
+    }
+    const order = labels
+      .map((label) => ({ text: label.textContent, left: textGeometryBox(label).left }))
+      .sort((a, b) => a.left - b.left)
+      .map((label) => label.text);
+    expect(order).to.deep.equal(['9:00 AM', '10:00 AM', '11:00 AM']);
+  });
+
+  it('isolates formatted legend text and generated table cells under dir="rtl"', async () => {
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="bar"
+      legend
+      show-data-table
+      style="inline-size: 480px"
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[
+        { label: 'Up', data: [1.5, 2.5] },
+        { label: 'Down', data: [3.5, 4.5] },
+      ]}
+      .legendText=${() => '7.5 MiB/s'}
+      .tableCellFormatter=${rateLabel}
+    ></lr-lite-chart>`);
+    const legendTexts = [...el.shadowRoot!.querySelectorAll('[part="legend-text"]')];
+    expect(legendTexts.length).to.equal(2);
+    for (const legendText of legendTexts) {
+      expect(legendText.textContent).to.equal('7.5 MiB/s');
+      expect(renderedBox(legendText, '7.5').left, 'legend value before unit').to.be.below(
+        renderedBox(legendText, 'MiB/s').left,
+      );
+    }
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="table"] td')];
+    expect(cells.map((cell) => cell.textContent)).to.deep.equal([
+      '1.5 MiB/s', '3.5 MiB/s', '2.5 MiB/s', '4.5 MiB/s',
+    ]);
+    for (const cell of cells) {
+      const text = cell.textContent ?? '';
+      expect(renderedBox(cell, text.slice(0, 3)).left, `cell "${text}"`).to.be.below(
+        renderedBox(cell, 'MiB/s').left,
+      );
+    }
+    const rowHeaders = [...el.shadowRoot!.querySelectorAll('[part="table"] tbody th')];
+    for (const header of rowHeaders) {
+      const text = header.textContent ?? '';
+      expect(renderedBox(header, text[0]!).left, `row header "${text}"`).to.be.below(
+        renderedBox(header, 'AM').left,
+      );
+    }
+  });
+
+  it('isolates the formatted value inside each visible single-series data-list item under dir="rtl"', async () => {
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="line"
+      show-data-table
+      .labels=${['Jan', 'Feb']}
+      .datasets=${[{ label: 'Throughput', data: [1.5, 2.5] }]}
+      .pointText=${(_label: string, value: number) => rateLabel(value)}
+    ></lr-lite-chart>`);
+    const items = [...el.shadowRoot!.querySelectorAll('[part="data-list"] li')];
+    expect(items.map((item) => item.textContent)).to.deep.equal([
+      '1.5 MiB/s (1 of 2)',
+      '2.5 MiB/s (2 of 2)',
+    ]);
+    for (const item of items) {
+      const text = item.textContent ?? '';
+      expect(renderedBox(item, text.slice(0, 3)).left, `"${text}"`).to.be.below(
+        renderedBox(item, 'MiB/s').left,
+      );
+    }
+  });
+
+  it('keeps accessible names, spoken text and CSV free of bidi control characters', async () => {
+    const el = await mount(html`<lr-lite-chart
+      dir="rtl"
+      type="bar"
+      legend
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[
+        { label: 'Up', data: [1.5, 2.5] },
+        { label: 'Down', data: [3.5, 4.5] },
+      ]}
+      .tickFormat=${rateLabel}
+      .pointText=${(label: string, value: number) => `${label}: ${value} MiB/s`}
+      .legendText=${() => '7.5 MiB/s'}
+      .tableCellFormatter=${rateLabel}
+    ></lr-lite-chart>`);
+    const root = el.shadowRoot!;
+    for (const node of root.querySelectorAll('[aria-label]')) {
+      expect(BIDI_CONTROLS.test(node.getAttribute('aria-label') ?? ''), `${node.localName} aria-label`).to.equal(false);
+    }
+    for (const title of root.querySelectorAll('title')) {
+      expect(BIDI_CONTROLS.test(title.textContent ?? ''), 'mark <title>').to.equal(false);
+    }
+    expect(BIDI_CONTROLS.test(root.textContent ?? ''), 'rendered text').to.equal(false);
+    expect(BIDI_CONTROLS.test(el.exportData('csv')), 'CSV export').to.equal(false);
+  });
+
+  it('leaves the LTR rendering of formatted labels unchanged', async () => {
+    const el = await mount(html`<lr-lite-chart
+      type="line"
+      value-axis-gutter="auto"
+      style="inline-size: 480px"
+      .labels=${['Jan', 'Feb', 'Mar']}
+      .datasets=${[{ label: 'Throughput', data: [1.2, 2.4, 3.6] }]}
+      .tickFormat=${rateLabel}
+    ></lr-lite-chart>`);
+    const svgBox = el.shadowRoot!.querySelector('svg')!.getBoundingClientRect();
+    for (const tick of valueAxisLabels(el)) {
+      const text = tick.textContent ?? '';
+      expect(renderedBox(tick, text[0]!).left).to.be.below(renderedBox(tick, 'MiB/s').left);
+      expect(textGeometryBox(tick).right, `"${text}" stays in the left-hand gutter`).to.be.below(
+        svgBox.left + svgBox.width / 2,
+      );
+    }
+  });
+});

@@ -670,7 +670,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   them side by side; ignored for `type="line"`
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
-  Falls back to the built-in "nice numbers" formatter when unset.
+  Falls back to the built-in "nice numbers" formatter when unset. The returned string is painted
+  bidi-isolated, so `2.4 MiB/s` keeps its number-unit order under `dir="rtl"` (see
+  [Formatted labels in right-to-left layouts](#formatted-labels-in-right-to-left-layouts)).
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.
@@ -1316,6 +1318,43 @@ loads are memoized per page.
   fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
   The transition into that state is announced through the shared document-level light-DOM
   assertive sink.
+
+---
+## Formatted labels in right-to-left layouts
+
+Every formatted chart label is bidi-isolated: it paints in the direction of its own first strong
+character, like `<bdi>` or a first-strong isolate, rather than in the chart's inherited direction.
+A number-first left-to-right string from `tickFormat`, `formatter`, `valueFormatter`,
+`tableCellFormatter`, `legendText` or an authored category label (`2.4 MiB/s`, `9:00 AM`, `-3`)
+therefore keeps its number-unit order inside `dir="rtl"`, and an Arabic- or Hebrew-script label
+keeps its own right-to-left order instead of being forced left-to-right. Axis placement, category
+order, boundary anchoring and label fitting are unchanged, and there is nothing to opt into — no
+text-direction hook is needed, and a formatter should return plain text without its own isolation
+controls.
+
+- `lr-lite-chart`: value-axis ticks, category ticks and axis titles (SVG `unicode-bidi: plaintext`);
+  the `legendText`/`formatter` legend value; the generated table's series headers, row headers and
+  cells; and, while visible, each value interpolated into a single-series data-list sentence (each
+  in its own `<bdi>`).
+- `lr-chart` (every typed subclass and `lr-histogram` included) and `lr-box-plot`: Chart.js tick
+  labels on every generated scale (radar/polar point labels included), axis titles, every tooltip
+  line, annotation labels and the `data-labels`/`stack-totals` labels are drawn inside a Unicode
+  directional embedding only where their first-strong direction differs from the canvas's (a
+  Chart.js `textDirection` set through `config` counts as the canvas's). A formatted value inside a
+  tooltip line (`Series: 2.4 MiB/s`) is also embedded on its own wherever it reads differently from
+  the line, so it keeps its order after an Arabic- or Hebrew-script series name. A left-to-right
+  chart with left-to-right labels therefore draws the formatter's strings exactly. A DOM legend
+  entry that shows a value isolates its label and value each in a `<bdi>`, and so do the generated
+  table's headers and cells.
+- Labels that a raw `config` passthrough draws on its own — scales, annotations or plugins it adds
+  beyond the generated ones — are drawn exactly as given; isolate those strings yourself if they
+  need it.
+- Isolation adds no bidi control characters to accessible names, live announcements, the visually
+  hidden data alternatives or CSV export. `lr-lite-chart`'s per-mark native SVG `<title>` hover
+  text stays the plain `pointText`/built-in string: the browser also exposes it as the mark's
+  accessible description, where control characters would reach speech and braille output.
+- The same rule covers `lr-gauge`'s value and label captions and `lr-heatmap`'s hover tooltip and
+  legend scale labels.
 
 ---
 ## Chart streaming and export

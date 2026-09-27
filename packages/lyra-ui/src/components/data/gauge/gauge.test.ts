@@ -995,3 +995,37 @@ describe('showValue', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('bidi isolation of formatted captions', () => {
+  function renderedBox(root: Element, needle: string): DOMRect {
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      const index = node.data.indexOf(needle);
+      if (index < 0) continue;
+      const range = root.ownerDocument.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + needle.length);
+      return range.getBoundingClientRect();
+    }
+    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
+  }
+
+  for (const shape of ['radial', 'linear', 'ring'] as const) {
+    it(`keeps a number-first valueText in number-unit order under dir="rtl" (${shape})`, async () => {
+      const wrapper = await fixture(html`<div dir="rtl" style="inline-size: 480px; font-size: 16px">
+        <lr-gauge shape=${shape} value="40" value-text="2.4 MiB/s" label="Rate"></lr-gauge>
+      </div>`);
+      const el = wrapper.querySelector('lr-gauge') as LyraGauge;
+      await el.updateComplete;
+      const value = el.shadowRoot!.querySelector('[part="value"]')!;
+      const text = value.textContent ?? '';
+      expect(text.startsWith('2.4'), text).to.equal(true);
+      expect(renderedBox(value, '2.4').left, `"${text}"`).to.be.below(renderedBox(value, 'M').left);
+      if (shape === 'linear') {
+        // The value keeps its end-of-track placement: the physical left edge under RTL.
+        const svg = el.shadowRoot!.querySelector('svg')!.getBoundingClientRect();
+        expect(value.getBoundingClientRect().left).to.be.below(svg.left + svg.width / 2);
+      }
+    });
+  }
+});

@@ -228,3 +228,16 @@ it('keeps histogram value redraws visibility-gated', async () => {
 
   expect(chart.data).to.equal(data);
 });
+
+it('embeds its isolated range tick labels left-to-right on an RTL canvas, where WebKit ignores the isolate', async () => {
+  const el = (await fixture(html`<lr-histogram dir="rtl" bins="2"></lr-histogram>`)) as LyraHistogram;
+  el.values = [0, 1, 2, 3, 4];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 2000 });
+  const ticks = ((el as any).chart.scales.x.ticks as { label: string }[]).map((tick) => tick.label);
+  expect(ticks.length).to.equal(2);
+  for (const label of ticks) {
+    // binValues() keeps its own public LRI/PDI; the canvas adds a left-to-right embedding around it.
+    expect(label.startsWith('\u202a\u2066') && label.endsWith('\u2069\u202c'), JSON.stringify(label)).to.equal(true);
+  }
+});

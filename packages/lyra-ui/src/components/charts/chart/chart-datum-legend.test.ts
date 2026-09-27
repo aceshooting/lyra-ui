@@ -326,7 +326,7 @@ describe('chart datum legends', () => {
 
     // Chart.js's own (visually forced-off) canvas legend plugin shares surface: 'legend' too, via
     // legendLabels()'s generateLabels hook -- it carries no share, so those calls report
-    // `percentage: undefined` and are filtered out below; only the DOM legend path (legendTextFor())
+    // `percentage: undefined` and are filtered out below; only the DOM legend path (legendMessage())
     // knows each entry's share.
     const seen: number[] = [];
     el.formatter = (context) => {

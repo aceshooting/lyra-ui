@@ -2354,3 +2354,143 @@ it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).blockSize).to.equal('500px');
 });
+
+describe('bidi isolation of formatted labels', () => {
+  const LRE = '\u202a';
+  const PDF = '\u202c';
+  const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+  const summary = (median: number): LyraBoxPlotSummary => ({
+    min: median - 2, q1: median - 1, median, q3: median + 1, max: median + 2,
+  });
+
+  function renderedBox(root: Element, needle: string): DOMRect {
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      const index = node.data.indexOf(needle);
+      if (index < 0) continue;
+      const range = root.ownerDocument.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + needle.length);
+      return range.getBoundingClientRect();
+    }
+    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
+  }
+
+  type Runtime = {
+    scales: Record<string, { position: string; ticks: { label: unknown }[] }>;
+    config: { plugins?: unknown[] };
+  };
+
+  it('embeds number-first ticks on an RTL canvas and isolates table cells, leaving CSV and names clean', async () => {
+    const el = (await fixture(html`<lr-box-plot
+      dir="rtl"
+      show-data-table
+      style="inline-size: 480px"
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[{ label: 'Latency', data: [summary(10), summary(20)] }]}
+      .formatter=${({ value }: { value: number }) => `${value} ms`}
+    ></lr-box-plot>`)) as LyraBoxPlot;
+    await waitUntil(() => (el as any).chart != null, 'box plot never initialized', { timeout: 5000 });
+    const chart = (el as unknown as { chart: Runtime }).chart;
+    expect(chart.scales['y']!.position, 'the value axis stays at the logical start').to.equal('right');
+    const valueTicks = chart.scales['y']!.ticks.map((tick) => String(tick.label));
+    expect(valueTicks.length).to.be.greaterThan(1);
+    for (const label of valueTicks) {
+      expect(label.startsWith(LRE) && label.endsWith(PDF), label).to.equal(true);
+    }
+    expect(chart.scales['x']!.ticks.map((tick) => tick.label)).to.deep.equal([
+      `${LRE}9:00 AM${PDF}`,
+      `${LRE}10:00 AM${PDF}`,
+    ]);
+
+    await el.updateComplete;
+    const firstRow = el.shadowRoot!.querySelector('table tbody tr')!;
+    const cells = [...firstRow.querySelectorAll('td')].slice(1);
+    expect(cells.map((cell) => cell.textContent)).to.deep.equal(['8 ms', '9 ms', '10 ms', '11 ms', '12 ms']);
+    for (const cell of cells) {
+      const text = cell.textContent ?? '';
+      expect(renderedBox(cell, text.split(' ')[0]!).left, `cell "${text}"`).to.be.below(renderedBox(cell, 'ms').left);
+    }
+    const header = firstRow.querySelector('th')!;
+    expect(renderedBox(header, '9:00').left, 'row header').to.be.below(renderedBox(header, 'AM').left);
+    expect(BIDI_CONTROLS.test(el.shadowRoot!.textContent ?? ''), 'rendered DOM text').to.equal(false);
+    expect(BIDI_CONTROLS.test(el.exportData('csv')), 'CSV export').to.equal(false);
+  });
+
+  it('keeps LTR tick strings exactly as formatted', async () => {
+    const el = (await fixture(html`<lr-box-plot
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[{ label: 'Latency', data: [summary(10), summary(20)] }]}
+      .formatter=${({ value }: { value: number }) => `${value} ms`}
+    ></lr-box-plot>`)) as LyraBoxPlot;
+    await waitUntil(() => (el as any).chart != null, 'box plot never initialized', { timeout: 5000 });
+    const chart = (el as unknown as { chart: Runtime }).chart;
+    expect(chart.scales['y']!.position).to.equal('left');
+    expect(chart.scales['x']!.ticks.map((tick) => tick.label)).to.deep.equal(['9:00 AM', '10:00 AM']);
+    for (const tick of chart.scales['y']!.ticks) {
+      expect(BIDI_CONTROLS.test(String(tick.label)), String(tick.label)).to.equal(false);
+    }
+  });
+
+  it('isolates the drawn tooltip lines on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-box-plot
+      dir="rtl"
+      .labels=${['9:00 AM']}
+      .datasets=${[{ label: 'Latency', data: [summary(10)] }]}
+      .formatter=${({ value }: { value: number }) => `${value} ms`}
+    ></lr-box-plot>`)) as LyraBoxPlot;
+    await waitUntil(() => (el as any).chart != null, 'box plot never initialized', { timeout: 5000 });
+    const chart = (el as unknown as {
+      chart: {
+        tooltip: {
+          setActiveElements(active: { datasetIndex: number; index: number }[], position: { x: number; y: number }): void;
+          title: string[];
+          body: { lines: string[] }[];
+        };
+        draw(): void;
+      };
+    }).chart;
+    chart.tooltip.setActiveElements([{ datasetIndex: 0, index: 0 }], { x: 10, y: 10 });
+    chart.draw();
+    await waitUntil(() => chart.tooltip.title[0]?.startsWith(LRE), 'the tooltip title was never isolated');
+    expect(chart.tooltip.title).to.deep.equal([`${LRE}9:00 AM${PDF}`]);
+    expect(chart.tooltip.body[0]!.lines).to.deep.equal([`${LRE}Latency: 10 ms${PDF}`]);
+  });
+
+  it('embeds a number-first tooltip value after an Arabic-script series label on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-box-plot
+      dir="rtl"
+      .labels=${['أ']}
+      .datasets=${[{ label: 'زمن', data: [summary(10)] }]}
+      .formatter=${({ value }: { value: number }) => `${value} ms`}
+    ></lr-box-plot>`)) as LyraBoxPlot;
+    await waitUntil(() => (el as any).chart != null, 'box plot never initialized', { timeout: 5000 });
+    const chart = (el as unknown as {
+      chart: {
+        tooltip: {
+          setActiveElements(active: { datasetIndex: number; index: number }[], position: { x: number; y: number }): void;
+          title: string[];
+          body: { lines: string[] }[];
+        };
+        draw(): void;
+      };
+    }).chart;
+    chart.tooltip.setActiveElements([{ datasetIndex: 0, index: 0 }], { x: 10, y: 10 });
+    chart.draw();
+    await waitUntil(() => chart.tooltip.body.length > 0, 'the tooltip never built its body');
+    chart.draw();
+    expect(chart.tooltip.title).to.deep.equal(['أ']);
+    // The line reads RTL from its label, so only the value is embedded.
+    expect(chart.tooltip.body[0]!.lines).to.deep.equal([`زمن: ${LRE}10 ms${PDF}`]);
+    const line = document.createElement('div');
+    line.dir = 'rtl';
+    line.style.cssText = 'font: 16px sans-serif; white-space: pre; inline-size: max-content;';
+    line.textContent = chart.tooltip.body[0]!.lines[0]!;
+    document.body.append(line);
+    try {
+      expect(renderedBox(line, '10').left, 'number before unit').to.be.below(renderedBox(line, 'ms').left);
+    } finally {
+      line.remove();
+    }
+  });
+});

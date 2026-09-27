@@ -18,6 +18,7 @@ import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
+import { isolatedMessage, type IsolatableMessage } from './chart-bidi.js';
 import {
   forcedColorEncoding,
   forcedColorsActive,
@@ -1522,9 +1523,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return marks.length ? Math.min(Math.max(this.activeMarkIndex, 0), marks.length - 1) : -1;
   }
 
-  private markAnnouncement(index: number, marks = this.interactiveMarks()): string {
+  /** The message key and interpolation values of one mark's summary, shared by the spoken
+   *  announcement (a plain string) and the visible data-list item (with isolated values). */
+  private markSummary(
+    index: number,
+    marks: readonly InteractiveMark[],
+  ): IsolatableMessage | undefined {
     const mark = marks[index];
-    if (!mark) return '';
+    if (!mark) return undefined;
     const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
     const custom = this.formatter?.({
       value: mark.value,
@@ -1536,19 +1542,42 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       axis: 'y',
     }) ?? this.resolvePointText(mark.label, mark.value, mark.datasetIndex, mark.index);
     if (custom) {
-      return this.localize('liteChartCustomMarkSummary', undefined, {
-        content: custom,
+      return {
+        format: (values) => this.localize('liteChartCustomMarkSummary', undefined, values),
+        values: {
+          content: custom,
+          index: getNumberFormat(this.effectiveLocale).format(index + 1),
+          total: getNumberFormat(this.effectiveLocale).format(marks.length),
+        },
+        isolated: ['content'],
+      };
+    }
+    return {
+      format: (values) => this.localize('liteChartMarkSummary', undefined, values),
+      values: {
+        series,
+        label: mark.label,
+        value: getNumberFormat(this.effectiveLocale).format(mark.value),
         index: getNumberFormat(this.effectiveLocale).format(index + 1),
         total: getNumberFormat(this.effectiveLocale).format(marks.length),
-      });
-    }
-    return this.localize('liteChartMarkSummary', undefined, {
-      series,
-      label: mark.label,
-      value: getNumberFormat(this.effectiveLocale).format(mark.value),
-      index: getNumberFormat(this.effectiveLocale).format(index + 1),
-      total: getNumberFormat(this.effectiveLocale).format(marks.length),
-    });
+      },
+      isolated: ['series', 'label', 'value'],
+    };
+  }
+
+  private markAnnouncement(index: number, marks = this.interactiveMarks()): string {
+    const summary = this.markSummary(index, marks);
+    return summary ? summary.format(summary.values) : '';
+  }
+
+  /** The visible data-list item: the same sentence as the announcement, with the caller-supplied
+   *  and formatted values each isolated so a number-first value keeps its order under RTL. Only
+   *  the visible list needs the isolated parts; a visually hidden one keeps the plain string, since
+   *  isolation changes painted order and nothing a screen reader reads. */
+  private markListItem(index: number, marks: readonly InteractiveMark[]) {
+    const summary = this.markSummary(index, marks);
+    if (!summary) return '';
+    return isolatedMessage(summary.format, summary.values, summary.isolated);
   }
 
   private onMarkFocus(index: number): void {
@@ -2647,7 +2676,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   <th scope="col">${this.localize('chartCategory')}</th>
                   ${recordSample.seriesIndexes.map((datasetIndex) => {
                     const series = this.datasets[datasetIndex]!;
-                    return html`<th scope="col">${series.label}</th>`;
+                    return html`<th scope="col"><bdi>${series.label}</bdi></th>`;
                   })}
                   ${showTableTotals ? html`<th scope="col">${this.localize('chartTotal')}</th>` : nothing}
                 </tr>
@@ -2657,11 +2686,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   (index) => {
                     const label = this.labels[index] ?? '';
                     return html`<tr>
-                    <th scope="row">${label}</th>
+                    <th scope="row"><bdi>${label}</bdi></th>
                     ${recordSample.seriesIndexes.map((datasetIndex) => {
                       const series = this.datasets[datasetIndex]!;
                       const value = series.data[index];
-                      return html`<td>${value == null || !Number.isFinite(value)
+                      return html`<td><bdi>${value == null || !Number.isFinite(value)
                         ? ''
                         : this.formatTableCell(
                             value,
@@ -2673,12 +2702,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                               seriesLabel: series.label,
                             },
                             tableNumberFormat,
-                          )}</td>`;
+                          )}</bdi></td>`;
                     })}
                     ${showTableTotals
                       ? (() => {
                           const total = this.tableTotalAt(index, recordSample.seriesIndexes);
-                          return html`<td>${total == null
+                          return html`<td><bdi>${total == null
                             ? ''
                             : this.formatTableCell(
                                 total,
@@ -2690,7 +2719,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                                   seriesLabel: null,
                                 },
                                 tableNumberFormat,
-                              )}</td>`;
+                              )}</bdi></td>`;
                         })()
                       : nothing}
                   </tr>`;
@@ -2703,7 +2732,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               class=${this.dataTableVisible ? nothing : 'sr-only'}
               aria-label=${this.localize('chartData')}
             >
-              ${marksForA11y.map((_mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
+              ${marksForA11y.map((_mark, index) => html`<li>${this.dataTableVisible
+                ? this.markListItem(index, marksForA11y)
+                : this.markAnnouncement(index, marksForA11y)}</li>`)}
             </ul>`}
         </div>
         ${this.legend
@@ -2719,7 +2750,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                       style=${styleMap({ backgroundColor: this.colorFor(i, s) })}
                     ></span>
                     ${s.label}${this.formatter || this.legendText
-                      ? html`<span part="legend-text">${this.formatter?.({
+                      ? html`<span part="legend-text"><bdi>${this.formatter?.({
                           value: recordSample.rowIndexes.reduce(
                             (sum, index) => {
                               const value = s.data[index];
@@ -2733,7 +2764,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                           datasetIndex: i,
                           seriesLabel: s.label,
                           axis: 'y',
-                        }) ?? this.legendText?.(s.label, i)}</span>`
+                        }) ?? this.legendText?.(s.label, i)}</bdi></span>`
                       : nothing}
                   </span>
                 `;

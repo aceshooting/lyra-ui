@@ -82,6 +82,14 @@ export const styles = css`
     font-family: var(--lr-font);
     text-transform: uppercase;
   }
+  /* Each caption is its own bidi paragraph whose direction comes from its first strong character,
+     like a first-strong isolate: a number-first valueText (2.4 MiB/s, -3) otherwise inherits an
+     RTL host's base direction and paints unit-first. text-anchor keeps following the inherited
+     direction, so caption placement is unchanged. */
+  [part='value'],
+  [part='label'] {
+    unicode-bidi: plaintext;
+  }
   :host([shape='linear']) [part='fill'] {
     stroke-linecap: butt;
   }

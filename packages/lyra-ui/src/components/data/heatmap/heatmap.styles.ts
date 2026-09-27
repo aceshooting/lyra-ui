@@ -177,6 +177,16 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
+  /* Formatted text -- the cellText tooltip, the numeric scale endpoints, legendStops captions --
+     is its own bidi paragraph whose direction comes from its first strong character, like
+     <bdi>: a number-first value (2.4 MiB/s, -3) otherwise inherits an RTL host's base direction
+     and paints unit- or sign-last. Each is a shrink-wrapped box, so nothing is realigned. */
+  [part="tooltip"],
+  [part="legend-lo"],
+  [part="legend-hi"],
+  [part="legend-stop-label"] {
+    unicode-bidi: plaintext;
+  }
   /* Flipped to below the cell when the frozen band, or the block start of the scrollport, leaves
      no room above it -- an unfrozen heatmap never takes this branch, because nothing clips it
      there. The gap mirrors the negative one above, so the tooltip keeps the same distance from

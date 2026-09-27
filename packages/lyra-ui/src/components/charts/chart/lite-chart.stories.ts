@@ -269,6 +269,37 @@ export const AutomaticAxisSizing: Story = {
   },
 };
 
+/** Formatted labels are bidi-isolated: inside `dir="rtl"` the number-first `MiB/s` ticks, the
+ *  `9:00 AM` categories, the legend value and the table cells keep their own left-to-right order,
+ *  while the value axis stays at the logical start (right) and the categories stay chronological. */
+export const RightToLeftFormattedLabels: Story = {
+  name: 'Right-to-left formatted labels',
+  render: () => {
+    const rate = (value: number) => `${value} MiB/s`;
+    const series: LyraLiteChartSeries[] = [
+      { label: 'Upload', data: [1.2, 2.4, 3.6, 2.8] },
+      { label: 'Download', data: [2.1, 3.3, 4.2, 3.9] },
+    ];
+    return html`
+      <div dir="rtl" style="inline-size: 26rem; max-inline-size: 100%;">
+        <lr-lite-chart
+          type="line"
+          value-axis-gutter="auto"
+          legend
+          show-data-table
+          height="16rem"
+          .labels=${['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM']}
+          .datasets=${series}
+          .tickFormat=${rate}
+          .tableCellFormatter=${rate}
+          .legendText=${(_label: string, index: number) =>
+            rate(series[index]!.data.reduce<number>((sum, value) => sum + (value ?? 0), 0))}
+        ></lr-lite-chart>
+      </div>
+    `;
+  },
+};
+
 /** `layout="scroll"` gives every bar a fixed `bar-width` instead of squeezing them into the host
  *  width -- with a long category list the plot overflows the (deliberately narrow) host, which
  *  scrolls horizontally to reveal the rest, instead of cramming 40 skinny bars into one view. Its

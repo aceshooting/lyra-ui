@@ -64,6 +64,17 @@ import {
 } from './chart-legend-visibility.js';
 export type { LyraChartLegendVisibilityChangeDetail, LyraChartDatumVisibilityChangeDetail } from './chart-legend-visibility.js';
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
+import {
+  canvasSentence,
+  canvasTextDirection,
+  type IsolatableMessage,
+  isolateCanvasLabel,
+  isolateCanvasText,
+  isolatedMessage,
+  isolateScaleTickLabels,
+  tooltipIsolationHook,
+  type ChartTextDirection,
+} from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -2728,6 +2739,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // The peer's onResize callback precedes its layout pass. Observe the completed layout too,
     // including responsive updates while this element's own drawing is visibility-gated.
     afterLayout: (chart: RuntimeChart): void => this.updateChartArea(chart),
+    // Each tooltip line is drawn as its own canvas string; isolate it in its own first-strong
+    // direction so a number-first formatted value keeps its order inside an RTL chart.
+    beforeTooltipDraw: tooltipIsolationHook(() => this.effectiveDirection),
   };
   // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
   // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
@@ -3677,11 +3691,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private annotationOptions(): Record<string, unknown> {
     const entries: Record<string, unknown> = {};
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     this.normalizedAnnotations().forEach((entry, index) => {
       const axis = entry.axis === 'x' ? 'x' : 'y';
       const color = this.annotationColor(entry.tone);
+      // Drawn on the canvas like a tick, so isolated the same way (see chart-bidi.ts).
       const label = entry.label
-        ? { content: entry.label, display: true, color: this.themeColors().tick, }
+        ? { content: isolateCanvasText(entry.label, direction), display: true, color: this.themeColors().tick, }
         : undefined;
       if (typeof entry.value === 'number') {
         entries[`lr-annotation-${index}`] = {
@@ -3780,6 +3796,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return totals;
     };
     const stackTotalsActive = [...topDatasetIndexByGroup.values()].some((byGroup) => byGroup.size > 0);
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
+    // The plugin draws each `\n`-separated line as its own canvas string.
+    const isolate = (text: string): string =>
+      text.split('\n').map((line) => isolateCanvasText(line, direction)).join('\n');
     return {
       color: theme.tick,
       // Totals sit above the stack; plain point labels center on the point.
@@ -3816,12 +3836,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           topDatasetIndexByGroup.get(axis)?.get(stack) === datasetIndex
         ) {
           const total = totalsFor(axis, stack)[sourceRowIndex(index)];
-          if (total != null) return this.formatDataLabel(total, this.stackTotalMetadata(metadata));
+          if (total != null) return isolate(this.formatDataLabel(total, this.stackTotalMetadata(metadata)));
         }
         const numeric = chartDatumNumericValue(this.scaledSliceDatasets.has(datasetIndex)
           ? this.datasetValues(dataset!)[sourceRowIndex(index)] : value);
         if (numeric === undefined) return '';
-        return this.formatDataLabel(numeric, metadata);
+        return isolate(this.formatDataLabel(numeric, metadata));
       },
     };
   }
@@ -3896,6 +3916,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   seriesPalette(): string[] {
     return seriesPalette(this);
+  }
+
+  /**
+   * The per-scale hook that isolates every tick label before Chart.js measures and draws it, so a
+   * number-first formatted tick (`2.4 MiB/s`, `9:00 AM`, `-3`) keeps its order on an RTL canvas
+   * and an Arabic-script tick keeps its own direction on an LTR one. Axis placement is untouched:
+   * only the drawn strings change, and only where their first-strong direction differs from the
+   * canvas's.
+   */
+  private tickLabelIsolation(direction: ChartTextDirection): Record<string, unknown> {
+    return {
+      afterTickToLabelConversion: (scale: { ticks?: unknown }) =>
+        isolateScaleTickLabels(scale, direction),
+    };
   }
 
   private tickOptions(
@@ -3977,10 +4011,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   ): Record<string, unknown> {
     if (effectiveType === 'pie' || effectiveType === 'doughnut') return {};
 
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     if (effectiveType === 'radar' || effectiveType === 'polarArea') {
       const explicitPointLabelFontSize = this.explicitTickFontSize();
       return {
         r: {
+          ...this.tickLabelIsolation(direction),
           beginAtZero: this.beginAtZero,
           ...this.scaleBounds(),
           // `z: 1` (any value > 0) moves the ring tick labels into Chart.js's post-dataset
@@ -4008,6 +4044,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // default already matches Chart.js's separate global tick default.
           pointLabels: {
             color: theme.tick,
+            callback: (label: unknown) => isolateCanvasLabel(label, direction),
             ...(explicitPointLabelFontSize !== undefined
               ? { font: { size: explicitPointLabelFontSize } }
               : {}),
@@ -4038,11 +4075,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const bounds = this.scaleBounds();
     return {
       x: {
+        ...this.tickLabelIsolation(direction),
         display: this.axisVisible('x'),
         type: xKind === 'value' ? this.valueScaleType() : 'category',
         beginAtZero: xKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'x' ? bounds : {}),
-        title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
+        title: { display: !!this.xLabel, text: isolateCanvasLabel(this.xLabel, direction), color: theme.tick },
         ticks: this.tickOptions(theme, xKind, 'x'),
         grid: {
           color: theme.grid,
@@ -4053,12 +4091,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         stacked: stackedX,
       },
       y: {
+        ...this.tickLabelIsolation(direction),
         display: this.axisVisible('y'),
         type: yKind === 'value' ? this.valueScaleType() : 'category',
         position: rtl ? 'right' : 'left',
         beginAtZero: yKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'y' ? bounds : {}),
-        title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
+        title: { display: !!this.yLabel, text: isolateCanvasLabel(this.yLabel, direction), color: theme.tick },
         ticks: this.tickOptions(theme, yKind, 'y'),
         grid: {
           color: theme.grid,
@@ -4071,6 +4110,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...(hasY2
         ? {
             y2: {
+              ...this.tickLabelIsolation(direction),
               display: this.axisVisible('y'),
               type: this.valueScaleType(),
               position: rtl ? 'left' : 'right',
@@ -4082,7 +4122,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 lineWidth: chartStyle.gridBorderWidth,
               },
               border: { width: chartStyle.gridBorderWidth },
-              title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick, },
+              title: { display: !!this.y2Label, text: isolateCanvasLabel(this.y2Label, direction), color: theme.tick, },
               ticks: this.tickOptions(theme, 'value', 'y2'),
               stacked: stackedY2,
             },
@@ -4458,6 +4498,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       }
     }
     const effective = this.effectiveData();
+    const direction = canvasTextDirection(chart.legend, this.effectiveDirection);
     const sourceIndexes = this.visualDatasetSourceIndexes ??
       effective.datasets.map((_dataset, index) => index);
     const fallbackDatasets = sourceIndexes.map((sourceIndex) => effective.datasets[sourceIndex]);
@@ -4482,7 +4523,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ...item,
             text: this.localize('chartValueLabel', undefined, {
               label: labelText(chartDatasetValue(item, 'text')),
-              value: String(formatted),
+              // Canvas-drawn: the value keeps its own direction beside an RTL-script label.
+              value: isolateCanvasText(String(formatted), direction),
             }),
           };
     });
@@ -4526,11 +4568,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if ((!scaled && formatted === rawValue) || formatted === undefined) return undefined;
     if (scaled && typeof formatted === 'number') formatted = this.formatSummaryValue(formatted);
     const label = chartDatasetLabel(chartDatasetValue(context, 'dataset'));
+    // The value is its own unit of text inside the drawn sentence. The whole-line isolation in
+    // `beforeTooltipDraw` paints a line in its series label's direction, so an RTL-script label
+    // would otherwise leave a number-first `1.5 MiB/s` painting unit-first. Canvas-only text.
     return label
-      ? this.localize('chartValueLabel', undefined, {
-          label,
-          value: String(formatted),
-        })
+      ? canvasSentence(
+          (value) => this.localize('chartValueLabel', undefined, { label, value }),
+          String(formatted),
+        )
       : String(formatted);
   }
 
@@ -5264,7 +5309,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             <th scope="col">${this.localize('chartCategory')}</th>
             ${sample.seriesIndexes.map((index) => {
               const dataset = effective.datasets[index]!;
-              return html`<th scope="col">${this.datasetLabel(dataset, index)}</th>`;
+              return html`<th scope="col"><bdi>${this.datasetLabel(dataset, index)}</bdi></th>`;
             })}
             ${stackAxes.map(
               (axis) =>
@@ -5276,7 +5321,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           ${sample.rowIndexes.map(
             (index) => html`
             <tr>
-              <th scope="row">${labelText(effective.labels[index]) ||
+              <th scope="row"><bdi>${labelText(effective.labels[index]) ||
                 sample.seriesIndexes
                   .map((datasetIndex) =>
                     normalizedChartPoint(valuesBySeries.get(datasetIndex)![index]),
@@ -5284,7 +5329,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   .find((point): point is LyraChartPoint => point !== null)?.label ||
                 this.localize('chartPointLabel', undefined, {
                   n: this.formatSummaryValue(index + 1),
-                })}</th>
+                })}</bdi></th>
               ${sample.seriesIndexes.map((datasetIndex) => {
                 const dataset = effective.datasets[datasetIndex]!;
                 const datum = valuesBySeries.get(datasetIndex)![index];
@@ -5311,22 +5356,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   type="button"
                   tabindex=${this.dataTableVisible ? '0' : '-1'}
                   @click=${() => this.activateDatum(detail)}
-                >${point
+                ><bdi>${point
                   ? this.datumDisplayValue(datum, {
                       surface: 'table',
                       ...metadata,
                     })
-                  : this.formatTableValue(value, metadata)}</button></td>`;
+                  : this.formatTableValue(value, metadata)}</bdi></button></td>`;
               })}
               ${stackAxes.map((axis) => {
                 const total = stackTotals.get(axis)?.[index];
-                return html`<td>${total == null
+                return html`<td><bdi>${total == null
                   ? this.localize('noData')
                   : this.formatTableValue(total, this.stackTotalMetadata({
                       index,
                       label: labelText(effective.labels[index]) || undefined,
                       axis: stackValueAxes.get(axis),
-                    }))}</td>`;
+                    }))}</bdi></td>`;
               })}
             </tr>
             `
@@ -5340,12 +5385,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
   }
 
-  private legendTextFor(
+  /** One DOM legend entry's text: the bare label, or a localized sentence with its values. */
+  private legendMessage(
     label: string,
     value: number | undefined,
     percentage: number,
     metadata: LyraChartFormatterMetadata = {},
-  ): string {
+  ): string | IsolatableMessage {
     if (this.legendDisplay === 'label' || value === undefined) return label;
     // percentage rides along on every formatted branch (value, percentage, value-percentage) so a
     // formatter/valueFormatter watching surface: 'legend' can read the share this method already
@@ -5357,11 +5403,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage);
       return formatted === undefined
         ? label
-        : this.localize('chartValuePercentageLabel', undefined, {
-            label,
-            value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
-            percentage: percentageText,
-          });
+        : {
+            format: (values) => this.localize('chartValuePercentageLabel', undefined, values),
+            values: {
+              label,
+              value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
+              percentage: percentageText,
+            },
+            isolated: ['label', 'value', 'percentage'],
+          };
     }
     const explicit = this.legendDisplay === 'value' || this.legendDisplay === 'percentage';
     const formatted = this.legendDisplay === 'percentage'
@@ -5369,10 +5419,30 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       : this.formatValue(value, 'legend', enriched);
     return (!explicit && formatted === value) || formatted === undefined
       ? label
-      : this.localize('chartValueLabel', undefined, {
-          label,
-          value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
-        });
+      : {
+          format: (values) => this.localize('chartValueLabel', undefined, values),
+          values: {
+            label,
+            value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
+          },
+          isolated: ['label', 'value'],
+        };
+  }
+
+  /** The rendered legend text: the localized sentence with the label and each formatted value
+   *  isolated in its own `<bdi>`, so a number-first value keeps its order under RTL while the
+   *  sentence keeps the translation's direction. The accessible text carries no control
+   *  characters. */
+  private legendTextContent(
+    label: string,
+    value: number | undefined,
+    percentage: number,
+    metadata: LyraChartFormatterMetadata = {},
+  ): string | TemplateResult {
+    const message = this.legendMessage(label, value, percentage, metadata);
+    return typeof message === 'string'
+      ? message
+      : isolatedMessage(message.format, message.values, message.isolated);
   }
 
   private legendColor(
@@ -5557,7 +5627,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   colorCache,
                 )}"
               ></span>
-              <span>${this.legendTextFor(
+              <span>${this.legendTextContent(
                 label,
                 value,
                 total ? Math.abs(scaledValue) * (valueScale / maximum) / total : 0,

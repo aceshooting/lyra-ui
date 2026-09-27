@@ -44,6 +44,13 @@ import {
   type LyraChartLegendVisibilityChangeDetail,
 } from './chart-legend-visibility.js';
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
+import {
+  canvasSentence,
+  isolateCanvasLabel,
+  isolateScaleTickLabels,
+  tooltipIsolationHook,
+  type ChartTextDirection,
+} from './chart-bidi.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type {
   LyraChartValueFormatter,
@@ -869,10 +876,21 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     }
   }
 
+  /** Isolates each drawn tooltip line in its own first-strong direction (see chart-bidi.ts). */
+  private readonly tooltipIsolationPlugin = {
+    id: 'lyra-box-plot-bidi',
+    beforeTooltipDraw: tooltipIsolationHook(() => this.effectiveDirection),
+  };
+
   private buildConfig(): BoxPlotChartConfiguration {
     const theme = this.themeColors();
     const palette = seriesPalette(this);
     const sample = this.dataTableSample();
+    // Tick labels and titles are drawn in their own first-strong direction, so a number-first
+    // formatted tick keeps its order on an RTL canvas; see chart-bidi.ts.
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
+    const afterTickToLabelConversion = (scale: { ticks?: unknown }) =>
+      isolateScaleTickLabels(scale, direction);
     return {
       // boxplot isn't in chart.js's static ChartType union — same cast the seed uses.
       type: 'boxplot' as never,
@@ -950,8 +968,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                         axis: 'y',
                       });
                       const label = String(context.dataset?.label ?? '');
+                      // The value keeps its own direction inside the drawn sentence, so a
+                      // number-first `12 ms` stays in order after an RTL-script series label,
+                      // whose direction the whole-line isolation paints the line in.
                       return label
-                        ? this.localize('chartValueLabel', undefined, { label, value })
+                        ? canvasSentence(
+                            (sentenceValue) =>
+                              this.localize('chartValueLabel', undefined, { label, value: sentenceValue }),
+                            value,
+                          )
                         : value;
                     },
                   },
@@ -961,14 +986,16 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         },
         scales: {
           x: {
-            title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
+            afterTickToLabelConversion,
+            title: { display: !!this.xLabel, text: isolateCanvasLabel(this.xLabel, direction), color: theme.tick },
             ticks: { color: theme.tick, font: { size: theme.tickFontSize } },
             grid: { color: theme.grid },
           },
           y: {
+            afterTickToLabelConversion,
             position: this.effectiveDirection === 'rtl' ? 'right' : 'left',
             beginAtZero: this.beginAtZero,
-            title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
+            title: { display: !!this.yLabel, text: isolateCanvasLabel(this.yLabel, direction), color: theme.tick },
             ticks: {
               color: theme.tick,
               font: { size: theme.tickFontSize },
@@ -1006,7 +1033,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     }
     this.chart = new this.chartJsModule.Chart(
       this.canvasEl,
-      config as never,
+      { ...config, plugins: [this.tooltipIsolationPlugin] } as never,
     ) as unknown as BoxPlotChartRuntime;
     if (this.hiddenDatasets !== undefined) {
       this.applyDatasetVisibility();
@@ -1389,15 +1416,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                 };
                 return this.validPoint(point) ? html`
                 <tr>
-                  <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
+                  <th scope="row"><bdi>${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
-                  })}</th>
-                  <td>${this.seriesDisplayLabel(series)}</td>
-                  <td>${this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' })}</td>
-                  <td>${this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' })}</td>
-                  <td>${this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' })}</td>
-                  <td>${this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' })}</td>
-                  <td>${this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' })}</td>
+                  })}</bdi></th>
+                  <td><bdi>${this.seriesDisplayLabel(series)}</bdi></td>
+                  <td><bdi>${this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' })}</bdi></td>
+                  <td><bdi>${this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' })}</bdi></td>
+                  <td><bdi>${this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' })}</bdi></td>
+                  <td><bdi>${this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' })}</bdi></td>
+                  <td><bdi>${this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' })}</bdi></td>
                 </tr>
               ` : nothing;
               },

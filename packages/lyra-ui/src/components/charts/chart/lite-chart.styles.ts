@@ -75,6 +75,16 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     font-family: var(--lr-font);
   }
+  /* Every tick and axis title is its own bidi paragraph whose direction comes from its first
+     strong character, like a first-strong isolate. Without it a number-first formatted label
+     (2.4 MiB/s, 9:00 AM, -3) inherits the chart's RTL base direction and paints unit-first.
+     A declaration rather than U+2068/U+2069 in the text: WebKit's SVG text ignores the isolate
+     controls, and the text nodes stay free of characters a screen reader or braille display would
+     meet. text-anchor keeps following the inherited direction, so axis placement is unchanged. */
+  [part='axis-label'],
+  [part='axis-title'] {
+    unicode-bidi: plaintext;
+  }
   [part='bar'] {
     cursor: pointer;
   }

@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { render } from 'lit';
 import './chart.js';
 import './doughnut-chart.js';
 import {
@@ -9,6 +10,16 @@ import {
   type LyraChartSeries,
 } from './chart.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
+import {
+  canvasSentence,
+  canvasTextDirection,
+  firstStrongDirection,
+  isolateCanvasLabel,
+  isolateCanvasText,
+  isolatedMessage,
+  isolateScaleTickLabels,
+  isolateTooltipLines,
+} from './chart-bidi.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -7103,7 +7114,9 @@ describe('bounded chart fallback paths', () => {
     el.valueFormatter = (value, context) => `${context}:${value}`;
     expect((el as any).tooltipLabel({ parsed: { x: 8 }, dataset: {} })).to.equal('tooltip:8');
     expect((el as any).formatExportValue(3)).to.equal('table:3');
-    expect((el as any).legendTextFor('point', 4, 1)).to.equal('point: legend:4');
+    const legendText = document.createElement('span');
+    render((el as any).legendTextContent('point', 4, 1), legendText);
+    expect(legendText.textContent).to.equal('point: legend:4');
 
     el.legendPosition = 'bottom';
     expect((el as any).legendPositionForLayout()).to.equal('bottom');
@@ -7324,4 +7337,487 @@ it("stretches [part='base'] to fill a grid/flex-stretched host instead of shrink
 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).blockSize).to.equal('500px');
+});
+
+describe('bidi isolation of formatted labels', () => {
+  const LRE = '\u202a';
+  const RLE = '\u202b';
+  const PDF = '\u202c';
+  const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+  const rate = (value: number) => `${value} MiB/s`;
+
+  function renderedBox(root: Element, needle: string): DOMRect {
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      const index = node.data.indexOf(needle);
+      if (index < 0) continue;
+      const range = root.ownerDocument.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + needle.length);
+      return range.getBoundingClientRect();
+    }
+    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
+  }
+
+  interface RuntimeScale {
+    position: string;
+    ticks: { label: unknown }[];
+    _pointLabels?: unknown[];
+  }
+  const runtime = (el: LyraChart) =>
+    (el as unknown as { chart: { scales: Record<string, RuntimeScale>; tooltip: unknown } }).chart;
+
+  it('embeds number-first ticks and titles in their own LTR order on an RTL canvas without moving the axis', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="line"
+      x-label="Time"
+      y-label="Rate (MiB/s)"
+      .labels=${['9:00 AM', '10:00 AM', '11:00 AM']}
+      .datasets=${[{ label: 'Throughput', data: [1, 2, 3] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    const { scales } = runtime(el);
+    expect(scales['y']!.position, 'the value axis stays at the logical start').to.equal('right');
+    const valueTicks = scales['y']!.ticks.map((tick) => tick.label);
+    expect(valueTicks.length).to.be.greaterThan(1);
+    for (const label of valueTicks) {
+      expect(label).to.be.a('string');
+      expect((label as string).startsWith(LRE) && (label as string).endsWith(PDF), String(label)).to.equal(true);
+      expect((label as string).slice(1, -1)).to.match(/^\d[\d.]* MiB\/s$/);
+    }
+    expect(scales['x']!.ticks.map((tick) => tick.label), 'chronological category order').to.deep.equal([
+      `${LRE}9:00 AM${PDF}`,
+      `${LRE}10:00 AM${PDF}`,
+      `${LRE}11:00 AM${PDF}`,
+    ]);
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    expect(config.options.scales.y.title.text).to.equal(`${LRE}Rate (MiB/s)${PDF}`);
+    expect(config.options.scales.x.title.text).to.equal(`${LRE}Time${PDF}`);
+  });
+
+  it('leaves an Arabic-script formatted tick in its own RTL direction on an RTL canvas', async () => {
+    const unit = 'كيلوبايت';
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="bar"
+      .labels=${['أ', 'ب']}
+      .datasets=${[{ label: 'حجم', data: [10, 20] }]}
+      .formatter=${({ value }: { value: number }) => `${value} ${unit}`}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    const labels = runtime(el).scales['y']!.ticks.map((tick) => tick.label as string);
+    expect(labels.length).to.be.greaterThan(1);
+    for (const label of labels) {
+      expect(BIDI_CONTROLS.test(label), label).to.equal(false);
+      expect(label.endsWith(unit)).to.equal(true);
+    }
+  });
+
+  it('keeps LTR tick, title and point-label strings exactly as formatted', async () => {
+    const el = (await fixture(html`<lr-chart
+      type="line"
+      y-label="Rate (MiB/s)"
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[{ label: 'Throughput', data: [1, 2] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    const { scales } = runtime(el);
+    expect(scales['y']!.position).to.equal('left');
+    for (const tick of [...scales['y']!.ticks, ...scales['x']!.ticks]) {
+      expect(BIDI_CONTROLS.test(String(tick.label)), String(tick.label)).to.equal(false);
+    }
+    expect(scales['x']!.ticks.map((tick) => tick.label)).to.deep.equal(['9:00 AM', '10:00 AM']);
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    expect(config.options.scales.y.title.text).to.equal('Rate (MiB/s)');
+  });
+
+  it('isolates radar point labels on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="radar"
+      .labels=${['9:00 AM', '10:00 AM', '11:00 AM']}
+      .datasets=${[{ label: 'Throughput', data: [1, 2, 3] }]}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    expect(runtime(el).scales['r']!._pointLabels).to.deep.equal([
+      `${LRE}9:00 AM${PDF}`,
+      `${LRE}10:00 AM${PDF}`,
+      `${LRE}11:00 AM${PDF}`,
+    ]);
+  });
+
+  it('isolates the drawn tooltip lines on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="bar"
+      without-animation
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[{ label: 'Up', data: [1.5, 2.5] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    const chart = runtime(el) as unknown as {
+      tooltip: {
+        setActiveElements(active: { datasetIndex: number; index: number }[], position: { x: number; y: number }): void;
+        title: string[];
+        body: { lines: string[] }[];
+      };
+      draw(): void;
+    };
+    chart.tooltip.setActiveElements([{ datasetIndex: 0, index: 0 }], { x: 10, y: 10 });
+    chart.draw();
+    await waitUntil(() => chart.tooltip.title[0]?.startsWith(LRE), 'the tooltip title was never isolated');
+    expect(chart.tooltip.title).to.deep.equal([`${LRE}9:00 AM${PDF}`]);
+    expect(chart.tooltip.body[0]!.lines).to.deep.equal([`${LRE}Up: 1.5 MiB/s${PDF}`]);
+  });
+
+  /** Drives the chart's own tooltip to the first datum and returns the drawn lines. */
+  async function drawnTooltip(el: LyraChart): Promise<{ title: string[]; lines: string[] }> {
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    const chart = runtime(el) as unknown as {
+      tooltip: {
+        setActiveElements(active: { datasetIndex: number; index: number }[], position: { x: number; y: number }): void;
+        title: string[];
+        body: { lines: string[] }[];
+      };
+      draw(): void;
+    };
+    chart.tooltip.setActiveElements([{ datasetIndex: 0, index: 0 }], { x: 10, y: 10 });
+    chart.draw();
+    await waitUntil(() => chart.tooltip.body.length > 0, 'the tooltip never built its body');
+    // One more draw proves the whole-line isolation is idempotent across redraws of one update.
+    chart.draw();
+    return { title: chart.tooltip.title, lines: chart.tooltip.body[0]!.lines };
+  }
+
+  /** Paints `text` as one line of an HTML paragraph in `direction`: the same bidi algorithm the
+   *  canvas runs over a drawn string, but with Range rects to read the painted order from. */
+  function paintedLine(text: string, direction: 'ltr' | 'rtl'): HTMLElement {
+    const line = document.createElement('div');
+    line.dir = direction;
+    line.style.cssText = 'font: 16px sans-serif; white-space: pre; inline-size: max-content;';
+    line.textContent = text;
+    document.body.append(line);
+    return line;
+  }
+
+  it('embeds a number-first tooltip value after an Arabic-script series label on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="bar"
+      without-animation
+      .labels=${['أ', 'ب']}
+      .datasets=${[{ label: 'حجم', data: [1.5, 2.5] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    const { title, lines } = await drawnTooltip(el);
+    expect(title, 'an Arabic title already reads RTL').to.deep.equal(['أ']);
+    // The line reads RTL from its label, so it is not embedded as a whole; the value is.
+    expect(lines).to.deep.equal([`حجم: ${LRE}1.5 MiB/s${PDF}`]);
+    const drawn = paintedLine(lines[0]!, 'rtl');
+    const bare = paintedLine('حجم: 1.5 MiB/s', 'rtl');
+    try {
+      expect(renderedBox(drawn, '1.5').left, 'number before unit').to.be.below(renderedBox(drawn, 'MiB/s').left);
+      expect(renderedBox(drawn, 'حجم').left, 'the label stays at the RTL start').to.be.above(
+        renderedBox(drawn, 'MiB/s').left,
+      );
+      expect(renderedBox(bare, '1.5').left, 'the unembedded line paints unit-first').to.be.above(
+        renderedBox(bare, 'MiB/s').left,
+      );
+    } finally {
+      drawn.remove();
+      bare.remove();
+    }
+  });
+
+  it('embeds a number-first tooltip value after an Arabic-script series label on an LTR canvas too', async () => {
+    const el = (await fixture(html`<lr-chart
+      type="bar"
+      without-animation
+      .labels=${['Mon', 'Tue']}
+      .datasets=${[{ label: 'حجم', data: [1.5, 2.5] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    const { lines } = await drawnTooltip(el);
+    // The whole line embeds right-to-left from its label, so the value needs its own embedding
+    // inside it just as it would on an RTL canvas.
+    expect(lines).to.deep.equal([`${RLE}حجم: ${LRE}1.5 MiB/s${PDF}${PDF}`]);
+    const drawn = paintedLine(lines[0]!, 'ltr');
+    try {
+      expect(renderedBox(drawn, '1.5').left, 'number before unit').to.be.below(renderedBox(drawn, 'MiB/s').left);
+    } finally {
+      drawn.remove();
+    }
+  });
+
+  it('keeps an LTR tooltip line exactly as formatted', async () => {
+    const el = (await fixture(html`<lr-chart
+      type="bar"
+      without-animation
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[{ label: 'Up', data: [1.5, 2.5] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    const { title, lines } = await drawnTooltip(el);
+    expect(title).to.deep.equal(['9:00 AM']);
+    expect(lines).to.deep.equal(['Up: 1.5 MiB/s']);
+  });
+
+  it('embeds the value of a formatted canvas legend line against the legend direction', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.dir = 'rtl';
+    el.datasets = [{ label: 'حجم', data: [1.5] }];
+    el.formatter = ({ value }) => rate(value);
+    const legendText = (chart: unknown) =>
+      ((el as unknown as { legendLabels(chart: unknown): { text: string }[] }).legendLabels(chart))[0]!.text;
+    // The canvas legend draws each line in its own canvas direction with no whole-line embedding.
+    expect(legendText({})).to.equal(`حجم: ${LRE}1.5 MiB/s${PDF}`);
+    // A caller-configured legend `textDirection` is the direction the line is drawn in.
+    expect(legendText({ legend: { options: { textDirection: 'ltr' } } })).to.equal('حجم: 1.5 MiB/s');
+  });
+
+  it('isolates annotation labels on an RTL canvas and leaves LTR ones untouched', async () => {
+    const annotations = [{ axis: 'y' as const, value: 2, label: 'Target 2 MiB/s' }];
+    const rtl = (await fixture(html`<lr-chart dir="rtl" .annotations=${annotations}></lr-chart>`)) as LyraChart;
+    const ltr = (await fixture(html`<lr-chart .annotations=${annotations}></lr-chart>`)) as LyraChart;
+    const content = (el: LyraChart) =>
+      ((el as unknown as { annotationOptions(): Record<string, { label?: { content: unknown } }> })
+        .annotationOptions()['lr-annotation-0']!.label!.content);
+    expect(content(rtl)).to.equal(`${LRE}Target 2 MiB/s${PDF}`);
+    expect(content(ltr)).to.equal('Target 2 MiB/s');
+  });
+
+  it('isolates stack-total and point data labels on an RTL canvas', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="bar"
+      data-labels
+      .labels=${['9:00 AM']}
+      .datasets=${[{ label: 'Up', data: [1.5] }]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    const config = (el as unknown as { buildConfig(): any }).buildConfig();
+    const formatter = config.options.plugins.datalabels.formatter as (value: unknown, context: unknown) => string;
+    expect(formatter(1.5, { datasetIndex: 0, dataIndex: 0 })).to.equal(`${LRE}1.5 MiB/s${PDF}`);
+  });
+
+  it('isolates the formatted legend value and table cells in the DOM under dir="rtl"', async () => {
+    const el = (await fixture(html`<lr-chart
+      dir="rtl"
+      type="bar"
+      legend-display="value"
+      show-data-table
+      style="inline-size: 480px"
+      .labels=${['9:00 AM', '10:00 AM']}
+      .datasets=${[
+        { label: 'Up', data: [1.5, 2.5] },
+        { label: 'Down', data: [3.5, 4.5] },
+      ]}
+      .formatter=${({ value }: { value: number }) => rate(value)}
+    ></lr-chart>`)) as LyraChart;
+    await waitUntil(() => runtime(el) != null, 'chart.js never initialized');
+    await el.updateComplete;
+    const legendItems = [...el.shadowRoot!.querySelectorAll('[part~="legend-item"]')];
+    expect(legendItems.map((item) => item.textContent?.trim())).to.deep.equal(['Up: 4 MiB/s', 'Down: 8 MiB/s']);
+    for (const item of legendItems) {
+      const text = item.textContent?.trim() ?? '';
+      const value = text.slice(text.indexOf(': ') + 2, text.indexOf(' MiB/s'));
+      expect(renderedBox(item, value).left, `legend "${text}"`).to.be.below(renderedBox(item, 'MiB/s').left);
+      expect(BIDI_CONTROLS.test(item.textContent ?? ''), 'legend accessible text').to.equal(false);
+    }
+    const cells = [...el.shadowRoot!.querySelectorAll('table td')];
+    expect(cells.map((cell) => cell.textContent?.trim())).to.deep.equal([
+      '1.5 MiB/s', '3.5 MiB/s', '2.5 MiB/s', '4.5 MiB/s',
+    ]);
+    for (const cell of cells) {
+      const text = cell.textContent?.trim() ?? '';
+      expect(renderedBox(cell, text.slice(0, 3)).left, `cell "${text}"`).to.be.below(
+        renderedBox(cell, 'MiB/s').left,
+      );
+    }
+    for (const header of el.shadowRoot!.querySelectorAll('table tbody th')) {
+      const text = header.textContent?.trim() ?? '';
+      expect(renderedBox(header, text.slice(0, text.indexOf(':'))).left, `row header "${text}"`).to.be.below(
+        renderedBox(header, 'AM').left,
+      );
+    }
+    expect(BIDI_CONTROLS.test(el.exportData('csv')), 'CSV export').to.equal(false);
+  });
+});
+
+describe('chart-bidi helpers', () => {
+  const LRE = '\u202a';
+  const RLE = '\u202b';
+  const PDF = '\u202c';
+  const ARABIC_UNIT = 'كيلوبايت';
+
+  describe('firstStrongDirection', () => {
+    it('reads the first strong letter and skips digits, punctuation and symbols', () => {
+      expect(firstStrongDirection('2.4 MiB/s')).to.equal('ltr');
+      expect(firstStrongDirection('-3 °C')).to.equal('ltr');
+      expect(firstStrongDirection(`12 ${ARABIC_UNIT}`)).to.equal('rtl');
+      expect(firstStrongDirection('٢٫٤ שקל')).to.equal('rtl');
+      expect(firstStrongDirection('9:00')).to.equal(null);
+      expect(firstStrongDirection('')).to.equal(null);
+    });
+
+    it('honors explicit marks and skips the content of an isolate, as rule P2 requires', () => {
+      expect(firstStrongDirection('\u200f12')).to.equal('rtl');
+      expect(firstStrongDirection('\u061c-12')).to.equal('rtl');
+      expect(firstStrongDirection('\u200e-12')).to.equal('ltr');
+      expect(firstStrongDirection(`\u2067${ARABIC_UNIT}\u2069 MiB`)).to.equal('ltr');
+      expect(firstStrongDirection('\u20660.0–1.0\u2069')).to.equal(null);
+    });
+
+    it('skips an embedded value, the isolate stand-in the canvas path interpolates', () => {
+      expect(firstStrongDirection(`${LRE}1.5 MiB/s${PDF} :${ARABIC_UNIT}`)).to.equal('rtl');
+      expect(firstStrongDirection(`${RLE}${ARABIC_UNIT}${PDF} for Up`)).to.equal('ltr');
+      expect(firstStrongDirection(`${LRE}a${RLE}b${PDF}c${PDF}`)).to.equal(null);
+      // A PDF inside an isolate cannot close an embedding opened outside it.
+      expect(firstStrongDirection(`${LRE}\u2068${PDF}\u2069a${PDF}${ARABIC_UNIT}`)).to.equal('rtl');
+      // A PDI closes the embeddings opened inside its isolate.
+      expect(firstStrongDirection(`\u2068${LRE}\u2069Up`)).to.equal('ltr');
+    });
+  });
+
+  describe('isolateCanvasText', () => {
+    it('returns a label already in the canvas direction unchanged, so LTR charts keep their strings', () => {
+      expect(isolateCanvasText('2.4 MiB/s', 'ltr')).to.equal('2.4 MiB/s');
+      expect(isolateCanvasText('1,000', 'ltr')).to.equal('1,000');
+      expect(isolateCanvasText(`12 ${ARABIC_UNIT}`, 'rtl')).to.equal(`12 ${ARABIC_UNIT}`);
+      expect(isolateCanvasText('', 'rtl')).to.equal('');
+    });
+
+    it('embeds a label whose first-strong direction differs from the canvas, defaulting to LTR', () => {
+      expect(isolateCanvasText('2.4 MiB/s', 'rtl')).to.equal(`${LRE}2.4 MiB/s${PDF}`);
+      expect(isolateCanvasText('-3', 'rtl')).to.equal(`${LRE}-3${PDF}`);
+      expect(isolateCanvasText(`12 ${ARABIC_UNIT}`, 'ltr')).to.equal(`${RLE}12 ${ARABIC_UNIT}${PDF}`);
+    });
+
+    it('is idempotent across the repeated draws of one Chart.js update', () => {
+      const once = isolateCanvasText('2.4 MiB/s', 'rtl');
+      expect(isolateCanvasText(once, 'rtl')).to.equal(once);
+      const sentence = `${LRE}Up: ${LRE}2.4 MiB/s${PDF}${PDF}`;
+      expect(isolateCanvasText(sentence, 'rtl')).to.equal(sentence);
+    });
+
+    it('embeds a line that merely starts and ends with two separate embeddings', () => {
+      const line = `${LRE}1${PDF} of ${LRE}2${PDF}`;
+      expect(isolateCanvasText(line, 'rtl')).to.equal(`${LRE}${line}${PDF}`);
+    });
+
+    it('maps multi-line Chart.js labels line by line and passes non-strings through', () => {
+      expect(isolateCanvasLabel(['9:00', 'AM'], 'rtl')).to.deep.equal([`${LRE}9:00${PDF}`, `${LRE}AM${PDF}`]);
+      expect(isolateCanvasLabel(null, 'rtl')).to.equal(null);
+      expect(isolateCanvasLabel(4, 'rtl')).to.equal(4);
+    });
+  });
+
+  describe('canvasSentence', () => {
+    const format = (label: string) => (value: string) => `${label}: ${value}`;
+
+    it('embeds the value against the direction the line is painted in, which is its label\'s', () => {
+      expect(canvasSentence(format('حجم'), '1.5 MiB/s')).to.equal(`حجم: ${LRE}1.5 MiB/s${PDF}`);
+      expect(canvasSentence(format('حجم'), '-3')).to.equal(`حجم: ${LRE}-3${PDF}`);
+      expect(canvasSentence(format('Up'), `12 ${ARABIC_UNIT}`)).to.equal(`Up: ${RLE}12 ${ARABIC_UNIT}${PDF}`);
+    });
+
+    it('leaves a value that already reads in the line\'s direction unchanged', () => {
+      expect(canvasSentence(format('Up'), '1.5 MiB/s')).to.equal('Up: 1.5 MiB/s');
+      expect(canvasSentence(format('حجم'), `12 ${ARABIC_UNIT}`)).to.equal(`حجم: 12 ${ARABIC_UNIT}`);
+      // A label with no strong character reads left-to-right, the P3 default the line gets too.
+      expect(canvasSentence(format('42'), '1.5 MiB/s')).to.equal('42: 1.5 MiB/s');
+    });
+
+    it('produces a line the whole-line isolation leaves in its label\'s direction', () => {
+      expect(isolateCanvasText(canvasSentence(format('حجم'), '1.5 MiB/s'), 'rtl')).to.equal(
+        `حجم: ${LRE}1.5 MiB/s${PDF}`,
+      );
+      expect(isolateCanvasText(canvasSentence(format('حجم'), '1.5 MiB/s'), 'ltr')).to.equal(
+        `${RLE}حجم: ${LRE}1.5 MiB/s${PDF}${PDF}`,
+      );
+    });
+  });
+
+  describe('canvasTextDirection', () => {
+    it('prefers a Chart.js element\'s configured textDirection over the host direction', () => {
+      expect(canvasTextDirection({ options: { textDirection: 'ltr' } }, 'rtl')).to.equal('ltr');
+      expect(canvasTextDirection({ options: { textDirection: 'rtl' } }, 'ltr')).to.equal('rtl');
+      expect(canvasTextDirection({ options: { textDirection: 'auto' } }, 'rtl')).to.equal('rtl');
+      expect(canvasTextDirection({ options: {} }, 'rtl')).to.equal('rtl');
+      expect(canvasTextDirection(undefined, 'ltr')).to.equal('ltr');
+    });
+  });
+
+  describe('Chart.js hook helpers', () => {
+    it('isolates every tick label on a scale', () => {
+      const scale = { ticks: [{ value: 0, label: '0 MiB/s' }, { value: 1, label: ['1', 'MiB/s'] }, { value: 2 }] };
+      isolateScaleTickLabels(scale, 'rtl');
+      expect(scale.ticks.map((tick) => (tick as { label?: unknown }).label)).to.deep.equal([
+        `${LRE}0 MiB/s${PDF}`,
+        [`${LRE}1${PDF}`, `${LRE}MiB/s${PDF}`],
+        undefined,
+      ]);
+    });
+
+    it('isolates every drawn tooltip line once, however many times the tooltip redraws', () => {
+      const tooltip = {
+        title: ['9:00 AM'],
+        beforeBody: [],
+        body: [{ before: [], lines: ['Up: 2.4 MiB/s', `حجم: 12 ${ARABIC_UNIT}`], after: [] }],
+        afterBody: [],
+        footer: ['Σ 3.5 MiB/s'],
+      };
+      isolateTooltipLines(tooltip, 'rtl');
+      isolateTooltipLines(tooltip, 'rtl');
+      expect(tooltip.title).to.deep.equal([`${LRE}9:00 AM${PDF}`]);
+      expect(tooltip.body[0]!.lines).to.deep.equal([`${LRE}Up: 2.4 MiB/s${PDF}`, `حجم: 12 ${ARABIC_UNIT}`]);
+      expect(tooltip.footer).to.deep.equal([`${LRE}Σ 3.5 MiB/s${PDF}`]);
+    });
+  });
+
+  describe('isolatedMessage', () => {
+    it('wraps each named value in its own <bdi> and keeps the accessible text identical', async () => {
+      const template = (values: Record<string, string | number>) =>
+        '{label}: {value} ({count})'.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name]));
+      const el = await fixture<HTMLElement>(
+        html`<p dir="rtl">${isolatedMessage(template, { label: 'Up', value: '2.4 MiB/s', count: 3 }, ['label', 'value'])}</p>`,
+      );
+      expect(el.textContent).to.equal('Up: 2.4 MiB/s (3)');
+      expect([...el.querySelectorAll('bdi')].map((bdi) => bdi.textContent)).to.deep.equal(['Up', '2.4 MiB/s']);
+    });
+  });
+
+  describe('canvas rendering of isolated labels', () => {
+    // Proves the chosen mechanism in the engine running this suite. First-strong/left-to-right
+    // ISOLATES (U+2066-U+2068) reorder correctly in Chromium and Gecko canvases but are ignored by
+    // WebKit's, which is why the canvas path embeds instead.
+    function paint(text: string, direction: CanvasDirection): string {
+      const canvas = document.createElement('canvas');
+      canvas.width = 240;
+      canvas.height = 40;
+      const context = canvas.getContext('2d')!;
+      context.font = '16px sans-serif';
+      context.direction = direction;
+      context.textAlign = 'left';
+      context.fillStyle = '#000';
+      context.fillText(text, 10, 26);
+      return canvas.toDataURL();
+    }
+
+    it('paints an LTR number-unit label in logical order on an RTL canvas', () => {
+      const reference = paint('2.4 MiB/s', 'ltr');
+      expect(paint('2.4 MiB/s', 'rtl') === reference, 'the unisolated label is reordered').to.equal(false);
+      expect(paint(isolateCanvasText('2.4 MiB/s', 'rtl'), 'rtl') === reference).to.equal(true);
+    });
+
+    it('paints an Arabic-script label in its own direction on an LTR canvas', () => {
+      const label = `${ARABIC_UNIT} (12)`;
+      const reference = paint(label, 'rtl');
+      expect(paint(isolateCanvasText(label, 'ltr'), 'ltr') === reference).to.equal(true);
+    });
+  });
 });

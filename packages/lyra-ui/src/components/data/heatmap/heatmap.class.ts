@@ -5116,6 +5116,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * `dir` is carried explicitly because the scrollport pins `direction: ltr` for the physically
    * non-mirrored grid geometry, and the tooltip is the one thing in there that is prose rather
    * than geometry -- it keeps the host's own direction it inherited before the scrollport existed.
+   * That direction sets the box's inline start; the text's own base direction comes from its first
+   * strong character (`unicode-bidi: plaintext` in the stylesheet), so a number-first formatted
+   * value is never reordered by an RTL host.
    */
   private renderTooltip(): TemplateResult {
     const pos = this.hoverCell;
