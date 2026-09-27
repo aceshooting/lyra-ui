@@ -331,7 +331,7 @@ inventory.
 | Kind | Rewritten | Reported |
 |---|---|---|
 | attribute, property | `a`, `?a`, `.p`, `[attr.a]`, `[p]`, `:a`/`v-bind:a` (spelling kept), `bind:p`, JSX `a={…}`/`p={…}` on the owner; anchored `.p` and `*Attribute('a')`; `T[a]` only when `to` reflects | `*Attribute('a')` and `.p` on unproven receivers in a file that uses the component; `T[a]` when `to` does not reflect; Svelte `{p}` shorthand; spreads |
-| inverted boolean | static presence, `""`, `"true"` or `"a"` is removed, and `"false"` becomes presence of `to`. Only in HTML/Markdown files and Lit `html`/`svg` templates | every binding, selector, assignment, other literal, and any static value in JSX, Vue, Svelte or untagged templates |
+| inverted boolean | static presence, `""`, `"true"` or `"a"` is removed, and the exact literal `"false"` becomes presence of `to`. Only in HTML/Markdown files and Lit `html`/`svg` templates, without a companion default insertion | every binding, selector, assignment, other literal, any explicit value with a companion default insertion, and any static value in JSX, Vue, Svelte or untagged templates |
 | event | an owner-bound listener when no non-mover exposes `to`, even if a non-mover still dispatches `from` (the owner-bound listener stops hearing it from nested elements; the change message names them). Any listener when the rename is global. Never a name the scanned code constructs (`new CustomEvent('lr-…')`) | everything else, as `RENAME_REVIEW` or `RENAME_TARGET_SHARED_REVIEW`; event-name strings outside listener calls; listeners of gained names |
 | part | `T::part(a)` when `T` renames `a`; `exportparts` on the owner (`a` becomes `b:a`, keeping the exported name) | every other `::part(a)` (class, foreign type, untyped); unowned selectors of gained names |
 | css-property | every occurrence, only when the rename is global | every other occurrence; declarations of gained names |
@@ -340,6 +340,12 @@ inventory.
 
 A listener bound on a component that dispatches the same name already hears nested dispatchers, so
 it gets no `NAME_GAINED_OWNER_REVIEW` or detail report for them.
+
+An inverted rename with a companion default insertion is withheld until that default change ships.
+Explicit values then require review: removing a true alias would let a second migration pass insert
+the inverse default and change the result, and a false-defaulting presence boolean can treat even
+the literal `"false"` as true. Keep those aliases until default insertion is complete, then migrate
+them by hand using the old converter's behavior.
 
 Comments are never scanned for names, including HTML comments inside template literals. Default
 insertion is blocked for a component across the whole scanned set when a DOM alias or an opaque

@@ -3661,7 +3661,22 @@ function migrateRenameText(original, contract, options) {
           });
           continue;
         }
-        const value = (attribute.value ?? '').trim().toLowerCase();
+        if (profile.defaultsFor(owner).some((entry) => entry.attribute === rule.to && entry.value === true)) {
+          warn(start, {
+            tag: owner,
+            member: rule.from,
+            code: POLARITY_REVIEW,
+            target: rule.to,
+            message:
+              `${rule.from} has a preserved absent default, so removing an explicit attribute would let a later run insert ${rule.to}. ` +
+              `Review this value using the old converter (a presence boolean treats even "false" as true), then migrate it by hand ` +
+              'after the default migration is complete.',
+          });
+          continue;
+        }
+        // The true-defaulting converter recognizes only the exact literal 'false'. Trimming or
+        // folding case here would invert values that the component still treats as true.
+        const value = attribute.value ?? '';
         const end = attributeEnd(original, attribute);
         if (value === '' || value === 'true' || value === rule.from) {
           let removeFrom = attribute.nameStart;
@@ -5042,6 +5057,18 @@ function diffOperations(before, after) {
   return operations;
 }
 
+function quoteDiffPath(file) {
+  if (/^[\x21-\x7e]+$/.test(file) && !/["\\]/.test(file)) return file;
+  // Git's quoted paths use byte-wise C escapes, including octal UTF-8 bytes.
+  let quoted = '"';
+  for (const byte of Buffer.from(file, 'utf8')) {
+    if (byte === 0x22 || byte === 0x5c) quoted += `\\${String.fromCharCode(byte)}`;
+    else if (byte >= 0x20 && byte <= 0x7e) quoted += String.fromCharCode(byte);
+    else quoted += `\\${byte.toString(8).padStart(3, '0')}`;
+  }
+  return `${quoted}"`;
+}
+
 /** A `git apply`-compatible unified diff of one file, with three lines of context. */
 export function unifiedDiff(file, original, content, context = 3) {
   if (original === content) return '';
@@ -5061,7 +5088,7 @@ export function unifiedDiff(file, original, content, context = 3) {
     if (last && index - last.end <= context * 2 + 1) last.end = index;
     else hunks.push({ start: index, end: index });
   });
-  const output = [`--- a/${file}\n`, `+++ b/${file}\n`];
+  const output = [`--- ${quoteDiffPath(`a/${file}`)}\n`, `+++ ${quoteDiffPath(`b/${file}`)}\n`];
   for (const hunk of hunks) {
     const start = Math.max(0, hunk.start - context);
     const end = Math.min(operations.length, hunk.end + context + 1);

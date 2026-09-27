@@ -25,6 +25,7 @@ The prototypes rewrite the built stylesheets; the implementation would generate 
 |---|---|
 | `build.mjs` | Builds variants A–E and the benchmark and parity bundles; prints sheet and bundle sizes. |
 | `server.mjs` | Static server with cross-origin isolation, for fine `performance.now()` resolution. |
+| `server.test.mjs` | URL validation and response-header checks; run with `node --test server.test.mjs`. |
 | `web/bench.html`, `run.mjs` | Benchmark page and runner: render, re-theme, memory; scopes, per-row scopes, application shadow roots. |
 | `report.mjs` | Turns a results file into the tables in `results.md`. |
 | `structure.mjs` | Per-host declaration counts and adopted-sheet structure. |

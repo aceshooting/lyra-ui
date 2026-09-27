@@ -10,9 +10,16 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 
 export function startServer(port = 0) {
   const server = createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://x');
-    const file = path.normalize(path.join(root, decodeURIComponent(url.pathname)));
-    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
+    let file;
+    try {
+      const url = new URL(req.url, 'http://x');
+      file = path.normalize(path.join(root, decodeURIComponent(url.pathname)));
+    } catch { res.writeHead(400).end(); return; }
+    const relative = path.relative(root, file);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      res.writeHead(403).end();
+      return;
+    }
     try {
       const body = await readFile(file);
       res.writeHead(200, {

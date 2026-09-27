@@ -675,13 +675,21 @@ export function projectRenameLedger(ledger, inventory) {
         fromMajor: profile.fromMajor,
         toMajor: profile.toMajor,
         aliasRemovalMajor: profile.aliasRemovalMajor,
-        renames: profile.renames.map((entry) => ({
-          ...structuredClone(entry),
-          since: recordFor(entry, entry.kind, entry.from).since,
-          ...(entry.kind === 'attribute'
-            ? { reflects: Boolean(surfaceEntry(components.get(entry.tag), 'attribute', entry.to)?.reflects) }
-            : {}),
-        })),
+        renames: profile.renames.map((entry) => {
+          const target = surfaceEntry(components.get(entry.tag), entry.kind, entry.to);
+          const attribute = entry.kind === 'attribute' ? entry.to : target?.attribute;
+          const preservesDefault = entry.polarity === 'inverted' && profile.defaults.some(
+            (rule) => rule.tag === entry.tag && rule.attribute === attribute,
+          );
+          // The alias can ship before the default changes. Removing it before the companion
+          // default applies would change the meaning of an explicitly set boolean in that release.
+          const since = recordFor(entry, entry.kind, entry.from).since;
+          return {
+            ...structuredClone(entry),
+            since: preservesDefault && compareVersions(since, release) < 0 ? release : since,
+            ...(entry.kind === 'attribute' ? { reflects: Boolean(target?.reflects) } : {}),
+          };
+        }),
         defaults: profile.defaults.map((entry) => ({ ...structuredClone(entry), since: release })),
         detailChanges: profile.detailChanges.map((entry) => ({ ...structuredClone(entry), since: release })),
         reviews: profile.reviews.map((entry) => {

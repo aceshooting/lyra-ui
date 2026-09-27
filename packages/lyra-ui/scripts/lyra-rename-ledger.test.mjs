@@ -307,6 +307,51 @@ test('entries newer than the installed release are withheld', () => {
   assert.ok(!result.warnings.some((entry) => entry.warningCode === 'DETAIL_SHAPE_REVIEW'), 'no detail change before 22.0.0');
 });
 
+function invertedDefaultFixture() {
+  const target = syntheticInventory();
+  for (const section of ['attributes', 'properties']) {
+    panelOf(target).surface[section].find((member) => member.name === 'arrow').default = false;
+  }
+  const renames = syntheticLedger();
+  renames.profiles[0].defaults.push({ tag: 'lr-sample-panel', attribute: 'without-arrow', value: true });
+  return { target, renames };
+}
+
+test('an inverted rename waits for its companion default change', () => {
+  const { target, renames } = invertedDefaultFixture();
+  const projection = projectRenameLedger(renames, target);
+  const early = createRenameProfiles(projection, { lyraVersion: '21.1.0' }).get('lyra-v21');
+  assert.equal(early.renameFor('lr-sample-panel', 'attribute', 'arrow'), null);
+  assert.equal(early.renameFor('lr-sample-panel', 'property', 'arrow'), null);
+  const earlyContract = buildMigrationContract(target, { renameLedger: renames, lyraVersion: '21.1.0' });
+  const input = '<lr-sample-panel size="m" arrow></lr-sample-panel>\n';
+  assert.equal(run(input, 'early.html', earlyContract).content, input);
+});
+
+test('a preserved inverted default never changes an explicit value on a second pass', () => {
+  const { target, renames } = invertedDefaultFixture();
+  const runContract = buildMigrationContract(target, { renameLedger: renames, lyraVersion: '22.0.0' });
+  for (const attribute of ['arrow', 'arrow="true"', 'arrow="false"', '']) {
+    const input = `<lr-sample-panel size="m" ${attribute}></lr-sample-panel>\n`;
+    const once = run(input, 'inverted.html', runContract);
+    const twice = run(once.content, 'inverted.html', runContract);
+    assert.equal(twice.content, once.content, attribute || 'absent');
+    if (attribute) {
+      assert.equal(once.content, input, 'keep an explicit alias until reviewed');
+      assert.ok(once.warnings.some((entry) => entry.warningCode === 'POLARITY_REVIEW'));
+    }
+  }
+});
+
+test('inverting a boolean does not normalize a literal false that the converter treats as true', () => {
+  for (const value of ['FALSE', ' false', 'false ']) {
+    const input = `<lr-sample-panel size="m" arrow="${value}"></lr-sample-panel>\n`;
+    const result = run(input, 'literal.html');
+    assert.equal(result.content, input, value);
+    assert.ok(result.warnings.some((entry) => entry.warningCode === 'POLARITY_REVIEW'));
+  }
+});
+
 test('the packaged projection fails closed when tampered with', () => {
   const projection = projectRenameLedger(ledger, inventory);
   const missingExposer = structuredClone(projection);
@@ -814,6 +859,25 @@ function applyUnifiedDiff(original, patch) {
   while (cursor < records.length) output.push(records[cursor++]);
   return output.map((record) => `${record.text}${record.eol ? '\n' : ''}`).join('');
 }
+
+test('git apply accepts diff paths containing whitespace, quotes, backslashes and Unicode', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-diff-paths-'));
+  try {
+    assert.equal(spawnSync('git', ['init', '-q'], { cwd: scratch }).status, 0);
+    for (const file of ['space name.html', 'quote"name.html', 'back\\slash.html', 'tab\tname.html', 'line\nname.html', 'café.html']) {
+      const original = 'before\n';
+      const content = 'after\n';
+      fs.writeFileSync(path.join(scratch, file), original);
+      const applied = spawnSync('git', ['apply', '-'], {
+        cwd: scratch, input: unifiedDiff(file, original, content), encoding: 'utf8',
+      });
+      assert.equal(applied.status, 0, `${JSON.stringify(file)}: ${applied.stderr}`);
+      assert.equal(fs.readFileSync(path.join(scratch, file), 'utf8'), content);
+    }
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
 
 test('unifiedDiff patches round-trip for seeded random edits, including end-of-file newlines', () => {
   let seed = 20260927;
