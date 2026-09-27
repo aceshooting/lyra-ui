@@ -86,7 +86,10 @@ export type {
   RecencyBucket,
   RecencyLabels,
 } from './group-by-recency.js';
-export { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from './localization.js';
+export { bridgeLyraLocale, resolveLyraScopedString } from './localization.js';
+// From the declaring runtime, not `./localization.js`: that module's specifier for this name is
+// deprecated with its entry point, and re-exporting through it would deprecate it here as well.
+export { subscribeLyraLocale } from '../internal/localization-runtime.js';
 export type {
   LyraLocaleBridgeCleanup,
   LyraLocaleBridgeOptions,

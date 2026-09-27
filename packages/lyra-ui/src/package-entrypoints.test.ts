@@ -35,6 +35,7 @@ type PackageEntrypointImports = {
   importRoot: EntrypointImport;
   importAll: EntrypointImport;
   importLocalization: EntrypointImport;
+  importUtilitiesLocalization: EntrypointImport;
   importPersianLocale: EntrypointImport;
   importHebrewLocale: EntrypointImport;
   importEmpty: EntrypointImport;
@@ -144,6 +145,21 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(typeof localization['resolveLyraLocale']).to.equal('function');
     expect(typeof localization['resolveLyraDirection']).to.equal('function');
     expect(typeof localization['LYRA_DEFAULT_STRINGS']).to.equal('object');
+    // `./localization.js` is a superset of the deprecated `./utilities/localization.js` entry: the
+    // active-locale subscription, the bridge and the scoped resolver are the very same bindings on
+    // both routes, so migrating an import changes nothing at runtime. Compare the references by
+    // strict equality -- never a chai deep-equal of the values.
+    const utilitiesLocalization = await entrypoints.importUtilitiesLocalization();
+    for (const name of ['bridgeLyraLocale', 'resolveLyraScopedString', 'subscribeLyraLocale']) {
+      expect(typeof localization[name], `localization.js ${name}`).to.equal('function');
+      expect(
+        localization[name] === utilitiesLocalization[name],
+        `localization.js ${name} is the utilities/localization.js binding`,
+      ).to.equal(true);
+    }
+    expect('LyraElement' in localization, 'localization.js stays free of the component graph').to.equal(
+      false,
+    );
     expect(typeof root['LyraElement']).to.equal('function');
     expect(typeof root['groupByRecency']).to.equal('function');
     expect(typeof classEntry['LyraEmpty']).to.equal('function');

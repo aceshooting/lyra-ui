@@ -757,6 +757,9 @@ if (
   typeof localization.registerLyraLocale !== 'function' ||
   typeof localization.setLyraLocale !== 'function' ||
   typeof localization.resolveLyraString !== 'function' ||
+  typeof localization.bridgeLyraLocale !== 'function' ||
+  typeof localization.subscribeLyraLocale !== 'function' ||
+  typeof localization.resolveLyraScopedString !== 'function' ||
   'LyraElement' in localization
 ) {
   throw new Error('the side-effect-free localization entry exposed the wrong surface');

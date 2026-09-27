@@ -15584,6 +15584,7 @@
       "fingerprint": "a1210bcc7bf3bd70f516",
       "routes": [
         "src/all.ts",
+        "src/localization.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
@@ -16889,6 +16890,7 @@
       "fingerprint": "648e737083c79e5a0a90",
       "routes": [
         "src/all.ts",
+        "src/localization.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
@@ -16910,6 +16912,7 @@
       "fingerprint": "e111ebcd1f6b5850207c",
       "routes": [
         "src/all.ts",
+        "src/localization.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
@@ -16930,6 +16933,7 @@
       "kind": "function",
       "fingerprint": "fac0e0e6fe299406a3ac",
       "routes": [
+        "src/localization.ts",
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
       ],

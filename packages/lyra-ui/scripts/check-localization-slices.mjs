@@ -81,6 +81,26 @@ export async function checkLocalizationSlices(packageDir) {
     'the scoped resolver must still prefer a registered locale catalog over the supplied defaults',
   );
 
+  // `localization.js` supersedes the deprecated `utilities/localization.js` entry by re-exporting
+  // its bindings, not by copying them. Compare against the canonical, query-free URL: that is the
+  // module instance the public entry's own relative re-export resolves to.
+  const canonicalUtilitiesLocalization = await import(
+    pathToFileURL(path.join(dist, 'utilities', 'localization.js'))
+  );
+  for (const name of ['bridgeLyraLocale', 'resolveLyraScopedString', 'subscribeLyraLocale']) {
+    assert.equal(typeof localization[name], 'function', `localization.js must export ${name}`);
+    assert.ok(
+      localization[name] === canonicalUtilitiesLocalization[name],
+      `localization.js ${name} must be the identical utilities/localization.js binding`,
+    );
+  }
+  assert.equal(
+    localization.resolveLyraScopedString(unregisteredHost, 'fieldRequired', defaults),
+    'This field is required.',
+    'the scoped resolver on localization.js must resolve a real component key against ' +
+      'caller-supplied defaults',
+  );
+
   const declaration = await readFile(
     path.join(dist, 'components', 'forms', 'button', 'button.class.d.ts'),
     'utf8',

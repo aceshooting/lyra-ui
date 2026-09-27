@@ -31,9 +31,13 @@ what is already registered rather than replacing it.
 `@aceshooting/lyra-ui/localization.js` is deliberately free of component imports and has no side
 effects on import, so an application can set up locales without pulling the component graph into its
 first-paint bundle. It exports `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`,
-`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
-`resolveLyraDirection`, `resolveLyraString` and `LYRA_DEFAULT_STRINGS`, plus the types
-`LyraLocaleStrings`, `LyraMessage`, `LyraMessageKey`, `LyraPluralCategory` and `LyraPluralMessage`.
+`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `subscribeLyraLocale`, `bridgeLyraLocale`,
+`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `resolveLyraScopedString` and
+`LYRA_DEFAULT_STRINGS`, plus the types `LyraLocaleStrings`, `LyraMessage`, `LyraMessageKey`,
+`LyraPluralCategory`, `LyraPluralMessage`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
+The older `@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not
+before 23.0.0; it exports the same bridge, subscription and scoped-resolver bindings, so switch its
+imports to `@aceshooting/lyra-ui/localization.js`.
 
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** — it *is* the English catalog, and its keys
 are exactly the `LyraMessageKey` union. Read it to find the key you need rather than guessing a name;

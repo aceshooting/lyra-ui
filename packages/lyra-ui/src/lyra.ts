@@ -262,10 +262,10 @@ export type {
 } from './utilities/animation-registry.js';
 export { invalidateLyraTheme } from './utilities/theme.js';
 export type { LyraThemeRoot } from './utilities/theme.js';
-export {
-  bridgeLyraLocale,
-  subscribeLyraLocale,
-} from './utilities/localization.js';
+export { bridgeLyraLocale } from './utilities/localization.js';
+// From the declaring runtime, not `./utilities/localization.js`: that module's specifier for this
+// name is deprecated with its entry point, and re-exporting through it would deprecate it here too.
+export { subscribeLyraLocale } from './internal/localization-runtime.js';
 export type {
   LyraLocaleBridgeCleanup,
   LyraLocaleBridgeOptions,

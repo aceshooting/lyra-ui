@@ -6,6 +6,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { parseSync } from 'oxc-parser';
+
 import {
   annotateComponentSource,
   applyComponentMetadataToManifest,
@@ -1462,6 +1464,44 @@ test('export deprecations validate type records against the declaring source', (
   assert.deepEqual(typeFindings({ module: './missing.js' }), [
     'exportDeprecations type ./missing.js#File: ./missing.js is not a package export',
   ]);
+});
+
+/** Every exported name of one source module, with whether the export is type-only. */
+function sourceExportKinds(relativePath) {
+  const source = fs.readFileSync(path.join(packageDir, relativePath), 'utf8');
+  const parsed = parseSync(relativePath, source);
+  assert.deepEqual(parsed.errors, [], `${relativePath} parses`);
+  const kinds = new Map();
+  for (const statement of parsed.module.staticExports) {
+    for (const entry of statement.entries) {
+      if (entry.exportName?.name) kinds.set(entry.exportName.name, entry.isType === true);
+    }
+  }
+  return kinds;
+}
+
+test('the deprecated utilities/localization.js entry is superseded by localization.js', () => {
+  const state = fixture();
+  const record = state.metadata.exportDeprecations.find(
+    (entry) => entry.kind === 'entry-point' && entry.name === './utilities/localization.js',
+  );
+  assert.ok(record, 'the ledger records the ./utilities/localization.js entry-point deprecation');
+  assert.equal(record.replacement.kind, 'entry-point');
+  assert.equal(record.replacement.name, './localization.js');
+  assert.match(record.replacement.usage, /from '@aceshooting\/lyra-ui\/localization\.js'/);
+  assert.equal(record.removalNotBefore, '23.0.0');
+
+  // The superset rule the migration depends on: every name the deprecated entry exports is
+  // exported by the replacement too, as a value or a type exactly as before, so moving an import
+  // is a specifier rename and nothing else. The identical-binding half is proven at runtime by
+  // check-localization-slices and the package-entrypoint browser test.
+  const deprecated = sourceExportKinds('src/utilities/localization.ts');
+  const replacement = sourceExportKinds('src/localization.ts');
+  assert.ok(deprecated.size > 0);
+  for (const [name, isType] of deprecated) {
+    assert.ok(replacement.has(name), `src/localization.ts must also export ${name}`);
+    assert.equal(replacement.get(name), isType, `${name} keeps its value/type kind on localization.js`);
+  }
 });
 
 test('export deprecations share the ledger ordering, window, rationale, and replacement rules', () => {

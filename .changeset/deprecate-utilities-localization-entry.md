@@ -1,0 +1,5 @@
+---
+"@aceshooting/lyra-ui": minor
+---
+
+The side-effect-free `localization.js` entry now also exports `bridgeLyraLocale()`, `subscribeLyraLocale()`, `resolveLyraScopedString()` and the `LyraLocaleBridgeOptions`/`LyraLocaleBridgeCleanup` types, the same bindings the `utilities/localization.js` entry exports. The `utilities/localization.js` entry point is deprecated in favour of `localization.js`, with removal no earlier than 23.0.0, and keeps working unchanged until then. To migrate, change the import specifier: `import { bridgeLyraLocale } from '@aceshooting/lyra-ui/localization.js'`. Importing `subscribeLyraLocale` from the deprecated path now shows a TypeScript deprecation. The other names are still declared in that module, so an editor cannot mark them deprecated on that path alone. The package root and the extensionless `utilities` barrel keep their existing exports, and none of those exports is deprecated. A bundler still drops the unused full message catalog from `localization.js`, because the entry is side-effect-free. An unbundled import of `localization.js` loads that catalog.

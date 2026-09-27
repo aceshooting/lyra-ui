@@ -2,6 +2,11 @@
  * Locale-change subscription, the opt-in locale bridge, and the tree-shakable scoped string
  * resolver.
  *
+ * **Deprecated entry point** (removal not before 23.0.0): import these names from
+ * `@aceshooting/lyra-ui/localization.js`, which exports every binding of this module, identical at
+ * runtime and in type. Both entries are side-effect-free. This one keeps working unchanged through
+ * the 22.x line.
+ *
  * Part of the curated `@aceshooting/lyra-ui/utilities/*` surface: supported and semver-covered,
  * unlike the `internal/` modules it forwards to.
  *
@@ -23,20 +28,33 @@ import {
 } from '../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../internal/localization-types.js';
 
-export { subscribeLyraLocale } from '../internal/localization-runtime.js';
+// Only this re-exported name can carry a path-scoped `@deprecated`: the other exports are declared
+// in this module, and a `@deprecated` on their declarations (or on a local export specifier) would
+// follow every re-export, striking them through on `localization.js` and the barrels as well.
+export {
+  /**
+   * @deprecated Import `subscribeLyraLocale` from `@aceshooting/lyra-ui/localization.js`, which
+   * exports the identical binding; removal not before 23.0.0.
+   */
+  subscribeLyraLocale,
+} from '../internal/localization-runtime.js';
 
 /**
  * Scoped variant of the full-catalog `resolveLyraString()` (`@aceshooting/lyra-ui/localization.js`):
  * resolves `key` through the same override -> fallback -> registered-locale-catalog chain, but
  * against a caller-supplied `defaults` record instead of the complete built-in English catalog.
  *
- * Exists on this tree-shakable entry, not the full-catalog one, so a consumer resolving a handful
- * of messages for its own component never pulls in the compatibility catalog to do it: pass a small
- * `defaults` object of just the keys used, built from imported per-key constants (mirroring how a
- * generated Lyra component's own `defaultStrings` slice is built) or authored by hand.
+ * It never reads the compatibility catalog, so a consumer resolving a handful of messages for its
+ * own component never needs it: pass a small `defaults` object of just the keys used, built from
+ * imported per-key constants (mirroring how a generated Lyra component's own `defaultStrings` slice
+ * is built) or authored by hand. `localization.js` is side-effect-free, so a bundler drops the
+ * unused catalog; an unbundled graph that imports `localization.js` still loads it.
+ *
+ * Import it from `@aceshooting/lyra-ui/localization.js`; the `utilities/localization.js` entry point
+ * is deprecated, with removal not before 23.0.0.
  *
  * ```ts
- * import { resolveLyraScopedString } from '@aceshooting/lyra-ui/utilities/localization.js';
+ * import { resolveLyraScopedString } from '@aceshooting/lyra-ui/localization.js';
  *
  * const label = resolveLyraScopedString(host, 'save', { save: 'Save' });
  * ```
@@ -52,7 +70,10 @@ export function resolveLyraScopedString(
   return resolveRuntimeLyraString(host, key, overrides, fallback, values, defaults);
 }
 
-/** Options for {@linkcode bridgeLyraLocale}. */
+/**
+ * Options for {@linkcode bridgeLyraLocale}. Import it from `@aceshooting/lyra-ui/localization.js`;
+ * the `utilities/localization.js` entry point is deprecated, with removal not before 23.0.0.
+ */
 export interface LyraLocaleBridgeOptions {
   /** Element whose `lang`/`dir` mirror the active locale. Defaults to `document.documentElement`.
    *  Pass an application root when the bridge should scope to a subtree instead of the page. */
@@ -63,7 +84,11 @@ export interface LyraLocaleBridgeOptions {
   direction?: boolean;
 }
 
-/** Idempotent disposer returned by {@linkcode bridgeLyraLocale}. */
+/**
+ * Idempotent disposer returned by {@linkcode bridgeLyraLocale}. Import it from
+ * `@aceshooting/lyra-ui/localization.js`; the `utilities/localization.js` entry point is deprecated,
+ * with removal not before 23.0.0.
+ */
 export type LyraLocaleBridgeCleanup = () => void;
 
 interface LocaleBridgeRegistration {
@@ -132,9 +157,11 @@ function applyLocaleBridge(state: LocaleBridgeState): void {
  * independent and order-insensitive; the authored state is restored only after the final handle
  * releases. Direction is mirrored while at least one active handle requests it.
  *
+ * Import it from `@aceshooting/lyra-ui/localization.js`; the `utilities/localization.js` entry point
+ * is deprecated, with removal not before 23.0.0.
+ *
  * ```ts
- * import { bridgeLyraLocale } from '@aceshooting/lyra-ui/utilities/localization.js';
- * import { setLyraLocale } from '@aceshooting/lyra-ui/localization.js';
+ * import { bridgeLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui/localization.js';
  *
  * const stop = bridgeLyraLocale();       // mirrors onto <html>
  * setLyraLocale('ar');                   // <html lang="ar" dir="rtl">

@@ -570,7 +570,10 @@ setLyraLocale("fr"); // or just set <html lang="fr">/an ancestor `lang` — comp
 
 The dedicated `localization.js` entry is side-effect-free: it does not register the component
 graph. The package root continues to re-export the same runtime for compatibility, but importing
-the root remains registration-free.
+the root remains registration-free. The same entry also carries `bridgeLyraLocale()`,
+`subscribeLyraLocale()` and `resolveLyraScopedString()`; their older
+`@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not before
+23.0.0.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->

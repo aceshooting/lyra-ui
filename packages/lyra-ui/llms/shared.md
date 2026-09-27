@@ -2126,17 +2126,21 @@ override takes precedence over either page-level choice.
 
 To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything _outside_ this library
 reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation — use
-`bridgeLyraLocale()` from `@aceshooting/lyra-ui/utilities/localization.js` (see
+`bridgeLyraLocale()` from `@aceshooting/lyra-ui/localization.js` (see
 [Shared helpers](#shared-helpers-utilities)).
 
 The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getLyraLocaleDirection`,
 `getRegisteredLyraLocales`, `getRegisteredLyraLocaleKeys`, `subscribeLyraLocaleRegistry`,
-`resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
+`subscribeLyraLocale`, `bridgeLyraLocale`, `resolveLyraLocale`, `resolveLyraDirection`,
+`resolveLyraString`, `resolveLyraScopedString`, `LYRA_DEFAULT_STRINGS`, and the types
 `LyraLocaleStrings`, `LyraLocaleMeta`, `LyraLocaleDirection`, `LyraMessageKey`, `LyraMessage`,
-`LyraPluralMessage` and `LyraPluralCategory`. The package root continues to re-export the same
-surface for compatibility and remains registration-free; use the dedicated entry when the
-application only needs locale setup and the narrower import graph.
+`LyraPluralMessage`, `LyraPluralCategory`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
+The package root continues to re-export the runtime for compatibility and remains registration-free;
+use the dedicated entry when the application only needs locale setup and the narrower import graph.
+The `@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not
+before 23.0.0: every name it exports is exported here as the identical binding, so change the import
+specifier to `@aceshooting/lyra-ui/localization.js` and nothing else.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
@@ -2215,7 +2219,7 @@ through to the next valid tier.
 sorted, deduped and canonically spelled. `subscribeLyraLocaleRegistry(listener: () => void): () =>
 void` fires when registry membership grows, including for a newly registered locale that is not
 active; extending an existing catalog does not change membership and does not fire it.
-`subscribeLyraLocale()` (on `@aceshooting/lyra-ui/utilities/localization.js`) instead fires when the
+`subscribeLyraLocale()` (also on `@aceshooting/lyra-ui/localization.js`) instead fires when the
 active selection changes or a registration can alter the active locale's messages/direction, and
 filters unrelated registrations. Both return an idempotent unsubscribe. Delivery uses the eligible
 starting listener snapshots: one callback failure cannot prevent later active, component or
@@ -3262,9 +3266,12 @@ readonly politeness: AnnouncementPoliteness; messageTtlMs: number; announce(text
 release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, timeout: number):
 number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
-  `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime,
-  which the side-effect-free `@aceshooting/lyra-ui/localization.js` entry does not carry (that one
-  has `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization").
+  `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
+  **This `utilities/localization.js` entry point is deprecated**, with removal not before 23.0.0:
+  import every name below from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry,
+  which exports the identical bindings and types. The extensionless `@aceshooting/lyra-ui/utilities`
+  barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
+  `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered
   or extended catalog can alter that selection's messages or direction. Registrations unrelated to
   the active lookup chain are filtered. An application can therefore re-render its **own**
@@ -3287,8 +3294,7 @@ number; clearTimeout(handle: number): void }`.
   Its exact options record is `LyraLocaleBridgeOptions { target?: Element; direction?: boolean }`.
 
   ```ts
-  import { bridgeLyraLocale } from "@aceshooting/lyra-ui/utilities/localization.js";
-  import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+  import { bridgeLyraLocale, setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
   import "@aceshooting/lyra-ui/translations/ar.js";
 
   const stop = bridgeLyraLocale(); // mirrors onto <html>
@@ -3299,13 +3305,13 @@ number; clearTimeout(handle: number): void }`.
   `resolveLyraScopedString(/* public names: host, key, defaults, overrides, fallback, values */):
 unknown` is a scoped variant of `resolveLyraString()` (see "Localization"): the same
 override → fallback → registered-locale-catalog resolution chain, but against a caller-supplied
-`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog. It lives on this
-tree-shakable entry rather than the side-effect-free `@aceshooting/lyra-ui/localization.js` one so
-that resolving a handful of an application's own messages never pulls in the full compatibility
-catalog to do it — pass a small `defaults` object of just the keys used.
+`defaults` record instead of the complete `LYRA_DEFAULT_STRINGS` catalog, so resolving a handful
+of an application's own messages never needs the full compatibility catalog — pass a small
+`defaults` object of just the keys used. `@aceshooting/lyra-ui/localization.js` is side-effect-free,
+so a bundler drops the unused catalog; an unbundled graph that imports it still loads the catalog.
 
   ```ts
-  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/utilities/localization.js";
+  import { resolveLyraScopedString } from "@aceshooting/lyra-ui/localization.js";
 
   const label = resolveLyraScopedString(host, "save", { save: "Save" });
   ```

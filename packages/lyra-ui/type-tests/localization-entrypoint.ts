@@ -1,19 +1,53 @@
 import {
+  bridgeLyraLocale,
   getLyraLocale,
   getRegisteredLyraLocales,
   registerLyraLocale,
   resolveLyraDirection,
   resolveLyraLocale,
   resolveLyraString,
+  resolveLyraScopedString,
   setLyraLocale,
+  subscribeLyraLocale,
   subscribeLyraLocaleRegistry,
   LYRA_DEFAULT_STRINGS,
+  type LyraLocaleBridgeCleanup,
+  type LyraLocaleBridgeOptions,
   type LyraLocaleStrings,
   type LyraMessage,
   type LyraMessageKey,
   type LyraPluralCategory,
   type LyraPluralMessage,
 } from '../src/localization.js';
+import type * as DeprecatedUtilitiesLocalization from '../src/utilities/localization.js';
+
+type Equal<Left, Right> =
+  (<Value>() => Value extends Left ? 1 : 2) extends
+  (<Value>() => Value extends Right ? 1 : 2)
+    ? true
+    : false;
+type Assert<Value extends true> = Value;
+
+// `localization.js` is a superset of the deprecated `utilities/localization.js` entry: every name the
+// deprecated entry exports resolves to the identical type here, so migrating an import is a
+// specifier rename and nothing else.
+type SameBridge = Assert<Equal<typeof bridgeLyraLocale, typeof DeprecatedUtilitiesLocalization.bridgeLyraLocale>>;
+type SameScopedResolver = Assert<
+  Equal<typeof resolveLyraScopedString, typeof DeprecatedUtilitiesLocalization.resolveLyraScopedString>
+>;
+type SameSubscription = Assert<
+  Equal<typeof subscribeLyraLocale, typeof DeprecatedUtilitiesLocalization.subscribeLyraLocale>
+>;
+type SameBridgeOptions = Assert<Equal<LyraLocaleBridgeOptions, DeprecatedUtilitiesLocalization.LyraLocaleBridgeOptions>>;
+type SameBridgeCleanup = Assert<Equal<LyraLocaleBridgeCleanup, DeprecatedUtilitiesLocalization.LyraLocaleBridgeCleanup>>;
+declare const supersetContract: [
+  SameBridge,
+  SameScopedResolver,
+  SameSubscription,
+  SameBridgeOptions,
+  SameBridgeCleanup,
+];
+void supersetContract;
 
 // A catalog accepts a plain string or, since 8.0.0, one string per CLDR plural
 // category the language needs — with `other` mandatory as the fallback terminal.
@@ -50,3 +84,11 @@ const values: [
 ];
 unsubscribe();
 void values;
+
+const bridgeOptions: LyraLocaleBridgeOptions = { target: host, direction: false };
+const stopBridge: LyraLocaleBridgeCleanup = bridgeLyraLocale(bridgeOptions);
+const stopActive: () => void = subscribeLyraLocale(() => undefined);
+const scoped: string = resolveLyraScopedString(host, 'save', { save: 'Save' });
+stopBridge();
+stopActive();
+void scoped;
