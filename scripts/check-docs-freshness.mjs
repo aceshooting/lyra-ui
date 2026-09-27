@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   rewriteStandaloneComponentReference,
   rewriteStandaloneSharedReference,
+  trimStandaloneChangelog,
 } from './skill-reference-context.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -72,9 +73,10 @@ if (staleReferenceFiles.length) {
   );
 }
 const skillChangelog = join(root, 'plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md');
+const expectedSkillChangelog = trimStandaloneChangelog(read('packages/lyra-ui/CHANGELOG.md'));
 if (
   !existsSync(skillChangelog)
-  || readFileSync(skillChangelog, 'utf8') !== read('packages/lyra-ui/CHANGELOG.md')
+  || readFileSync(skillChangelog, 'utf8') !== expectedSkillChangelog
 ) {
   errors.push('plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md is missing or out of sync; run `./package.sh`');
 }

@@ -686,11 +686,19 @@ function buildPreview(source) {
     `export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze(${JSON.stringify(output, null, 2)});\n`;
 }
 
+/**
+ * llms/tokens.md (scripts/build-llms.mjs's buildTokens()) reads only name/scope/themeInput/values,
+ * never `description` -- most of it is boilerplate ("Canonical shared component token for <name>.")
+ * restating the name anyway, so it is dropped here rather than duplicated into an unread fixture.
+ */
 function buildDocsInput(source) {
   return {
     schemaVersion: 1,
     authority: source.source.authority,
-    tokens: Object.entries(source.tokens).map(([name, token]) => ({ name, ...token })),
+    tokens: Object.entries(source.tokens).map(([name, { description: _description, ...rest }]) => ({
+      name,
+      ...rest,
+    })),
   };
 }
 

@@ -32,13 +32,11 @@ the M+2 rule applies as written; treat the above as a documented exception, not 
 
 ### Release history and upgrade notes
 
-`since` records when a tag first appeared; it is not a history of later additions, fixes, or
-breaking changes. For every release after 9.0.0 — including minor and patch releases — read the
-package's shipped [CHANGELOG.md](../CHANGELOG.md) before upgrading. Family-wide breaking-change
-summaries sit at the start of the applicable authored `llms/<family>.md` file; each generated
-`llms/components/<tag>.md` header links that family summary when one exists. Component-specific
-version notes remain in the component's own section. `llms/migration.md` is narrower: it covers
-`wa-*`/`sl-*` renames and compatibility decisions, not Lyra release history.
+`since` records when a tag first appeared, not later changes. Before upgrading, read the
+package's [CHANGELOG.md](../CHANGELOG.md) (every release, including minor and patch).
+Family-wide breaking-change summaries open each authored `llms/<family>.md`, and each generated
+`llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only
+`wa-*`/`sl-*` renames, not Lyra release history.
 
 The major-version landmarks after 9.0.0 are:
 

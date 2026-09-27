@@ -1,7 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { clearPapaParseCache, loadPapaParse, loadPapaParseCached } from './papaparse-loader.js';
-
-afterEach(() => clearPapaParseCache());
+import { loadPapaParse, loadPapaParseCached } from './papaparse-loader.js';
 
 it('loads and caches the real papaparse API, shared across every caller', async () => {
   const first = await loadPapaParseCached();

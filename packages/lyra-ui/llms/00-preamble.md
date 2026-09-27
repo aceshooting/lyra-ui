@@ -12,7 +12,7 @@ Read it end to end only if you genuinely need everything. Otherwise:
 
 | To… | Read |
 |---|---|
-| use one component | `llms/components/<tag>.md` (path derived from the tag; self-contained) |
+| use one component | `llms/components/<tag>.md` (path derived from the tag; a sibling-documented tag points to its primary file) |
 | find the right component | `llms/index.md` (every tag, its import path, one-line purpose) |
 | get library-wide behavior right | `llms/shared.md` (status, imports/autoloading, events, forms, theming/styles, i18n/RTL, TS/frameworks, SSR, utilities, AI types) |
 | theme it | `llms/tokens.md` |

@@ -12,7 +12,7 @@ Read it end to end only if you genuinely need everything. Otherwise:
 
 | To… | Read |
 |---|---|
-| use one component | `llms/components/<tag>.md` (path derived from the tag; self-contained) |
+| use one component | `llms/components/<tag>.md` (path derived from the tag; a sibling-documented tag points to its primary file) |
 | find the right component | `llms/index.md` (every tag, its import path, one-line purpose) |
 | get library-wide behavior right | `llms/shared.md` (status, imports/autoloading, events, forms, theming/styles, i18n/RTL, TS/frameworks, SSR, utilities, AI types) |
 | theme it | `llms/tokens.md` |
@@ -28,9 +28,11 @@ a sibling `.class.js` exports a class without registering it.
 ## Contents
 
 This file is the concatenation of the per-family sources in `llms/`. When only one component is
-in question, read `llms/components/<tag>.md` instead — it is the same text plus its import path,
-and costs a few hundred tokens instead of the whole catalog. `llms/index.md` maps every tag to its
-family and entry point.
+in question, read `llms/components/<tag>.md` instead — for a tag documented on its own, that file
+holds the same text plus its import path; for a tag documented together with siblings, it holds
+the generated facts (import path, status, peers, and so on) plus a pointer to the primary
+sibling's file for the shared prose. Either way it costs a few hundred tokens instead of the
+whole catalog. `llms/index.md` maps every tag to its family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 31 tags in `components/forms/`
@@ -84,13 +86,11 @@ the M+2 rule applies as written; treat the above as a documented exception, not 
 
 ### Release history and upgrade notes
 
-`since` records when a tag first appeared; it is not a history of later additions, fixes, or
-breaking changes. For every release after 9.0.0 — including minor and patch releases — read the
-package's shipped [CHANGELOG.md](./CHANGELOG.md) before upgrading. Family-wide breaking-change
-summaries sit at the start of the applicable authored `llms/<family>.md` file; each generated
-`llms/components/<tag>.md` header links that family summary when one exists. Component-specific
-version notes remain in the component's own section. `llms/migration.md` is narrower: it covers
-`wa-*`/`sl-*` renames and compatibility decisions, not Lyra release history.
+`since` records when a tag first appeared, not later changes. Before upgrading, read the
+package's [CHANGELOG.md](./CHANGELOG.md) (every release, including minor and patch).
+Family-wide breaking-change summaries open each authored `llms/<family>.md`, and each generated
+`llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only
+`wa-*`/`sl-*` renames, not Lyra release history.
 
 The major-version landmarks after 9.0.0 are:
 

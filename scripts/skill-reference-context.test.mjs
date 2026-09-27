@@ -18,6 +18,8 @@ import {
   markdownLinkTargets,
   rewriteStandaloneComponentReference,
   rewriteStandaloneSharedReference,
+  STANDALONE_CHANGELOG_POINTER,
+  trimStandaloneChangelog,
 } from './skill-reference-context.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -128,11 +130,12 @@ test('context rewrites are exact and fail closed on drift', () => {
   const standaloneShared = rewriteStandaloneSharedReference(packageShared);
   assert.match(
     standaloneShared,
-    /bundled \[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)[\s\S]*bundled references link that\s+self-contained changelog/u,
+    /bundled\s+\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\):\s+it\s+holds\s+the\s+newest\s+three\s+major\s+versions/u,
   );
+  assert.doesNotMatch(standaloneShared, /self-contained changelog/u);
   assert.match(
     standaloneShared,
-    /Family-wide breaking-change summaries\s+remain in the installed\s+package's `llms-full\.txt`/u,
+    /Family-wide\s+breaking-change\s+summaries\s+are\s+in\s+the\s+installed\s+package's\s+`llms-full\.txt`/u,
   );
   assert.deepEqual(
     markdownLinkTargets(standaloneShared).filter(isLlmsFullMarkdownTarget),
@@ -181,14 +184,100 @@ test('context rewrites are exact and fail closed on drift', () => {
   );
 });
 
+test('trimStandaloneChangelog keeps the newest majors and points to the rest', () => {
+  const changelog = [
+    '# Changelog',
+    '',
+    '## 21.0.0',
+    '',
+    '### Major Changes',
+    '',
+    '- abc1234: twenty-one.',
+    '',
+    '## 20.0.1',
+    '',
+    '### Patch Changes',
+    '',
+    '- abc1235: twenty-oh-one.',
+    '',
+    '## 20.0.0',
+    '',
+    '### Major Changes',
+    '',
+    '- abc1236: twenty.',
+    '',
+    '## 19.0.0',
+    '',
+    '### Major Changes',
+    '',
+    '- abc1237: nineteen.',
+    '',
+    '## 18.4.0',
+    '',
+    '### Minor Changes',
+    '',
+    '- abc1238: eighteen-four.',
+    '',
+    '## Unreleased',
+    '',
+    '- stray non-major heading nested under an old (dropped) major.',
+    '',
+    '## 1.0.0',
+    '',
+    '### Major Changes',
+    '',
+    '- abc1239: one.',
+    '',
+  ].join('\n');
+
+  const trimmed = trimStandaloneChangelog(changelog, 3);
+  assert.ok(trimmed.startsWith('# Changelog'), 'the file preamble must survive the trim');
+  assert.match(trimmed, /## 21\.0\.0/);
+  assert.match(trimmed, /## 20\.0\.1/);
+  assert.match(trimmed, /## 20\.0\.0/);
+  assert.match(trimmed, /## 19\.0\.0/);
+  assert.doesNotMatch(trimmed, /## 18\.4\.0/, 'a fourth major must be dropped');
+  assert.doesNotMatch(trimmed, /## Unreleased/, 'a heading below the cutoff is dropped with its major');
+  assert.doesNotMatch(trimmed, /## 1\.0\.0/);
+  assert.equal(
+    trimmed.split(STANDALONE_CHANGELOG_POINTER).length - 1,
+    1,
+    'the pointer to older history must appear exactly once',
+  );
+  assert.ok(trimmed.trimEnd().endsWith(STANDALONE_CHANGELOG_POINTER));
+
+  const trimmedToOne = trimStandaloneChangelog(changelog, 1);
+  assert.match(trimmedToOne, /## 21\.0\.0/);
+  assert.doesNotMatch(trimmedToOne, /## 20\.0\.1/, 'a smaller majors budget keeps fewer majors');
+
+  const untouched = 'No version headings here at all.';
+  assert.equal(
+    trimStandaloneChangelog(untouched),
+    untouched,
+    'text with no `## X.Y.Z` heading is returned unchanged rather than corrupted',
+  );
+
+  assert.equal(
+    trimStandaloneChangelog(changelog, 3),
+    trimStandaloneChangelog(changelog, 3),
+    'the trim is a pure function of its inputs',
+  );
+});
+
 test('staged standalone references preserve package truth in their own link context', () => {
   const packageChangelog = readFileSync(path.join(packageRoot, 'CHANGELOG.md'), 'utf8');
-  assert.equal(readFileSync(path.join(skillRoot, 'CHANGELOG.md'), 'utf8'), packageChangelog);
+  const stagedChangelog = readFileSync(path.join(skillRoot, 'CHANGELOG.md'), 'utf8');
+  assert.equal(stagedChangelog, trimStandaloneChangelog(packageChangelog));
+  assert.ok(
+    stagedChangelog.length < packageChangelog.length,
+    'the staged standalone changelog must be trimmed, not a full copy',
+  );
+  assert.ok(stagedChangelog.includes(STANDALONE_CHANGELOG_POINTER));
 
   const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');
   const stagedShared = readFileSync(path.join(referencesRoot, 'shared.md'), 'utf8');
   assert.equal(stagedShared, rewriteStandaloneSharedReference(packageShared));
-  assert.match(stagedShared, /standalone skill[\s\S]*installed[\s\S]*`llms-full\.txt`/u);
+  assert.match(stagedShared, /installed[\s\S]*`llms-full\.txt`[\s\S]*standalone\s+skill/u);
 
   const staged = validateStandaloneTree(skillRoot);
   const table = readFileSync(path.join(referencesRoot, 'components', 'lr-table.md'), 'utf8');
@@ -207,7 +296,7 @@ test('the deterministic skill archive is self-contained without llms-full.txt', 
     assert.equal(unzip.status, 0, unzip.stderr);
     assert.equal(
       readFileSync(path.join(extracted, 'CHANGELOG.md'), 'utf8'),
-      readFileSync(path.join(packageRoot, 'CHANGELOG.md'), 'utf8'),
+      trimStandaloneChangelog(readFileSync(path.join(packageRoot, 'CHANGELOG.md'), 'utf8')),
     );
     const archived = validateStandaloneTree(extracted);
     assert.equal(archived.componentFiles.length, expectedComponentCount);

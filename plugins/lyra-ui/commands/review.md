@@ -4,26 +4,24 @@ argument-hint: '[path] [--report-only]'
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(grep:*), Bash(git:*), Bash(npm:*), Bash(pnpm:*), Bash(yarn:*), Bash(curl:*), Bash(sleep:*), Bash(ls:*), Bash(mkdir:*), Bash(node:*)
 ---
 
-Audit the project at the path given in `$ARGUMENTS` (the first token that does not start with
-`--`; default to the current working directory when there is none) for how it uses
-`@aceshooting/lyra-ui`, then act on what the audit finds in both directions:
+Audit how the project at the path in `$ARGUMENTS` (first token not starting with `--`; default the
+current working directory) uses `@aceshooting/lyra-ui`, then act on the findings in both directions:
 
-- **Down into the project:** every local misuse of the library, and every hack, override or
-  duplicate implementation that works around something the *installed* version already supports
-  properly, gets replaced with the supported API and the dead workaround deleted.
-- **Up into the library:** every verified defect or gap the installed version genuinely cannot
-  cover is filed to the lyra-ui feature-request intake — one request per item, with the user's
-  explicit agreement — and recorded in a ledger in the project so a later run can remove the
-  workaround once the fix ships.
+- **Down into the project:** replace every local misuse, and every hack, override or duplicate
+  implementation that works around something the *installed* version already supports properly,
+  with the supported API — and delete the dead workaround.
+- **Up into the library:** file every verified defect or gap the installed version genuinely
+  cannot cover to the lyra-ui feature-request intake (one request per item, with the user's
+  explicit agreement) and record it in a project ledger so a later run can remove the workaround
+  once the fix ships.
 
-This is the periodic, whole-project pass. The narrower siblings stay separate on purpose:
+This is the periodic, whole-project pass. Narrower siblings stay separate on purpose:
 `/lyra-ui:frontend` is a single-agent read-only review, `/lyra-ui:update` bumps the dependency and
-reports the changelog, `/lyra-ui:migrate` renames `wa-*`/`sl-*` tags. This command does not
-bump the version and does not migrate legacy tags; it points at those commands when it finds work
-for them.
+reports the changelog, `/lyra-ui:migrate` renames `wa-*`/`sl-*` tags. This command neither bumps
+the version nor migrates legacy tags — it points at those commands when it finds work for them.
 
-`--report-only` anywhere in `$ARGUMENTS` stops after step 3: the findings document is delivered,
-nothing is edited, nothing is filed, and the ledger is not touched. Use it the first time on an
+`--report-only` anywhere in `$ARGUMENTS` stops after step 3: it delivers the findings document,
+edits nothing, files nothing, and leaves the ledger untouched. Use it the first time on an
 unfamiliar project.
 
 ## 0. Preflight
@@ -34,8 +32,7 @@ Do these in order and stop on the first one that fails; never guess past a missi
    a dependency, say so and stop — there is nothing to audit.
 2. **Read the installed version, not the declared range.** Take `version` from
    `node_modules/@aceshooting/lyra-ui/package.json`. If `node_modules` is missing, tell the user to
-   install first and stop; auditing against a version that is not on disk produces claims nobody
-   can verify.
+   install first and stop — a version not on disk can't be verified.
 3. **Resolve the reference directory** and record its absolute path for the brief in step 1:
    - Prefer `node_modules/@aceshooting/lyra-ui/llms/` — it matches the installed version exactly.
    - Fall back to `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/` only when the installed copy
@@ -51,22 +48,21 @@ Do these in order and stop on the first one that fails; never guess past a missi
    lint and test commands, the i18n mechanism, the commit-message convention, and whether routine
    pushing is mandated. Those instructions govern steps 4 and 7; this command never overrides them.
 5. **Check the tree.** `git status --short`. A dirty tree may be another session's in-progress
-   work: if anything is modified, ask the user (with `AskUserQuestion`) whether to continue on top
-   of it or stop. Never stash, reset or discard on their behalf.
-6. **Check version drift.** `npm view @aceshooting/lyra-ui version`, then fetch
+   work — if anything is modified, ask the user (`AskUserQuestion`) whether to continue on top of
+   it or stop. Never stash, reset or discard on their behalf.
+6. **Check version drift.** Run `npm view @aceshooting/lyra-ui version`, then fetch
    `https://www.lyra-ui.com/changelog.json` and keep every release entry between the installed
    version and `latest` (treat `kind: "major"` entries as breaking). If the project is behind, say
-   so up front and recommend `/lyra-ui:update` first, but continue the audit against the
-   installed version. The kept release notes let reviewers classify a workaround as *already
-   fixed in a newer release* (see the taxonomy in step 2), which is a different action from *fix
-   here now*. If the feed's `latest` is behind `npm view`'s, the feed is stale, not authoritative:
-   trust npm for what exists and read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md` for the
-   notes it is missing. Otherwise a workaround that a newer release already fixed gets audited as
-   still-broken and re-filed.
+   so up front and recommend `/lyra-ui:update` first, but continue the audit against the installed
+   version. The kept notes let reviewers classify a workaround as *already fixed in a newer
+   release* (taxonomy in step 2) rather than *fix here now*. If the feed's `latest` trails `npm
+   view`'s, the feed is stale: trust npm for what exists, and read
+   `node_modules/@aceshooting/lyra-ui/CHANGELOG.md` for the notes the feed is missing — otherwise a
+   workaround a newer release already fixed gets audited as still-broken and re-filed.
 7. **Load and reconcile the ledger.** Look for the project's request tracker at
-   `docs/lyra-ui-requests.md`. If the project already tracks requests under another name (for
-   example `docs/lyra-ui-open-requests.md` or `docs/lyra-request-statuses.json`), adopt that
-   file; never start a second tracker. For every open request id it lists, read
+   `docs/lyra-ui-requests.md`; if it already tracks requests under another name (for example
+   `docs/lyra-ui-open-requests.md` or `docs/lyra-request-statuses.json`), adopt that file — never
+   start a second tracker. For every open request id it lists, read
    `https://www.lyra-ui.com/api/v1/feature-requests/<id>` (a read-only call returning `status`,
    `note`, `issue_url`, `updated_at`; statuses are `received`, `planned`, `shipped`, `declined`,
    `duplicate`). Pace these at one call per 5 seconds — the intake and the status endpoint share
@@ -241,8 +237,8 @@ regression is attributable to one change.
 ## 5. File upstream, with consent
 
 For every `upstream-defect` and `upstream-gap` that survived step 3 and is not already in the
-ledger, draft one report using the payload described in the lyra-ui skill's "Report gaps, bugs,
-and improvement ideas" section:
+ledger, draft one report using the payload described in
+`${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/reporting.md`:
 
 - `title` — specific, at most 120 characters, naming the component
   (`lr-select ignores disabled on keyboard nav`, not `select bug`);

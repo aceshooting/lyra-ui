@@ -9,26 +9,53 @@ export const FAMILY_SUMMARY_LINK_SUFFIX =
   '; family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)';
 
 const SHARED_PACKAGE_RELEASE_PARAGRAPH = [
-  '`since` records when a tag first appeared; it is not a history of later additions, fixes, or',
-  'breaking changes. For every release after 9.0.0 — including minor and patch releases — read the',
-  'package\'s shipped [CHANGELOG.md](../CHANGELOG.md) before upgrading. Family-wide breaking-change',
-  'summaries sit at the start of the applicable authored `llms/<family>.md` file; each generated',
-  '`llms/components/<tag>.md` header links that family summary when one exists. Component-specific',
-  'version notes remain in the component\'s own section. `llms/migration.md` is narrower: it covers',
-  '`wa-*`/`sl-*` renames and compatibility decisions, not Lyra release history.',
+  '`since` records when a tag first appeared, not later changes. Before upgrading, read the',
+  'package\'s [CHANGELOG.md](../CHANGELOG.md) (every release, including minor and patch).',
+  'Family-wide breaking-change summaries open each authored `llms/<family>.md`, and each generated',
+  '`llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only',
+  '`wa-*`/`sl-*` renames, not Lyra release history.',
 ].join('\n');
 
 const SHARED_STANDALONE_RELEASE_PARAGRAPH = [
-  '`since` records when a tag first appeared; it is not a history of later additions, fixes, or',
-  'breaking changes. For every release after 9.0.0 — including minor and patch releases — read the',
-  'bundled [CHANGELOG.md](../CHANGELOG.md) before upgrading. These bundled references link that',
-  'self-contained changelog beside this standalone skill. Family-wide breaking-change summaries',
-  'remain in the installed package\'s `llms-full.txt`; this compact skill intentionally does not',
-  'bundle that multi-megabyte concatenation. Component-specific version notes remain in the',
-  'component\'s own section.',
-  '`llms/migration.md` is narrower: it covers `wa-*`/`sl-*` renames and compatibility decisions,',
-  'not Lyra release history.',
+  '`since` records when a tag first appeared, not later changes. Before upgrading, read the bundled',
+  '[CHANGELOG.md](../CHANGELOG.md): it holds the newest three major versions; older history is in the',
+  'package\'s own CHANGELOG.md and at https://github.com/aceshooting/lyra-ui/releases. Family-wide',
+  'breaking-change summaries are in the installed package\'s `llms-full.txt`, which this standalone',
+  'skill does not bundle. `llms/migration.md` covers only `wa-*`/`sl-*` renames, not Lyra release',
+  'history.',
 ].join('\n');
+
+/** Appended to the standalone skill's trimmed CHANGELOG.md so older history stays reachable. */
+export const STANDALONE_CHANGELOG_POINTER =
+  'Older releases: the package\'s own CHANGELOG.md (bundled under ' +
+  '`node_modules/@aceshooting/lyra-ui/` once installed) or ' +
+  'https://github.com/aceshooting/lyra-ui/releases.';
+
+/**
+ * Pure trim of a full, newest-first CHANGELOG.md down to its preamble plus the newest `majors`
+ * distinct `## X.Y.Z` major-version groups (a major is the leading `X`; every `X.Y.Z` heading with
+ * the same `X` stays together). A heading that doesn't match `## <digits>.<digits>.<digits>` (e.g.
+ * a stray `## Unreleased`) is not itself a major boundary and rides along with whichever major
+ * precedes it. Appends STANDALONE_CHANGELOG_POINTER once, after the kept content.
+ */
+export function trimStandaloneChangelog(text, majors = 3) {
+  const headings = [...text.matchAll(/^## (\d+)\.\d+\.\d+.*$/gm)];
+  if (headings.length === 0) return text;
+
+  const seenMajors = [];
+  let cutIndex = text.length;
+  for (const heading of headings) {
+    const major = heading[1];
+    if (!seenMajors.includes(major)) seenMajors.push(major);
+    if (seenMajors.length > majors) {
+      cutIndex = heading.index;
+      break;
+    }
+  }
+
+  const kept = text.slice(0, cutIndex).replace(/\n+$/u, '\n');
+  return `${kept}\n${STANDALONE_CHANGELOG_POINTER}\n`;
+}
 
 const FENCED_CODE_BLOCK =
   /^[ \t]{0,3}(?<fence>`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]{0,3}\k<fence>[ \t]*$/gmu;
@@ -102,7 +129,7 @@ export function rewriteStandaloneComponentReference(text, label = 'component ref
   return text.replaceAll(FAMILY_SUMMARY_LINK_SUFFIX, '');
 }
 
-function rewriteStandaloneReferenceTree(referencesDir) {
+function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
   const sharedPath = path.join(referencesDir, 'shared.md');
   const componentsDir = path.join(referencesDir, 'components');
   if (!existsSync(sharedPath) || !existsSync(componentsDir)) {
@@ -113,6 +140,14 @@ function rewriteStandaloneReferenceTree(referencesDir) {
     sharedPath,
     rewriteStandaloneSharedReference(readFileSync(sharedPath, 'utf8')),
   );
+
+  const skillRoot = path.dirname(referencesDir);
+  if (changelogSource) {
+    writeFileSync(
+      path.join(skillRoot, 'CHANGELOG.md'),
+      trimStandaloneChangelog(readFileSync(changelogSource, 'utf8')),
+    );
+  }
 
   const componentFiles = readdirSync(componentsDir)
     .filter((file) => file.endsWith('.md'))
@@ -133,7 +168,6 @@ function rewriteStandaloneReferenceTree(referencesDir) {
     throw new Error('Standalone component references contained zero family-summary link suffixes.');
   }
 
-  const skillRoot = path.dirname(referencesDir);
   const markdownFiles = filesUnder(skillRoot, (file) => file.endsWith('.md'));
   const linkedFiles = markdownFiles.filter(
     (file) => llmsFullMarkdownTargets(readFileSync(file, 'utf8')).length > 0,
@@ -152,12 +186,18 @@ function rewriteStandaloneReferenceTree(referencesDir) {
 
 if (isMainModule(import.meta.url)) {
   const referencesDir = process.argv[2];
-  if (!referencesDir || process.argv.length !== 3) {
-    console.error('Usage: node scripts/skill-reference-context.mjs <references-directory>');
+  const changelogSource = process.argv[3];
+  if (!referencesDir || process.argv.length < 3 || process.argv.length > 4) {
+    console.error(
+      'Usage: node scripts/skill-reference-context.mjs <references-directory> [changelog-source]',
+    );
     process.exitCode = 1;
   } else {
     try {
-      const result = rewriteStandaloneReferenceTree(path.resolve(referencesDir));
+      const result = rewriteStandaloneReferenceTree(
+        path.resolve(referencesDir),
+        changelogSource ? path.resolve(changelogSource) : undefined,
+      );
       console.log(
         `Prepared ${result.componentFiles} standalone component references; stripped ${result.strippedFamilyLinks} family-summary links.`,
       );

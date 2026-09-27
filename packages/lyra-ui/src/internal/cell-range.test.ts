@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { parseCellRange, formatCellRange } from './cell-range.js';
+import { parseCellRange } from './cell-range.js';
 
 describe('parseCellRange', () => {
   it('parses a single cell reference', () => {
@@ -77,59 +77,5 @@ describe('parseCellRange', () => {
       endRow: 0,
       endCol: 0,
     });
-  });
-});
-
-describe('formatCellRange', () => {
-  it('formats a single-cell range without a colon', () => {
-    expect(formatCellRange({ startRow: 6, startCol: 1, endRow: 6, endCol: 1 })).to.equal('B7');
-  });
-
-  it('formats a multi-cell range with a colon', () => {
-    expect(formatCellRange({ startRow: 0, startCol: 0, endRow: 2, endCol: 2 })).to.equal('A1:C3');
-  });
-
-  it('prefixes the sheet name when present', () => {
-    expect(formatCellRange({ sheet: 'Sheet2', startRow: 0, startCol: 0, endRow: 1, endCol: 1 })).to.equal(
-      'Sheet2!A1:B2',
-    );
-  });
-
-  it('round-trips through parseCellRange for AA+ columns', () => {
-    const parsed = parseCellRange('AB5:AC9')!;
-    expect(formatCellRange(parsed)).to.equal('AB5:AC9');
-  });
-
-  it('fails closed for non-finite, negative, unsafe, or reversed coordinates', () => {
-    expect(
-      formatCellRange({
-        startRow: 0,
-        startCol: Number.POSITIVE_INFINITY,
-        endRow: 0,
-        endCol: Number.POSITIVE_INFINITY,
-      }),
-    ).to.equal(null);
-    expect(formatCellRange({ startRow: -1, startCol: 0, endRow: 0, endCol: 0 })).to.equal(null);
-    expect(
-      formatCellRange({
-        startRow: Number.MAX_SAFE_INTEGER,
-        startCol: 0,
-        endRow: Number.MAX_SAFE_INTEGER,
-        endCol: 0,
-      }),
-    ).to.equal(null);
-    expect(formatCellRange({ startRow: 2, startCol: 0, endRow: 1, endCol: 0 })).to.equal(null);
-  });
-
-  it('fails closed when a sheet name would exceed the parse boundary', () => {
-    expect(
-      formatCellRange({
-        sheet: 'S'.repeat(256),
-        startRow: 0,
-        startCol: 0,
-        endRow: 0,
-        endCol: 0,
-      }),
-    ).to.equal(null);
   });
 });

@@ -34,9 +34,6 @@ export default {
         'src/**/*.stories.ts',
         'type-tests/**/*.ts',
         // Maintainer CLIs invoked from shell/docs rather than a package.json script.
-        'scripts/generate-chart-palette.mjs',
-        'scripts/generate-palette.mjs',
-        'scripts/generate-terminal-palette.mjs',
         'scripts/llms-gap-report.mjs',
         'scripts/scaffold-translation.mjs',
         'scripts/fixtures/migrate-wa/*.{svelte,vue}',

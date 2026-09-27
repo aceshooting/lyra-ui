@@ -3,6 +3,12 @@ import test from "node:test";
 
 import { collectEventMaps, generateEventTypeSource } from "./generate-event-types.mjs";
 
+/** Collapses `docComment()`'s `\n * ` line-continuations so an assertion doesn't depend on the
+ *  greedy-width-wrap point. */
+function flattenDocComments(source) {
+  return source.replace(/\n \* /g, " ");
+}
+
 const manifest = {
   schemaVersion: "1.0.0",
   modules: [
@@ -47,15 +53,45 @@ test("emitter documentation comes from every effective manifest contract", () =>
     ],
   });
 
+  // Doc comments are greedy-width-wrapped, so match against the flattened prose (`\n * ` line
+  // continuations collapsed to a space) rather than assuming a wrap point.
   assert.match(
-    source,
-    /`lr-open` — dispatched by 2 components: `<lr-base>`, `<lr-child>`\./
+    flattenDocComments(source),
+    /`lr-open` — dispatched by 2 components: `<lr-base>`, `<lr-child>`; detail `LyraBaseEventMap\['lr-open'\]`\./
   );
   assert.match(
     source,
     /export type LyraOpenEvent = LyraBaseEventMap\['lr-open'\];/
   );
   assert.doesNotMatch(source, /LyraChildEventMap\['lr-open'\]/);
+});
+
+test("a multi-owner event documents a union detail type", () => {
+  const source = generateEventTypeSource({
+    prefix: "lr",
+    manifest,
+    maps: [
+      {
+        name: "LyraBaseEventMap",
+        specifier: "./components/base/base.class.js",
+        events: ["lr-open"],
+      },
+      {
+        name: "LyraChildEventMap",
+        specifier: "./components/child/child.class.js",
+        events: ["lr-open"],
+      },
+    ],
+  });
+
+  assert.match(
+    flattenDocComments(source),
+    /`lr-open` — dispatched by 2 components: `<lr-base>`, `<lr-child>`; detail union of 2, e\.g\. `LyraBaseEventMap\['lr-open'\]`\./
+  );
+  assert.match(
+    source,
+    /export type LyraOpenEvent =\n {2}\| LyraBaseEventMap\['lr-open'\]\n {2}\| LyraChildEventMap\['lr-open'\];/
+  );
 });
 
 test("generation fails closed when an effective manifest event has no typed owner", () => {

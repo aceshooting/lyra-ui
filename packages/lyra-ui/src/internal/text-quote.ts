@@ -1521,26 +1521,6 @@ export function rangesFromTextQuoteMatches(
   return ranges;
 }
 
-export function findTextQuoteRanges(scope: TextQuoteScope, query: string, locale?: string): Range[] {
-  const ranges: Range[] = [];
-  const matches = findTextQuoteMatches(scope, query, locale);
-  try {
-    if (!scopeStructureIsFresh(scope)) return ranges;
-  } catch {
-    return ranges;
-  }
-  for (let index = 0; index < matches.length; index++) {
-    const range = rangeFromOffsets(
-      scope,
-      matches.packedOffsets[index * 2]!,
-      matches.packedOffsets[index * 2 + 1]!,
-      false,
-    );
-    if (range) ranges.push(range);
-  }
-  return ranges;
-}
-
 /** Resolves a DOM boundary point `(container, offset)` to a concrete `(Text node, offset)` pair.
  *  `container` is already a Text node for a Selection-derived Range, but a Range built via
  *  `selectNodeContents(element)` reports the element itself with `offset` as a child index, so that

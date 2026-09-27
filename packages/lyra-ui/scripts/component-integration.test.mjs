@@ -186,7 +186,63 @@ test('renders explicit none and not-measured states instead of ambiguous blanks'
   });
   const markdown = renderIntegrationCards(ledger);
   assert.match(markdown, /id="lr-a"/);
-  assert.match(markdown, /Optional peers: none/);
-  assert.match(markdown, /Direct Lyra dependencies: `lr-b`/);
-  assert.match(markdown, /Standalone gzip: not measured/);
+  assert.match(
+    markdown,
+    /\| <a id="lr-a"><\/a>`lr-a` \| utility \| `import '@aceshooting\/lyra-ui\/components\/utility\/a\/a\.js';` \| none \| `lr-b` \| none \| not measured/,
+  );
+});
+
+test('states the class-import derivation and gzip-ledger pointer once instead of per row', async () => {
+  const ledger = await buildComponentIntegration({
+    packageDir: '/not-used',
+    inventory,
+    packageJson: {},
+    graph,
+  });
+  const markdown = renderIntegrationCards(ledger);
+  assert.match(markdown, /`\.class` inserted before `\.js`/);
+  assert.match(markdown, /packages\/lyra-ui\/scripts\/fixtures\/component-integration\.json/);
+  assert.match(markdown, /`import '@aceshooting\/lyra-ui\/components\/utility\/a\/a\.js';`/);
+  assert.ok(!markdown.includes('Side-effect-free class import'), 'the per-row class import line is redundant with the header rule');
+  assert.ok(!/bundle SHA-256 `[0-9a-f]/.test(markdown), 'a per-row digest is redundant with the JSON ledger');
+});
+
+test('renders one dense table row per tag with no repeated per-card scaffolding', async () => {
+  const ledger = await buildComponentIntegration({
+    packageDir: '/not-used',
+    inventory,
+    packageJson: {},
+    graph,
+  });
+  const markdown = renderIntegrationCards(ledger);
+  assert.ok(!markdown.includes('<details'), 'the old per-card <details> wrapper must not come back');
+  assert.ok(!markdown.includes('<summary>'), 'the old per-card <summary> wrapper must not come back');
+  const tableRows = markdown.split('\n').filter((line) => line.startsWith('| <a id='));
+  assert.equal(tableRows.length, ledger.components.length);
+});
+
+test('prints only the KiB figure for a measured row, not the raw bytes or digest', async () => {
+  const previous = {
+    components: [{
+      tag: 'lr-a',
+      gzip: {
+        status: 'measured',
+        bytes: 1024,
+        kib: 1,
+        bundleSha256: 'a'.repeat(64),
+        limitation: 'fixture',
+      },
+    }],
+  };
+  const ledger = await buildComponentIntegration({
+    packageDir: '/not-used',
+    inventory,
+    packageJson: {},
+    graph,
+    previous,
+  });
+  const markdown = renderIntegrationCards(ledger);
+  assert.match(markdown, /\| 1 KiB \|/);
+  assert.ok(!markdown.includes('1024 bytes'));
+  assert.ok(!markdown.includes('a'.repeat(64)));
 });

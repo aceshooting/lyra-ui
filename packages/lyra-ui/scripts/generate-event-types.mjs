@@ -300,19 +300,13 @@ export function generateEventTypeSource({ prefix, maps, manifest }) {
   for (const { event, alias, labels, owners } of entries) {
     const emitters =
       labels.length === 1
-        ? `dispatched by ${labels[0]}.`
-        : `dispatched by ${labels.length} components: ${labels.join(', ')}.`;
-    const paragraphs = [`\`${event}\` — ${emitters}`];
-    if (owners.length === 1) {
-      paragraphs.push(`Detail type: \`${owners[0]}['${event}']\`.`);
-    } else {
-      paragraphs.push(
-        `A union of ${owners.length} component entries, so \`event.detail\` here exposes only what all ` +
-          `of them share. For one component's exact detail, index its own map — e.g. ` +
-          `\`${owners[0]}['${event}']\`.`,
-      );
-    }
-    lines.push(...docComment(paragraphs));
+        ? `dispatched by ${labels[0]}`
+        : `dispatched by ${labels.length} components: ${labels.join(', ')}`;
+    const detail =
+      owners.length === 1
+        ? `\`${owners[0]}['${event}']\``
+        : `union of ${owners.length}, e.g. \`${owners[0]}['${event}']\``;
+    lines.push(...docComment([`\`${event}\` — ${emitters}; detail ${detail}.`]));
     if (owners.length === 1) {
       lines.push(`export type ${alias} = ${owners[0]}['${event}'];`);
     } else {

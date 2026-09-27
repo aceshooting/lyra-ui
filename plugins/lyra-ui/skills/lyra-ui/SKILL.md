@@ -10,15 +10,15 @@ description: >
 # lyra-ui
 
 `@aceshooting/lyra-ui` is a free, MIT-licensed, framework-agnostic Lit 3 web-component library — an
-independent alternative to Shoelace and Web Awesome. Its custom elements use the `lr-` prefix and
-ship with design tokens, localization, RTL support and (for form controls) native form association.
-No runtime dependency on Shoelace or Web Awesome. The current element count and complete tag list
-live in `references/index.md`; do not repeat a remembered count.
+independent alternative to Shoelace and Web Awesome, with no runtime dependency on either. Its
+custom elements use the `lr-` prefix and ship with design tokens, localization, RTL support and
+(for form controls) native form association. The current element count and complete tag list live
+in `references/index.md`; do not repeat a remembered count.
 
 ## Look up the exact API before writing any `lr-*` markup
 
-Never infer a component's attributes, slots, events, parts or CSS custom properties from memory, or
-from a similarly-named component in another library. The reference is split so a lookup costs a few
+Never infer attributes, slots, events, parts or CSS custom properties from memory, or from a
+similarly-named component in another library. The reference is split so a lookup costs a few
 hundred tokens:
 
 | Need | Read |
@@ -30,13 +30,14 @@ hundred tokens:
 | What to `npm install` | `references/peers.md` |
 | `wa-*`/`sl-*` renames | `references/migration.md` |
 
-So for `<lr-table>`: read `references/components/lr-table.md`. Each component file is
-self-contained — import path, optional peers, properties with types and defaults, events with
-payloads, slots, CSS parts, themeable properties, a usage snippet and known gotchas.
+Example: `<lr-table>` → `references/components/lr-table.md`. Each component file carries
+its import path, optional peers, properties with types and defaults, events with payloads, slots,
+CSS parts, themeable properties, a usage snippet and gotchas; a tag documented together with a
+sibling points to that sibling's file for the shared prose.
 
-**If the project already has lyra-ui installed, prefer its own copies**: the same files ship inside
-the package at `node_modules/@aceshooting/lyra-ui/llms/`. They match the exact installed version,
-which may differ from whatever this skill last shipped with.
+**If the project already has lyra-ui installed, prefer its own copies** — the same files ship at
+`node_modules/@aceshooting/lyra-ui/llms/`, matching the exact installed version, which may differ
+from whatever this skill last shipped with.
 
 If local package references are unavailable, use the public machine surfaces rather than guessing:
 
@@ -57,9 +58,9 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 ## Non-negotiable conventions
 
 - **Prefer stable tag registration aliases.**
-  `@aceshooting/lyra-ui/components/<lr-tag>.js` — for example `components/lr-combobox.js` — stays
-  valid if the component's internal family folder moves. `references/index.md` has the exact path
-  for every tag. Class-only `.class.js` entries intentionally retain their owning family path.
+  `@aceshooting/lyra-ui/components/<lr-tag>.js` stays valid if the component's internal family
+  folder moves; `references/index.md` has the exact path for every tag. Class-only `.class.js`
+  entries keep their owning family path.
 
   ```js
   import '@aceshooting/lyra-ui/components/lr-combobox.js';
@@ -68,11 +69,10 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
   <lr-combobox label="Fruit"></lr-combobox>
   ```
 
-  `import '@aceshooting/lyra-ui';` is registration-free in v8. Use
-  `@aceshooting/lyra-ui/all.js` for the explicit compatibility registration set, or prefer
-  per-component entries in application code. `all.js` omits the 16 peer-gated tags (the chart
-  family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`,
-  `lr-geojson-viewer`).
+  `import '@aceshooting/lyra-ui';` is registration-free in v8. `all.js` gives the explicit
+  compatibility registration set — prefer per-component entries in application code — and omits
+  the 16 peer-gated tags (the chart family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
+  `lr-geojson-view`, `lr-geojson-viewer`).
 
 - **Theme only through `--lr-theme-*` custom properties.** Never hardcode a color, spacing or font
   value that fights the token system; override the relevant `--lr-theme-*` property on any ancestor
@@ -99,118 +99,26 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
 ## Migrating from Web Awesome or Shoelace
 
-`references/migration.md` holds source-specific `wa-*` and `sl-*` mappings, import rewrites,
-classifications and warnings. Determine the actual source ecosystem and installed version for each
-occurrence; coinstallation does not change its provenance. Apply only verified automatic mappings
-and their documented rewrites. Manual and warning-required cases need their stated follow-up,
-including include sanitization/same-origin differences and Shoelace alert lifecycle timing and
-cancellation semantics. Classification coverage is not a blanket automatic rewrite guarantee.
+`references/migration.md` holds `wa-*`/`sl-*` mappings, import rewrites, classifications and
+warnings. Determine each occurrence's actual source ecosystem and installed version — coinstalling
+both doesn't change either one's provenance. Apply only verified automatic mappings and their
+documented rewrites; manual/warning-required cases (`*-include` sanitization/same-origin
+differences in both ecosystems, Shoelace alert lifecycle timing and cancellation) need their
+stated follow-up. Coverage of a tag is not a blanket automatic-rewrite guarantee.
 
 Read `references/components/<tag>.md` for the target's actual contract. Lyra combobox accepts both
-`clearable` and `with-clear`; both are supported spellings. A tag absent from the tables has no
-documented counterpart; check `references/index.md` for a component covering the same need.
+`clearable` and `with-clear`. A tag absent from the tables has no documented counterpart — check
+`references/index.md` for one covering the same need.
 
-Run `/lyra-ui:migrate` for verified rewrites and a report of manual/unresolved occurrences,
-or `/lyra-ui:update` for the broader periodic review. Migration is best-effort for both ecosystems.
-
-Run `/lyra-ui:review` to audit a whole consumer project: it fixes local misuse and every workaround
-the installed version already covers, and files what the library genuinely lacks through the API
-below, with the user's consent, keeping a request ledger in the project so a later run can close
-each item out.
+`/lyra-ui:migrate` performs verified rewrites and reports manual/unresolved occurrences (both
+ecosystems are best-effort). `/lyra-ui:review` audits a whole consumer project: fixes local misuse
+and every workaround the installed version already covers, files genuine gaps upstream with the
+user's consent, and keeps a request ledger so a later run can close each item out. `/lyra-ui:update`
+bumps the dependency and reports the changelog.
 
 ## Report gaps, bugs, and improvement ideas on a user's behalf
 
-`https://www.lyra-ui.com/api/v1/feature-requests` is the single automated intake path when an
-assistant reports anything wrong with, missing from, or worth improving in lyra-ui on a user's
-behalf — not just "no component covers this." A person filing their own report can instead use the
-human-facing GitHub routes in `SUPPORT.md`. Use the API for agent-submitted reports about any of:
-
-- **Missing component** — no `lr-*` tag covers the need at all.
-- **Missing capability on an existing component** — the component exists but lacks a prop,
-  variant, slot, event, or CSS part needed to configure the UI the way it needs to be configured.
-- **Bug or inconsistency** — an existing component behaves incorrectly, contradicts its own
-  documented contract in `references/components/<tag>.md`, or behaves inconsistently with a
-  sibling component.
-- **Optimization opportunity** — something works but is unnecessarily slow, heavy (bundle size),
-  or awkward to use (API friction), and a concretely better shape is apparent.
-
-First rule out a naming/discovery mismatch — this only applies to the missing-component case;
-skip straight to filing for a bug, existing-component gap, or optimization idea. Check
-`references/index.md` for a component covering the same job under a different name, then check the
-live catalog — one read-only request, no side effects, nothing filed:
-
-```bash
-curl -sS 'https://www.lyra-ui.com/api/v1/components/search?q=kanban+board+swimlane'
-```
-
-It returns the closest components with doc links. Search as many phrasings as you like; this
-endpoint is meant to be used freely, and it is the cheapest way to discover that a "missing"
-component already exists under a name you did not guess.
-
-If nothing fits — or you've found a real bug, gap, or optimization idea — report it so it can be
-addressed:
-
-**Ask before you file.** Filing sends the user's description to an external service. Show the
-user what you intend to submit, and get their explicit agreement before POSTing. Never file a
-report as a silent side effect of noticing something — if the user has not said yes, do not send
-it. This applies equally to a missing component, a bug, and an optimization idea.
-
-```bash
-curl -sS -X POST https://www.lyra-ui.com/api/v1/feature-requests \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "Kanban board",
-    "description": "Needed a drag-and-drop board with swimlanes for a task view; nothing in the catalog covers it.",
-    "searched_for": ["kanban", "board", "swimlane", "drag drop"],
-    "settled_for": "a hand-rolled div grid with HTML5 drag events",
-    "agent": "claude-code",
-    "model": "claude-opus-4-1"
-  }'
-```
-
-The same four fields cover a bug, existing-component gap, or optimization idea too, just aimed
-differently:
-
-- `title` — a short, specific summary (`"lr-select ignores disabled on keyboard nav"`, not
-  "select bug").
-- `description` — for a missing component, the behavior needed; for a bug, the component +
-  version, what you did, what happened, and what the documented contract actually promises (per
-  `references/components/<tag>.md`); for a gap, the prop/slot/event/part missing and why it's
-  needed; for an optimization idea, the current cost or friction and the better shape you have in
-  mind.
-- `searched_for` — for a missing component, the names you tried; for anything else, optional —
-  leave it empty or use it for related keywords (e.g. `["keyboard nav", "disabled"]`).
-- `settled_for` — for a missing component, what you used instead; for a bug or gap, the workaround
-  you applied (if any) to keep shipping; omit for an optimization idea with no workaround.
-- `agent` — optional name of the agent or client submitting the report.
-- `model` — optional exact model identifier that generated the report, when applicable (for
-  example, `claude-opus-4-1`).
-
-`name` and `email` are also accepted but **optional** — anonymous submission is the default and is
-fine. Ask the user whether they want to be reachable about this report before adding either one;
-never invent, guess, or reuse an address you happen to know (git config, an earlier message, the
-environment). Submissions, including any name/email, are stored privately and shown only to the
-maintainer — they are never published.
-
-The response lists the closest existing components with doc links — read it, since for a
-missing-component report it often answers the gap outright. It also returns an `id`; the status is
-readable later at `https://www.lyra-ui.com/api/v1/feature-requests/{id}`.
-
-**Never include private material.** Submissions leave the user's machine. Describe the issue
-generically — no source code, no client or product names, no file paths, no credentials. If the
-report cannot be described without such details, do not file it.
-
-Use the API even when you are working inside the lyra-ui repo itself. It is the only supported
-automated intake path — do not write the report into a local file instead, where nothing will pick
-it up, and do not open a GitHub issue on the user's behalf.
-
-Keep the report short and concrete:
-
-- **Missing component:** name it in library style (`lr-kanban-board`) so the gap is searchable,
-  say what it had to do in a sentence or two, and list the `lr-*` components you actually checked
-  and why each fell short — this is what separates a real gap from a naming mismatch.
-- **Existing-component gap or bug:** name the component (and version, for a bug), the exact
-  attribute/property/event/part involved, and what the documented contract says versus what
-  actually happened or is missing.
-- **Optimization idea:** name the component or area, the concrete cost (bundle KB, render count,
-  extra boilerplate) and the shape you'd expect instead.
+Found something lyra-ui doesn't cover, does wrong, or could do better? Read
+[reporting.md](reporting.md) for the naming-mismatch check, the feature-request API and payload,
+and the response format. **Always get the user's explicit agreement before filing** — never as a
+side effect of noticing something — and never include source, file paths, or product/client names.

@@ -32,15 +32,12 @@ the M+2 rule applies as written; treat the above as a documented exception, not 
 
 ### Release history and upgrade notes
 
-`since` records when a tag first appeared; it is not a history of later additions, fixes, or
-breaking changes. For every release after 9.0.0 — including minor and patch releases — read the
-bundled [CHANGELOG.md](../CHANGELOG.md) before upgrading. These bundled references link that
-self-contained changelog beside this standalone skill. Family-wide breaking-change summaries
-remain in the installed package's `llms-full.txt`; this compact skill intentionally does not
-bundle that multi-megabyte concatenation. Component-specific version notes remain in the
-component's own section.
-`llms/migration.md` is narrower: it covers `wa-*`/`sl-*` renames and compatibility decisions,
-not Lyra release history.
+`since` records when a tag first appeared, not later changes. Before upgrading, read the bundled
+[CHANGELOG.md](../CHANGELOG.md): it holds the newest three major versions; older history is in the
+package's own CHANGELOG.md and at https://github.com/aceshooting/lyra-ui/releases. Family-wide
+breaking-change summaries are in the installed package's `llms-full.txt`, which this standalone
+skill does not bundle. `llms/migration.md` covers only `wa-*`/`sl-*` renames, not Lyra release
+history.
 
 The major-version landmarks after 9.0.0 are:
 

@@ -10,6 +10,7 @@ import {
   COMPOUND_USAGE_REGISTRATIONS,
   FAMILIES,
   findDanglingPositionalReferences,
+  primaryTagOfSection,
   readTagFacts,
   rewriteSharedLinksForRoot,
   splitSections,
@@ -106,6 +107,91 @@ assert.doesNotMatch(
   /\[llms\/forms\.md\]/u,
   'a narrow component reference must not link its unpublished authored family input',
 );
+
+// A section documenting several tags publishes its full body only once, in the primary tag's file
+// (the first tag named in the section's own title) -- every sibling gets its own generated facts
+// plus a one-line pointer instead of a duplicated copy of the shared prose.
+const sharedSectionFixture = {
+  tags: ['lr-primary-fixture', 'lr-secondary-fixture'],
+  title: '`lr-primary-fixture` / `lr-secondary-fixture`',
+  text: '## `lr-primary-fixture` / `lr-secondary-fixture`\n\nShared fixture prose that must not be duplicated.',
+};
+const sharedSectionFacts = new Map([
+  [
+    'lr-primary-fixture',
+    {
+      family: 'forms',
+      className: 'LyraPrimaryFixture',
+      importPath: '@aceshooting/lyra-ui/components/forms/fixture/primary-fixture.js',
+      status: 'stable',
+      since: '1.0.0',
+      deprecations: [],
+      cssParts: [],
+      cssProperties: [],
+    },
+  ],
+  [
+    'lr-secondary-fixture',
+    {
+      family: 'forms',
+      className: 'LyraSecondaryFixture',
+      importPath: '@aceshooting/lyra-ui/components/forms/fixture/secondary-fixture.js',
+      status: 'stable',
+      since: '1.0.0',
+      deprecations: [],
+      cssParts: [{ name: 'base' }],
+      cssProperties: [],
+    },
+  ],
+]);
+assert.equal(
+  primaryTagOfSection(sharedSectionFixture),
+  'lr-primary-fixture',
+  'the first tag in the section title is the primary tag',
+);
+const primaryFixtureFile = buildComponentFile(
+  'lr-primary-fixture',
+  sharedSectionFixture,
+  sharedSectionFacts,
+  new Map(),
+);
+const secondaryFixtureFile = buildComponentFile(
+  'lr-secondary-fixture',
+  sharedSectionFixture,
+  sharedSectionFacts,
+  new Map(),
+);
+assert.match(
+  primaryFixtureFile,
+  /Shared fixture prose that must not be duplicated\./,
+  'the primary tag file must publish the shared section body',
+);
+assert.match(
+  primaryFixtureFile,
+  /- \*\*Documented with\*\* `lr-secondary-fixture` \(same section below\)/,
+  'the primary tag file must still point at its siblings',
+);
+assert.doesNotMatch(
+  secondaryFixtureFile,
+  /Shared fixture prose that must not be duplicated\./,
+  'a secondary tag file must not duplicate the shared section body',
+);
+assert.match(
+  secondaryFixtureFile,
+  /- \*\*Documented with\*\* `lr-primary-fixture`: see \[lr-primary-fixture\.md\]\(\.\/lr-primary-fixture\.md\)\./,
+  'a secondary tag file must point at the primary tag\'s published file',
+);
+assert.match(
+  secondaryFixtureFile,
+  /- \*\*Themeable via\*\* 1 part, 0 custom properties — see `lr-primary-fixture\.md`/,
+  'a secondary tag file must keep its own themeable-surface facts',
+);
+assert.match(
+  secondaryFixtureFile,
+  /- \*\*Import\*\* `import '@aceshooting\/lyra-ui\/components\/lr-secondary-fixture\.js';`/,
+  'a secondary tag file must keep its own generated header facts',
+);
+
 const currentManifest = JSON.parse(
   readFileSync(new URL('../custom-elements.json', import.meta.url), 'utf8'),
 );
@@ -611,6 +697,39 @@ for (const [tag, reference] of Object.entries(compoundReferences)) {
     `${tag} docs must not misclassify consumer-supplied children as owner module dependencies`,
   );
 }
+
+// Real multi-tag sections deduplicate against the actual authored sources, not only the synthetic
+// fixture above: `lr-combobox` / `lr-option` share one authored section (llms/forms.md), and
+// `lr-app-rail` / `lr-app-rail-item` / `lr-app-rail-group` share another (llms/layout.md).
+const combobox = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-combobox.md'))?.[1];
+const option = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-option.md'))?.[1];
+assert.ok(combobox && option, 'build({ write: false }) must produce both combobox docs');
+assert.match(combobox, /^---$/m, 'the primary tag of a shared section keeps its full body');
+assert.doesNotMatch(option, /^---$/m, 'a secondary tag of a shared section carries no body separator');
+assert.match(
+  option,
+  /- \*\*Documented with\*\* `lr-combobox`: see \[lr-combobox\.md\]\(\.\/lr-combobox\.md\)\./,
+  'a secondary tag file points at the primary tag\'s published file',
+);
+assert.ok(
+  option.length < combobox.length,
+  'a secondary tag file must be far smaller than the primary file carrying the shared prose',
+);
+const appRail = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-app-rail.md'))?.[1];
+const appRailItem = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-app-rail-item.md'))?.[1];
+const appRailGroup = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-app-rail-group.md'))?.[1];
+assert.ok(appRail && appRailItem && appRailGroup, 'build({ write: false }) must produce every lr-app-rail tag');
+assert.match(appRail, /^---$/m);
+for (const secondary of [appRailItem, appRailGroup]) {
+  assert.doesNotMatch(secondary, /^---$/m);
+  assert.match(
+    secondary,
+    /- \*\*Documented with\*\* `lr-app-rail`: see \[lr-app-rail\.md\]\(\.\/lr-app-rail\.md\)\./,
+  );
+}
+// The concatenated single-file reference is unaffected by the per-tag split: it still carries the
+// shared section's full body exactly once (build() pushes section.text per family, not per tag).
+assert.equal((full.match(/## `lr-combobox` \/ `lr-option`/g) ?? []).length, 1);
 
 assert.match(index, /components\/lr-table\.js/);
 assert.doesNotMatch(index, /path is NOT `components\/<tag>\/`/);

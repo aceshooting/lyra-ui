@@ -7,7 +7,9 @@
 // Generated (never edit; `pnpm run llms` rewrites them, CI diffs them):
 //   llms-full.txt             concatenation, the single-file reference published since v1
 //   llms/index.md             tag -> family/import/one-line-purpose routing table
-//   llms/components/<tag>.md  one self-contained file per custom element (surgical agent reads)
+//   llms/components/<tag>.md  one file per custom element (surgical agent reads); a tag sharing a
+//                             section with siblings gets its own facts plus a pointer to the
+//                             section's primary tag file instead of a duplicated body
 //   llms/tokens.md            direct --lr-theme-* mappings plus derived/fixed --lr-* tokens
 //   llms/peers.md             component -> optional peer dependency map
 //   llms/migration.md         wa-*/sl-* classification and codemod table
@@ -862,9 +864,13 @@ function buildIndex(sectionsByFamily, tagFacts) {
     `${tagFacts.size} custom elements, grouped by the source family they live in.`,
     '',
     '**Reading one component.** Its reference file path is derived from the tag — no search needed:',
-    '`llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import',
-    'path, optional peers, properties, events, slots, CSS parts, themeable custom properties, a usage',
-    'snippet, and known gotchas — a few hundred tokens instead of the whole catalog.',
+    '`llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,',
+    'properties, events, slots, CSS parts, themeable custom properties, a usage snippet, and known',
+    'gotchas — a few hundred tokens instead of the whole catalog. A tag documented together with',
+    'siblings (e.g. `lr-combobox` / `lr-option`) still gets its own generated facts (import path,',
+    'class, status, deprecations, optional peers), but the properties, events, slots, usage snippet,',
+    'and gotchas live once in the primary sibling\'s file; the secondary tag\'s file carries a one-line',
+    'pointer to it instead of a duplicated copy.',
     '',
     '**Importing.** Registration paths are stable aliases derived from the tag:',
     "`import '@aceshooting/lyra-ui/components/lr-table.js';` registers `<lr-table>` and remains",
@@ -897,6 +903,15 @@ function buildIndex(sectionsByFamily, tagFacts) {
   return out.join('\n');
 }
 
+/**
+ * The tag whose generated `llms/components/<tag>.md` carries a multi-tag section's full body text.
+ * `section.tags` is already ordered title-tags-first (see splitSections), so its first entry is
+ * exactly "the first lr-* tag in the section's title line; if ambiguous, the first tag found".
+ */
+export function primaryTagOfSection(section) {
+  return section.tags[0];
+}
+
 export function buildComponentFile(
   tag,
   section,
@@ -905,6 +920,8 @@ export function buildComponentFile(
   { familyHasBreakingNotes = false } = {},
 ) {
   const facts = tagFacts.get(tag);
+  const primaryTag = primaryTagOfSection(section);
+  const isPrimary = tag === primaryTag;
   const shares = section.tags.filter((t) => t !== tag && tagFacts.has(t));
   const peers = peersByTag.get(tag) ?? [];
   const cssPartNames = facts.cssParts?.map((p) => p.name) ?? [];
@@ -919,6 +936,14 @@ export function buildComponentFile(
       `${entry.replacement?.kind ?? 'API'} \`${replacement}\`; removal not before ` +
       `\`${entry.removalNotBefore}\` — ${entry.rationale}`;
   });
+  // A section shared by several tags publishes its full body only once, in the primary tag's file
+  // (the first tag named in the section's own title) -- every sibling gets its own generated facts
+  // above plus this one-line pointer instead of a duplicated copy of the shared prose.
+  const documentedWithLine = isPrimary
+    ? shares.length
+      ? `- **Documented with** ${shares.map((t) => `\`${t}\``).join(', ')} (same section below)`
+      : null
+    : `- **Documented with** \`${primaryTag}\`: see [${primaryTag}.md](./${primaryTag}.md).`;
   return [
     GENERATED(`llms/${facts.family}.md`),
     '',
@@ -951,18 +976,13 @@ export function buildComponentFile(
       ? `- **Optional peers** ${peers.map((p) => `\`${p}\``).join(', ') } — see \`llms/peers.md\``
       : '- **Optional peers** none',
     cssPartNames.length || cssPropNames.length
-      ? `- **Themeable via** ${cssPartNames.length} part${cssPartNames.length === 1 ? '' : 's'}, ${cssPropNames.length} custom propert${cssPropNames.length === 1 ? 'y' : 'ies'} — see this component's own \`@csspart\`/\`@cssprop\` list below`
+      ? `- **Themeable via** ${cssPartNames.length} part${cssPartNames.length === 1 ? '' : 's'}, ${cssPropNames.length} custom propert${cssPropNames.length === 1 ? 'y' : 'ies'} — see ${isPrimary ? "this component's own `@csspart`/`@cssprop` list below" : `\`${primaryTag}.md\``}`
       : '- **Themeable via** nothing component-specific — inherits only the shared surface',
-    shares.length
-      ? `- **Documented with** ${shares.map((t) => `\`${t}\``).join(', ')} (same section below)`
-      : null,
+    documentedWithLine,
     '- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types):' +
       ' `llms/shared.md`',
     '',
-    '---',
-    '',
-    section.text,
-    '',
+    ...(isPrimary ? ['---', '', section.text, ''] : []),
   ]
     .filter((l) => l !== null)
     .join('\n');
@@ -1061,9 +1081,11 @@ export function build({ write = true } = {}) {
     '## Contents',
     '',
     'This file is the concatenation of the per-family sources in `llms/`. When only one component is',
-    'in question, read `llms/components/<tag>.md` instead — it is the same text plus its import path,',
-    'and costs a few hundred tokens instead of the whole catalog. `llms/index.md` maps every tag to its',
-    'family and entry point.',
+    'in question, read `llms/components/<tag>.md` instead — for a tag documented on its own, that file',
+    'holds the same text plus its import path; for a tag documented together with siblings, it holds',
+    'the generated facts (import path, status, peers, and so on) plus a pointer to the primary',
+    'sibling\'s file for the shared prose. Either way it costs a few hundred tokens instead of the',
+    'whole catalog. `llms/index.md` maps every tag to its family and entry point.',
     '',
     '- **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks,' +
       ' SSR, packaging (`llms/shared.md`)',

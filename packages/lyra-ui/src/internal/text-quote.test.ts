@@ -15,9 +15,15 @@ import {
   resolveTextQuote,
   rangeFromTextQuoteMatch,
   rangesFromTextQuoteMatches,
-  findTextQuoteRanges,
   buildQuoteAnchor,
 } from './text-quote.js';
+
+/** Find-then-materialize, mirroring the production pattern every viewer uses
+ *  (`findTextQuoteMatches` + `rangesFromTextQuoteMatches`). */
+function toRanges(scope: TextQuoteScope, query: string, locale?: string): Range[] {
+  const matches = [...findTextQuoteMatches(scope, query, locale)];
+  return rangesFromTextQuoteMatches(scope, matches).filter((range): range is Range => range !== null);
+}
 
 describe('bounded text quote indexing', () => {
   it('retains a bounded traversal allowance for template markers during freshness checks', () => {
@@ -576,7 +582,7 @@ describe('locale-aware search ranges', () => {
     root.textContent = 'İzmir';
     document.body.appendChild(root);
     try {
-      const ranges = findTextQuoteRanges(scopeFromElement(root), 'izmir', 'tr');
+      const ranges = toRanges(scopeFromElement(root), 'izmir', 'tr');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('İzmir');
     } finally {
@@ -589,7 +595,7 @@ describe('locale-aware search ranges', () => {
     root.textContent = 'İ Foo';
     document.body.appendChild(root);
     try {
-      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
+      const ranges = toRanges(scopeFromElement(root), 'foo', 'en');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
     } finally {
@@ -618,12 +624,12 @@ describe('locale-aware search ranges', () => {
     document.body.appendChild(root);
     try {
       const scope = scopeFromElement(root);
-      const greekRanges = findTextQuoteRanges(scope, 'ος', 'el');
+      const greekRanges = toRanges(scope, 'ος', 'el');
       expect(greekRanges).to.have.length(1);
       expect(greekRanges[0]!.toString()).to.equal('ΟΣ');
       expect(resolveTextQuote(scope, { quote: 'ος' }, 'el')?.toString()).to.equal('ΟΣ');
 
-      const lithuanianRanges = findTextQuoteRanges(scope, 'i\u0307\u0301', 'lt');
+      const lithuanianRanges = toRanges(scope, 'i\u0307\u0301', 'lt');
       expect(lithuanianRanges).to.have.length(1);
       expect(lithuanianRanges[0]!.toString()).to.equal('I\u0301');
       expect(resolveTextQuote(scope, { quote: 'i\u0307\u0301' }, 'lt')?.toString()).to.equal('I\u0301');
@@ -639,7 +645,7 @@ describe('locale-aware search ranges', () => {
     try {
       const scope = scopeFromElement(root);
       for (const query of ['Σ', 'σ', 'ς']) {
-        const ranges = findTextQuoteRanges(scope, query, 'el');
+        const ranges = toRanges(scope, query, 'el');
         expect(ranges, query).to.have.length(1);
         expect(ranges[0]!.toString()).to.equal('Σ');
       }
@@ -666,7 +672,7 @@ describe('locale-aware search ranges', () => {
     document.body.appendChild(root);
     try {
       const scope = scopeFromElement(root);
-      expect(findTextQuoteRanges(scope, 'needle', 'en')).to.have.length(1);
+      expect(toRanges(scope, 'needle', 'en')).to.have.length(1);
       expect(resolveTextQuote(scope, { quote: 'Needle' }, 'en')?.toString()).to.equal('Needle');
       expect(constructions).to.equal(0);
     } finally {
@@ -1217,7 +1223,7 @@ describe('segmenter and case-fold defensive fallbacks', () => {
     root.textContent = 'İ Foo';
     document.body.appendChild(root);
     try {
-      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'xx');
+      const ranges = toRanges(scopeFromElement(root), 'foo', 'xx');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
     } finally {
@@ -1239,7 +1245,7 @@ describe('segmenter and case-fold defensive fallbacks', () => {
     root.textContent = 'İ Foo';
     document.body.appendChild(root);
     try {
-      expect(() => findTextQuoteRanges(scopeFromElement(root), 'foo', 'yy')).to.throw(TypeError);
+      expect(() => findTextQuoteMatches(scopeFromElement(root), 'foo', 'yy')).to.throw(TypeError);
     } finally {
       root.remove();
       Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
@@ -1260,7 +1266,7 @@ describe('segmenter and case-fold defensive fallbacks', () => {
     document.body.appendChild(root);
     document.body.appendChild(hangulRoot);
     try {
-      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
+      const ranges = toRanges(scopeFromElement(root), 'foo', 'en');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
       const decomposedRoot = document.createElement('div');
@@ -1511,14 +1517,14 @@ describe('TextQuoteIndex.resolve context ceilings', () => {
 });
 
 describe('defensive edge cases for range-materialization helpers', () => {
-  it('findTextQuoteRanges returns no ranges once the scope structure has gone stale', () => {
+  it('materializes no ranges once the scope structure has gone stale', () => {
     const root = document.createElement('div');
     root.textContent = 'needle';
     document.body.appendChild(root);
     try {
       const scope = scopeFromElement(root);
       (root.firstChild as Text).data = 'changed';
-      expect(findTextQuoteRanges(scope, 'needle', 'en')).to.deep.equal([]);
+      expect(toRanges(scope, 'needle', 'en')).to.deep.equal([]);
     } finally {
       root.remove();
     }
@@ -1875,7 +1881,7 @@ describe('normalization and materialization failure boundaries', () => {
       });
       const hostileScope: TextQuoteScope = { ...scope, segments: throwingSegments };
       expect(rangesFromTextQuoteMatches(hostileScope, [{ start: 0, end: 6 }])).to.deep.equal([null]);
-      expect(findTextQuoteRanges(hostileScope, 'needle')).to.deep.equal([]);
+      expect(toRanges(hostileScope, 'needle')).to.deep.equal([]);
 
       const range = document.createRange();
       range.selectNodeContents(root);

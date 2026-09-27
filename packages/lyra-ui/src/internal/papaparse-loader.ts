@@ -42,7 +42,3 @@ export function loadPapaParseCached(): Promise<PapaParseApi | null> {
   if (!cached) cached = loadPapaParse();
   return cached;
 }
-
-export function clearPapaParseCache(): void {
-  cached = undefined;
-}

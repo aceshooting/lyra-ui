@@ -33,18 +33,6 @@ function isCoordinate(value: unknown): value is number {
   );
 }
 
-function indexToColumn(index: number): string | null {
-  if (!isCoordinate(index)) return null;
-  let n = index + 1;
-  let letters = '';
-  while (n > 0) {
-    const remainder = (n - 1) % 26;
-    letters = String.fromCharCode(65 + remainder) + letters;
-    n = Math.floor((n - 1) / 26);
-  }
-  return letters;
-}
-
 function parseCellRef(ref: string): { row: number; col: number } | null {
   const trimmed = ref.trim();
   if (trimmed.length === 0 || trimmed.length > MAX_CELL_REFERENCE_LENGTH) return null;
@@ -93,31 +81,4 @@ export function parseCellRange(input: string): ParsedCellRange | null {
     startCol: Math.min(first.col, second.col),
     endCol: Math.max(first.col, second.col),
   };
-}
-
-/**
- * Inverse of `parseCellRange()` -- builds an A1-notation string for a `LyraAnchor` of kind
- * `cell-range`. Returns `null` for non-finite, unsafe, negative, reversed, or overlong input rather
- * than entering an unbounded column-conversion loop.
- */
-export function formatCellRange(range: ParsedCellRange): string | null {
-  if (
-    !isCoordinate(range.startRow) ||
-    !isCoordinate(range.startCol) ||
-    !isCoordinate(range.endRow) ||
-    !isCoordinate(range.endCol) ||
-    range.startRow > range.endRow ||
-    range.startCol > range.endCol ||
-    (range.sheet !== undefined &&
-      (typeof range.sheet !== 'string' || range.sheet.length === 0 || range.sheet.length > MAX_SHEET_NAME_LENGTH))
-  ) {
-    return null;
-  }
-  const startColumn = indexToColumn(range.startCol);
-  const endColumn = indexToColumn(range.endCol);
-  if (startColumn === null || endColumn === null) return null;
-  const start = `${startColumn}${range.startRow + 1}`;
-  const end = `${endColumn}${range.endRow + 1}`;
-  const body = start === end ? start : `${start}:${end}`;
-  return range.sheet ? `${range.sheet}!${body}` : body;
 }

@@ -82,6 +82,25 @@ const editor = JSON.parse(bySuffix('/scripts/fixtures/token-editor.generated.jso
 assert.equal(docs.schemaVersion, 1);
 assert.ok(docs.tokens.some((token) => token.name === '--lr-color-surface'));
 assert.ok(editor.properties.some((property) => property.name === '--lr-theme-color-surface-default'));
+// llms/tokens.md (build-llms.mjs's buildTokens()) never reads a token's `description`, so it is
+// dropped from this fixture rather than duplicating canonical-tokens.json's boilerplate prose into
+// an artifact nothing consumes; every other field a shared token needs still round-trips.
+assert.ok(docs.tokens.every((token) => !('description' in token)));
+const surfaceDocsToken = docs.tokens.find((token) => token.name === '--lr-color-surface');
+assert.equal(surfaceDocsToken.scope, 'shared');
+assert.equal(typeof surfaceDocsToken.values.light, 'string');
+// token-editor.generated.json feeds the VS Code/JetBrains CSS-property hover
+// (design-token-editor.mjs), which does render `description` as prose, so it is kept there.
+// Compare against the checked-in fixture rather than a second hard-coded copy of the wording —
+// design-token-editor.test.mjs already pins that literal sentence, and this assertion only needs
+// to prove the generator left that consumer's output untouched, not lock the prose here too.
+const persistedEditor = JSON.parse(
+  readFileSync(path.join(packageDir, 'scripts', 'fixtures', 'token-editor.generated.json'), 'utf8'),
+);
+assert.equal(
+  editor.properties.find((property) => property.name === '--lr-theme-color-surface-default').description,
+  persistedEditor.properties.find((property) => property.name === '--lr-theme-color-surface-default').description,
+);
 
 // tokens-root.css repeats theme.css's cascade-layer order statement verbatim. Layer order is fixed
 // by FIRST appearance, so if tokens-root.css loaded first with a shorter list, every layer only

@@ -5,9 +5,13 @@
 296 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
-`llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
-path, optional peers, properties, events, slots, CSS parts, themeable custom properties, a usage
-snippet, and known gotchas — a few hundred tokens instead of the whole catalog.
+`llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
+properties, events, slots, CSS parts, themeable custom properties, a usage snippet, and known
+gotchas — a few hundred tokens instead of the whole catalog. A tag documented together with
+siblings (e.g. `lr-combobox` / `lr-option`) still gets its own generated facts (import path,
+class, status, deprecations, optional peers), but the properties, events, slots, usage snippet,
+and gotchas live once in the primary sibling's file; the secondary tag's file carries a one-line
+pointer to it instead of a duplicated copy.
 
 **Importing.** Registration paths are stable aliases derived from the tag:
 `import '@aceshooting/lyra-ui/components/lr-table.js';` registers `<lr-table>` and remains
