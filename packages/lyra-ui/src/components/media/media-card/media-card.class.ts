@@ -350,10 +350,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
       e.preventDefault();
       return;
     }
-    const request = this.emit('lr-media-download-request', this.eventDetail(), { cancelable: true });
+    const detail = this.eventDetail();
+    const request = this.emit('lr-media-download-request', { ...detail }, { cancelable: true });
     // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
     // bound only to the old name can still veto, exactly as one bound to the canonical name can.
-    const deprecatedAlias = this.emit('lr-before-media-download', this.eventDetail(), { cancelable: true });
+    const deprecatedAlias = this.emit('lr-before-media-download', { ...detail }, { cancelable: true });
     if (deprecatedAlias.defaultPrevented) {
       warnDeprecatedUsage(this, 'event', 'lr-before-media-download', 'lr-media-download-request');
     }

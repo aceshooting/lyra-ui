@@ -4444,7 +4444,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -4455,7 +4455,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4472,7 +4472,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -4540,7 +4540,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -4632,35 +4632,35 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 107,
+              "line": 122,
               "test": "drops dataset entries without array data while retaining a valid rendered sibling",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 551,
+              "line": 566,
               "test": "falls back to a localized series label when a legend toggle would otherwise be unnamed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 756,
+              "line": 771,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 2268,
+              "line": 2283,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 2268,
+              "line": 2283,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -4674,7 +4674,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -4685,7 +4685,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4702,7 +4702,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -4770,7 +4770,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -5610,7 +5610,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -5621,7 +5621,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5638,7 +5638,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -5706,7 +5706,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -7346,49 +7346,49 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
-              "line": 46,
+              "line": 54,
               "test": "${type} exposes one named, color-matched category toggle per slice",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
-              "line": 360,
+              "line": 368,
               "test": "wraps long RTL categories and refreshes per-slice theme swatches",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 91,
+              "line": 109,
               "test": "drops malformed simplified dataset entries while retaining valid rendered series",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 1832,
+              "line": 1850,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6681,
+              "line": 6699,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6681,
+              "line": 6699,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 7164,
+              "line": 7182,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
@@ -7402,7 +7402,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -7413,7 +7413,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7430,7 +7430,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -7500,7 +7500,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -15995,7 +15995,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -16006,7 +16006,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -16023,7 +16023,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -16091,7 +16091,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -17286,14 +17286,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/email-viewer/email-viewer.test.ts",
-              "line": 804,
+              "line": 813,
               "test": "is accessible once a message has loaded (headers grid, attachment list/buttons)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/email-viewer/email-viewer.test.ts",
-              "line": 819,
+              "line": 828,
               "test": "is accessible with the quote-fold toggle expanded",
               "target": "el",
               "state": "populated"
@@ -23697,7 +23697,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23708,7 +23708,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23725,7 +23725,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23793,7 +23793,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -26825,7 +26825,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26836,7 +26836,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26853,7 +26853,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26921,7 +26921,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -27020,35 +27020,35 @@
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 77,
+              "line": 86,
               "test": "drops dataset entries without array data while retaining a valid rendered sibling",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 727,
+              "line": 736,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 2056,
+              "line": 2065,
               "test": "stays accessible with a fixed pitch",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4656,
+              "line": 4665,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4656,
+              "line": 4665,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -27062,7 +27062,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -27073,7 +27073,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27090,7 +27090,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28462,49 +28462,49 @@
           "evidence": [
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 935,
+              "line": 963,
               "test": "is accessible with a populated image card",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 942,
+              "line": 970,
               "test": "is accessible with a populated video card",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 949,
+              "line": 977,
               "test": "is accessible with a populated file chip (safe link)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 956,
+              "line": 984,
               "test": "is accessible in the unsafe-URL inert fallback state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 1013,
+              "line": 1041,
               "test": "is accessible in the plain frame state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 1447,
+              "line": 1475,
               "test": "forwards aria-current but never aria-pressed onto the file anchor, and both onto the video open-button",
               "target": "file",
               "state": "populated"
             },
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 1483,
+              "line": 1511,
               "test": "stays accessible as a disabled, pressed, right-to-left file card",
               "target": "el",
               "state": "populated"
@@ -28524,7 +28524,7 @@
           "evidence": [
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 1485,
+              "line": 1513,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28541,7 +28541,7 @@
           "evidence": [
             {
               "file": "src/components/media/media-card/media-card.test.ts",
-              "line": 1171,
+              "line": 1199,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34560,7 +34560,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34571,7 +34571,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34588,7 +34588,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34657,7 +34657,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -34770,7 +34770,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34781,7 +34781,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34798,7 +34798,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -34866,7 +34866,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -37194,7 +37194,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -37205,7 +37205,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37222,7 +37222,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37290,7 +37290,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -40915,7 +40915,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1797,
+              "line": 1812,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40926,7 +40926,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 820,
+              "line": 835,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40943,7 +40943,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 829,
+              "line": 844,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41011,7 +41011,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 76,
+              "line": 91,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -43325,7 +43325,7 @@
           "evidence": [
             {
               "file": "src/components/data/sparkline/sparkline.test.ts",
-              "line": 456,
+              "line": 462,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -43345,7 +43345,7 @@
           "evidence": [
             {
               "file": "src/components/data/sparkline/sparkline.test.ts",
-              "line": 126,
+              "line": 132,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50160,35 +50160,35 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 354,
+              "line": 360,
               "test": "shows an incomplete call as a terminal, unanimated, neutral state with localized header and status text",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 611,
+              "line": 617,
               "test": "scrolls a wide renderer inside the result section and makes it a keyboard stop only while it overflows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 784,
+              "line": 790,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 784,
+              "line": 790,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 784,
+              "line": 790,
               "test": "is accessible collapsed, expanded with every section, and with a label override",
               "target": "el",
               "state": "populated"
@@ -50213,7 +50213,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 577,
+              "line": 583,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50230,7 +50230,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 593,
+              "line": 599,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50352,14 +50352,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 113,
+              "line": 119,
               "test": "keeps an incomplete status as a neutral, unanimated terminal state with visible and accessible text",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 740,
+              "line": 746,
               "test": "is accessible in a populated state with category, duration, and an open detail tooltip",
               "target": "el",
               "state": "populated"
@@ -50390,7 +50390,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip.test.ts",
-              "line": 269,
+              "line": 275,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -50680,14 +50680,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 619,
+              "line": 625,
               "test": "is accessible while open with body and footer content",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 612,
+              "line": 618,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -50701,7 +50701,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 303,
+              "line": 309,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -50724,7 +50724,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 666,
+              "line": 672,
               "kind": "320px allocation test signal"
             }
           ]
@@ -51203,7 +51203,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 1084,
+              "line": 1091,
               "test": "is accessible with a populated timeline and the approval dialog open",
               "target": "el",
               "state": "populated"
@@ -51223,7 +51223,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 963,
+              "line": 970,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51240,7 +51240,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-timeline/tool-timeline.test.ts",
-              "line": 971,
+              "line": 978,
               "kind": "320px allocation test signal"
             }
           ]

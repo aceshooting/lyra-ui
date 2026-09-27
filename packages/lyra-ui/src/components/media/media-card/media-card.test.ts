@@ -651,6 +651,28 @@ describe('lr-media-download-request and its deprecated lr-before-media-download 
     expect(prevented).to.equal(false);
   });
 
+  it('keeps both request details on the activated file when a listener updates the card', async () => {
+    const { el, activate } = await fileCard();
+    const details: { src: string; filename: string }[] = [];
+    el.addEventListener('lr-media-download-request', (event) => {
+      details.push({ ...event.detail });
+      el.src = 'https://example.test/next.pdf';
+      el.filename = 'next.pdf';
+      Object.assign(event.detail, { filename: 'listener-only.pdf' });
+    });
+    el.addEventListener('lr-before-media-download', (event) => {
+      details.push(event.detail);
+      if (event.detail.filename === 'report.pdf') event.preventDefault();
+    });
+    expect(activate(), 'the alias still vetoes the activated file').to.equal(true);
+    expect(details).to.deep.equal([
+      { src: 'https://example.test/report.pdf', filename: 'report.pdf' },
+      { src: 'https://example.test/report.pdf', filename: 'report.pdf' },
+    ]);
+    await el.updateComplete;
+    expect(el.filename).to.equal('next.pdf');
+  });
+
   it('suppresses the native download when the canonical request is vetoed, without a warning', async () => {
     const { el, activate } = await fileCard();
     let aliasPrevented: boolean | undefined;
