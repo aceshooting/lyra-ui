@@ -204,6 +204,13 @@ plus Shoelace aliases `prefix` → `start` and `suffix` → `end`.
 In a constrained button the default label ellipsizes and each adornment wrapper is capped at 40%
 of the control. Fixed icons remain visible while unbroken labels or metadata cannot widen the row.
 
+A detected icon-only label (the `icon-button` state) has no text to ellipsize, so it does not clip
+paint. A glow drawn around the glyph extends past the label box instead of being cut to a square,
+for example `gemstoneSelectedGlyphStyles`' drop-shadow halo on a `data-lr-gemstone-selected`
+wrapper. A text label keeps the truncation clip, even beside a glowing glyph. The `start`/`end`
+wrappers always clip, so put a glowing glyph in the default slot on its own. Hit area, focus ring,
+and label box are unchanged.
+
 **CSS parts:** `base` (compatibility name for the internal control; use `button`),
 `button` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe link; it is
 the same node as `base`), `label`, `start`/`prefix` (the same wrapper), `end`/`suffix` (the same

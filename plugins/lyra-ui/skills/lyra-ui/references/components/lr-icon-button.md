@@ -108,7 +108,10 @@ sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts on
 set, so with `icon` left empty your content is the button's only child. That is what lets a
 complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — render at its own natural aspect ratio
 instead of being forced into a 1:1 box. Setting both `icon` and slotted content renders both, side
-by side; that is a valid composition, not a fallback.
+by side; that is a valid composition, not a fallback. No wrapper sits between the slot and the
+native control, and that control declares no overflow clip. A glow painted around slotted content
+therefore keeps its full silhouette instead of being cut to the glyph's box. The
+`gemstoneAccentPicker` trigger's `gemstoneSelectedGlyphStyles` halo relies on this.
 
 **Bare SVG geometry fallback:** slotted bare SVG _geometry_ (`path`, `circle`, `rect`, `line`,
 `polygon`, `polyline`, `ellipse`, `g`, `use`) with no `icon` set and no enclosing `<svg>` of its
