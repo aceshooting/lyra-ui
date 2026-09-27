@@ -13,27 +13,27 @@
 // This module is copied beside migrate-wa.mjs into dist/cli, so it stays dependency-free and never
 // reads the filesystem itself.
 
-export const LYRA_RENAME_LEDGER_SCHEMA_VERSION = 1;
+const LYRA_RENAME_LEDGER_SCHEMA_VERSION = 1;
 
 /**
  * The `since` of a deprecation record that lands after the current release tag
  * (component-metadata.mjs). The version bump stamps the released version in its place before the
  * build, so only a build made between two releases projects it, and a published CLI never does.
  */
-export const UNRELEASED_VERSION = 'unreleased';
+const UNRELEASED_VERSION = 'unreleased';
 
 /** Every supported Lyra-to-Lyra rename profile. The ledger must contain exactly these, in order. */
-export const LYRA_RENAME_PROFILES = Object.freeze([
+const LYRA_RENAME_PROFILES = Object.freeze([
   Object.freeze({ origin: 'lyra-v21', fromMajor: 21, toMajor: 22, aliasRemovalMajor: 23 }),
 ]);
 
 export const LYRA_RENAME_ORIGINS = Object.freeze(LYRA_RENAME_PROFILES.map((profile) => profile.origin));
 
 /** Member kinds a rename entry can rewrite mechanically. */
-export const RENAME_KINDS = Object.freeze(['attribute', 'property', 'event', 'part', 'css-property', 'slot']);
+const RENAME_KINDS = Object.freeze(['attribute', 'property', 'event', 'part', 'css-property', 'slot']);
 
 /** Deprecation kinds a review entry can report (every kind component-metadata.json records). */
-export const REVIEW_KINDS = Object.freeze([
+const REVIEW_KINDS = Object.freeze([
   'component',
   'attribute',
   'property',
@@ -52,7 +52,7 @@ export const REVIEW_KINDS = Object.freeze([
  * every component exposing each ledger name -- old names AND new names -- so the codemod can tell
  * a rename that keeps a listener's or declaration's reach from one that widens or narrows it.
  */
-export const EXPOSURE_KINDS = Object.freeze(['event', 'part', 'css-property']);
+const EXPOSURE_KINDS = Object.freeze(['event', 'part', 'css-property']);
 
 const SURFACE_SECTIONS = Object.freeze({
   attribute: 'attributes',
