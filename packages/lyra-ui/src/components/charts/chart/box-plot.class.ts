@@ -50,6 +50,8 @@ import {
   isolateScaleTickLabels,
   tooltipIsolationHook,
   type ChartTextDirection,
+  bidiStyles,
+  isolateHtml,
 } from './chart-bidi.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type {
@@ -394,7 +396,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     'hiddenDatasets',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-legend-visibility-change-request',
     'lr-before-legend-visibility-change',
@@ -1386,6 +1388,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private renderDataTable(): TemplateResult {
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const sample = this.dataTableSample();
     return html`
       <table class=${this.dataTableVisible ? '' : 'sr-only'}>
@@ -1416,15 +1419,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                 };
                 return this.validPoint(point) ? html`
                 <tr>
-                  <th scope="row"><bdi>${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
+                  <th scope="row">${isolateHtml(this.labels[index] ?? this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
-                  })}</bdi></th>
-                  <td><bdi>${this.seriesDisplayLabel(series)}</bdi></td>
-                  <td><bdi>${this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' })}</bdi></td>
-                  <td><bdi>${this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' })}</bdi></td>
-                  <td><bdi>${this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' })}</bdi></td>
-                  <td><bdi>${this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' })}</bdi></td>
-                  <td><bdi>${this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' })}</bdi></td>
+                  }), direction)}</th>
+                  <td>${isolateHtml(this.seriesDisplayLabel(series), direction)}</td>
+                  <td>${isolateHtml(this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' }), direction)}</td>
+                  <td>${isolateHtml(this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' }), direction)}</td>
+                  <td>${isolateHtml(this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' }), direction)}</td>
+                  <td>${isolateHtml(this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' }), direction)}</td>
+                  <td>${isolateHtml(this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' }), direction)}</td>
                 </tr>
               ` : nothing;
               },

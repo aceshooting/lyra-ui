@@ -11,12 +11,14 @@ import {
 } from './chart.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
 import {
+  bidiStyles,
   canvasSentence,
   canvasTextDirection,
   firstStrongDirection,
   isolateCanvasLabel,
   isolateCanvasText,
   isolatedMessage,
+  isolateHtml,
   isolateScaleTickLabels,
   isolateTooltipLines,
 } from './chart-bidi.js';
@@ -7779,15 +7781,85 @@ describe('chart-bidi helpers', () => {
     });
   });
 
+  describe('isolateHtml', () => {
+    it('wraps only content whose direction differs from the context', () => {
+      const wrapped = (content: unknown, context: 'ltr' | 'rtl') => typeof isolateHtml(content, context) !== 'string';
+      expect(wrapped('2.4 MiB/s', 'ltr'), 'LTR text in LTR').to.equal(false);
+      expect(wrapped('-3', 'ltr'), 'neutral-led text in LTR').to.equal(false);
+      expect(wrapped(1999, 'rtl'), 'a number in RTL').to.equal(false);
+      expect(wrapped('1999', 'rtl'), 'bare digits in RTL').to.equal(false);
+      expect(wrapped('1,999.5', 'rtl'), 'a grouped decimal number in RTL').to.equal(false);
+      expect(wrapped('١٬٩٩٩٫٥', 'rtl'), 'Arabic-Indic digits with Arabic separators in RTL').to.equal(false);
+      expect(wrapped('1\u00a0999', 'rtl'), 'no-break-space-grouped digits in RTL').to.equal(false);
+      expect(wrapped('1 999', 'rtl'), 'space-separated digits in RTL').to.equal(true);
+      expect(wrapped('1,,999', 'rtl'), 'doubled separators in RTL').to.equal(true);
+      expect(wrapped('', 'rtl'), 'empty text').to.equal(false);
+      expect(wrapped(`حجم 12 ${'\u0645'}`, 'rtl'), 'RTL text in RTL').to.equal(false);
+      expect(wrapped('2.4 MiB/s', 'rtl'), 'LTR text in RTL').to.equal(true);
+      expect(wrapped('-3', 'rtl'), 'a signed number in RTL').to.equal(true);
+      expect(wrapped('حجم 12', 'ltr'), 'RTL text in LTR').to.equal(true);
+      expect(wrapped(html`<b>x</b>`, 'ltr'), 'non-text content').to.equal(true);
+    });
+
+    it('leaves only numbers that already render in logical order under RTL unwrapped', async () => {
+      const order = async (text: string): Promise<boolean> => {
+        const el = await fixture<HTMLElement>(html`<p dir="rtl" style="display: inline-block">${text}</p>`);
+        const node = [...el.childNodes].find((child): child is Text => child instanceof Text && child.data !== '')!;
+        const box = (index: number): DOMRect => {
+          const range = document.createRange();
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          return range.getBoundingClientRect();
+        };
+        return box(0).left < box(text.length - 1).left;
+      };
+      for (const text of ['1,999.5', '12.25', '1,000,000', '1\u00a0999', '1\u202f999,5', '١٬٩٩٩٫٥']) {
+        expect(await order(text), `${text} unwrapped`).to.equal(true);
+        expect(typeof isolateHtml(text, 'rtl'), text).to.equal('string');
+      }
+      for (const text of ['1 999', '-3', '1\'999']) {
+        expect(await order(text), `${text} needs isolating`).to.equal(false);
+        expect(typeof isolateHtml(text, 'rtl'), text).to.not.equal('string');
+      }
+    });
+
+    it('adds no element to a large left-to-right data table', async () => {
+      const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+      el.labels = Array.from({ length: 50 }, (_, i) => `Item ${i}`);
+      el.datasets = [{ label: 'S', data: Array.from({ length: 50 }, (_, i) => i - 25) }];
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr').length).to.equal(50);
+      expect(el.shadowRoot!.querySelectorAll('[part="data-table"] .bidi').length).to.equal(0);
+    });
+  });
+
   describe('isolatedMessage', () => {
-    it('wraps each named value in its own <bdi> and keeps the accessible text identical', async () => {
+    it('isolates each named value in its own span and keeps the accessible text identical', async () => {
       const template = (values: Record<string, string | number>) =>
         '{label}: {value} ({count})'.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name]));
-      const el = await fixture<HTMLElement>(
-        html`<p dir="rtl">${isolatedMessage(template, { label: 'Up', value: '2.4 MiB/s', count: 3 }, ['label', 'value'])}</p>`,
-      );
-      expect(el.textContent).to.equal('Up: 2.4 MiB/s (3)');
-      expect([...el.querySelectorAll('bdi')].map((bdi) => bdi.textContent)).to.deep.equal(['Up', '2.4 MiB/s']);
+      const style = document.createElement('style');
+      style.textContent = bidiStyles.cssText;
+      document.head.append(style);
+      try {
+        const el = await fixture<HTMLElement>(
+          html`<p dir="rtl">${isolatedMessage(template, { label: 'Up', value: '2.4 MiB/s', count: 3 }, ['label', 'value'])}</p>`,
+        );
+        expect(el.textContent).to.equal('Up: 2.4 MiB/s (3)');
+        const spans = [...el.querySelectorAll('span.bidi')];
+        expect(spans.map((span) => span.textContent)).to.deep.equal(['Up', '2.4 MiB/s']);
+        expect(spans.map((span) => getComputedStyle(span).unicodeBidi)).to.deep.equal(['plaintext', 'plaintext']);
+        expect(el.querySelectorAll('bdi').length, 'no element whose directionality the DOM must track').to.equal(0);
+        const value = [...spans[1]!.childNodes].find((node): node is Text => node instanceof Text && node.data !== '')!;
+        const box = (needle: string): DOMRect => {
+          const range = document.createRange();
+          range.setStart(value, value.data.indexOf(needle));
+          range.setEnd(value, value.data.indexOf(needle) + needle.length);
+          return range.getBoundingClientRect();
+        };
+        expect(box('2.4').left, 'the isolated value keeps number-unit order under RTL').to.be.below(box('MiB/s').left);
+      } finally {
+        style.remove();
+      }
     });
   });
 

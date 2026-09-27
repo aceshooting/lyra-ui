@@ -18,7 +18,13 @@ import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
-import { isolatedMessage, type IsolatableMessage } from './chart-bidi.js';
+import {
+  bidiStyles,
+  type ChartTextDirection,
+  isolateHtml,
+  isolatedMessage,
+  type IsolatableMessage,
+} from './chart-bidi.js';
 import {
   forcedColorEncoding,
   forcedColorsActive,
@@ -604,7 +610,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     'selectedIndices',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
@@ -2522,6 +2528,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private renderChart(): TemplateResult {
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const n = this.recordCount();
     const awaitingFitMeasurement = this.awaitingFitMeasurement();
     const h = finiteRange(this.plotHeight || 200, 200, 0, MAX_SCROLL_CONTENT_WIDTH);
@@ -2785,7 +2792,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   <th scope="col">${this.localize('chartCategory')}</th>
                   ${recordSample.seriesIndexes.map((datasetIndex) => {
                     const series = this.datasets[datasetIndex]!;
-                    return html`<th scope="col"><bdi>${series.label}</bdi></th>`;
+                    return html`<th scope="col">${isolateHtml(series.label, direction)}</th>`;
                   })}
                   ${showTableTotals ? html`<th scope="col">${this.localize('chartTotal')}</th>` : nothing}
                 </tr>
@@ -2795,11 +2802,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   (index) => {
                     const label = this.labels[index] ?? '';
                     return html`<tr>
-                    <th scope="row"><bdi>${label}</bdi></th>
+                    <th scope="row">${isolateHtml(label, direction)}</th>
                     ${recordSample.seriesIndexes.map((datasetIndex) => {
                       const series = this.datasets[datasetIndex]!;
                       const value = series.data[index];
-                      return html`<td><bdi>${value == null || !Number.isFinite(value)
+                      return html`<td>${isolateHtml(value == null || !Number.isFinite(value)
                         ? ''
                         : this.formatTableCell(
                             value,
@@ -2811,12 +2818,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                               seriesLabel: series.label,
                             },
                             tableNumberFormat,
-                          )}</bdi></td>`;
+                          ), direction)}</td>`;
                     })}
                     ${showTableTotals
                       ? (() => {
                           const total = this.tableTotalAt(index, recordSample.seriesIndexes);
-                          return html`<td><bdi>${total == null
+                          return html`<td>${isolateHtml(total == null
                             ? ''
                             : this.formatTableCell(
                                 total,
@@ -2828,7 +2835,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                                   seriesLabel: null,
                                 },
                                 tableNumberFormat,
-                              )}</bdi></td>`;
+                              ), direction)}</td>`;
                         })()
                       : nothing}
                   </tr>`;
@@ -2859,7 +2866,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                       style=${styleMap({ backgroundColor: this.colorFor(i, s) })}
                     ></span>
                     ${s.label}${this.formatter || this.legendText
-                      ? html`<span part="legend-text"><bdi>${this.formatter?.({
+                      ? html`<span part="legend-text">${isolateHtml(this.formatter?.({
                           value: recordSample.rowIndexes.reduce(
                             (sum, index) => {
                               const value = s.data[index];
@@ -2873,7 +2880,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                           datasetIndex: i,
                           seriesLabel: s.label,
                           axis: 'y',
-                        }) ?? this.legendText?.(s.label, i)}</bdi></span>`
+                        }) ?? this.legendText?.(s.label, i), direction)}</span>`
                       : nothing}
                   </span>
                 `;

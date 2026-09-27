@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { css, html, type TemplateResult } from 'lit';
 
 /**
  * Bidirectional-text isolation for the chart family's formatted labels.
@@ -8,12 +8,15 @@ import { html, type TemplateResult } from 'lit';
  * inside an RTL chart with no isolation, a number-first LTR label such as `2.4 MiB/s`, `9:00 AM`
  * or `-3` inherits the RTL base direction and reads unit-first (`MiB/s 2.4`). Every surface here
  * therefore resolves a label's direction from its first strong character, the way a first-strong
- * isolate (U+2068 ... U+2069) or `<bdi>` would, while leaving the chart's own geometry alone.
+ * isolate (U+2068 ... U+2069) would, while leaving the chart's own geometry alone.
  *
  * Three mechanisms, one per rendering technology:
  *
- * - HTML (legends, generated tables): `<bdi>`, which isolates with first-strong direction without
- *   putting any character into the accessible text.
+ * - HTML (legends, generated tables): a `<span class="bidi">` styled by {@link bidiStyles}.
+ *   `unicode-bidi: plaintext` on an inline box isolates it with first-strong direction, exactly
+ *   like `<bdi>`, without putting any character into the accessible text. A table cell is wrapped
+ *   only when its direction differs from the chart's ({@link isolateHtml}): one extra inline
+ *   element per cell costs WebKit about a second across a sampled table of a thousand rows.
  * - SVG `<text>`: the `unicode-bidi: plaintext` declaration in the component stylesheet. WebKit's
  *   SVG text ignores the isolate controls entirely, and the declaration keeps screen-reader text
  *   clean as well.
@@ -26,6 +29,14 @@ import { html, type TemplateResult } from 'lit';
  *   right-to-left series label too.
  */
 export type ChartTextDirection = 'ltr' | 'rtl';
+
+/** The rule behind every `<span class="bidi">` a chart renders; include it in the component's
+ *  `static styles`. */
+export const bidiStyles = css`
+  .bidi {
+    unicode-bidi: plaintext;
+  }
+`;
 
 const LEFT_TO_RIGHT_EMBEDDING = '\u202a';
 const RIGHT_TO_LEFT_EMBEDDING = '\u202b';
@@ -142,6 +153,30 @@ export function canvasSentence(format: (value: string) => string, value: string)
   return format(isolateCanvasText(value, direction));
 }
 
+// Digits joined by single decimal or grouping separators read the same in either base direction:
+// a common separator between two digits -- including the no-break spaces Intl groups with --
+// takes the digits' class (Unicode bidi rule W4). A plain space or an apostrophe does not, so
+// those numbers are still isolated.
+const PLAIN_NUMBER = /^\p{Nd}+(?:[.,\u00a0\u202f\u066b\u066c]\p{Nd}+)*$/u;
+
+/**
+ * One generated table cell's or legend entry's content, wrapped in a `<span class="bidi">` (see
+ * {@link bidiStyles}) only when it needs isolating inside an HTML context of direction `context`:
+ * text whose first-strong direction (left-to-right when it has no strong character) differs from
+ * the context, other than a plain number. Text already in the context's direction is returned
+ * unchanged, like {@link isolateCanvasText}, so a large left-to-right table gains no elements.
+ * Non-text content is always wrapped.
+ */
+export function isolateHtml(content: unknown, context: ChartTextDirection): unknown {
+  if (typeof content === 'number') content = String(content);
+  if (typeof content !== 'string') return html`<span class="bidi">${content}</span>`;
+  if (!content || PLAIN_NUMBER.test(content)) return content;
+  if (context === 'ltr' && !ANY_RIGHT_TO_LEFT.test(content)) return content;
+  return (firstStrongDirection(content) ?? 'ltr') === context
+    ? content
+    : html`<span class="bidi">${content}</span>`;
+}
+
 /** {@link isolateCanvasText} over a Chart.js label, which may be a string, a multi-line array of
  *  strings (each line is drawn as its own string) or a non-string passthrough. */
 export function isolateCanvasLabel<T>(label: T, context: ChartTextDirection): T {
@@ -253,8 +288,8 @@ export interface IsolatableMessage {
 
 /**
  * Renders a localized `{placeholder}` message with each value named in `isolated` wrapped in its
- * own `<bdi>`, so a formatted value or caller label keeps its own direction inside a translated
- * sentence while the sentence keeps the translation's. `format` receives the values with the
+ * own `<span class="bidi">` (see {@link bidiStyles}), so a formatted value or caller label keeps
+ * its own direction inside a translated sentence while the sentence keeps the translation's. `format` receives the values with the
  * isolated ones replaced by private-use sentinels (plural selection still sees the real numeric
  * `count`), and the sentinels are then swapped for the isolated parts. The accessible text is the
  * same string `format(values)` would return, with no control characters added.
@@ -274,7 +309,7 @@ export function isolatedMessage(
   for (const match of text.matchAll(SENTINEL)) {
     const name = isolated[Number(match[1])];
     if (match.index > cursor) parts.push(text.slice(cursor, match.index));
-    parts.push(name === undefined ? match[0] : html`<bdi>${String(values[name] ?? '')}</bdi>`);
+    parts.push(name === undefined ? match[0] : html`<span class="bidi">${String(values[name] ?? '')}</span>`);
     cursor = match.index + match[0].length;
   }
   if (cursor < text.length) parts.push(text.slice(cursor));

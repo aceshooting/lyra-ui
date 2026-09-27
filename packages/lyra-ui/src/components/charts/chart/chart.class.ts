@@ -74,6 +74,8 @@ import {
   isolateScaleTickLabels,
   tooltipIsolationHook,
   type ChartTextDirection,
+  bidiStyles,
+  isolateHtml,
 } from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -1919,7 +1921,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     'hiddenDatasets',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
   constructor() {
     super();
@@ -5286,6 +5288,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private renderDataTable(): TemplateResult {
     const effective = this.effectiveData();
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const sample = this.dataTableSample(effective);
     const valuesBySeries = new Map(sample.seriesIndexes.map((index) =>
       [index, this.datasetValues(effective.datasets[index]!)] as const,
@@ -5309,7 +5312,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             <th scope="col">${this.localize('chartCategory')}</th>
             ${sample.seriesIndexes.map((index) => {
               const dataset = effective.datasets[index]!;
-              return html`<th scope="col"><bdi>${this.datasetLabel(dataset, index)}</bdi></th>`;
+              return html`<th scope="col">${isolateHtml(this.datasetLabel(dataset, index), direction)}</th>`;
             })}
             ${stackAxes.map(
               (axis) =>
@@ -5321,7 +5324,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           ${sample.rowIndexes.map(
             (index) => html`
             <tr>
-              <th scope="row"><bdi>${labelText(effective.labels[index]) ||
+              <th scope="row">${isolateHtml(labelText(effective.labels[index]) ||
                 sample.seriesIndexes
                   .map((datasetIndex) =>
                     normalizedChartPoint(valuesBySeries.get(datasetIndex)![index]),
@@ -5329,7 +5332,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   .find((point): point is LyraChartPoint => point !== null)?.label ||
                 this.localize('chartPointLabel', undefined, {
                   n: this.formatSummaryValue(index + 1),
-                })}</bdi></th>
+                }), direction)}</th>
               ${sample.seriesIndexes.map((datasetIndex) => {
                 const dataset = effective.datasets[datasetIndex]!;
                 const datum = valuesBySeries.get(datasetIndex)![index];
@@ -5356,22 +5359,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   type="button"
                   tabindex=${this.dataTableVisible ? '0' : '-1'}
                   @click=${() => this.activateDatum(detail)}
-                ><bdi>${point
+                >${isolateHtml(point
                   ? this.datumDisplayValue(datum, {
                       surface: 'table',
                       ...metadata,
                     })
-                  : this.formatTableValue(value, metadata)}</bdi></button></td>`;
+                  : this.formatTableValue(value, metadata), direction)}</button></td>`;
               })}
               ${stackAxes.map((axis) => {
                 const total = stackTotals.get(axis)?.[index];
-                return html`<td><bdi>${total == null
+                return html`<td>${isolateHtml(total == null
                   ? this.localize('noData')
                   : this.formatTableValue(total, this.stackTotalMetadata({
                       index,
                       label: labelText(effective.labels[index]) || undefined,
                       axis: stackValueAxes.get(axis),
-                    }))}</bdi></td>`;
+                    })), direction)}</td>`;
               })}
             </tr>
             `
@@ -5430,7 +5433,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /** The rendered legend text: the localized sentence with the label and each formatted value
-   *  isolated in its own `<bdi>`, so a number-first value keeps its order under RTL while the
+   *  isolated in its own `<span class="bidi">`, so a number-first value keeps its order under RTL while the
    *  sentence keeps the translation's direction. The accessible text carries no control
    *  characters. */
   private legendTextContent(
