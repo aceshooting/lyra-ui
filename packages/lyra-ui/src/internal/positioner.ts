@@ -502,21 +502,21 @@ async function popupRectAtPosition(
 }
 
 function validatePlaceNumericOptions(opts: PlaceOptions): void {
-  for (const [name, value] of [
-    ['offset', opts.offset],
-    ['skidding', opts.skidding],
-  ] as const) {
-    if (value !== undefined) finiteGeometry(value, `place() ${name}`);
-  }
-  for (const [name, value] of [
-    ['flipPadding', opts.flipPadding],
-    ['shiftPadding', opts.shiftPadding],
-    ['padding', opts.padding],
-    ['autoSizePadding', opts.autoSizePadding],
-    ['arrowPadding', opts.arrowPadding],
-  ] as const) {
-    if (value !== undefined) finiteGeometry(value, `place() ${name}`, true);
-  }
+  // `offset` and `skidding` are signed; every padding after them must also be nonnegative.
+  (
+    [
+      'offset',
+      'skidding',
+      'flipPadding',
+      'shiftPadding',
+      'padding',
+      'autoSizePadding',
+      'arrowPadding',
+    ] as const
+  ).forEach((name, index) => {
+    const value = opts[name];
+    if (value !== undefined) finiteGeometry(value, `place() ${name}`, index > 1);
+  });
 }
 
 function validateAnchorBeforeSetup(anchor: Element | VirtualAnchor): void {
@@ -900,23 +900,36 @@ function absoluteContainingBlock(element: HTMLElement): Element | null {
   return null;
 }
 
+/** {@link placeAnchoredSurface} options: the public `PlaceOptions` plus the library-internal
+ *  top-layer switch, which public `place()` does not accept. */
+export interface AnchoredSurfaceOptions extends PlaceOptions {
+  /** Promote a `fixed` popup (and its hover bridge) into the browser top layer whether or not an
+   *  ancestor traps it. A surface stacked beneath a sibling only because an ancestor is a plain
+   *  stacking context (a `z-index`ed fixed header) is not trapped, so the automatic escape leaves
+   *  it alone; this is the explicit opt-in for that case. The caller also passes the `fixed`
+   *  strategy: an `absolute` popup is never promoted. Like every promotion, it lasts until the
+   *  popup settles with `[hidden]` or `releaseTopLayer()` is called. */
+  topLayer?: boolean;
+}
+
 /**
  * Library-internal `place()` for anchored surfaces: identical geometry, plus the top-layer escape
  * (`top-layer-escape.ts`). A `fixed` popup whose containing block is an ancestor -- a transformed
  * virtual-list row, a filtered card, a `contain`ed panel -- is shown in the browser top layer
  * where the native Popover API exists, re-tested on every update, so it lays out against the
- * viewport and no ancestor clips it. The hover bridge, which is `position: fixed` whatever the
- * popup strategy, is judged on its own. Both are compensated for an ancestor CSS `zoom` (an
- * `absolute` popup only for the zoom between its offset parent and itself), and a promoted popup
- * whose reference scrolls out of view is hidden until it returns. Disposing a run never demotes:
- * a promotion lasts until the popup settles with `[hidden]` or `releaseTopLayer()` is called.
+ * viewport and no ancestor clips it; `topLayer` promotes it unconditionally. The hover bridge,
+ * which is `position: fixed` whatever the popup strategy, is judged on its own. Both are
+ * compensated for an ancestor CSS `zoom` (an `absolute` popup only for the zoom between its offset
+ * parent and itself), and a promoted popup whose reference scrolls out of view is hidden until it
+ * returns. Disposing a run never demotes: a promotion lasts until the popup settles with
+ * `[hidden]` or `releaseTopLayer()` is called.
  * `src/utilities/positioner.ts` does not re-export this.
  * @internal
  */
 export function placeAnchoredSurface(
   anchor: Element | VirtualAnchor,
   popup: HTMLElement,
-  opts: PlaceOptions = {},
+  opts: AnchoredSurfaceOptions = {},
 ): () => void {
   // Validate before any escape write, exactly like place() itself.
   validatePlaceNumericOptions(opts);
@@ -925,7 +938,7 @@ export function placeAnchoredSurface(
   const fixed = (opts.strategy ?? 'fixed') === 'fixed';
   const escape = (element: HTMLElement, eligible: boolean): void => {
     if (isLibraryPromotedAndShowing(element)) return;
-    if (eligible && needsTopLayerEscape(element)) promoteToTopLayer(element, popup);
+    if (eligible && (opts.topLayer || needsTopLayerEscape(element))) promoteToTopLayer(element, popup);
     else stripStaleTopLayer(element);
   };
   const referenceHidden = hide({ strategy: 'referenceHidden' });

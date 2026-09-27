@@ -1585,8 +1585,12 @@ control, without making the control valid — see "The validity alias is cancela
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
 overrides `errorText`.
 
-The editable input shrinks first in a constrained row; `start` and `end` adornments are each
-capped at 40% and ellipsize unbroken content. Clear and calendar actions retain their fixed target.
+The editable input shrinks first in a constrained row. While a `start` or `end` adornment is shown
+it keeps a four-character floor, so a short adornment keeps its content width; without one it
+yields entirely to the clear and calendar actions. Adornments are sized to their content, each
+capped at 40%, and ellipsize unbroken content. Clear and calendar actions retain their fixed
+target, so a row with an adornment that is narrower than those actions plus the floor overflows
+rather than collapsing the field.
 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
@@ -2776,8 +2780,15 @@ and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finit
 `prefix` (alias of `start`), `suffix` (alias of `end`),
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
-Long `start`/`end` adornments shrink and ellipsize inside their flex allocation rather than
-widening a narrow field; label, hint, and error text wrap at unbroken boundaries. The
+In a constrained row the native field gives up its spare width first, so a short adornment such
+as a measurement unit (`kWh`) stays whole beside a narrow value. While a `start` or `end` adornment
+is shown the field keeps a four-character floor; only then do the adornments shrink: each is
+capped at half the row, and genuinely long adornments ellipsize inside that allocation rather than
+widening a narrow field. The floor holds against the fixed clear, password-toggle and stepper
+actions too, so a row with an adornment that is narrower than those actions plus the floor
+overflows rather than hiding the value. A row without adornments has no floor: its field still
+yields entirely to those actions. A shrink-to-fit container still sizes the field to its native
+intrinsic width. Label, hint, and error text wrap at unbroken boundaries. The
 `Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
@@ -3057,6 +3068,10 @@ disabled state.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
 subclass does not redeclare them on its host.
+Beside the stepper pair it keeps `lr-input`'s constrained-row allocation: the number field gives up
+its spare width first, down to a four-character floor while a unit is shown, so a short `end` unit
+stays whole (the `Narrow Measurement Unit` story). A stepper row with a unit therefore needs room
+for the steppers plus that floor; without a unit the field still yields entirely to the steppers.
 It also installs the shared six-tier size sheet: stepper-bearing rows follow the same rendered
 action-height ladder as `lr-input` instead of remaining at the default tier for every `size`.
 

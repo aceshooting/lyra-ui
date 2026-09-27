@@ -105,8 +105,13 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* A small basis, not auto: a native field's intrinsic width comes from its size attribute, not
+     its value, so an auto basis made a 4-digit number claim ~20 characters and clip a short end
+     unit (kWh) in proportion. The field now takes what the adornments leave and gives it back
+     first; only then do the adornments (capped at 50% below) shrink and ellipsize. Shrink-to-fit
+     sizing still reads the intrinsic width. */
   [part='input'] {
-    flex: 1 1 auto;
+    flex: 1 1 var(--lr-size-4ch);
     min-inline-size: 0;
     box-sizing: border-box;
     padding-block: var(--lr-input-padding-block, var(--_lr-input-padding-block-default));
@@ -119,6 +124,14 @@ export const styles = css`
   }
   [part='input']::placeholder {
     color: var(--lr-input-action-color, var(--lr-color-text-quiet));
+  }
+  /* The 4-character floor holds only while an adornment is shown: shrink is shared in proportion
+     to base size, so long adornments would otherwise squeeze the field out. Without one the field
+     is the only item that can shrink and must still yield to the fixed actions (clear, password,
+     steppers) in a narrow row. */
+  :where([part~='input-wrapper']:has(> [part='start']:not([hidden]), > [part='end']:not([hidden])))
+    > [part='input'] {
+    min-inline-size: min(var(--lr-size-4ch), 100%);
   }
   [part='input'][type='search']::-webkit-search-cancel-button,
   [part='input'][type='search']::-webkit-search-decoration {

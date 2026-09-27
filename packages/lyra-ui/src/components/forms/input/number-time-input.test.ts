@@ -52,6 +52,66 @@ it('forces number-input to native number semantics and preserves range validatio
   await expect(el).to.be.accessible();
 });
 
+it('keeps a short end unit whole beside the steppers while the number field shrinks, mirrored under RTL', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 210px">
+        <lr-number-input value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-number-input>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-number-input') as LyraNumberInput;
+    await el.updateComplete;
+    const unit = el.querySelector('span')!;
+    const native = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+    const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+    const nativeStyle = getComputedStyle(native);
+    const probe = document.createElement('span');
+    probe.textContent = '1650';
+    probe.style.cssText = 'position: absolute; visibility: hidden; white-space: pre';
+    for (const property of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing'] as const) {
+      probe.style[property] = nativeStyle[property];
+    }
+    document.body.append(probe);
+    let valueWidth: number;
+    try {
+      valueWidth = probe.getBoundingClientRect().width;
+    } finally {
+      probe.remove();
+    }
+    const fieldContent =
+      native.clientWidth - parseFloat(nativeStyle.paddingInlineStart) - parseFloat(nativeStyle.paddingInlineEnd);
+    expect(unit.scrollWidth, `${direction}: the unit text is clipped`).to.be.at.most(unit.clientWidth);
+    expect(fieldContent, `${direction}: the entered value no longer fits its field`).to.be.at.least(valueWidth);
+    expect(row.scrollWidth, `${direction}: the row overflows`).to.be.at.most(row.clientWidth);
+  }
+});
+
+it('lets the number field yield to the steppers in a narrow row without adornments', async () => {
+  // A quantity stepper in a narrow table cell: with no adornment the field is the only item that
+  // can shrink, so it must still give way before the steppers leave the bordered row.
+  for (const width of [120, 130, 140]) {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style=${`inline-size: ${width}px`}>
+          <lr-number-input value="12" aria-label="Quantity"></lr-number-input>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-number-input') as LyraNumberInput;
+      await el.updateComplete;
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+      const rowBox = row.getBoundingClientRect();
+      const steppers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="stepper"]')];
+      expect(steppers.length).to.equal(2);
+      expect(row.scrollWidth, `${width}px ${direction}: the row overflows`).to.be.at.most(row.clientWidth);
+      for (const stepper of steppers) {
+        const box = stepper.getBoundingClientRect();
+        expect(box.left, `${width}px ${direction}: a stepper leaves the row`).to.be.at.least(rowBox.left - 0.5);
+        expect(box.right, `${width}px ${direction}: a stepper leaves the row`).to.be.at.most(rowBox.right + 0.5);
+      }
+    }
+  }
+});
+
 it('preserves native time semantics on native-time-input', async () => {
   const el = await fixture(html`<lr-native-time-input label="Start time"></lr-native-time-input>`);
   expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).type).to.equal('time');

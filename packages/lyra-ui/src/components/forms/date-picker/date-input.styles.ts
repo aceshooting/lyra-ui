@@ -131,8 +131,10 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* The lr-input allocation: a small basis rather than the native field's size-derived intrinsic
+     width, so the field gives up its slack before an adornment is clipped. */
   [part="input"] {
-    flex: 1 1 auto;
+    flex: 1 1 var(--lr-size-4ch);
     min-inline-size: 0;
     padding-block: var(--lr-date-input-padding-block, var(--_lr-date-input-padding-block));
     border: none;
@@ -149,9 +151,18 @@ export const styles = css`
   [part="input"]::placeholder {
     color: var(--lr-date-input-placeholder-color, var(--lr-color-text-quiet));
   }
+  /* A 4-character floor only while an adornment is shown, so two long adornments cannot squeeze
+     the field out; without one the field must still yield to the clear and calendar actions. The
+     field sits inside display: contents wrappers, hence the :has() on the row. */
+  :where([part="input-wrapper"]:has(> [part="start"]:not([hidden]), > [part="end"]:not([hidden])))
+    [part="input"] {
+    min-inline-size: min(var(--lr-size-4ch), 100%);
+  }
+  /* Content-sized up to the 40% cap: a 40% basis reserved that share for a three-letter
+     adornment in a wide row and clipped it in a narrow one. */
   [part="start"],
   [part="end"] {
-    flex: 0 1 40%;
+    flex: 0 1 auto;
     display: inline-flex;
     min-inline-size: 0;
     max-inline-size: 40%;

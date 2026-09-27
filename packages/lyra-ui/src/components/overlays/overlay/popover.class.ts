@@ -328,6 +328,26 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     _previous: PlaceStrategy,
     _next: PlaceStrategy,
   ): void {}
+  /**
+   * Shows the open popup in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it for a popover
+   * inside a fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface
+   * stacked higher would otherwise cover: such an ancestor is only a stacking context, not a
+   * containing block, so the automatic top-layer escape of `fixed` never applies, and no `z-index`
+   * on the popup can lift it out of that ancestor's context. While set, the popup is placed with
+   * the `fixed` strategy whatever `positioning-strategy` resolves to; no DOM node moves, so
+   * anchoring, the arrow, RTL placement, focus, Escape, light dismiss and the show/hide transition
+   * are unchanged. The popup stays promoted through its hide transition and leaves the top layer
+   * once it settles closed. Stacking contexts are deliberately not detected automatically: every
+   * fixed or sticky ancestor creates one, as does almost every `z-index`ed, translucent or isolated
+   * one, and promoting through each would override layer ordering pages set on purpose. Without
+   * native Popover API support the popup keeps its ordinary `z-index` stacking. Changes apply live
+   * while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
    *  be negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default. */
   @property({ type: Number }) distance = 8;
@@ -702,6 +722,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       changed.has('open') ||
       changed.has('placement') ||
       changed.has('positioningStrategy') ||
+      changed.has('topLayer') ||
       changed.has('hoverBridge') ||
       changed.has('trigger') ||
       changed.has('distance') ||
@@ -1062,7 +1083,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     bridgeElement: HTMLElement | null,
   ): Promise<void> {
     try {
-      const { place } = await loadAnchoredOverlayRuntime();
+      const { place, releaseTopLayer } = await loadAnchoredOverlayRuntime();
       if (
         generation !== this.positioningGeneration ||
         !this.open ||
@@ -1072,9 +1093,15 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       ) {
         return;
       }
+      // Placement never demotes on its own, so leaving `topLayer` releases the forced promotion
+      // here; the run below promotes again only if an ancestor traps the popup.
+      if (this.placedTopLayer && !this.topLayer) releaseTopLayer?.(popup);
+      this.placedTopLayer = this.topLayer;
       const cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: this.resolvedPositioningStrategy,
+        // A top-layer popup lays out against the viewport, so it is always placed `fixed`.
+        strategy: this.topLayer ? 'fixed' : this.resolvedPositioningStrategy,
+        topLayer: this.topLayer,
         offset: finiteNumber(this.distance, this.defaultDistance),
         skidding: finiteNumber(this.skidding, 0),
         sync: this.positioningSync,

@@ -1278,6 +1278,185 @@ describe('lr-input', () => {
     expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
   });
 
+  describe('adornment allocation in a constrained row', () => {
+    const part = (el: LyraInput, name: string) =>
+      el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
+    const inlinePadding = (node: Element) => {
+      const style = getComputedStyle(node);
+      return parseFloat(style.paddingInlineStart) + parseFloat(style.paddingInlineEnd);
+    };
+    // Rendered width of `text` in the native field's own font, measured on a light-DOM probe: the
+    // field's scroll metrics alone cannot tell a fitting value from one scrolled out of view in
+    // every engine.
+    const textWidth = (reference: Element, text: string) => {
+      const style = getComputedStyle(reference);
+      const probe = document.createElement('span');
+      probe.textContent = text;
+      probe.style.cssText = 'position: absolute; visibility: hidden; white-space: pre';
+      for (const property of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing'] as const) {
+        probe.style[property] = style[property];
+      }
+      document.body.append(probe);
+      try {
+        return probe.getBoundingClientRect().width;
+      } finally {
+        probe.remove();
+      }
+    };
+
+    it('keeps a short end unit whole beside a narrow number value, mirrored under RTL', async () => {
+      for (const direction of ['ltr', 'rtl'] as const) {
+        const wrapper = await fixture<HTMLDivElement>(html`
+          <div dir=${direction} style="inline-size: 210px">
+            <lr-input type="number" value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+          </div>
+        `);
+        const el = wrapper.querySelector('lr-input') as LyraInput;
+        await el.updateComplete;
+        const unit = el.querySelector('span')!;
+        const end = part(el, 'end');
+        const native = part(el, 'input');
+        const row = part(el, 'input-wrapper');
+        expect(unit.scrollWidth, `${direction}: the unit text is clipped`).to.be.at.most(unit.clientWidth);
+        expect(end.scrollWidth, `${direction}: the end part clips its unit`).to.be.at.most(end.clientWidth);
+        expect(
+          native.clientWidth - inlinePadding(native),
+          `${direction}: the entered value no longer fits its field`,
+        ).to.be.at.least(textWidth(native, '1650'));
+        expect(row.scrollWidth, `${direction}: the row overflows`).to.be.at.most(row.clientWidth);
+        const endBox = end.getBoundingClientRect();
+        const inputBox = native.getBoundingClientRect();
+        if (direction === 'ltr') {
+          expect(endBox.left, 'ltr: the unit trails the value').to.be.at.least(inputBox.right - 0.5);
+        } else {
+          expect(endBox.right, 'rtl: the unit trails the value on the left').to.be.at.most(inputBox.left + 0.5);
+        }
+      }
+    });
+
+    it('keeps a short start adornment whole too', async () => {
+      const el = await fixture<LyraInput>(html`
+        <lr-input style="inline-size: 160px" clearable value="1650" aria-label="Price">
+          <span slot="start">EUR</span>
+        </lr-input>
+      `);
+      const prefix = el.querySelector('span')!;
+      const native = part(el, 'input');
+      expect(prefix.scrollWidth, 'the prefix text is clipped').to.be.at.most(prefix.clientWidth);
+      expect(native.clientWidth - inlinePadding(native), 'the value no longer fits').to.be.at.least(
+        textWidth(native, '1650'),
+      );
+    });
+
+    it('still caps a genuinely long adornment at half the row and ellipsizes it', async () => {
+      const el = await fixture<LyraInput>(html`
+        <lr-input style="inline-size: 210px" value="1650" aria-label="Energy">
+          <span slot="end">kilowatt-hours per billing period</span>
+        </lr-input>
+      `);
+      const unit = el.querySelector('span')!;
+      const end = part(el, 'end');
+      const row = part(el, 'input-wrapper');
+      expect(getComputedStyle(unit).textOverflow).to.equal('ellipsis');
+      expect(unit.scrollWidth, 'the long adornment is not truncated').to.be.greaterThan(unit.clientWidth);
+      expect(end.getBoundingClientRect().width).to.be.at.most((row.clientWidth - inlinePadding(row)) / 2 + 0.5);
+      expect(row.scrollWidth).to.be.at.most(row.clientWidth);
+    });
+
+    it('keeps a four-character value floor between two long adornments', async () => {
+      const el = await fixture<LyraInput>(html`
+        <lr-input style="inline-size: 210px" value="1650" aria-label="Energy">
+          <span slot="start">VeryLongLeadingAdornment</span>
+          <span slot="end">VeryLongTrailingAdornment</span>
+        </lr-input>
+      `);
+      const native = part(el, 'input');
+      const row = part(el, 'input-wrapper');
+      expect(native.getBoundingClientRect().width, 'the value field collapsed').to.be.at.least(
+        textWidth(native, '0000') - 0.5,
+      );
+      for (const slot of ['start', 'end'] as const) {
+        const adornment = el.querySelector<HTMLElement>(`[slot="${slot}"]`)!;
+        expect(adornment.scrollWidth, `${slot} is not truncated`).to.be.greaterThan(adornment.clientWidth);
+      }
+      expect(row.scrollWidth).to.be.at.most(row.clientWidth);
+    });
+
+    it('never overflows a row narrower than the value floor', async () => {
+      for (const width of [40, 90]) {
+        const el = await fixture<LyraInput>(html`
+          <lr-input style=${`inline-size: ${width}px`} value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+        `);
+        const row = part(el, 'input-wrapper');
+        expect(row.scrollWidth, `${width}px`).to.be.at.most(row.clientWidth);
+        expect(el.getBoundingClientRect().width, `${width}px`).to.be.closeTo(width, 0.5);
+      }
+    });
+
+    it('lets the field of a row without adornments yield to its fixed actions', async () => {
+      // The value floor only protects the field against adornments. Without one the field is the
+      // only item that can shrink, so a narrow row must still fit its clear and password buttons.
+      for (const direction of ['ltr', 'rtl'] as const) {
+        const wrapper = await fixture<HTMLDivElement>(html`
+          <div dir=${direction}>
+            <lr-input style="inline-size: 80px" clearable value="1650" aria-label="Code"></lr-input>
+            <lr-input style="inline-size: 80px" type="password" password-toggle value="secret" aria-label="Secret"></lr-input>
+          </div>
+        `);
+        for (const [host, action] of [
+          [wrapper.querySelector<LyraInput>('[clearable]')!, 'clear-button'],
+          [wrapper.querySelector<LyraInput>('[password-toggle]')!, 'password-toggle'],
+        ] as const) {
+          await host.updateComplete;
+          const row = part(host, 'input-wrapper');
+          const button = part(host, action);
+          const rowBox = row.getBoundingClientRect();
+          const buttonBox = button.getBoundingClientRect();
+          expect(row.scrollWidth, `${direction} ${action}: the row overflows`).to.be.at.most(row.clientWidth);
+          expect(buttonBox.left, `${direction} ${action}: the action leaves the row`).to.be.at.least(rowBox.left - 0.5);
+          expect(buttonBox.right, `${direction} ${action}: the action leaves the row`).to.be.at.most(rowBox.right + 0.5);
+        }
+      }
+    });
+
+    it('keeps its intrinsic width in a shrink-to-fit container', async () => {
+      // The row's small flex basis only governs how a constrained row is shared out: an inline
+      // block, an auto grid track and a flex item still size the field to its native intrinsic
+      // width, exactly as an explicit auto basis does.
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <style>
+            .auto-basis::part(input) {
+              flex-basis: auto;
+            }
+          </style>
+          <div style="display: inline-block">
+            <lr-input value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+          </div>
+          <div style="display: inline-block">
+            <lr-input class="auto-basis" value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+          </div>
+          <div style="display: grid; grid-template-columns: auto 1fr">
+            <lr-input value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+            <span></span>
+          </div>
+          <div style="display: flex">
+            <lr-input value="1650" aria-label="Energy"><span slot="end">kWh</span></lr-input>
+          </div>
+        </div>
+      `);
+      const hosts = [...wrapper.querySelectorAll<LyraInput>('lr-input')];
+      expect(hosts.length).to.equal(4);
+      const [inlineBlock, reference, gridItem, flexItem] = hosts as [LyraInput, LyraInput, LyraInput, LyraInput];
+      const expected = reference.getBoundingClientRect().width;
+      for (const [label, host] of [['inline-block', inlineBlock], ['grid auto track', gridItem], ['flex item', flexItem]] as const) {
+        expect(host.getBoundingClientRect().width, label).to.be.closeTo(expected, 1);
+        const unit = host.querySelector('span')!;
+        expect(unit.scrollWidth, `${label}: the unit text is clipped`).to.be.at.most(unit.clientWidth);
+      }
+    });
+  });
+
   it('reflects size="2xs" as a host attribute', async () => {
     const el = (await fixture(html`<lr-input size="2xs"></lr-input>`)) as LyraInput;
     expect(el.size).to.equal('2xs');

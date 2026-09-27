@@ -258,3 +258,35 @@ export const PositioningStrategy: Story = {
     </div>
   `,
 };
+
+export const TopLayer: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A header with its own `z-index` is a stacking context: every overlay inside it paints beneath a sibling surface stacked higher, whatever `z-index` the overlay itself sets. The header is not a containing block (no transform, filter or `contain`), so the automatic top-layer escape does not apply. `top-layer` opts the popover into the browser top layer, above the sibling, without moving any DOM node. The right popover sets `top-layer` and opens above the search surface; open the unset left one to compare.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div style="block-size: 16rem">
+      <div
+        style="position: relative; z-index: 1000; display: flex; gap: var(--lr-space-l); padding: var(--lr-space-s) var(--lr-space-m); background: var(--lr-color-surface-raised)"
+      >
+        <lr-popover placement="bottom-start">
+          <button slot="trigger">Unset</button>
+          <p>Covered by the search surface.</p>
+        </lr-popover>
+        <lr-popover .open=${context.viewMode !== 'docs'} placement="bottom-start" top-layer>
+          <button slot="trigger">top-layer</button>
+          <p>Painted above the search surface.</p>
+        </lr-popover>
+      </div>
+      <div
+        style="position: relative; z-index: 1100; block-size: 12rem; padding: var(--lr-space-m); background: var(--lr-color-surface)"
+      >
+        Search surface (z-index: 1100)
+      </div>
+    </div>
+  `,
+};

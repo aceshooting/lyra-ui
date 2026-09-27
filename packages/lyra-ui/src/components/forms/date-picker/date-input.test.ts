@@ -5125,3 +5125,119 @@ describe("lr-date-input slotted adornment truncation", () => {
     });
   }
 });
+
+describe('lr-date-input adornment allocation', () => {
+  const part = (el: LyraDateInput, name: string) =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
+  const contentWidth = (node: Element) => {
+    const style = getComputedStyle(node);
+    return node.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
+  };
+  const textWidth = (reference: Element, text: string) => {
+    const style = getComputedStyle(reference);
+    const probe = document.createElement('span');
+    probe.textContent = text;
+    probe.style.cssText = 'position: absolute; visibility: hidden; white-space: pre';
+    for (const property of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing'] as const) {
+      probe.style[property] = style[property];
+    }
+    document.body.append(probe);
+    try {
+      return probe.getBoundingClientRect().width;
+    } finally {
+      probe.remove();
+    }
+  };
+
+  it('keeps a short end adornment whole while the date field shrinks first, mirrored under RTL', async () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 180px">
+          <lr-date-input value="2026-01-01" aria-label="Billing date"><span slot="end">UTC</span></lr-date-input>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+      await el.updateComplete;
+      const unit = el.querySelector('span')!;
+      const end = part(el, 'end');
+      const native = part(el, 'input');
+      const row = part(el, 'input-wrapper');
+      expect(unit.scrollWidth, `${direction}: the adornment text is clipped`).to.be.at.most(unit.clientWidth);
+      expect(end.scrollWidth, `${direction}: the end part clips its adornment`).to.be.at.most(end.clientWidth);
+      expect(contentWidth(native), `${direction}: the date field collapsed`).to.be.at.least(
+        textWidth(native, '0000'),
+      );
+      expect(row.scrollWidth, `${direction}: the row overflows`).to.be.at.most(row.clientWidth);
+      const endBox = end.getBoundingClientRect();
+      const inputBox = native.getBoundingClientRect();
+      if (direction === 'ltr') {
+        expect(endBox.left, 'ltr: the adornment trails the field').to.be.at.least(inputBox.right - 0.5);
+      } else {
+        expect(endBox.right, 'rtl: the adornment trails the field on the left').to.be.at.most(inputBox.left + 0.5);
+      }
+    }
+  });
+
+  it('sizes a short adornment to its content instead of reserving 40% of a wide row', async () => {
+    const el = await fixture<LyraDateInput>(html`
+      <lr-date-input style="inline-size: 400px" value="2026-01-01" aria-label="Billing date"
+        ><span slot="end">UTC</span></lr-date-input
+      >
+    `);
+    const unit = el.querySelector('span')!;
+    expect(part(el, 'end').getBoundingClientRect().width).to.be.closeTo(unit.getBoundingClientRect().width, 1);
+  });
+
+  it('caps a long adornment at 40% of the row', async () => {
+    for (const slot of ['start', 'end'] as const) {
+      const el = await fixture<LyraDateInput>(html`
+        <lr-date-input style="inline-size: 240px" aria-label="Billing date"
+          ><span slot=${slot}>Adornment text that is far too long.</span></lr-date-input
+        >
+      `);
+      const row = part(el, 'input-wrapper');
+      expect(part(el, slot).getBoundingClientRect().width, slot).to.be.at.most(contentWidth(row) * 0.4 + 0.5);
+      expect(row.scrollWidth, `${slot}: the row overflows`).to.be.at.most(row.clientWidth);
+    }
+  });
+
+  it('keeps a four-character field floor between two long adornments', async () => {
+    const el = await fixture<LyraDateInput>(html`
+      <lr-date-input style="inline-size: 240px" value="2026-01-01" aria-label="Billing date"
+        ><span slot="start">VeryLongLeadingAdornment</span
+        ><span slot="end">VeryLongTrailingAdornment</span></lr-date-input
+      >
+    `);
+    const native = part(el, 'input');
+    const row = part(el, 'input-wrapper');
+    expect(native.getBoundingClientRect().width, 'the date field collapsed').to.be.at.least(
+      textWidth(native, '0000') - 0.5,
+    );
+    expect(row.scrollWidth).to.be.at.most(row.clientWidth);
+  });
+
+  it('lets the date field of a row without adornments yield to its clear and calendar actions', async () => {
+    // The field floor only protects against adornments: with none, the field is the only item that
+    // can shrink, so a narrow row must still fit both fixed actions inside its border. The widths
+    // clear the two actions' own minimum but not that minimum plus a 4-character floor.
+    for (const width of [120, 130]) {
+      for (const direction of ['ltr', 'rtl'] as const) {
+        const wrapper = await fixture<HTMLElement>(html`
+          <div dir=${direction} style=${`inline-size: ${width}px`}>
+            <lr-date-input with-clear value="2026-01-01" aria-label="Billing date"></lr-date-input>
+          </div>
+        `);
+        const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+        await el.updateComplete;
+        const row = part(el, 'input-wrapper');
+        const rowBox = row.getBoundingClientRect();
+        expect(row.scrollWidth, `${width}px ${direction}: the row overflows`).to.be.at.most(row.clientWidth);
+        for (const action of ['clear-button', 'expand-button']) {
+          const box = part(el, action).getBoundingClientRect();
+          expect(box.left, `${width}px ${direction}: ${action} leaves the row`).to.be.at.least(rowBox.left - 0.5);
+          expect(box.right, `${width}px ${direction}: ${action} leaves the row`).to.be.at.most(rowBox.right + 0.5);
+        }
+      }
+    }
+  });
+});

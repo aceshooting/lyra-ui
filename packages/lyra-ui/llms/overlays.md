@@ -129,8 +129,8 @@ that override no longer decides anything for their modal instances and can be dr
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
 doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
-promoted unless trapped (below), and otherwise go on stacking at `--lr-overlay-stack-index`,
-falling back to `--lr-layer-popover`.
+promoted unless trapped (below) or, for `lr-popover` and `lr-dropdown`, opted in with `top-layer`,
+and otherwise go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
 
 **Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
 (dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
@@ -153,6 +153,29 @@ at UI scale with either strategy. The full-viewport modal surfaces that are not 
 (`lr-command-palette`, `lr-lightbox`, the tool approval/result/select dialogs, a fullscreen
 `lr-widget`, the `lr-responsive-panel` overlay and `lr-tour`'s spotlight) still stack with
 `z-index`: do not place them under a transformed, filtered or contained ancestor.
+
+An ancestor that is only a **stacking context** does not trap an overlay, so it is not promoted: a
+popover inside a `position: fixed` (or `sticky`) header with `z-index: 1000` still paints beneath a
+sibling surface at `z-index: 1100`, and no `z-index` on the popup can lift it out of the header's
+context. For that case `lr-popover` and `lr-dropdown` take an explicit opt-in, `top-layer`: the open
+popup is always shown in the browser top layer, placed `fixed`, with anchoring, the arrow, RTL
+placement, focus, Escape, light dismiss and the transitions unchanged, and no DOM node moved.
+Stacking contexts are deliberately not detected automatically: every `fixed` or `sticky` ancestor
+creates one, and so does almost every `z-index`ed, translucent (`opacity`) or `isolation: isolate`d
+one; most of them never cover the overlay, and promoting through each would lift overlays above
+layers that pages order on purpose (including their own toasts and sticky chrome). Whether a
+stacking context actually hides an overlay depends on sibling layering elsewhere on the page, which
+only the page knows, so the page opts in per instance.
+
+```html
+<header style="position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 1000">
+  <lr-popover top-layer placement="bottom-start">
+    <button slot="trigger">Account</button>
+    <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+  </lr-popover>
+</header>
+<div class="search-panel" style="position: fixed; z-index: 1100">…</div>
+```
 
 **Initial focus.** An `[autofocus]` element anywhere in the slotted content takes focus when the
 overlay opens — including one inside a slotted custom element's own open shadow root, so
@@ -1620,6 +1643,16 @@ If the import fails, leave the native disclosure visible and usable.
   escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
   layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
   clips it (see **Anchored overlays and the top layer**).
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — always shows the open popup in
+  the browser top layer where the native Popover API exists, so it paints above every page layer
+  whatever the stacking contexts around it: the fix for a popover in a `z-index`ed fixed or sticky
+  header, toolbar or rail that a sibling surface stacked higher would otherwise cover. While set the
+  popup is placed with the `fixed` strategy whatever `positioning-strategy` resolves to (the
+  property still reads back its own value). Anchoring, the arrow, RTL placement, focus, Escape,
+  light dismiss, the hover bridge and the show/hide transition are unchanged, because no DOM node
+  moves; the popup stays promoted through its hide transition and leaves the top layer once it
+  settles closed. Changes apply live while open. Without native Popover API support the popup keeps
+  its ordinary `z-index` stacking. Unset, nothing changes: only a trapping ancestor promotes it.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
@@ -2149,6 +2182,12 @@ its surface.
   inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
   cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
   when neither spelling is authored on the instance.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — inherited from `<lr-popover>`:
+  always shows the open menu in the browser top layer, placed `fixed` whatever
+  `positioning-strategy`/`hoist` say, so a dropdown in a `z-index`ed fixed header opens above a
+  sibling surface stacked higher. Submenus of a promoted menu stay above the sibling surface too.
+  Unset, a dropdown is promoted only when a trapping ancestor forces it (see **Anchored overlays
+  and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`

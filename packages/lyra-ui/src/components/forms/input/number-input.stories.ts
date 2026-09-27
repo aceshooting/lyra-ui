@@ -111,6 +111,21 @@ export const NarrowRightToLeft: StoryObj = {
   `,
 };
 
+/**
+ * A short measurement unit in the `end` slot stays whole in a narrow field: the native number
+ * field gives up its spare width first, down to a four-character floor, before an adornment
+ * shrinks. Only a genuinely long adornment ellipsizes.
+ */
+export const NarrowMeasurementUnit: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); inline-size: 210px; max-inline-size: 100%">
+      <lr-number-input label="Energy" value="1650"><span slot="end">kWh</span></lr-number-input>
+      <lr-number-input label="Power" value="1650" dir="rtl"><span slot="end">kW</span></lr-number-input>
+      <lr-number-input label="Energy" value="1650"><span slot="end">kilowatt-hours per billing period</span></lr-number-input>
+    </div>
+  `,
+};
+
 export const PendingStepConstraints: StoryObj = {
   parameters: { docs: { description: { story: 'Native stepping uses newly assigned constraints immediately and remains silent for programmatic edits.' } } },
   render: () => html`
