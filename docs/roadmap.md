@@ -14,10 +14,18 @@ v22 is the next major release. Beyond the switchable-styling work below, it comm
 - **`lr-button-group` fill default.** Stop stretching to full width in narrow containers by default,
   matching `lr-control-group`, with a migration note for consumers that relied on it.
 
-Planned for 21.1.0 ahead of v22: an opt-in `lr-app-rail` fallback focus target for when every
-built-in return target is hidden or inert.
+## 21.1.0
 
-## 21.0.1 fixes
+There is no 21.0.1 release; its fixes ship in 21.1.0, together with:
+
+- An opt-in `lr-app-rail` fallback focus target for when every built-in return target is hidden or
+  inert.
+- Deprecation records for the aliases listed under v22 "Cleanup and removals" item 16, so they can be
+  removed in v23.
+- `lr-tool-call-block`: a localized tool display name and an incomplete/cancelled status.
+- `lr-map`: a fit-to-bounds API that does not fight its own `center`/`zoom` updates.
+
+Fixes:
 
 - Script-aware regional locale fallback, so `zh-HK`, `zh-MO` and bare `zh-Hant` resolve to
   Traditional Chinese instead of Simplified.
@@ -132,10 +140,7 @@ Awesome or Shoelace, and their defaults, never change.
 40. Next: `lr-conversation-tree`, `lr-state-history`, `lr-query-plan`, `lr-web-search-results`,
     `lr-suggested-edits`, `lr-prompt-library`, `lr-agent-card` with `lr-agent-picker`,
     `lr-diagram` (Mermaid), and `lr-guardrail-notice`.
-41. Consumer-reported gaps: `lr-tool-call-block` gains a localized tool display name and an
-    incomplete/cancelled status; `lr-map` gains a fit-to-bounds API that does not fight its own
-    `center`/`zoom` updates.
-42. Later: `lr-schedule-editor`, `lr-share-dialog`, `lr-session-replay`, `lr-conversation-search`,
+41. Later: `lr-schedule-editor`, `lr-share-dialog`, `lr-session-replay`, `lr-conversation-search`,
     `lr-image-generation`, `lr-read-aloud`, `lr-agent-team`, and reasoning-effort controls in
     `lr-model-settings-panel`.
 
