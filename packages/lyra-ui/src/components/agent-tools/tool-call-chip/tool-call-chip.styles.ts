@@ -36,6 +36,8 @@ export const styles = css`
     --_lr-tool-call-chip-bg: var(--lr-color-warning-quiet);
     --_lr-tool-call-chip-border: transparent;
   }
+  /* 'incomplete' (a call that ended without a result) has no rule on purpose: it keeps the neutral
+     resting tone and visible border, and only its static glyph and status text set it apart. */
 
   [part="base"] {
     display: inline-flex;

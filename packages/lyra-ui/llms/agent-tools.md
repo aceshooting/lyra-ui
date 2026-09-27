@@ -47,11 +47,17 @@ its content.
 **Properties:**
 
 - `name: string = ''` — the tool/function name, e.g. `web_search`
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool (e.g. `Lecture d’un fichier`). It replaces `name` in the
+  visible `name` part and the chip's accessible name only; `lr-tool-call-chip-select` still reports
+  the raw `name`. Unset or empty shows `name`
 - `category: string = ''` — optional grouping label, e.g. `research`
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  glyph, accent color, and `status-text`; same status vocabulary as `<lr-tool-result-dialog>` so a
-  call's chip and its detail dialog always agree; unknown runtime values render the pending icon,
-  text, and accessible label instead of failing the update
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the glyph, accent color, and `status-text`; same status vocabulary as
+  `<lr-tool-result-dialog>` so a call's chip and its detail dialog always agree; `incomplete`
+  (21.1.0) is a call that ended without a result (an interrupted stream, a cancelled run) and reads
+  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; unknown
+  runtime values render the pending icon, text, and accessible label instead of failing the update
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
@@ -76,7 +82,7 @@ content — assigned content wins; otherwise the `icon` prop is rendered as a li
 the built-in glyph for the current `status` is used)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
-`summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
+`summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
 **Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
@@ -84,7 +90,7 @@ i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
 (default `1.8s ease-in-out` — pending-icon pulse duration/timing).
 `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public
-component hooks whose private defaults follow `status` (e.g. `pending` →
+component hooks whose private defaults follow `status` (e.g. `pending` and `incomplete` →
 `--lr-color-text-quiet`/`--lr-color-surface`/`--lr-color-border`; `running` → brand; `success` →
 success; `error` → danger; `denied` → warning). Set them on an ancestor to retheme a subtree or
 directly on one chip; either public value remains authoritative in every status. Shared tokens
@@ -191,7 +197,7 @@ Direction: a text fallback (`::part(fallback-text)`) uses `unicode-bidi: plainte
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'success'` (reflected) — the outcome of
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'success'` (reflected) — the outcome of
   the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
   (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
   never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
@@ -273,8 +279,9 @@ DirectToolRendererDefinition }>` and `render?: never` — lazy loader
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
 
 - `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
-  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
-  union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
+  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied' |
+  'incomplete'`, the same union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported
+  from this module. Calling
   it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
   property at its default, `'success'`. This threads through the lazy `load()` path exactly the
   same way — a `render()` resolved via `load()` receives the same 3rd `context` argument as one
@@ -406,8 +413,10 @@ title.
   cloning that name. A direct property assignment made without the attribute can name the panel
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
-- `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
-  header's status badge; same status vocabulary as `<lr-tool-call-chip>`
+- `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
+  drives the header's status badge; same status vocabulary as `<lr-tool-call-chip>`. `incomplete`
+  (21.1.0) is a call that ended without a result; its badge reads `Incomplete` in the neutral
+  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; omitted
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
@@ -510,6 +519,8 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 - `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
 - `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
 - `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-tool-result-dialog-incomplete-color` — Incomplete status foreground (21.1.0). Default: `var(--lr-color-text-quiet)`.
+- `--lr-tool-result-dialog-incomplete-bg` — Incomplete status background (21.1.0). Default: `transparent`.
 
 ---
 
@@ -2944,9 +2955,9 @@ primitives, with retry counts and sensitive-field redaction.
 **Properties:**
 
 - `entries: readonly ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
-  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
-Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
-  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
+  `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; displayName?:
+string; args: Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
+  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete'`) with `{ startedAt?:
 number; endedAt?: number; retryCount?: number; redactedFields?: readonly string[]; needsApproval?: boolean;
 approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
   source generation when invocation ids can be reused; every expansion, activation, renderer error,
@@ -2954,7 +2965,12 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   are omitted; a blank optional `sourceKey` is treated as absent. Duplicate occurrences of the same
   pair are normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
   literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
-  to `pending` before both the timeline row and its composed chip render.
+  to `pending` before both the timeline row and its composed chip render. `displayName` (21.1.0),
+  the application's own translated tool label, is forwarded to the chip's `displayName` and names
+  the entry's details disclosure (`Details for Lecture d’un fichier`); an empty, omitted or
+  non-string value shows `name`. `name` still selects the result renderer, is still the `toolName`
+  in `lr-tool-render-error`, and still names the tool in the approval dialog, so the reviewer
+  authorizes the exact tool.
   Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
   and an entry with none sorts after every timed entry (keeping its relative position among other
   untimed ones) and renders no visible timestamp. `startedAt`+`endedAt` derive the `durationMs`
@@ -3035,6 +3051,8 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 `status="denied"` entry, decoupled from the pending-approval border color below so either can be
 retinted independently; `--lr-tool-timeline-pending-marker-color` (default
 `var(--lr-color-text-quiet)`) — rail-dot color for a `status="pending"` entry;
+`--lr-tool-timeline-incomplete-marker-color` (21.1.0, default `var(--lr-color-text-quiet)`) —
+rail-dot color for a `status="incomplete"` entry, independent of the pending one;
 `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
@@ -3945,6 +3963,7 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from ToolInvocation.
     id: string;
     name: string;
+    displayName?: string;
     args: Record<string, unknown>;
     status: ToolCallStatus;
     result?: unknown;
@@ -4005,11 +4024,19 @@ progress, and `No data` only for a terminal status.
 **Properties:**
 
 - `name: string = ''` — tool name; an empty name renders the localized generic `Tool call` label
+- `displayName?: string` (attribute `display-name`, 21.1.0) — the application's own,
+  already-translated label for the tool. It replaces `name` inside the localized header verb only
+  (`Used Lecture d’un fichier`), so the status wording stays localized; `name` still selects the
+  result renderer and is still reported in `lr-render-error`. Unset or empty shows `name`; a
+  `label` override replaces the whole header, this included
 - `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
   `lr-render-error` details
 - `status: ToolCallStatus = 'pending'` (reflected, including the default) —
-  `'pending'|'running'|'success'|'error'|'denied'`; selects the header verb, glyph and accent.
-  Values outside the set normalize and reflect as `pending`
+  `'pending'|'running'|'success'|'error'|'denied'|'incomplete'`; selects the header verb, glyph
+  and accent. `incomplete` (21.1.0) is a call that ended without a result (an interrupted stream, a
+  cancelled run): it reads `Did not finish using {name}` (`toolCallBlockHeaderIncomplete`), or
+  `Incomplete` (`statusIncomplete`) in `status-text` beside a `label`, with a static glyph and the
+  neutral accent. Values outside the set normalize and reflect as `pending`
 - `expanded: boolean = false` (reflected) — whether the details are shown
 - `label?: string` — header override, used verbatim (including `''`); when set, the localized
   status text renders beside it in `status-text`. Unset renders the localized status verb
@@ -4060,7 +4087,8 @@ set), `duration` (only while finite), `body` (the disclosed region), `args`, `ar
   header/body divider
 - `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius
 - `--lr-tool-call-block-accent` — status glyph colour; its private default follows `status`
-  (`--lr-color-text-quiet`, then brand while running, success, danger on error, warning when denied)
+  (`--lr-color-text-quiet` while pending or incomplete, then brand while running, success, danger
+  on error, warning when denied)
 - `--lr-tool-call-block-error-color` (default `var(--lr-color-danger)`) — error section text
 
 The running glyph spins and the pending glyph pulses at `--lr-transition-ambient`; both stop under

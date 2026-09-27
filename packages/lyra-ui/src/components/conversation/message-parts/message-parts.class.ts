@@ -20,7 +20,6 @@ import type {
   ToolCallBlockRenderErrorDetail,
   ToolCallBlockToggleDetail,
 } from '../../agent-tools/tool-call-block/tool-call-block.class.js';
-import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { isToolCallStatus } from '../../agent-tools/tool-status.js';
 import {
   projectedRedactionFields,
@@ -28,7 +27,7 @@ import {
   TOO_MANY_REDACTION_PATHS,
   type RedactedToolDetail,
 } from '../../agent-tools/tool-redaction.js';
-import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { LyraToolCallChipEventMap, ToolCallStatus } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
 import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -85,10 +84,11 @@ const EMPTY_REDACTED_FIELDS: readonly string[] = Object.freeze([]);
 const TOOL_BLOCK_EXPORTPARTS =
   'header:tool-block-header, body:tool-block-body, args:tool-block-args, result:tool-block-result, error:tool-block-error';
 
-/** A block's status from its call and (optional) paired result part. */
-function resolveBlockStatus(invocation: ToolInvocation, result?: ToolResultMessagePart): LyraToolStatus {
+/** A block's status from its call and (optional) paired result part. `denied` and `incomplete` are
+ *  outcomes the application declared on the call itself, so no paired result overrides them. */
+function resolveBlockStatus(invocation: ToolInvocation, result?: ToolResultMessagePart): ToolCallStatus {
   const status = isToolCallStatus(invocation.status) ? invocation.status : 'pending';
-  if (status === 'denied') return 'denied';
+  if (status === 'denied' || status === 'incomplete') return status;
   if (status === 'error' || (result && 'error' in result)) return 'error';
   if (result && result.state === 'streaming') return 'running';
   if (result) return 'success';
@@ -100,6 +100,12 @@ function invocationDuration(invocation: ToolInvocation): number | undefined {
   if (invocation.startedAt == null || invocation.endedAt == null) return undefined;
   const diff = invocation.endedAt - invocation.startedAt;
   return Number.isFinite(diff) ? diff : undefined;
+}
+
+/** The invocation's display label, or `undefined` so the block/chip falls back to `name`. A
+ *  non-string value (a caller bypassing the typed shape) never reaches the rendered label. */
+function invocationDisplayName(invocation: ToolInvocation): string | undefined {
+  return typeof invocation.displayName === 'string' ? invocation.displayName : undefined;
 }
 
 /** One render pass's tool pairing (block display only). */
@@ -154,7 +160,9 @@ export interface LyraMessagePartsEventMap
  * invocation id and renders the pair through one collapsed `<lr-tool-call-block>` at the call's
  * position; the folded result part renders nothing (it still counts toward `max-rendered-parts`).
  * The block shows a running state until the result arrives, and reads its duration from the
- * invocation's `startedAt`/`endedAt`. An invocation's `redactedFields` masks every built-in
+ * invocation's `startedAt`/`endedAt`. An invocation marked `denied` or `incomplete` keeps that
+ * status whatever result part is paired with it. In either display, an invocation's `displayName`
+ * (the application's translated tool label) is shown in place of its `name`. An invocation's `redactedFields` masks every built-in
  * rendering of its payload in either display: the block's details, the chip's summary, and a
  * standalone result part's result and error.
  *
@@ -488,6 +496,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     // reach the `call-id` attribute. `expanded` is never bound, so the block keeps its own state.
     return html`<lr-tool-call-block
       .name=${invocation.name}
+      .displayName=${invocationDisplayName(invocation)}
       .callId=${invocation.id}
       .args=${invocation.args}
       status=${resolveBlockStatus(invocation, paired)}
@@ -554,6 +563,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         return html`<lr-tool-call-chip
           .callId=${part.invocation.id}
           .name=${part.invocation.name}
+          .displayName=${invocationDisplayName(part.invocation)}
           .status=${part.invocation.status}
           .summary=${summary ?? ''}
         ></lr-tool-call-chip>`;

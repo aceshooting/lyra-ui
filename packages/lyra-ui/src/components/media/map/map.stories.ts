@@ -1,12 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { ref } from 'lit/directives/ref.js';
 import type {
+  LyraMap,
+  LyraMapBounds,
   LyraMapChoroplethLayer,
   LyraMapGeoJsonDataLayer,
   LyraMapLegendEntry,
   LyraMapMarker,
   LyraMapMarkerActivationDetail,
   LyraMapPointIcon,
+  LyraMapViewChangeDetail,
 } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 import '../../../../../../.storybook/maplibre-worker.js';
@@ -333,6 +337,78 @@ export const Markers: Story = {
           event: CustomEvent<LyraMapMarkerActivationDetail>,
         ) => console.log('marker activate', event.detail)}
       ></lr-map>
+    `;
+  },
+};
+
+/**
+ * `fitBounds()` frames a box -- here the bounding box of the markers currently shown -- and writes
+ * the settled camera back into `center`/`zoom`, reporting it through `lr-map-view-change`. The
+ * story calls it before the map exists, so the fit is queued and applied as the map is built; the
+ * buttons swap the data set and fit again. The status line mirrors the event: pan or zoom and it
+ * reports `source: user`, press a button and it reports `source: fit`. Under
+ * `prefers-reduced-motion: reduce` the camera jumps instead of animating.
+ */
+export const FitBounds: Story = {
+  render: () => {
+    const capitals: LyraMapMarker[] = [
+      { id: 'lisbon', lngLat: [-9.1393, 38.7223], label: 'Lisbon' },
+      { id: 'paris', lngLat: [2.3522, 48.8566], label: 'Paris' },
+      { id: 'berlin', lngLat: [13.405, 52.52], label: 'Berlin' },
+      { id: 'warsaw', lngLat: [21.0122, 52.2297], label: 'Warsaw' },
+      { id: 'athens', lngLat: [23.7275, 37.9838], label: 'Athens' },
+    ];
+    const nordics: LyraMapMarker[] = [
+      { id: 'oslo', lngLat: [10.7522, 59.9139], label: 'Oslo' },
+      { id: 'stockholm', lngLat: [18.0686, 59.3293], label: 'Stockholm' },
+      { id: 'helsinki', lngLat: [24.9384, 60.1699], label: 'Helsinki' },
+      { id: 'copenhagen', lngLat: [12.5683, 55.6761], label: 'Copenhagen' },
+    ];
+    const boxOf = (markers: readonly LyraMapMarker[]): LyraMapBounds => {
+      const lngs = markers.map((marker) => marker.lngLat[0]);
+      const lats = markers.map((marker) => marker.lngLat[1]);
+      return [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ];
+    };
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    const show = (markers: LyraMapMarker[]): void => {
+      if (!map) return;
+      map.markers = markers;
+      map.fitBounds(boxOf(markers), { padding: 48, maxZoom: 8 });
+    };
+    const onViewChange = (event: CustomEvent<LyraMapViewChangeDetail>): void => {
+      const { center, zoom, source } = event.detail;
+      if (status) {
+        status.textContent =
+          `source: ${source} · center: ${center.map((value) => value.toFixed(2)).join(', ')}` +
+          ` · zoom: ${zoom.toFixed(2)}`;
+      }
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s)">
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-s)">
+          <lr-button @click=${() => show(capitals)}>Fit capitals</lr-button>
+          <lr-button @click=${() => show(nordics)}>Fit Nordic capitals</lr-button>
+        </div>
+        <lr-map
+          label="Map fitted to its markers"
+          style="height: 20rem"
+          .renderWorldCopies=${false}
+          .mapStyle=${OFFLINE_RASTER_STYLE}
+          @lr-map-view-change=${onViewChange}
+          ${ref((element) => {
+            if (!element || map === element) return;
+            map = element as LyraMap;
+            show(capitals);
+          })}
+        ></lr-map>
+        <output ${ref((element) => {
+          status = element as HTMLElement | undefined;
+        })}>Waiting for the first settled camera…</output>
+      </div>
     `;
   },
 };

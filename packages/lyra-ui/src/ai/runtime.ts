@@ -117,7 +117,9 @@ const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
 const MESSAGE_STATUSES = new Set(['sending', 'sent', 'failed', 'streaming']);
 const PART_STATES = new Set(['streaming', 'complete']);
-const TOOL_STATUSES = new Set(['pending', 'running', 'success', 'error', 'denied']);
+// Equal to TOOL_CALL_STATUSES in components/agent-tools/tool-status.ts (the `ToolCallStatus` union a
+// `ToolInvocation` carries); kept local so this runtime layer imports nothing from the component tree.
+const TOOL_STATUSES = new Set(['pending', 'running', 'success', 'error', 'denied', 'incomplete']);
 
 function positiveInteger(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
@@ -222,6 +224,7 @@ function validTool(value: unknown, limits: Readonly<AgentStreamLimits>): value i
   if (!isRecord(value)) return false;
   return validIdentifier(value['id'], limits)
     && validIdentifier(value['name'], limits)
+    && validOptionalString(value['displayName'], limits.maxIdentifierCharacters)
     && isRecord(value['args'])
     && TOOL_STATUSES.has(String(value['status']))
     && validOptionalString(value['error'], limits.maxStatusMessageCharacters)

@@ -20,12 +20,13 @@ import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolGlyph, toolStatusIcon } fr
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Same status vocabulary as `<lr-tool-call-chip>`. */
-export type ToolResultStatus = LyraToolStatus;
+/** Same status vocabulary as `<lr-tool-call-chip>`, including `incomplete` for a call that ended
+ *  without a result. */
+export type ToolResultStatus = LyraToolStatus | 'incomplete';
 
 /**
  * Reason the dialog was dismissed, forwarded as the `lr-close` event
@@ -156,6 +157,8 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @cssprop [--lr-tool-result-dialog-error-bg=var(--lr-color-danger-quiet)] - Error status background.
  * @cssprop [--lr-tool-result-dialog-denied-color=var(--lr-color-warning)] - Denied status foreground.
  * @cssprop [--lr-tool-result-dialog-denied-bg=var(--lr-color-warning-quiet)] - Denied status background.
+ * @cssprop [--lr-tool-result-dialog-incomplete-color=var(--lr-color-text-quiet)] - Incomplete status foreground.
+ * @cssprop [--lr-tool-result-dialog-incomplete-bg=transparent] - Incomplete status background.
  * @status stable
  * @since 4.0.0
  */
@@ -179,6 +182,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -210,9 +214,10 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /**
    * The tool call's current lifecycle state — drives the header's status
-   * badge. An out-of-union value (e.g. a stray `status` attribute, or a
-   * direct property assignment from an untyped caller) is treated as
-   * `'pending'` rather than crashing render.
+   * badge. `incomplete` is a call that ended without a result. An
+   * out-of-union value (e.g. a stray `status` attribute, or a direct property
+   * assignment from an untyped caller) is treated as `'pending'` rather than
+   * crashing render.
    */
   @property({ reflect: true, converter: statusConverter }) status: ToolResultStatus = 'pending';
 

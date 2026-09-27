@@ -7,6 +7,7 @@ export const styles = css`
     --_lr-tool-timeline-marker-size: var(--lr-size-0-625rem);
     --_lr-tool-timeline-denied-marker-color: var(--lr-color-warning);
     --_lr-tool-timeline-pending-marker-color: var(--lr-color-text-quiet);
+    --_lr-tool-timeline-incomplete-marker-color: var(--lr-color-text-quiet);
     --_lr-tool-timeline-pending-approval-border-color: var(--lr-color-warning);
   }
 
@@ -82,6 +83,12 @@ export const styles = css`
     background: var(
       --lr-tool-timeline-denied-marker-color,
       var(--_lr-tool-timeline-denied-marker-color)
+    );
+  }
+  [part="entry"][data-status="incomplete"] [part="entry-marker"]::before {
+    background: var(
+      --lr-tool-timeline-incomplete-marker-color,
+      var(--_lr-tool-timeline-incomplete-marker-color)
     );
   }
 

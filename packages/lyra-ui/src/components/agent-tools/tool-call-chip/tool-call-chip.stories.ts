@@ -43,6 +43,17 @@ export const Statuses: Story = {
         duration-ms="300"
       ></lr-tool-call-chip>
       <lr-tool-call-chip name="delete_file" status="denied" summary="Blocked by policy"></lr-tool-call-chip>
+      <lr-tool-call-chip name="read_file" status="incomplete" summary="Run cancelled"></lr-tool-call-chip>
+    </div>
+  `,
+};
+
+export const DisplayName: Story = {
+  name: 'Display name',
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:40rem;">
+      <lr-tool-call-chip name="read_file" display-name="File reader" status="success" duration-ms="640"></lr-tool-call-chip>
+      <lr-tool-call-chip name="read_file" display-name="Lecture d’un fichier" status="incomplete"></lr-tool-call-chip>
     </div>
   `,
 };

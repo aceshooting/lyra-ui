@@ -25,8 +25,8 @@ function glyphMarkup(status: unknown): string {
   return svgElement ? markupWithoutComments(svgElement).replace(/\s+/g, ' ').trim() : '';
 }
 
-it('exposes the frozen five-member tool status vocabulary', () => {
-  expect([...TOOL_CALL_STATUSES]).to.deep.equal(['pending', 'running', 'success', 'error', 'denied']);
+it('exposes the frozen six-member tool status vocabulary, with incomplete appended last', () => {
+  expect([...TOOL_CALL_STATUSES]).to.deep.equal(['pending', 'running', 'success', 'error', 'denied', 'incomplete']);
   expect(Object.isFrozen(TOOL_CALL_STATUSES)).to.equal(true);
 });
 
@@ -59,5 +59,6 @@ it('maps every status to its visible text-twin key', () => {
     success: 'statusSuccess',
     error: 'statusError',
     denied: 'statusDenied',
+    incomplete: 'statusIncomplete',
   });
 });

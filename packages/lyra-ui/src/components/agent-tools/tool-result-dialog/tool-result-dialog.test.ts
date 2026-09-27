@@ -105,6 +105,27 @@ it('shows a visible status label for every status value, not just a color', asyn
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Denied');
 });
 
+it('keeps an incomplete status with its localized badge text and its own themeable colours', async () => {
+  const el = (await fixture(
+    html`<lr-tool-result-dialog tool-name="read_file" status="incomplete"></lr-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  const badge = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(el.status).to.equal('incomplete');
+  expect(el.getAttribute('status')).to.equal('incomplete');
+  expect(badge.textContent).to.include('Incomplete');
+
+  el.style.setProperty('--lr-tool-result-dialog-pending-color', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lr-tool-result-dialog-pending-bg', 'rgb(10, 11, 12)');
+  el.style.setProperty('--lr-tool-result-dialog-incomplete-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-tool-result-dialog-incomplete-bg', 'rgb(4, 5, 6)');
+  expect(getComputedStyle(badge).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(badge).backgroundColor).to.equal('rgb(4, 5, 6)');
+
+  el.strings = { statusIncomplete: 'Inachevé' };
+  await el.updateComplete;
+  expect(badge.textContent).to.include('Inachevé');
+});
+
 it('falls back to a pending badge instead of throwing for an out-of-union status attribute', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python" status="bogus"></lr-tool-result-dialog>`,

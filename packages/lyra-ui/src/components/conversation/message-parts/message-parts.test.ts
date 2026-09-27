@@ -11,6 +11,7 @@ import type {
 } from "./message-parts.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
+import type { LyraToolCallChip } from "../../agent-tools/tool-call-chip/tool-call-chip.class.js";
 import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
 import type { ToolInvocation } from "../../../ai/types.js";
 
@@ -967,6 +968,9 @@ describe('tool-display', () => {
   it('resolves the block status from the call and its paired result', async () => {
     const cases: Array<[MessagePart[], string]> = [
       [[call('c', { status: 'denied' }), result('r')], 'denied'],
+      [[call('c', { status: 'incomplete' })], 'incomplete'],
+      [[call('c', { status: 'incomplete' }), result('r', { state: 'streaming' })], 'incomplete'],
+      [[call('c', { status: 'incomplete' }), result('r', { error: 'aborted', result: undefined })], 'incomplete'],
       [[call('c', { status: 'error' })], 'error'],
       [[call('c'), result('r', { error: 'boom', result: undefined })], 'error'],
       [[call('c'), result('r', { state: 'streaming' })], 'running'],
@@ -978,6 +982,30 @@ describe('tool-display', () => {
       const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${source}></lr-message-parts>`)) as LyraMessageParts;
       expect(blocks(el)[0]!.status, JSON.stringify(source.map((part) => part.id))).to.equal(expected);
     }
+  });
+
+  it('forwards an invocation display name to the block and the chip, keeping the raw name', async () => {
+    const translated = call('c', { name: 'read_file', displayName: 'Lecture d’un fichier', status: 'incomplete' });
+    const block = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[translated]}></lr-message-parts>`)) as LyraMessageParts;
+    const [rendered] = blocks(block);
+    await rendered!.updateComplete;
+    expect(rendered!.name).to.equal('read_file');
+    expect(rendered!.displayName).to.equal('Lecture d’un fichier');
+    expect(rendered!.status).to.equal('incomplete');
+    expect(rendered!.shadowRoot!.querySelector('[part="header"]')!.textContent).to.contain('Lecture d’un fichier');
+
+    const chip = (await fixture(html`<lr-message-parts .parts=${[translated]}></lr-message-parts>`)) as LyraMessageParts;
+    const renderedChip = chip.shadowRoot!.querySelector<LyraToolCallChip>('lr-tool-call-chip')!;
+    await renderedChip.updateComplete;
+    expect(renderedChip.name).to.equal('read_file');
+    expect(renderedChip.displayName).to.equal('Lecture d’un fichier');
+    expect(renderedChip.status).to.equal('incomplete');
+    expect(renderedChip.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('Lecture d’un fichier');
+
+    const plain = (await fixture(html`<lr-message-parts tool-display="block"
+      .parts=${[call('c')]}></lr-message-parts>`)) as LyraMessageParts;
+    expect(blocks(plain)[0]!.displayName).to.equal(undefined);
   });
 
   it('renders unpaired, duplicate and windowed-out results on their own, and folds a result that precedes its call', async () => {

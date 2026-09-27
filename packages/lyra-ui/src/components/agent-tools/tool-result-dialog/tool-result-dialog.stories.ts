@@ -125,6 +125,12 @@ export const Statuses: Story = {
           <p slot="body" style="margin:0;">Blocked by workspace policy: destructive file operations require approval.</p>
         </lr-tool-result-dialog>
       </div>
+      <div>
+        <button @click=${openDialog}>Incomplete</button>
+        <lr-tool-result-dialog tool-name="read_file" status="incomplete">
+          <p slot="body" style="margin:0;">The run was cancelled before this call returned a result.</p>
+        </lr-tool-result-dialog>
+      </div>
     </div>
   `,
 };

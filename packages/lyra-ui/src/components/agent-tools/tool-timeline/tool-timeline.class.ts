@@ -109,6 +109,7 @@ interface CanonicalToolTimelineEntry {
   readonly source: ToolTimelineEntry;
   readonly id: string;
   readonly name: string;
+  readonly displayName?: string;
   readonly args: unknown;
   readonly status: ToolCallStatus;
   readonly result?: unknown;
@@ -135,6 +136,7 @@ function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | 
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
     const idDescriptor = descriptorValue(value, 'id');
     const nameDescriptor = descriptorValue(value, 'name');
+    const displayNameDescriptor = descriptorValue(value, 'displayName');
     const argsDescriptor = descriptorValue(value, 'args');
     const statusDescriptor = descriptorValue(value, 'status');
     const resultDescriptor = descriptorValue(value, 'result');
@@ -151,6 +153,7 @@ function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | 
       [
         idDescriptor,
         nameDescriptor,
+        displayNameDescriptor,
         argsDescriptor,
         statusDescriptor,
         resultDescriptor,
@@ -182,6 +185,7 @@ function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | 
       : projectedRedactionFields(redactedFieldsValue);
     if (redactedFields === undefined) return undefined;
     const name = valueOf(nameDescriptor);
+    const displayName = valueOf(displayNameDescriptor);
     const status = valueOf(statusDescriptor);
     const result = valueOf(resultDescriptor);
     const error = valueOf(errorDescriptor);
@@ -196,6 +200,7 @@ function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | 
       source: value as ToolTimelineEntry,
       id,
       name: typeof name === 'string' ? name : '',
+      ...(typeof displayName === 'string' ? { displayName } : {}),
       args: valueOf(argsDescriptor),
       status: TOOL_STATUSES.has(status as ToolCallStatus) ? status as ToolCallStatus : 'pending',
       ...(result === undefined ? {} : { result }),
@@ -255,6 +260,11 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * review are reserved inside that budget when new history would otherwise push them past the
  * ceiling, and a localized notice exposes truncation instead of silently hiding it. Foreign
  * runtime statuses normalize once to `pending` before both row and child presentation.
+ *
+ * An entry's `displayName` (the application's translated tool label) is shown on its chip and in
+ * its details disclosure name; `name` still selects the result renderer, is still the
+ * `toolName` in `lr-tool-render-error`, and still names the tool in the approval dialog, where the
+ * exact tool being authorized matters more than its friendly label.
  *
  * Redaction work is deferred until a detail row opens and memoized while its payload/path inputs
  * remain unchanged. It is bounded to 100 paths, 64 levels, and 10,000 visited nodes; exceeding a
@@ -326,6 +336,9 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   retint either independently.
  * @cssprop [--lr-tool-timeline-pending-marker-color=var(--lr-color-text-quiet)] - Rail-dot color
  *   for a `status="pending"` entry.
+ * @cssprop [--lr-tool-timeline-incomplete-marker-color=var(--lr-color-text-quiet)] - Rail-dot color
+ *   for a `status="incomplete"` entry (a call that ended without a result), independent of the
+ *   pending one.
  * @cssprop [--lr-tool-timeline-pending-approval-border-color=var(--lr-color-warning)] - Color of
  *   the entry body's leading border while `data-pending-approval="true"`.
  * @cssprop [--lr-tool-timeline-running-marker-color=var(--lr-color-brand)] - Running rail dot.
@@ -672,6 +685,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               : nothing}
             <lr-tool-call-chip
               .name=${entry.name}
+              .displayName=${entry.displayName}
               .status=${entry.status}
               .durationMs=${durationMs}
               .icon=${entry.icon ?? ''}
@@ -702,7 +716,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
           </div>
           <lr-details
             part="entry-details"
-            .summary=${this.localize('toolTimelineDetailsFor', undefined, { name: entry.name })}
+            .summary=${this.localize('toolTimelineDetailsFor', undefined, { name: entry.displayName || entry.name })}
             .open=${detailsOpened}
             @lr-show=${this.stopOwnedEvent}
             @lr-after-show=${this.stopOwnedEvent}

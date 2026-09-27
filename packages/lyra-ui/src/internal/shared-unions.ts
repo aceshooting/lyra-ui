@@ -33,7 +33,8 @@ export type LyraOrientation = 'horizontal' | 'vertical';
  * The lifecycle a single tool/function call (or the span standing in for one) moves through. One
  * vocabulary across the chip, the result dialog, the trace span, and the flow-canvas run so a call
  * reads identically wherever it is shown. `denied` is a policy rejection, distinct from a runtime
- * `error`.
+ * `error`. The tool-call surfaces (`ToolCallStatus`, `ToolResultStatus`) add one member on top,
+ * `incomplete`, for a call that ended without a result; spans and flow runs keep this set.
  */
 export type LyraToolStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
 

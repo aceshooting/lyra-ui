@@ -4065,16 +4065,23 @@ duration; expanding shows arguments, error and result in place) and pairs it wit
 - Everything else renders as in chip display: unpaired results, a result whose call is outside the
   rendered window, duplicate results after the first, and custom-rendered calls or results. A
   second call part with the same invocation id renders its own unpaired block.
-- The block binds `name`, `callId` and `args` from the invocation, and `redactedFields` from the
+- The block binds `name`, `displayName`, `callId` and `args` from the invocation, and `redactedFields` from the
   invocation-level paths described under redaction below; `result` from
   the paired part (else `invocation.result`); `error` from the paired part when it carries one (else
   `invocation.error`); and `durationMs = endedAt - startedAt` when both are set (else no duration).
   `expanded` is never bound, so a user-expanded block stays open across `parts` updates.
-- Block status, first match wins: invocation `denied` → `denied`; invocation `error` or a paired
-  error result → `error`; a paired result still `streaming` → `running`; any paired result →
+- Block status, first match wins: invocation `denied` → `denied`; invocation `incomplete` (a call
+  that ended without a result, 21.1.0) → `incomplete`, whatever result part is paired; invocation
+  `error` or a paired error result → `error`; a paired result still `streaming` → `running`; any paired result →
   `success`; otherwise the invocation's own status (an unknown value → `pending`), so a call still
   waiting on its result keeps showing `pending`/`running`.
 - The tool-call wrapper stretches to the message width in block display.
+
+**Display name in both displays** (21.1.0). An invocation's `displayName` (the application's own,
+already-translated tool label) is bound to the chip's or the block's `displayName`, so the visible
+and announced tool name is the translated one while `name` still selects the result renderer and
+is still what `lr-tool-call-chip-select` and `lr-render-error` report. A non-string value is not
+forwarded.
 
 **Redaction in both displays.** An invocation's `redactedFields` (dotted paths rooted at
 `args`/`result`/`error`, see `<lr-tool-call-block>`) masks every built-in rendering of its payload

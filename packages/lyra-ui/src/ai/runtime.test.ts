@@ -1156,8 +1156,68 @@ it('accepts and preserves tool timing and redaction fields', () => {
   expect(omitted.tools).to.have.lengthOf(1);
 });
 
-it('rejects malformed tool timing and redaction fields as invalid stream events', () => {
+it('accepts an incomplete tool call and its display name on an upsert, a message and a snapshot', () => {
+  const invocation = {
+    id: 'call-1',
+    name: 'read_file',
+    displayName: 'Lecture d’un fichier',
+    args: {},
+    status: 'incomplete',
+  } as const;
+  const upsert = reduceAgentStream(createAgentStreamState(), {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation,
+  });
+  expect(upsert.error).to.equal(undefined);
+  expect(upsert.status.kind).to.not.equal('error');
+  expect(upsert.tools[0]?.status).to.equal('incomplete');
+  expect(upsert.tools[0]?.displayName).to.equal('Lecture d’un fichier');
+
+  const message = {
+    id: 'message-1',
+    role: 'assistant',
+    parts: [{ id: 'call-part', type: 'tool-call', invocation }],
+  } as const;
+  const started = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message,
+  });
+  expect(started.error).to.equal(undefined);
+  const startedPart = started.messages[0]?.parts?.[0];
+  expect(startedPart?.type === 'tool-call' ? startedPart.invocation.status : undefined).to.equal('incomplete');
+
+  const snapshot = reduceAgentStream(createAgentStreamState(), {
+    type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
+    messages: [message],
+  });
+  expect(snapshot.error).to.equal(undefined);
+  const snapshotPart = snapshot.messages[0]?.parts?.[0];
+  expect(snapshotPart?.type === 'tool-call' ? snapshotPart.invocation.displayName : undefined)
+    .to.equal('Lecture d’un fichier');
+
+  // A later upsert that omits the display name keeps the one already retained.
+  const merged = reduceAgentStream(upsert, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 2,
+    invocation: { id: 'call-1', name: 'read_file', args: {}, status: 'incomplete' },
+  });
+  expect(merged.error).to.equal(undefined);
+  expect(merged.tools[0]?.displayName).to.equal('Lecture d’un fichier');
+});
+
+it('rejects malformed tool status, display name, timing and redaction fields as invalid stream events', () => {
   const malformed: ReadonlyArray<Record<string, unknown>> = [
+    { status: 'cancelled' },
+    { displayName: 7 },
+    { displayName: null },
+    { displayName: 'x'.repeat(1_025) },
     { startedAt: Number.NaN },
     { startedAt: Number.POSITIVE_INFINITY },
     { startedAt: '1000' },

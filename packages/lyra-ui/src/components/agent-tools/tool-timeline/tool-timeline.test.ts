@@ -371,6 +371,19 @@ it('normalizes a foreign provider status once to pending for both timeline row a
   expect(chipIn(row).status).to.equal('pending');
 });
 
+it('keeps an incomplete entry status for both the timeline row and its child chip', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[makeEntry({ status: 'incomplete' })]}></lr-tool-timeline>
+  `);
+  const row = entriesEl(el)[0]!;
+  expect(el.entries[0]!.status).to.equal('incomplete');
+  expect(row.dataset['status']).to.equal('incomplete');
+  const chip = chipIn(row);
+  await chip.updateComplete;
+  expect(chip.status).to.equal('incomplete');
+  expect(chip.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Incomplete');
+});
+
 it('defaults to entries=[] and approvalEditable=true, rendering an empty list with no dialog decision affordance', async () => {
   const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.entries).to.deep.equal([]);
@@ -910,6 +923,39 @@ it('names each details disclosure with its entry name', async () => {
   ]);
 });
 
+it('shows an entry display name on its chip and details disclosure while the renderer keeps the raw name', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'read', name: 'read_file', displayName: 'Lecture d’un fichier' }),
+    makeEntry({ id: 'code', name: 'run_code', displayName: '' }),
+    makeEntry({ id: 'odd', name: 'odd_tool', displayName: 7 as unknown as string }),
+  ];
+  const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
+  const chip = chipIn(entryAt(el, 0));
+  await chip.updateComplete;
+  expect(chip.name).to.equal('read_file');
+  expect(chip.displayName).to.equal('Lecture d’un fichier');
+  expect(chip.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('Lecture d’un fichier');
+  expect(chipIn(entryAt(el, 2)).displayName, 'a non-string display name is dropped').to.equal(undefined);
+
+  const details = [...el.shadowRoot!.querySelectorAll<HTMLElement>('lr-details')];
+  expect(details.map((item) => (item as HTMLElement & { summary: string }).summary)).to.deep.equal([
+    'Details for Lecture d’un fichier',
+    'Details for run_code',
+    'Details for odd_tool',
+  ]);
+
+  const opened = await openEntry(el, 0);
+  expect(resultViewIn(opened).toolName).to.equal('read_file');
+
+  const gated = (await fixture(html`<lr-tool-timeline .entries=${[
+    makeEntry({ name: 'read_file', displayName: 'Lecture d’un fichier', status: 'pending', needsApproval: true }),
+  ]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entryAt(gated)).dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
+  await gated.updateComplete;
+  expect(dialog(gated).open).to.equal(true);
+  expect(dialog(gated).toolName, 'the approval dialog names the exact tool').to.equal('read_file');
+});
+
 it('accepts approval-editable="false" as a plain-HTML attribute string', async () => {
   const el = (await fixture(html`<lr-tool-timeline approval-editable="false"></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.approvalEditable).to.be.false;
@@ -995,6 +1041,31 @@ it('falls back denied and pending marker colors plus the pending-approval border
   expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal(warningColor);
   expect(getComputedStyle(pendingMarker, '::before').backgroundColor).to.equal(quietColor);
   expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal(warningColor);
+});
+
+it('paints an incomplete rail-dot through its own cssprop, never the pending one', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'c-incomplete', status: 'incomplete' }),
+    makeEntry({ id: 'c-pending', status: 'pending' }),
+  ];
+  const el = (await fixture(html`<lr-tool-timeline
+    .entries=${entries}
+    style="--lr-tool-timeline-pending-marker-color: rgb(4, 5, 6);"
+  ></lr-tool-timeline>`)) as LyraToolTimeline;
+  const incompleteMarker = entryAt(el, 0).querySelector('[part="entry-marker"]') as HTMLElement;
+  const pendingMarker = entryAt(el, 1).querySelector('[part="entry-marker"]') as HTMLElement;
+  const quietProbe = document.createElement('div');
+  quietProbe.style.color = 'var(--lr-color-text-quiet)';
+  el.shadowRoot!.append(quietProbe);
+  const quietColor = getComputedStyle(quietProbe).color;
+  quietProbe.remove();
+
+  expect(getComputedStyle(pendingMarker, '::before').backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(incompleteMarker, '::before').backgroundColor).to.equal(quietColor);
+
+  el.style.setProperty('--lr-tool-timeline-incomplete-marker-color', 'rgb(10, 11, 12)');
+  expect(getComputedStyle(incompleteMarker, '::before').backgroundColor).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(pendingMarker, '::before').backgroundColor).to.equal('rgb(4, 5, 6)');
 });
 
 it('retints success markers and approval badges through component-scoped state hooks', async () => {

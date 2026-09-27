@@ -26,6 +26,7 @@ export const styles = css`
   :host(:where([status='denied'])) {
     --_lr-tool-call-block-accent: var(--lr-color-warning);
   }
+  /* An incomplete call (ended without a result) keeps the neutral accent: no outcome to colour. */
 
   /* The clip only rounds the corners of the header's hover fill; every inline-overflowing
      descendant is contained by a section scroller below. */

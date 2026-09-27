@@ -126,6 +126,7 @@ describe('<lr-tool-call-block>', () => {
       success: 'Used web_search',
       error: 'Failed to use web_search',
       denied: 'Use of web_search denied',
+      incomplete: 'Did not finish using web_search',
     };
     const glyphs = new Set<string>();
     for (const [status, verb] of Object.entries(expected)) {
@@ -135,7 +136,7 @@ describe('<lr-tool-call-block>', () => {
       expect(el.getAttribute('status')).to.equal(status);
       glyphs.add(markupWithoutComments(part(el, 'icon')!));
     }
-    expect(glyphs.size).to.equal(5);
+    expect(glyphs.size).to.equal(6);
 
     el.setAttribute('status', 'bogus');
     await el.updateComplete;
@@ -274,6 +275,7 @@ describe('<lr-tool-call-block>', () => {
       success: 'No data',
       error: 'No data',
       denied: 'No data',
+      incomplete: 'No data',
     };
     for (const [status, message] of Object.entries(expected)) {
       el.status = status as Block['status'];
@@ -353,6 +355,81 @@ describe('<lr-tool-call-block>', () => {
     await el.updateComplete;
     expect(text(part(el, 'label'))).to.equal('Utilisé x');
     expect(part(el, 'status-text') === null).to.equal(true);
+  });
+
+  it('shows an incomplete call as a terminal, unanimated, neutral state with localized header and status text', async () => {
+    await setReducedMotion('no-preference');
+    try {
+      const el = await fixture<Block>(html`<lr-tool-call-block name="read_file" status="incomplete"></lr-tool-call-block>`);
+      expect(el.status).to.equal('incomplete');
+      expect(el.getAttribute('status')).to.equal('incomplete');
+      expect(text(part(el, 'label'))).to.equal('Did not finish using read_file');
+      expect(part(el, 'status-text') === null).to.equal(true);
+      expect(getComputedStyle(part(el, 'icon')!.querySelector('svg')!).animationName).to.equal('none');
+      expect(getComputedStyle(part(el, 'icon')!).color).to.equal(resolvedToken(el, '--lr-color-text-quiet'));
+      await expect(el).to.be.accessible();
+
+      el.label = 'Lecture';
+      await el.updateComplete;
+      expect(text(part(el, 'status-text'))).to.equal('Incomplete');
+
+      el.strings = { statusIncomplete: 'Inachevé', toolCallBlockHeaderIncomplete: 'Utilisation de {name} interrompue' };
+      await el.updateComplete;
+      expect(text(part(el, 'status-text'))).to.equal('Inachevé');
+      el.label = undefined;
+      await el.updateComplete;
+      expect(text(part(el, 'label'))).to.equal('Utilisation de read_file interrompue');
+      expect(part(el, 'status-text') === null).to.equal(true);
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+
+  it('substitutes a display name for the tool name in the header only, keeping the raw name for renderers and events', async () => {
+    const name = uniqueName('read_file');
+    const el = await fixture<Block>(html`<lr-tool-call-block
+      .name=${name}
+      display-name="Lecture d’un fichier"
+      call-id="c9"
+      status="success"
+      .result=${{ ok: true }}
+    ></lr-tool-call-block>`);
+    expect(el.displayName).to.equal('Lecture d’un fichier');
+    expect(text(part(el, 'label'))).to.equal('Used Lecture d’un fichier');
+    expect(part(el, 'status-text') === null).to.equal(true);
+
+    el.strings = { toolCallBlockHeaderSuccess: '{name} utilisé' };
+    await el.updateComplete;
+    expect(text(part(el, 'label'))).to.equal('Lecture d’un fichier utilisé');
+
+    const events: Array<Record<string, unknown>> = [];
+    el.addEventListener('lr-render-error', (event) => events.push((event as CustomEvent).detail));
+    el.expanded = true;
+    await settleChildren(el);
+    await waitUntil(() => events.length === 1, 'no-match render error re-emitted');
+    expect([events[0]!['toolName'], events[0]!['callId']]).to.deep.equal([name, 'c9']);
+    expect(el.shadowRoot!.querySelector('lr-tool-result-view')!.getAttribute('tool-name')).to.equal(name);
+
+    el.label = 'Lire';
+    await el.updateComplete;
+    expect(text(part(el, 'label'))).to.equal('Lire');
+    el.label = undefined;
+
+    el.setAttribute('display-name', '');
+    await el.updateComplete;
+    expect(text(part(el, 'label'))).to.equal(`${name} utilisé`);
+    el.removeAttribute('display-name');
+    el.name = '';
+    await el.updateComplete;
+    expect(el.displayName == null).to.equal(true);
+    expect(text(part(el, 'label'))).to.equal('Tool call utilisé');
+  });
+
+  it('leaves the display name unset by default', async () => {
+    const el = await fixture<Block>(html`<lr-tool-call-block name="t"></lr-tool-call-block>`);
+    expect(el.displayName === undefined).to.equal(true);
+    expect(el.hasAttribute('display-name')).to.equal(false);
+    expect(text(part(el, 'label'))).to.equal('Waiting to use t');
   });
 
   it('formats a finite duration in the effective locale and hides non-finite values', async () => {

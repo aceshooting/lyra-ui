@@ -69,8 +69,8 @@ it('hides the category and summary parts when unset, shows them when set', async
 });
 
 it('shows a visible status label for every status value, not just a color', async () => {
-  const statuses = ['pending', 'running', 'success', 'error', 'denied'] as const;
-  const labels = ['Pending', 'Running', 'Success', 'Error', 'Denied'];
+  const statuses = ['pending', 'running', 'success', 'error', 'denied', 'incomplete'] as const;
+  const labels = ['Pending', 'Running', 'Success', 'Error', 'Denied', 'Incomplete'];
   for (let i = 0; i < statuses.length; i++) {
     const el = (await fixture(
       html`<lr-tool-call-chip status=${statuses[i]}></lr-tool-call-chip>`,
@@ -104,7 +104,7 @@ it('renders a pending fallback for a direct out-of-union status assignment', asy
 });
 
 it('renders a distinct built-in glyph per status as the icon slot fallback content', async () => {
-  const statuses = ['pending', 'running', 'success', 'error', 'denied'] as const;
+  const statuses = ['pending', 'running', 'success', 'error', 'denied', 'incomplete'] as const;
   const markups = new Set<string>();
   for (const status of statuses) {
     const el = (await fixture(html`<lr-tool-call-chip status=${status}></lr-tool-call-chip>`)) as LyraToolCallChip;
@@ -114,6 +114,76 @@ it('renders a distinct built-in glyph per status as the icon slot fallback conte
     markups.add(svg!.innerHTML);
   }
   expect(markups.size, 'every status should render a visually distinct glyph').to.equal(statuses.length);
+});
+
+it('keeps an incomplete status as a neutral, unanimated terminal state with visible and accessible text', async () => {
+  await setReducedMotion('no-preference');
+  try {
+    const el = (await fixture(
+      html`<lr-tool-call-chip name="read_file" status="incomplete"></lr-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    expect(el.status).to.equal('incomplete');
+    expect(el.getAttribute('status')).to.equal('incomplete');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Incomplete');
+    expect(base.getAttribute('aria-label')).to.equal('read_file — Incomplete');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('slot[name="icon"] svg')!).animationName).to.equal('none');
+
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--lr-color-border)';
+    probe.style.backgroundColor = 'var(--lr-color-surface)';
+    el.shadowRoot!.appendChild(probe);
+    const { color: border, backgroundColor: surface } = getComputedStyle(probe);
+    probe.remove();
+    expect(getComputedStyle(base).borderTopColor).to.equal(border);
+    expect(getComputedStyle(base).backgroundColor).to.equal(surface);
+    await expect(el).to.be.accessible();
+
+    el.strings = { statusIncomplete: 'Inachevé' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Inachevé');
+    expect(base.getAttribute('aria-label')).to.equal('read_file — Inachevé');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
+});
+
+it('shows a display name in place of the tool name while the select event keeps the raw name', async () => {
+  const el = (await fixture(html`
+    <lr-tool-call-chip
+      name="read_file"
+      display-name="Lecture d’un fichier"
+      call-id="c7"
+      status="success"
+    ></lr-tool-call-chip>
+  `)) as LyraToolCallChip;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  expect(el.displayName).to.equal('Lecture d’un fichier');
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('Lecture d’un fichier');
+  expect(base.getAttribute('aria-label')).to.equal('Lecture d’un fichier — Success');
+
+  const selected = oneEvent(el, 'lr-tool-call-chip-select');
+  base.click();
+  const event = (await selected) as CustomEvent;
+  expect(event.detail).to.deep.equal({ name: 'read_file', callId: 'c7' });
+
+  el.setAttribute('display-name', '');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('read_file');
+  expect(base.getAttribute('aria-label')).to.equal('read_file — Success');
+
+  el.removeAttribute('display-name');
+  el.name = '';
+  await el.updateComplete;
+  expect(el.displayName == null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('Tool call');
+});
+
+it('leaves the display name unset by default', async () => {
+  const el = (await fixture(html`<lr-tool-call-chip name="web_search"></lr-tool-call-chip>`)) as LyraToolCallChip;
+  expect(el.displayName === undefined).to.equal(true);
+  expect(el.hasAttribute('display-name')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('web_search');
 });
 
 it('omits the duration part entirely when duration-ms is unset, formats it once set', async () => {

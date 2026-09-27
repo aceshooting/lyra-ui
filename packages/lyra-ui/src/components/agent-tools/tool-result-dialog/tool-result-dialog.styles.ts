@@ -27,6 +27,8 @@ export const styles = css`
     --_lr-tool-result-dialog-error-bg: var(--lr-color-danger-quiet);
     --_lr-tool-result-dialog-denied-color: var(--lr-color-warning);
     --_lr-tool-result-dialog-denied-bg: var(--lr-color-warning-quiet);
+    --_lr-tool-result-dialog-incomplete-color: var(--lr-color-text-quiet);
+    --_lr-tool-result-dialog-incomplete-bg: transparent;
     display: none;
     position: fixed;
     inset: 0;
@@ -184,6 +186,18 @@ export const styles = css`
     background: var(
       --lr-tool-result-dialog-denied-bg,
       var(--_lr-tool-result-dialog-denied-bg)
+    );
+  }
+  /* 'incomplete' (ended without a result) defaults to the same neutral look as pending, through its
+     own pair so retheming pending never repaints it. */
+  :host([status="incomplete"]) [part="status"] {
+    color: var(
+      --lr-tool-result-dialog-incomplete-color,
+      var(--_lr-tool-result-dialog-incomplete-color)
+    );
+    background: var(
+      --lr-tool-result-dialog-incomplete-bg,
+      var(--_lr-tool-result-dialog-incomplete-bg)
     );
   }
   :host([status="running"]) [part="status"] svg {

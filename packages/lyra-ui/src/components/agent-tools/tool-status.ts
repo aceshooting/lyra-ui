@@ -2,6 +2,15 @@ import { svg, type SVGTemplateResult } from 'lit';
 import type { LyraToolStatus } from '../../internal/shared-unions.js';
 
 /**
+ * A tool call's status: the shared tool lifecycle plus `incomplete`, a call that ended without a
+ * result (an interrupted stream, a cancelled run). Spelled out here, rather than imported from the
+ * chip's public `ToolCallStatus`, so this leaf module stays free of import cycles.
+ *
+ * @internal
+ */
+export type ToolCallStatusValue = LyraToolStatus | 'incomplete';
+
+/**
  * The one tool-call status vocabulary shared by `<lr-tool-call-chip>`, `<lr-tool-result-dialog>`,
  * `<lr-tool-timeline>` and `<lr-tool-call-block>`, so a call reads with the same glyph, label and
  * normalization rule wherever it is shown.
@@ -14,7 +23,8 @@ export const TOOL_CALL_STATUSES = Object.freeze([
   'success',
   'error',
   'denied',
-] as const satisfies readonly LyraToolStatus[]);
+  'incomplete',
+] as const satisfies readonly ToolCallStatusValue[]);
 
 const TOOL_CALL_STATUS_SET: ReadonlySet<string> = new Set<string>(TOOL_CALL_STATUSES);
 
@@ -22,7 +32,7 @@ const TOOL_CALL_STATUS_SET: ReadonlySet<string> = new Set<string>(TOOL_CALL_STAT
  *
  * @internal
  */
-export function isToolCallStatus(value: unknown): value is LyraToolStatus {
+export function isToolCallStatus(value: unknown): value is ToolCallStatusValue {
   return typeof value === 'string' && TOOL_CALL_STATUS_SET.has(value);
 }
 
@@ -87,12 +97,21 @@ function deniedIcon(): SVGTemplateResult {
   );
 }
 
-const STATUS_ICON: Readonly<Record<LyraToolStatus, () => SVGTemplateResult>> = Object.freeze({
+/** A circle with a level dash -- the call stopped short, neither succeeding nor failing. Distinct
+ *  from the denial slash and the error cross, and deliberately static, unlike the pending pulse. */
+function incompleteIcon(): SVGTemplateResult {
+  return toolGlyph(
+    svg`<circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line>`
+  );
+}
+
+const STATUS_ICON: Readonly<Record<ToolCallStatusValue, () => SVGTemplateResult>> = Object.freeze({
   pending: pendingIcon,
   running: runningIcon,
   success: successIcon,
   error: errorIcon,
   denied: deniedIcon,
+  incomplete: incompleteIcon,
 });
 
 /** The decorative glyph for `status`; any value outside the vocabulary renders the pending glyph.
@@ -110,10 +129,11 @@ export function toolStatusIcon(status: unknown): SVGTemplateResult {
  */
 // A plain object literal (typed read-only) rather than a frozen call, so the default-string gate
 // can resolve every `localize(TOOL_STATUS_LABEL_KEY[status])` call site to this closed key set.
-export const TOOL_STATUS_LABEL_KEY: Readonly<Record<LyraToolStatus, string>> = {
+export const TOOL_STATUS_LABEL_KEY: Readonly<Record<ToolCallStatusValue, string>> = {
   pending: 'statusPending',
   running: 'statusRunning',
   success: 'statusSuccess',
   error: 'statusError',
   denied: 'statusDenied',
+  incomplete: 'statusIncomplete',
 };

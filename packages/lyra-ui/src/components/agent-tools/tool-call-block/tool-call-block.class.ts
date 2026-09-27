@@ -25,7 +25,7 @@ import {
 import { styles } from './tool-call-block.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -57,6 +57,7 @@ const HEADER_KEY: Readonly<Record<ToolCallStatus, string>> = {
   success: 'toolCallBlockHeaderSuccess',
   error: 'toolCallBlockHeaderError',
   denied: 'toolCallBlockHeaderDenied',
+  incomplete: 'toolCallBlockHeaderIncomplete',
 };
 
 interface DetailMemo {
@@ -82,6 +83,12 @@ function argsPresent(args: unknown): boolean {
  * `<lr-tool-call-block>` — one tool call shown inline as a collapsed-by-default disclosure. The
  * header reads a status-aware verb (`Used web_search`) beside a status glyph and an optional
  * duration; expanding it in place reveals the call's arguments, then its error, then its result.
+ *
+ * `display-name` puts the application's own, already-translated tool label into that verb in place
+ * of `name` (`Used Lecture d’un fichier`), so the status wording stays localized. `name` still
+ * selects the result renderer and is still reported in `lr-render-error`. `status="incomplete"`
+ * is a call that ended without a result (an interrupted stream, a cancelled run): it reads
+ * `Did not finish using …` with a static glyph and the neutral accent.
  *
  * Details are deferred: a collapsed block renders an empty body and never reads `args` or
  * `result`. Expanding renders `args` through `<lr-json-viewer>` and `result` through
@@ -124,7 +131,7 @@ function argsPresent(args: unknown): boolean {
  * @cssprop [--lr-tool-call-block-background=var(--lr-color-surface)] - Card fill.
  * @cssprop [--lr-tool-call-block-border-color=var(--lr-color-border)] - Card edge and header/body divider.
  * @cssprop [--lr-tool-call-block-radius=var(--lr-radius)] - Card corner radius.
- * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied).
+ * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied, neutral while pending or incomplete).
  * @cssprop [--lr-tool-call-block-error-color=var(--lr-color-danger)] - Error section text colour.
  * @status experimental
  * @since 21.0.0
@@ -148,6 +155,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -156,6 +164,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     toolCallBlockErrorLabel: LYRA_DEFAULT_toolCallBlockErrorLabel,
     toolCallBlockHeaderDenied: LYRA_DEFAULT_toolCallBlockHeaderDenied,
     toolCallBlockHeaderError: LYRA_DEFAULT_toolCallBlockHeaderError,
+    toolCallBlockHeaderIncomplete: LYRA_DEFAULT_toolCallBlockHeaderIncomplete,
     toolCallBlockHeaderPending: LYRA_DEFAULT_toolCallBlockHeaderPending,
     toolCallBlockHeaderRunning: LYRA_DEFAULT_toolCallBlockHeaderRunning,
     toolCallBlockHeaderSuccess: LYRA_DEFAULT_toolCallBlockHeaderSuccess,
@@ -170,13 +179,20 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   /** Tool name. An empty name renders the localized generic tool-call label in its place. */
   @property() name = '';
 
+  /** The tool's display label, e.g. an application-translated `Lecture d’un fichier`. Replaces
+   *  `name` in the header verb only; `name` still selects the result renderer and is still reported
+   *  in `lr-render-error`. Unset or empty shows `name`. A `label` override replaces the whole
+   *  header, this included. */
+  @property({ attribute: 'display-name' }) displayName?: string;
+
   /** Invocation id, echoed in `lr-toggle` and `lr-render-error` details. */
   @property({ attribute: 'call-id' }) callId = '';
 
   private statusValue: ToolCallStatus = 'pending';
 
-  /** Call status. Values outside `pending | running | success | error | denied` normalize and
-   *  reflect as `pending`. */
+  /** Call status. `incomplete` is a call that ended without a result (an interrupted stream, a
+   *  cancelled run). Values outside `pending | running | success | error | denied | incomplete`
+   *  normalize and reflect as `pending`. */
   @property({ reflect: true, converter: TOOL_CALL_BLOCK_STATUS })
   get status(): ToolCallStatus {
     return this.statusValue;
@@ -373,7 +389,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   override render(): TemplateResult {
     const status = this.status;
-    const name = this.name === '' ? this.localize('toolCall') : this.name;
+    const name = this.displayName || this.name || this.localize('toolCall');
     const label = this.label ?? this.localize(HEADER_KEY[status], undefined, { name });
     const duration = this.durationText();
     return html`

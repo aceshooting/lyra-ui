@@ -12,6 +12,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import './map.js';
 import {
   LyraMap as LyraMapElement,
+  type LyraMapBounds,
   type LyraMapInstance,
   type LyraMapMarker,
   type LyraMapMarkerActivationDetail,
@@ -1151,7 +1152,9 @@ it('normalizes a non-finite initial zoom before constructing the underlying mapl
 
 it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map after mount', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  // Starts away from the fallback zoom (2): a value the map already shows is never pushed, so the
+  // NaN case must resolve to a real change to reach `setZoom()` at all.
+  const el = (await fixture(html`<lr-map zoom="5"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1177,7 +1180,9 @@ it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map afte
 
 it('normalizes malformed and out-of-range center values before live map updates', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  // Starts away from the fallback center ([0, 0]) for the same reason: a center the map already
+  // shows is never pushed.
+  const el = (await fixture(html`<lr-map center="[10, 10]"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -7408,5 +7413,847 @@ describe('legend sections', () => {
     interactive.hiddenCategories = ['bus'];
     await interactive.updateComplete;
     await expect(interactive).to.be.accessible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fitBounds() and lr-map-view-change. `fitBounds()` and the view-change event are camera
+// contracts between the element and its peer, so most of this block drives a scripted camera engine
+// through the component's own `loadLibrary` seam. That keeps every assertion running in all three
+// engines: headless Firefox/WebKit do not reliably provide the WebGL2 context a real maplibre-gl map
+// needs. One test at the end checks the same contract against the real peer wherever WebGL2 exists.
+// ---------------------------------------------------------------------------
+describe('fitBounds and lr-map-view-change', () => {
+  const EMPTY_STYLE = {
+    version: 8,
+    sources: {},
+    layers: [],
+  } satisfies LyraMapStyleSpecification;
+
+  type Listener = (event: Record<string, unknown>) => void;
+
+  interface FitCall {
+    readonly bounds: unknown;
+    readonly options: Record<string, unknown>;
+  }
+
+  /** A camera engine that answers `fitBounds()` deterministically: the box's midpoint at zoom 6
+   *  (or `maxZoom`, when that is lower), settled synchronously the way MapLibre settles a jump. With
+   *  `deferAnimatedFits`, an animated fit stays in flight -- halfway there, and `isMoving()` -- until
+   *  `finishFit()`; as in MapLibre, whose `jumpTo()` calls `stop()` first, a `setCenter`/`setZoom`
+   *  settles it early, wherever it has got to. */
+  class ScriptedCameraMap {
+    static instances: ScriptedCameraMap[] = [];
+    deferAnimatedFits = false;
+    private inFlight?: {
+      readonly eventData: Record<string, unknown>;
+      readonly center: { lng: number; lat: number };
+      readonly zoom: number;
+    };
+    readonly options: Record<string, unknown>;
+    readonly fitCalls: FitCall[] = [];
+    readonly setCenterCalls: unknown[] = [];
+    readonly setZoomCalls: unknown[] = [];
+    private readonly listeners = new Map<string, Set<Listener>>();
+    private readonly canvas = document.createElement('canvas');
+    center: { lng: number; lat: number };
+    zoom: number;
+
+    constructor(options: Record<string, unknown>) {
+      this.options = options;
+      const [lng, lat] = options['center'] as [number, number];
+      this.center = { lng, lat };
+      this.zoom = options['zoom'] as number;
+      ScriptedCameraMap.instances.push(this);
+    }
+
+    on(type: string, listener: Listener): this {
+      let set = this.listeners.get(type);
+      if (!set) this.listeners.set(type, (set = new Set()));
+      set.add(listener);
+      return this;
+    }
+
+    once(type: string, listener: Listener): this {
+      return this.on(type, listener);
+    }
+
+    /** Mirrors MapLibre: movement events carry the caller's `eventData` merged into the event. */
+    fire(type: string, eventData: Record<string, unknown> = {}): void {
+      for (const listener of this.listeners.get(type) ?? []) listener({ type, target: this, ...eventData });
+    }
+
+    getCanvas(): HTMLCanvasElement {
+      return this.canvas;
+    }
+
+    getCenter(): { lng: number; lat: number } {
+      return { ...this.center };
+    }
+
+    getZoom(): number {
+      return this.zoom;
+    }
+
+    isMoving(): boolean {
+      return this.inFlight !== undefined;
+    }
+
+    /** Settles an in-flight fit where it currently is, firing its `moveend` with its event data. */
+    stop(): void {
+      const inFlight = this.inFlight;
+      this.inFlight = undefined;
+      if (inFlight) this.fire('moveend', inFlight.eventData);
+    }
+
+    finishFit(): void {
+      if (!this.inFlight) return;
+      this.center = { ...this.inFlight.center };
+      this.zoom = this.inFlight.zoom;
+      this.stop();
+    }
+
+    setCenter(center: [number, number], eventData?: Record<string, unknown>): this {
+      this.stop();
+      this.setCenterCalls.push(center);
+      this.center = { lng: center[0], lat: center[1] };
+      this.fire('moveend', eventData);
+      return this;
+    }
+
+    setZoom(zoom: number, eventData?: Record<string, unknown>): this {
+      this.stop();
+      this.setZoomCalls.push(zoom);
+      this.zoom = zoom;
+      this.fire('moveend', eventData);
+      return this;
+    }
+
+    fitBounds(
+      bounds: readonly [readonly [number, number], readonly [number, number]],
+      options: Record<string, unknown> = {},
+      eventData: Record<string, unknown> = {},
+    ): this {
+      this.fitCalls.push({ bounds, options });
+      const [[west, south], [east, north]] = bounds;
+      const center = { lng: (west + east) / 2, lat: (south + north) / 2 };
+      const maxZoom = options['maxZoom'];
+      const zoom = typeof maxZoom === 'number' ? Math.min(6, maxZoom) : 6;
+      if (this.deferAnimatedFits && options['animate'] === true) {
+        this.center = {
+          lng: (this.center.lng + center.lng) / 2,
+          lat: (this.center.lat + center.lat) / 2,
+        };
+        this.zoom = (this.zoom + zoom) / 2;
+        this.inFlight = { eventData, center, zoom };
+      } else {
+        this.center = center;
+        this.zoom = zoom;
+        this.fire('moveend', eventData);
+      }
+      return this;
+    }
+
+    resize(): void {}
+    remove(): void {}
+  }
+
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  const originalMatchMedia = window.matchMedia;
+
+  function preferReducedMotion(reduce: boolean): void {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: (query: string) => ({
+        matches: reduce && query.includes('prefers-reduced-motion: reduce'),
+        media: query,
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent: () => false,
+      }),
+    });
+  }
+
+  interface Harness {
+    readonly el: LyraMap;
+    /** Resolves the peer import, letting the element construct its engine. */
+    readonly load: () => Promise<ScriptedCameraMap>;
+  }
+
+  /** Connects a map whose engine is constructed only once `load()` runs, so a test can act first. */
+  async function connectScriptedMap(): Promise<Harness> {
+    let resolveLibrary!: (module: unknown) => void;
+    const library = new Promise((resolve) => {
+      resolveLibrary = resolve;
+    });
+    const wrapper = (await fixture(html`<div style="inline-size: 32rem"></div>`)) as HTMLElement;
+    const el = document.createElement('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => library;
+    el.mapStyle = EMPTY_STYLE;
+    wrapper.append(el);
+    await el.updateComplete;
+    return {
+      el,
+      load: async () => {
+        resolveLibrary({ Map: ScriptedCameraMap });
+        await waitUntil(() => el.map != null, 'scripted map never initialized', { timeout: 2000 });
+        return el.map as unknown as ScriptedCameraMap;
+      },
+    };
+  }
+
+  async function liveScriptedMap(): Promise<{ el: LyraMap; engine: ScriptedCameraMap }> {
+    const { el, load } = await connectScriptedMap();
+    const engine = await load();
+    await el.updateComplete;
+    return { el, engine };
+  }
+
+  /** Collects every `lr-map-view-change` detail dispatched while `run` executes and settles. */
+  async function viewChanges(
+    el: LyraMap,
+    run: () => unknown | Promise<unknown>,
+  ): Promise<Record<string, unknown>[]> {
+    const details: Record<string, unknown>[] = [];
+    const listener = (event: Event) =>
+      details.push((event as CustomEvent<Record<string, unknown>>).detail);
+    el.addEventListener('lr-map-view-change', listener);
+    try {
+      await run();
+      await el.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+    } finally {
+      el.removeEventListener('lr-map-view-change', listener);
+    }
+    return details;
+  }
+
+  describe('fitBounds', () => {
+    beforeEach(() => {
+      ScriptedCameraMap.instances = [];
+      Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+      setCanvasGetContext(
+        HTMLCanvasElement.prototype,
+        function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+          if (contextId === 'webgl2') return {};
+          return originalGetContext.call(this, contextId as never, ...(rest as []));
+        },
+      );
+    });
+
+    afterEach(() => {
+      fixtureCleanup();
+      Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: OriginalIntersectionObserver,
+      });
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+    });
+
+    it('queues a fit requested before the map exists and applies it, unanimated, on construction', async () => {
+      preferReducedMotion(false);
+      const { el, load } = await connectScriptedMap();
+      expect(el.map, 'precondition: no engine yet').to.equal(undefined);
+
+      expect(el.fitBounds([[2, 48], [3, 49]], { padding: 24, maxZoom: 12 })).to.equal(true);
+      const changed = oneEvent(el, 'lr-map-view-change');
+      const engine = await load();
+      const event = (await changed) as CustomEvent<{
+        center: readonly [number, number];
+        zoom: number;
+        source: string;
+      }>;
+
+      expect(engine.fitCalls.length, 'the queued fit runs exactly once').to.equal(1);
+      const [call] = engine.fitCalls;
+      expect(call!.bounds).to.deep.equal([[2, 48], [3, 49]]);
+      expect(call!.options['padding']).to.deep.equal({ top: 24, right: 24, bottom: 24, left: 24 });
+      expect(call!.options['maxZoom']).to.equal(12);
+      expect(call!.options['animate'], 'the first camera is set, not flown to').to.equal(false);
+
+      expect(event.detail.center).to.deep.equal([2.5, 48.5]);
+      expect(event.detail.zoom).to.equal(6);
+      expect(event.detail.source).to.equal('fit');
+      expect(Object.isFrozen(event.detail), 'the detail is immutable').to.equal(true);
+      expect(Object.isFrozen(event.detail.center), 'the center tuple is detached and frozen').to.equal(true);
+      expect(event.bubbles && event.composed).to.equal(true);
+      expect(event.cancelable, 'a settled camera is a notification, not a veto point').to.equal(false);
+
+      expect(el.center).to.deep.equal([2.5, 48.5]);
+      expect(el.zoom).to.equal(6);
+      await el.updateComplete;
+      expect(engine.setCenterCalls, 'the reflected center is not pushed back').to.deep.equal([]);
+      expect(engine.setZoomCalls, 'the reflected zoom is not pushed back').to.deep.equal([]);
+    });
+
+    it('fits a live map, animating by default, and reflects the settled camera without resetting it', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+
+      const details = await viewChanges(el, () => {
+        expect(el.fitBounds([[-10, -5], [10, 5]])).to.equal(true);
+      });
+
+      expect(engine.fitCalls.length).to.equal(1);
+      expect(engine.fitCalls[0]!.bounds).to.deep.equal([[-10, -5], [10, 5]]);
+      expect(engine.fitCalls[0]!.options['animate']).to.equal(true);
+      expect(engine.fitCalls[0]!.options['padding']).to.deep.equal({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      });
+      expect('maxZoom' in engine.fitCalls[0]!.options, 'no maxZoom unless one is asked for').to.equal(false);
+      expect(details).to.deep.equal([{ center: [0, 0], zoom: 6, source: 'fit' }]);
+      expect(el.center).to.deep.equal([0, 0]);
+      expect(el.zoom).to.equal(6);
+      expect(engine.setCenterCalls).to.deep.equal([]);
+      expect(engine.setZoomCalls).to.deep.equal([]);
+
+      // A later, different declarative camera still wins: fitting did not take center/zoom over.
+      el.center = [5, 5];
+      el.zoom = 3;
+      await el.updateComplete;
+      expect(engine.setCenterCalls).to.deep.equal([[5, 5]]);
+      expect(engine.setZoomCalls).to.deep.equal([3]);
+    });
+
+    it('does not animate under prefers-reduced-motion, or when asked not to', async () => {
+      preferReducedMotion(true);
+      const { el, engine } = await liveScriptedMap();
+      el.fitBounds([[0, 0], [1, 1]], { animate: true });
+      expect(engine.fitCalls[0]!.options['animate'], 'reduced motion overrides animate').to.equal(false);
+
+      preferReducedMotion(false);
+      el.fitBounds([[0, 0], [1, 1]], { animate: false });
+      expect(engine.fitCalls[1]!.options['animate']).to.equal(false);
+      el.fitBounds([[0, 0], [1, 1]]);
+      expect(engine.fitCalls[2]!.options['animate']).to.equal(true);
+    });
+
+    it('reads west greater than east as a box crossing the antimeridian, as MapLibre does', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      const details = await viewChanges(el, () => {
+        expect(el.fitBounds([[175, -10], [-165, 10]])).to.equal(true);
+      });
+
+      // Passed on unwrapped past 180, so every supported peer major fits the short way round.
+      expect(engine.fitCalls[0]!.bounds).to.deep.equal([[175, -10], [195, 10]]);
+      // The engine settles at longitude 185; the declarative center is the same place, wrapped.
+      expect(details.map((detail) => detail['center'])).to.deep.equal([[-175, 0]]);
+      expect(el.center).to.deep.equal([-175, 0]);
+      await el.updateComplete;
+      expect(engine.setCenterCalls, 'an equivalent wrapped center is not pushed back').to.deep.equal([]);
+    });
+
+    it('accepts the unwrapped antimeridian form, east past 180, as the same box', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      // `LngLatBounds#adjustAntiMeridian()` produces this form; it frames the same place as
+      // `[[175, -10], [-165, 10]]`, so it reaches the peer unchanged.
+      const details = await viewChanges(el, () => {
+        expect(el.fitBounds([[175, -10], [195, 10]])).to.equal(true);
+        expect(el.fitBounds([[-180, -10], [180, 10]]), 'a whole-world box').to.equal(true);
+        expect(el.fitBounds([[10, -10], [370, 10]]), 'one full turn east of west').to.equal(true);
+      });
+      expect(engine.fitCalls.map((call) => call.bounds)).to.deep.equal([
+        [[175, -10], [195, 10]],
+        [[-180, -10], [180, 10]],
+        [[10, -10], [370, 10]],
+      ]);
+      expect(details.map((detail) => detail['center'])).to.deep.equal([[-175, 0], [0, 0], [-170, 0]]);
+    });
+
+    it('accepts a single point as a zero-size box, so one marker still fits', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      expect(el.fitBounds([[2.35, 48.85], [2.35, 48.85]], { maxZoom: 14 })).to.equal(true);
+      expect(engine.fitCalls[0]!.bounds).to.deep.equal([[2.35, 48.85], [2.35, 48.85]]);
+      expect(engine.fitCalls[0]!.options['maxZoom']).to.equal(14);
+    });
+
+    it('rejects an unusable box without moving, queueing, or reporting anything', async () => {
+      preferReducedMotion(false);
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+      const rejected: unknown[] = [
+        undefined,
+        null,
+        'world',
+        [],
+        [[0, 0]],
+        [[0, 0], [1, 1], [2, 2]],
+        [[0], [1, 1]],
+        [[Number.NaN, 0], [1, 1]],
+        [[0, 0], [Number.POSITIVE_INFINITY, 1]],
+        [[0, '0'], [1, 1]],
+        [[0, 10], [1, 5]],
+        [[0, -91], [1, 1]],
+        [[0, 0], [1, 91]],
+        [[-181, 0], [1, 1]],
+        [[0, 0], [-181, 1]],
+        [[0, 0], [361, 1]],
+        [[-10, 0], [351, 1]],
+      ];
+      try {
+        const { el, load } = await connectScriptedMap();
+        for (const bounds of rejected) {
+          expect(el.fitBounds(bounds as LyraMapBounds), JSON.stringify(bounds)).to.equal(false);
+        }
+        const details = await viewChanges(el, async () => {
+          const engine = await load();
+          expect(engine.fitCalls, 'a rejected box is never queued').to.deep.equal([]);
+          for (const bounds of rejected) el.fitBounds(bounds as LyraMapBounds);
+          expect(engine.fitCalls, 'a rejected box never reaches a live map').to.deep.equal([]);
+        });
+        expect(details).to.deep.equal([]);
+        expect(warnings.every((warning) => warning.includes('fitBounds'))).to.equal(true);
+      } finally {
+        console.warn = originalWarn;
+      }
+    });
+
+    it('normalizes padding and maxZoom through the finite-number guards', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      const box: LyraMapBounds = [[0, 0], [1, 1]];
+
+      el.fitBounds(box, {
+        padding: { top: -5, right: Number.NaN, bottom: 12, left: Number.POSITIVE_INFINITY },
+        maxZoom: 99,
+      });
+      el.fitBounds(box, { padding: { bottom: 8 }, maxZoom: -3 });
+      el.fitBounds(box, { padding: Number.NaN, maxZoom: Number.NaN });
+      el.fitBounds(box, { padding: 'wide' as unknown as number });
+
+      const [first, second, third, fourth] = engine.fitCalls.map((call) => call.options);
+      expect(first!['padding']).to.deep.equal({ top: 0, right: 0, bottom: 12, left: 0 });
+      expect(first!['maxZoom'], 'clamped to the peer default ceiling').to.equal(22);
+      expect(second!['padding']).to.deep.equal({ top: 0, right: 0, bottom: 8, left: 0 });
+      expect(second!['maxZoom']).to.equal(0);
+      expect(third!['padding']).to.deep.equal({ top: 0, right: 0, bottom: 0, left: 0 });
+      expect('maxZoom' in third!, 'a non-finite maxZoom sets no ceiling').to.equal(false);
+      expect(fourth!['padding']).to.deep.equal({ top: 0, right: 0, bottom: 0, left: 0 });
+    });
+
+    it('lets a center or zoom assigned after a queued fit supersede it, and a later fit win again', async () => {
+      preferReducedMotion(false);
+      const superseded = await connectScriptedMap();
+      superseded.el.fitBounds([[2, 48], [3, 49]]);
+      superseded.el.zoom = 9;
+      const first = await superseded.load();
+      await superseded.el.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(first.fitCalls, 'the newer zoom assignment dropped the queued fit').to.deep.equal([]);
+      expect(first.options['zoom']).to.equal(9);
+
+      const refit = await connectScriptedMap();
+      refit.el.center = [10, 10];
+      refit.el.fitBounds([[2, 48], [3, 49]]);
+      const second = await refit.load();
+      await waitUntil(() => second.fitCalls.length === 1, 'the newer fit never ran');
+      expect(second.fitCalls[0]!.bounds).to.deep.equal([[2, 48], [3, 49]]);
+    });
+
+    it('keeps a queued fit when center or zoom is re-assigned the value it already holds', async () => {
+      preferReducedMotion(false);
+      const { el, load } = await connectScriptedMap();
+      el.fitBounds([[2, 48], [3, 49]]);
+      // A framework re-render rebuilds an equal array and re-sets an equal number: no new intent.
+      el.zoom = el.zoom;
+      el.center = [el.center[0], el.center[1]];
+      const engine = await load();
+      await el.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await el.updateComplete;
+      expect(engine.fitCalls.map((call) => call.bounds), 'the queued fit survived').to.deep.equal([
+        [[2, 48], [3, 49]],
+      ]);
+      expect(el.center).to.deep.equal([2.5, 48.5]);
+    });
+
+    it('applies only the most recent of several queued fits', async () => {
+      preferReducedMotion(false);
+      const { el, load } = await connectScriptedMap();
+      el.fitBounds([[0, 0], [1, 1]]);
+      el.fitBounds([[20, 20], [30, 30]], { padding: 4 });
+      const engine = await load();
+      await waitUntil(() => engine.fitCalls.length > 0, 'the queued fit never ran');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(engine.fitCalls.map((call) => call.bounds)).to.deep.equal([[[20, 20], [30, 30]]]);
+    });
+
+    it('reflects a settled user gesture into center/zoom and reports it; programmatic moves stay silent', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+
+      const gesture = await viewChanges(el, () => {
+        engine.center = { lng: 12, lat: 34 };
+        engine.zoom = 5;
+        engine.fire('moveend', { originalEvent: new MouseEvent('mouseup') });
+      });
+      expect(gesture).to.deep.equal([{ center: [12, 34], zoom: 5, source: 'user' }]);
+      expect(el.center).to.deep.equal([12, 34]);
+      expect(el.zoom).to.equal(5);
+      expect(engine.setCenterCalls, 'a gesture is not pushed back').to.deep.equal([]);
+      expect(engine.setZoomCalls).to.deep.equal([]);
+
+      // Assigning center/zoom reconciles without an event, like every other controlled property.
+      const programmatic = await viewChanges(el, () => {
+        el.zoom = 3;
+        el.center = [1, 2];
+      });
+      expect(programmatic).to.deep.equal([]);
+      expect(engine.setZoomCalls).to.deep.equal([3]);
+      expect(engine.setCenterCalls).to.deep.equal([[1, 2]]);
+
+      // A move the element did not ask for and no user made is not reported either.
+      const untracked = await viewChanges(el, () => engine.fire('moveend'));
+      expect(untracked).to.deep.equal([]);
+      expect(el.center).to.deep.equal([1, 2]);
+    });
+
+    it('applies a fit queued while off-screen once the map scrolls into view', async () => {
+      preferReducedMotion(false);
+      const callbacks: IntersectionObserverCallback[] = [];
+      class FakeIntersectionObserver {
+        constructor(callback: IntersectionObserverCallback) {
+          callbacks.push(callback);
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+        takeRecords(): IntersectionObserverEntry[] {
+          return [];
+        }
+      }
+      Object.defineProperty(window, 'IntersectionObserver', {
+        configurable: true,
+        value: FakeIntersectionObserver,
+      });
+      const { el, load } = await connectScriptedMap();
+      const loaded = load();
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="container"]') != null,
+        'container never rendered',
+      );
+      await el.updateComplete;
+      expect(el.map, 'precondition: an off-screen map is not constructed').to.equal(undefined);
+      expect(el.fitBounds([[2, 48], [3, 49]])).to.equal(true);
+
+      // Construction now runs from `updated()`; the fit it applies must not write `center`/`zoom`
+      // back inside that update cycle (strict console turns Lit's warning into a failure).
+      const changed = oneEvent(el, 'lr-map-view-change');
+      callbacks[0]!(
+        [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
+        new OriginalIntersectionObserver(() => {}),
+      );
+      const engine = await loaded;
+      const event = (await changed) as CustomEvent<{ center: readonly [number, number]; source: string }>;
+      expect(engine.fitCalls.length).to.equal(1);
+      expect(engine.fitCalls[0]!.options['animate']).to.equal(false);
+      expect(event.detail.source).to.equal('fit');
+      expect(el.center).to.deep.equal([2.5, 48.5]);
+    });
+
+    it('reports an animated fit when it settles, and never writes one a center assignment interrupts', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      engine.deferAnimatedFits = true;
+
+      const interrupted = await viewChanges(el, async () => {
+        el.fitBounds([[20, 20], [30, 30]]);
+        el.center = [-40, -20];
+        await el.updateComplete;
+      });
+      expect(interrupted, 'the superseded fit is not reported').to.deep.equal([]);
+      expect(el.center).to.deep.equal([-40, -20]);
+      expect(engine.setCenterCalls).to.deep.equal([[-40, -20]]);
+      expect(engine.getCenter()).to.deep.equal({ lng: -40, lat: -20 });
+
+      const settled = await viewChanges(el, () => {
+        el.fitBounds([[-2, -2], [2, 2]]);
+        expect(el.center, 'nothing is written while the fit is in flight').to.deep.equal([-40, -20]);
+        engine.finishFit();
+      });
+      expect(settled).to.deep.equal([{ center: [0, 0], zoom: 6, source: 'fit' }]);
+      expect(el.center).to.deep.equal([0, 0]);
+      expect(engine.setCenterCalls.length, 'the settled fit is not pushed back').to.equal(1);
+    });
+
+    it('keeps a declarative camera assigned inside the listener', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      el.addEventListener(
+        'lr-map-view-change',
+        (event) => {
+          const { center } = (event as CustomEvent<{ center: readonly [number, number] }>).detail;
+          // A controlled host echoing the reported camera back must not move the map.
+          el.center = [center[0], center[1]];
+        },
+        { once: true },
+      );
+      el.fitBounds([[-4, -2], [4, 2]]);
+      await el.updateComplete;
+      expect(el.center).to.deep.equal([0, 0]);
+      expect(engine.setCenterCalls).to.deep.equal([]);
+    });
+
+    it('reports a box zoom, which the peer settles without a DOM event, as a user change', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+
+      // MapLibre fires `boxzoomend` (carrying the mouseup), then animates with
+      // `fitScreenCoordinates()` and no event data: that `moveend` names no DOM event.
+      const boxZoom = await viewChanges(el, () => {
+        engine.fire('boxzoomend', { originalEvent: new MouseEvent('mouseup') });
+        engine.center = { lng: 3, lat: 4 };
+        engine.zoom = 7;
+        engine.fire('moveend');
+      });
+      expect(boxZoom).to.deep.equal([{ center: [3, 4], zoom: 7, source: 'user' }]);
+      expect(el.center).to.deep.equal([3, 4]);
+      expect(el.zoom).to.equal(7);
+      expect(engine.setCenterCalls, 'the box zoom is not pushed back').to.deep.equal([]);
+      expect(engine.setZoomCalls).to.deep.equal([]);
+
+      // Only the move that settles the box zoom is attributed to it.
+      const later = await viewChanges(el, () => engine.fire('moveend'));
+      expect(later).to.deep.equal([]);
+
+      // A fit the box zoom interrupts reports itself, and the box zoom still settles as the user's.
+      engine.deferAnimatedFits = true;
+      const interleaved = await viewChanges(el, () => {
+        el.fitBounds([[20, 20], [30, 30]]);
+        engine.fire('boxzoomend', { originalEvent: new MouseEvent('mouseup') });
+        engine.stop();
+        engine.center = { lng: -3, lat: -4 };
+        engine.zoom = 8;
+        engine.fire('moveend');
+      });
+      expect(interleaved.map((detail) => detail['source'])).to.deep.equal(['fit', 'user']);
+      expect(el.center).to.deep.equal([-3, -4]);
+      expect(el.zoom).to.equal(8);
+    });
+
+    it('does not push back a reported camera that a host echoes after the update completes', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+
+      const gesture = await viewChanges(el, () => {
+        engine.center = { lng: 12, lat: 34 };
+        engine.zoom = 5;
+        engine.fire('moveend', { originalEvent: new MouseEvent('mouseup') });
+      });
+      await el.updateComplete;
+      // A framework state round-trip assigns the detail's detached copy on a later render.
+      el.center = gesture[0]!['center'] as readonly [number, number];
+      el.zoom = gesture[0]!['zoom'] as number;
+      await el.updateComplete;
+
+      const fitted = await viewChanges(el, () => el.fitBounds([[-10, -5], [10, 5]]));
+      await el.updateComplete;
+      el.center = [...(fitted[0]!['center'] as readonly [number, number])] as [number, number];
+      await el.updateComplete;
+
+      expect(engine.setCenterCalls, 'an echo of the camera already shown moves nothing').to.deep.equal([]);
+      expect(engine.setZoomCalls).to.deep.equal([]);
+
+      // A different value still moves the map.
+      el.center = [1, 1];
+      await el.updateComplete;
+      expect(engine.setCenterCalls).to.deep.equal([[1, 1]]);
+    });
+
+    it('applies the whole declared camera when an assignment interrupts a movement in flight', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      engine.deferAnimatedFits = true;
+
+      const details = await viewChanges(el, async () => {
+        el.fitBounds([[20, 20], [30, 30]]);
+        expect(engine.isMoving(), 'precondition: the fit is animating').to.equal(true);
+        expect(engine.getZoom(), 'precondition: the fit is partway').to.equal(4);
+        el.center = [-40, -20];
+        await el.updateComplete;
+      });
+
+      expect(details, 'the interrupted fit is not reported').to.deep.equal([]);
+      expect(engine.getCenter()).to.deep.equal({ lng: -40, lat: -20 });
+      expect(
+        engine.getZoom(),
+        'the zoom the host did not assign is not left where the interrupted fit stopped',
+      ).to.equal(el.zoom);
+      expect(el.zoom).to.equal(2);
+
+      // With nothing in flight, a one-axis assignment still moves only that axis.
+      el.center = [7, 7];
+      await el.updateComplete;
+      expect(engine.setZoomCalls.length, 'no zoom push when nothing was interrupted').to.equal(1);
+    });
+  });
+
+  describe('fitBounds against the real maplibre-gl peer', () => {
+    afterEach(() => fixtureCleanup());
+
+    it('frames the box, reports the resulting camera, and leaves it alone on the next update', async function () {
+      if (!hasWebGL2) this.skip();
+      const el = (await fixture(
+        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+      )) as LyraMap;
+      await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
+      const map = el.map!;
+      const setCenterCalls: unknown[] = [];
+      const setCenter = map.setCenter.bind(map);
+      map.setCenter = ((center: [number, number]) => {
+        setCenterCalls.push(center);
+        return setCenter(center);
+      }) as typeof map.setCenter;
+
+      const changed = oneEvent(el, 'lr-map-view-change');
+      expect(el.fitBounds([[-10, -10], [10, 10]], { padding: 16, animate: false })).to.equal(true);
+      const event = (await changed) as CustomEvent<{ center: readonly [number, number]; zoom: number }>;
+
+      const center = map.getCenter();
+      expect(event.detail.center[0]).to.be.closeTo(center.lng, 1e-9);
+      expect(event.detail.center[1]).to.be.closeTo(center.lat, 1e-9);
+      expect(event.detail.zoom).to.equal(map.getZoom());
+      expect(el.center[0]).to.be.closeTo(0, 1e-6);
+      expect(el.center[1]).to.be.closeTo(0, 1e-6);
+      expect(el.zoom).to.equal(map.getZoom());
+      expect(el.zoom, 'the fit zoomed in from the default camera').to.be.greaterThan(2);
+      const bounds = (map as unknown as {
+        getBounds(): { getWest(): number; getEast(): number; getSouth(): number; getNorth(): number };
+      }).getBounds();
+      expect(bounds.getWest()).to.be.at.most(-10);
+      expect(bounds.getEast()).to.be.at.least(10);
+      expect(bounds.getSouth()).to.be.at.most(-10);
+      expect(bounds.getNorth()).to.be.at.least(10);
+
+      await el.updateComplete;
+      expect(setCenterCalls, 'the element does not reset the fitted camera').to.deep.equal([]);
+      expect(map.getZoom()).to.equal(el.zoom);
+
+      // A host echoing the reported camera on a later render (a detached copy) moves nothing.
+      el.center = [event.detail.center[0], event.detail.center[1]];
+      el.zoom = event.detail.zoom;
+      await el.updateComplete;
+      expect(setCenterCalls, 'a late echo is not pushed back').to.deep.equal([]);
+    });
+
+    it('lands an assignment that interrupts an animated fit on the whole declared camera', async function () {
+      if (!hasWebGL2) this.skip();
+      const el = (await fixture(
+        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+      )) as LyraMap;
+      await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
+      const map = el.map as unknown as LyraMapInstance & { isMoving(): boolean };
+      const views: unknown[] = [];
+      el.addEventListener('lr-map-view-change', (event) => views.push((event as CustomEvent).detail));
+
+      expect(el.fitBounds([[20, 20], [30, 30]], { animate: true })).to.equal(true);
+      await waitUntil(
+        () => map.getZoom() !== el.zoom,
+        'precondition: the animated fit never started moving',
+        { timeout: 2000 },
+      );
+      expect(map.isMoving(), 'precondition: the fit is still in flight').to.equal(true);
+
+      el.center = [-40, -20];
+      await el.updateComplete;
+      expect(map.isMoving()).to.equal(false);
+      expect(map.getCenter().lng).to.be.closeTo(-40, 1e-6);
+      expect(map.getCenter().lat).to.be.closeTo(-20, 1e-6);
+      expect(map.getZoom(), 'the unassigned zoom is not left mid-flight').to.equal(el.zoom);
+      await aTimeout(50);
+      expect(views, 'the interrupted fit is never reported').to.deep.equal([]);
+    });
+
+    it('reports a real shift-drag box zoom as a user camera change', async function () {
+      if (!hasWebGL2) this.skip();
+      const el = (await fixture(
+        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+      )) as LyraMap;
+      await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
+      const map = el.map!;
+      const zoomBefore = map.getZoom();
+      const views: { center: readonly [number, number]; zoom: number; source: string }[] = [];
+      el.addEventListener('lr-map-view-change', (event) => views.push((event as CustomEvent).detail));
+      const rect = map.getCanvas().getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2);
+      const y = Math.round(rect.top + rect.height / 2);
+
+      try {
+        await sendKeys({ down: 'Shift' });
+        await sendMouse({ type: 'move', position: [x - 40, y - 30] });
+        await sendMouse({ type: 'down' });
+        await sendMouse({ type: 'move', position: [x, y] });
+        await sendMouse({ type: 'move', position: [x + 40, y + 30] });
+        await sendMouse({ type: 'up' });
+      } finally {
+        await sendKeys({ up: 'Shift' });
+        await resetMouse();
+      }
+
+      await waitUntil(() => views.length > 0, 'the box zoom was never reported', { timeout: 3000 });
+      const [view] = views;
+      expect(view!.source).to.equal('user');
+      expect(view!.zoom, 'the box zoom zoomed in').to.be.greaterThan(zoomBefore);
+      expect(el.zoom).to.equal(map.getZoom());
+      expect(el.center).to.deep.equal(view!.center);
+    });
+
+    it('reports a real drag as a user camera change and keeps it on the next update', async function () {
+      if (!hasWebGL2) this.skip();
+      const el = (await fixture(
+        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+      )) as LyraMap;
+      await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
+      const map = el.map!;
+      const setCenterCalls: unknown[] = [];
+      const setCenter = map.setCenter.bind(map);
+      map.setCenter = ((center: [number, number]) => {
+        setCenterCalls.push(center);
+        return setCenter(center);
+      }) as typeof map.setCenter;
+      const rect = map.getCanvas().getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2);
+      const y = Math.round(rect.top + rect.height / 2);
+
+      const changed = oneEvent(el, 'lr-map-view-change');
+      try {
+        await sendMouse({ type: 'move', position: [x, y] });
+        await sendMouse({ type: 'down' });
+        await sendMouse({ type: 'move', position: [x - 60, y] });
+        await sendMouse({ type: 'move', position: [x - 120, y] });
+        await sendMouse({ type: 'up' });
+        const event = (await changed) as CustomEvent<{
+          center: readonly [number, number];
+          zoom: number;
+          source: string;
+        }>;
+        expect(event.detail.source).to.equal('user');
+        expect(event.detail.center[0], 'dragging west brings the east into view').to.be.greaterThan(0);
+        expect(el.center).to.deep.equal(event.detail.center);
+        expect(el.zoom).to.equal(event.detail.zoom);
+        await el.updateComplete;
+        expect(setCenterCalls, 'the element does not undo the gesture').to.deep.equal([]);
+      } finally {
+        await resetMouse();
+      }
+    });
   });
 });

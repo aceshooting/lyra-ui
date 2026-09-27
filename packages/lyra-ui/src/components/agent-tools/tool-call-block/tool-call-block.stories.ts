@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware verb with a status glyph and an optional duration; expanding it reveals the arguments, then the error, then the result. `redactedFields` masks dotted payload paths. `<lr-message-parts tool-display="block">` renders paired tool-call/tool-result parts through this element.',
+          'One tool call shown inline as a collapsed-by-default disclosure. The header reads a status-aware verb with a status glyph and an optional duration; expanding it reveals the arguments, then the error, then the result. `display-name` puts an application-translated tool label into that verb in place of `name`, and `status="incomplete"` marks a call that ended without a result. `redactedFields` masks dotted payload paths. `<lr-message-parts tool-display="block">` renders paired tool-call/tool-result parts through this element.',
       },
     },
   },
@@ -38,6 +38,23 @@ export const Statuses: Story = {
       <lr-tool-call-block name="web_search" status="success" duration-ms="820" .result=${{ hits: 3 }}></lr-tool-call-block>
       <lr-tool-call-block name="run_python" status="error" duration-ms="300" error="Request timed out"></lr-tool-call-block>
       <lr-tool-call-block name="delete_file" status="denied"></lr-tool-call-block>
+      <lr-tool-call-block name="read_file" status="incomplete" .args=${{ path: 'notes.md' }}></lr-tool-call-block>
+    </div>
+  `,
+};
+
+export const DisplayName: Story = {
+  name: 'Display name',
+  render: () => html`
+    <div style="display: grid; gap: 0.5rem; max-inline-size: 36rem;">
+      <lr-tool-call-block name="read_file" display-name="File reader" status="success" duration-ms="640"></lr-tool-call-block>
+      <lr-tool-call-block name="read_file" display-name="File reader" status="incomplete"></lr-tool-call-block>
+      <lr-tool-call-block
+        name="read_file"
+        display-name="Lecture d’un fichier"
+        status="incomplete"
+        .strings=${{ toolCallBlockHeaderIncomplete: '{name} : interrompue' }}
+      ></lr-tool-call-block>
     </div>
   `,
 };

@@ -61,6 +61,34 @@ export const Default: Story = {
   render: () => html`<lr-tool-timeline .entries=${mixedEntries()} style="max-width:36rem;"></lr-tool-timeline>`,
 };
 
+/** Application-translated tool labels through `displayName`, plus a call that ended without a
+ *  result (`status: 'incomplete'`), whose rail dot takes its own `--lr-tool-timeline-incomplete-marker-color`. */
+export const TranslatedLabelsAndIncomplete: Story = {
+  render: () => html`<lr-tool-timeline
+    style="max-width:36rem;"
+    .entries=${[
+      {
+        id: 'call-read',
+        name: 'read_file',
+        displayName: 'Lecture d’un fichier',
+        args: { path: 'rapport.pdf' },
+        result: { pages: 12 },
+        status: 'success',
+        startedAt: Date.now() - 30_000,
+        endedAt: Date.now() - 29_200,
+      },
+      {
+        id: 'call-search',
+        name: 'web_search',
+        displayName: 'Recherche sur le web',
+        args: { query: 'onduleurs solaires' },
+        status: 'incomplete',
+        startedAt: Date.now() - 20_000,
+      },
+    ] satisfies ToolTimelineEntry[]}
+  ></lr-tool-timeline>`,
+};
+
 export const RedactedFields: Story = {
   name: 'Redacted sensitive fields',
   parameters: {

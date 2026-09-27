@@ -253,6 +253,51 @@ export const ToolDisplayBlock: Story = {
   `,
 };
 
+/** Invocations carrying the application's translated `displayName`, in both tool displays, and
+ *  one call marked `incomplete` because its stream was interrupted before a result arrived. */
+export const TranslatedToolLabels: Story = {
+  render: () => {
+    const parts: MessagePart[] = [
+      {
+        id: 'read-call',
+        type: 'tool-call',
+        state: 'complete',
+        invocation: {
+          id: 'call-read',
+          name: 'read_file',
+          displayName: 'Lecture d’un fichier',
+          args: { path: 'rapport.pdf' },
+          status: 'success',
+        },
+      },
+      {
+        id: 'read-result',
+        type: 'tool-result',
+        state: 'complete',
+        invocationId: 'call-read',
+        name: 'read_file',
+        result: { pages: 12 },
+      },
+      {
+        id: 'search-call',
+        type: 'tool-call',
+        state: 'complete',
+        invocation: {
+          id: 'call-search',
+          name: 'web_search',
+          displayName: 'Recherche sur le web',
+          args: { query: 'onduleurs solaires' },
+          status: 'incomplete',
+        },
+      },
+    ];
+    return html`<div style="display:grid; gap:1rem; max-width:40rem;">
+      <lr-message-parts tool-display="block" .parts=${parts}></lr-message-parts>
+      <lr-message-parts .parts=${parts}></lr-message-parts>
+    </div>`;
+  },
+};
+
 export const MarkdownCodeHeaders: Story = {
   render: () => html`<lr-message-parts code-block-header .parts=${[
     { id: 'reasoning-code', type: 'reasoning', collapsed: false, text: '```ts\nconst input = 42;\n```' },

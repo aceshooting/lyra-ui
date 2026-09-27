@@ -22,12 +22,14 @@ import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolStatusIcon } from '../tool
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Same status vocabulary as `<lr-tool-result-dialog>`, so a call's chip
- *  and its detail dialog always agree on icon/label/tone. */
-export type ToolCallStatus = LyraToolStatus;
+ *  and its detail dialog always agree on icon/label/tone. `incomplete` marks
+ *  a call that ended without a result (an interrupted stream, a cancelled
+ *  run). */
+export type ToolCallStatus = LyraToolStatus | 'incomplete';
 
 export interface ToolChipSelectDetail {
   name: string;
@@ -65,7 +67,10 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * summary is useful, with or without a detail surface behind it.
  *
  * The default slot is *not* the chip's visible content — the chip's own
- * label is always built from `name`/`summary`/`status`/`duration-ms`. It's
+ * label is always built from `name` (or `display-name`)/`summary`/`status`/
+ * `duration-ms`. `display-name` is the application's own, already-translated
+ * label for the tool: it replaces only the visible and announced name, while
+ * `lr-tool-call-chip-select` keeps reporting the raw `name`. It's
  * reserved for optional read-only preview content (e.g. the tool's raw
  * arguments or a short formatted summary) shown in a floating tooltip on hover or keyboard focus
  * (the focused control matches `:focus-visible` and no pointer press preceded it), positioned
@@ -105,7 +110,7 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * @csspart icon - Wrapper around the status glyph / `icon` slot.
  * @csspart label - Wrapper around `category`, `name` and `summary`.
  * @csspart category - The optional grouping label.
- * @csspart name - The tool/function name.
+ * @csspart name - The tool/function name, or `display-name` when set.
  * @csspart summary - The short status text.
  * @csspart meta - Wrapper around `status-text` and `duration`.
  * @csspart status-text - The visible text twin of the status glyph/color — carries the state in text, not just color.
@@ -116,11 +121,13 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
  * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Accent color for the status
  * glyph and text. Its private default follows `status` (`running` → brand, `success` → success,
- * `error` → danger, `denied` → warning); an inherited or direct public override always wins.
+ * `error` → danger, `denied` → warning; `pending` and `incomplete` stay neutral); an inherited or
+ * direct public override always wins.
  * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Chip background. Its private default
  * follows the same `status` rules using each status's `-quiet` tint; a public override wins.
  * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Chip border color. Its private
- * default becomes transparent for every non-`pending` status; a public override wins.
+ * default becomes transparent for every tinted status (all but `pending` and `incomplete`); a
+ * public override wins.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the anchored detail tooltip.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
@@ -153,6 +160,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -165,12 +173,19 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   /** The tool/function name, e.g. `web_search`. */
   @property() name = '';
 
+  /** The tool's display label, e.g. an application-translated `Lecture d’un fichier`. Replaces
+   *  `name` in the visible chip and its accessible name only; `lr-tool-call-chip-select` still
+   *  reports `name`. Unset or empty shows `name`. */
+  @property({ attribute: 'display-name' }) displayName?: string;
+
   /** Optional grouping label, e.g. `research`. Removing the attribute clears its displayed text. */
   @property() category = '';
 
   /**
    * The call's current lifecycle state — drives the glyph, color, and
-   * `status-text`. Invalid runtime values use the pending presentation.
+   * `status-text`. `incomplete` is a call that ended without a result; it
+   * keeps the neutral tone with its own static glyph and text. Invalid runtime
+   * values use the pending presentation.
    */
   @property({ reflect: true, converter: statusConverter })
   status: ToolCallStatus = 'pending';
@@ -421,8 +436,14 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
       : null;
   }
 
+  /** The visible tool name: the display label when set, else `name`, else the localized
+   *  generic label. */
+  private get shownName(): string {
+    return this.displayName || this.name || this.localize('toolCall');
+  }
+
   private get accessibleLabel(): string {
-    const parts = [this.name || this.localize('toolCall')];
+    const parts = [this.shownName];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.effectiveStatus]));
     const durationMs = this.safeDurationMs;
@@ -470,7 +491,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
-          <span part="name">${this.name || this.localize('toolCall')}</span>
+          <span part="name">${this.shownName}</span>
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">

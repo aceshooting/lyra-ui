@@ -398,7 +398,16 @@ modes use the same expression semantics at initial render and after a theme chan
 **Properties:**
 
 - `center: [number, number] = [0, 0]`
-- `zoom: number = 2`
+- `zoom: number = 2` — `center` and `zoom` are the declarative camera. Assigning either moves the
+  map without emitting anything. When the camera settles after a user gesture or `fitBounds()`, the
+  element writes that camera into both and reports it through `lr-map-view-change`, so its next
+  update never resets it, and a later, different assignment still moves the map. Assigning a value
+  the map already shows moves nothing, so echoing a reported camera back, however late, never stops
+  an animation or gesture. An assignment that does interrupt one (a fit still animating, a
+  gesture's inertia) applies the whole declared camera, `center` and `zoom` alike, so the axis you
+  did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
+  only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
+  disconnect/reconnect opens at the last settled camera rather than the originally declared one.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -813,6 +822,73 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 `false` when the peer is unavailable, allowing an application to choose a fallback before connecting
 an element.
 
+`fitBounds(bounds: LyraMapBounds, options?: LyraMapFitBoundsOptions): boolean` frames a box
+`[[west, south], [east, north]]` in the viewport: the way to show every current marker, or a
+selected region, whenever the data set changes. Use it instead of calling the peer's own
+`fitBounds()` through `map`, which the element neither knows about nor reports. Once the camera
+settles, the element writes it into `center`/`zoom` and emits `lr-map-view-change` with
+`source: 'fit'`, so declarative state stays in sync and the element never resets the fitted camera.
+
+- `options.padding` — screen pixels kept clear around the box: one number for every side, or a
+  `LyraMapPadding { top?, right?, bottom?, left? }`. The sides are the viewport's physical sides in
+  both text directions, because the map's projected space is physical. A negative or non-finite
+  side counts as `0`. Defaults to `0`.
+- `options.maxZoom` — the highest zoom the fit may reach, so one marker or a tight cluster does not
+  zoom to the street. Clamped into `[0, 22]`; a non-finite value sets no ceiling.
+- `options.animate` — defaults to `true`. The camera never animates under
+  `prefers-reduced-motion: reduce`.
+- Latitudes lie in `[-90, 90]`, with `south <= north`, and longitudes in `[-180, 180]`. A box
+  crossing the antimeridian takes either of MapLibre's forms: `west > east`, or `east` unwrapped
+  past 180, up to one full turn east of `west` (`[[170, -10], [190, 10]]`, the form MapLibre's
+  `LngLatBounds` produces). A single point is a valid zero-size box; pair it with `maxZoom`.
+  Anything else (non-finite or non-number values, out-of-range coordinates, an inverted latitude
+  span, the wrong shape) returns `false` without moving or queueing anything, with a
+  development-mode warning.
+- Callable before the map exists, whether the peer is still loading or an off-screen map has not
+  been constructed yet. The most recent request is queued and applied without animation right
+  after construction, unless `center` or `zoom` has been given a different value since the call.
+  Re-assigning the value already held (a framework re-render building an equal array, say) keeps
+  the queued fit.
+- A `center`/`zoom` assignment made while a fit is still animating wins: the interrupted fit is
+  neither written back nor reported, and the camera lands on the whole declared `center`/`zoom`.
+- Returns `true` once the fit is running or queued, and `false` when the loaded peer cannot fit a
+  box. When the padded box cannot fit the map's current size (padding wider or taller than the
+  map), MapLibre leaves the camera where it is and logs its own warning: the call still returns
+  `true`, and no `lr-map-view-change` fires.
+
+There is deliberately no declarative `bounds` property. `center` and `zoom` already describe the
+camera; a third camera input would need a precedence rule against them, and a framework that
+rebuilds its arrays on every render would refit on every render, pulling the camera away from a user
+who has just panned. A one-shot command whose result lands in `center`/`zoom` keeps one camera input.
+
+```ts
+import type {
+  LyraMap,
+  LyraMapBounds,
+  LyraMapMarker,
+  LyraMapViewChangeDetail,
+} from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+let camera: LyraMapViewChangeDetail | undefined;
+const mapEl = document.querySelector('lr-map') as LyraMap;
+mapEl.addEventListener('lr-map-view-change', (event) => {
+  // Keep the host's own camera state in step: { center, zoom, source }.
+  camera = event.detail;
+});
+
+function showMarkers(markers: LyraMapMarker[]): void {
+  mapEl.markers = markers;
+  if (markers.length === 0) return;
+  const lngs = markers.map((marker) => marker.lngLat[0]);
+  const lats = markers.map((marker) => marker.lngLat[1]);
+  const box: LyraMapBounds = [
+    [Math.min(...lngs), Math.min(...lats)],
+    [Math.max(...lngs), Math.max(...lats)],
+  ];
+  mapEl.fitBounds(box, { padding: 48, maxZoom: 14 });
+}
+```
+
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
 `lr-map-legend-toggle` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
@@ -845,7 +921,16 @@ separately because it is a synthetic aggregate rather than one of your features:
 is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, which is what a
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
-layer is never queried at all — MapLibre returns no features for a rendered density surface
+layer is never queried at all — MapLibre returns no features for a rendered density surface.
+Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source }`,
+`source` being `LyraMapViewChangeSource = 'user' | 'fit'`), fired once each time the camera settles
+after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or a standard peer
+navigation button) or a `fitBounds()` call. `center` is `[longitude, latitude]` with the longitude
+wrapped into `[-180, 180]`. The element has already written the camera into `center` and `zoom`
+when it fires, so a host that mirrors camera state assigns the detail back, at any later time,
+without moving the map. Assigning `center`/`zoom` reconciles without emitting it, so a controlled
+host cannot loop, and camera moves made directly through `map` are not reported — which is why
+`'user'` and `'fit'` are the only sources.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -3580,11 +3665,15 @@ These named interfaces and helper signatures are available to typed integrations
     setZoom(zoom: number): unknown;
     resize(): unknown;
     setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
+    fitBounds?(bounds: [[number, number], [number, number]], options: Record<string, unknown>, eventData: Record<string, unknown>): unknown;
+    isMoving?(): boolean;
     remove(): void;
     on(type: 'error', listener: (event: {
       error?: unknown;
     }) => void): this;
     on(type: 'load', listener: () => void): this;
+    on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+    on(type: 'boxzoomend', listener: () => void): this;
     on(type: 'click', listener: (event: {
       point: unknown;
       lngLat: {
@@ -3773,6 +3862,26 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapLegendPanelToggleDetail {
     readonly open: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapPadding {
+    readonly top?: number;
+    readonly right?: number;
+    readonly bottom?: number;
+    readonly left?: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapFitBoundsOptions {
+    readonly padding?: number | LyraMapPadding;
+    readonly maxZoom?: number;
+    readonly animate?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapViewChangeDetail {
+    readonly center: readonly [number, number];
+    readonly zoom: number;
+    readonly source: LyraMapViewChangeSource;
+  }`
+  `LyraMapViewChangeSource = 'user' | 'fit'`.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {
     readonly version: 8;

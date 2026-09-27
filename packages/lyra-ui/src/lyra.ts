@@ -636,6 +636,10 @@ export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export { LyraMap } from './components/media/map/map.class.js';
 export type {
   LyraMapBounds,
+  LyraMapFitBoundsOptions,
+  LyraMapPadding,
+  LyraMapViewChangeDetail,
+  LyraMapViewChangeSource,
   LyraMapLegendEntry,
   LyraMapChoroplethInterpolation,
   LyraMapLegendGradientStop,

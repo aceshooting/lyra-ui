@@ -118,7 +118,7 @@
       "module": "src/ai/adapters/ai-sdk.ts",
       "exportName": "adaptAiSdkMessage",
       "kind": "function",
-      "fingerprint": "101528706718d0c26109",
+      "fingerprint": "4842c84181a0d57f9f10",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -182,7 +182,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "AgentStreamState",
       "kind": "interface",
-      "fingerprint": "d8582b8b56febd39f05d",
+      "fingerprint": "4cf03190eb1a63a893cf",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -214,7 +214,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "createAgentStreamState",
       "kind": "function",
-      "fingerprint": "64947a61eae3c305eab4",
+      "fingerprint": "fd76a6b6acb1d46b1fe3",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -246,7 +246,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStream",
       "kind": "function",
-      "fingerprint": "202efc0c070af31ce018",
+      "fingerprint": "3cb0a4f848f3bc3d56ea",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -262,7 +262,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStreamEvents",
       "kind": "function",
-      "fingerprint": "150e6d38b94363027168",
+      "fingerprint": "73bd0fbc0f80836f3096",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -478,7 +478,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ChatMessage",
       "kind": "interface",
-      "fingerprint": "6dfb2d5f79cb4d79850e",
+      "fingerprint": "6fc3ea526b58721ef018",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -878,7 +878,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolCallMessagePart",
       "kind": "interface",
-      "fingerprint": "f938ffbae44bb0fcb373",
+      "fingerprint": "2c293ab3c1a8bf72cbe0",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -898,7 +898,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolInvocation",
       "kind": "interface",
-      "fingerprint": "a4a0befeee41bfcfb290",
+      "fingerprint": "59f4364a123c63286586",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -1669,7 +1669,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalExampleResult",
       "kind": "interface",
-      "fingerprint": "54a1985486563389bc03",
+      "fingerprint": "43e134b05a9dbd3e1215",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -2447,7 +2447,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "DirectToolRendererDefinition",
       "kind": "interface",
-      "fingerprint": "0eb7db09a1e00d7b4cda",
+      "fingerprint": "d44fffa12fb969c44b5e",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2467,7 +2467,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "findToolRenderer",
       "kind": "function",
-      "fingerprint": "3201afdbb3423c71b515",
+      "fingerprint": "f91ce90123c146e02ee6",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2487,7 +2487,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "getDefaultToolRendererRegistry",
       "kind": "function",
-      "fingerprint": "1c4bc811ce871ef38ace",
+      "fingerprint": "3352366d7318da79e4ca",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2507,7 +2507,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "LazyToolRendererDefinition",
       "kind": "interface",
-      "fingerprint": "0172b84dc6efcbb8e9a2",
+      "fingerprint": "604e31a6f6ffd0b2d40c",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2527,7 +2527,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "loadToolRenderer",
       "kind": "function",
-      "fingerprint": "8da9743258747bfb4270",
+      "fingerprint": "bb11a64e6e700728b2f3",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2547,7 +2547,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "registerToolRenderer",
       "kind": "function",
-      "fingerprint": "8c274256764d5a926350",
+      "fingerprint": "050d78b1936facf7da48",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2567,7 +2567,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "ToolRenderContext",
       "kind": "interface",
-      "fingerprint": "30dd5f3fc56a93054eea",
+      "fingerprint": "74a1bb3332df62bbe951",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2679,7 +2679,7 @@
       "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
       "exportName": "ToolTimelineEntry",
       "kind": "interface",
-      "fingerprint": "5253e61b6b88255b5214",
+      "fingerprint": "34606f6dd0c183aa305a",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -10074,7 +10074,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "ee0072cd7855418b67ce",
+      "fingerprint": "7cd54705b081695100ed",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10122,7 +10122,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "a9a501694d82ba1d6521",
+      "fingerprint": "1a81434e5feca2d6f08c",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10138,7 +10138,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "1c7fc7a85be9c0fa36a8",
+      "fingerprint": "c38f9a7d49726509557e",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10154,7 +10154,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "64dba0879bd0f8217e52",
+      "fingerprint": "02fbe5bba31251ce76c2",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10406,6 +10406,75 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapLegendPanelToggleDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapPadding",
+      "kind": "interface",
+      "fingerprint": "1699a752d00096592293",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapPadding"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapFitBoundsOptions",
+      "kind": "interface",
+      "fingerprint": "d8d4f9aef03b79b46e37",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapFitBoundsOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapViewChangeDetail",
+      "kind": "interface",
+      "fingerprint": "b85128ac73230ad59a3f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapViewChangeDetail"
       }
     },
     {
@@ -14501,7 +14570,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "02048159f25a9052fdd2",
+      "fingerprint": "22a8fc80da8e1ebfa7b7",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15432,7 +15501,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "705763239b1059f1a4ed",
+      "fingerprint": "c7799e703a90df37103e",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15573,7 +15642,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "4e800ad9d663fbb409c7",
+      "fingerprint": "bb79bbc23ab095171734",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16194,7 +16263,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "145f91cac6d2080095c8",
+      "fingerprint": "719224193b2f0b66e840",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16210,7 +16279,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "2c0879ef78ea3fc29db4",
+      "fingerprint": "ebb57495393312884ce1",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16859,7 +16928,7 @@
       "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "533decb8dd441d1a6f1b",
+      "fingerprint": "fac0e0e6fe299406a3ac",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/localization.ts"
@@ -16876,7 +16945,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "fb57c5637157a49f6b46",
+      "fingerprint": "874f03d7279b217e2032",
       "routes": [
         "src/vue.ts"
       ],

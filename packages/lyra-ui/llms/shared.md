@@ -2387,6 +2387,14 @@ import {
   validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
   a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
   the event as `invalid_stream_event`.
+- **Tool display name and incomplete calls** (21.1.0) — `ToolInvocation.displayName` is the
+  application's own, already-translated tool label; `<lr-message-parts>` (both `tool-display`
+  modes) and `<lr-tool-timeline>` show it in place of `name`, which still selects the result
+  renderer. `status: 'incomplete'` marks a call that ended without a result (an interrupted stream,
+  a cancelled run); set it yourself on a `tool-upsert` or `tool-call` part, since the adapters never
+  infer it. The runtime accepts both on `tool-upsert` events, `tool-call` parts and message
+  snapshots; a `displayName` that is not a string of at most `maxIdentifierCharacters` fails the
+  event as `invalid_stream_event`, and a later upsert that omits it keeps the retained one.
 - **Resource limits** — pass a partial `AgentStreamLimits` to `createAgentStreamState()`, or adapter
   limit options to the relevant adapter. The exported `DEFAULT_AGENT_STREAM_LIMITS`,
   `DEFAULT_AI_SDK_ADAPTER_LIMITS`, `DEFAULT_AG_UI_ADAPTER_LIMITS`, and
@@ -3667,6 +3675,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ToolInvocation {
   id: unknown;
   name: unknown;
+  displayName: unknown;
   args: unknown;
   status: unknown;
   result: unknown;

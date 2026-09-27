@@ -29,10 +29,10 @@ export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
 /**
  * Coarse lifecycle state for a whole agent run or a single step within one. Broader than any
  * single existing component's own status vocabulary (e.g. `ToolCallStatus`'s `'pending' |
- * 'running' | 'success' | 'error' | 'denied'`, reused as-is by `ToolInvocation` below) because a
- * run/step can also be waiting on the user (`'waiting-input'`), waiting on an approval gate
- * (`'waiting-approval'`), or user-cancelled (`'cancelled'`) -- states a single tool call's own
- * terminal status has no need to express.
+ * 'running' | 'success' | 'error' | 'denied' | 'incomplete'`, reused as-is by `ToolInvocation`
+ * below) because a run/step can also be waiting on the user (`'waiting-input'`), waiting on an
+ * approval gate (`'waiting-approval'`), or user-cancelled (`'cancelled'`) -- a single tool call
+ * has no waiting states, and folds an interrupted or cancelled call into its own `'incomplete'`.
  */
 export type AgentStatusKind =
   | 'idle'
@@ -120,7 +120,14 @@ export interface ChatMessage {
 export interface ToolInvocation {
   id: string;
   name: string;
+  /** The application's own, already-translated label for the tool (e.g. `Lecture d’un fichier`).
+   *  Shown in place of `name` by `<lr-message-parts>` (either `tool-display`) and
+   *  `<lr-tool-timeline>`; `name` still selects the result renderer and is still the id reported in
+   *  events. Omitted or empty shows `name`. */
+  displayName?: string;
   args: Record<string, unknown>;
+  /** `'incomplete'` marks a call that ended without a result (an interrupted stream, a cancelled
+   *  run). */
   status: ToolCallStatus;
   result?: unknown;
   error?: string;

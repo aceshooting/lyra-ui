@@ -50,9 +50,21 @@ export interface MapLibreMapCapability {
   resize(): unknown;
   /** Optional: absent on peers predating it, and the caller feature-detects before use. */
   setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
+  /** Optional for the same reason; `LyraMap.fitBounds()` feature-detects it. The peer merges
+   *  `eventData` into every movement event the fit fires, which is how its `moveend` is told
+   *  apart from any other camera move. */
+  fitBounds?(
+    bounds: [[number, number], [number, number]],
+    options: Record<string, unknown>,
+    eventData: Record<string, unknown>,
+  ): unknown;
+  /** Optional and feature-detected: whether an animation or a gesture is moving the camera now. */
+  isMoving?(): boolean;
   remove(): void;
   on(type: 'error', listener: (event: { error?: unknown }) => void): this;
   on(type: 'load', listener: () => void): this;
+  on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+  on(type: 'boxzoomend', listener: () => void): this;
   on(type: 'click', listener: (event: {
     point: unknown;
     lngLat: { lng: number; lat: number };
