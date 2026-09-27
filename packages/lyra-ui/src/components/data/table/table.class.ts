@@ -1569,6 +1569,23 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  when substituting it for a live, potentially-stretched reading is the correction, not a risk. */
   private alwaysVisibleNaturalWidth: number | undefined;
 
+  /** `[part='base']`'s border-box inline size when each priority tier was hidden -- the allocation
+   *  that tier demonstrably did not fit. A tier the table is itself hiding is re-admitted only once
+   *  the allocation grows past this, never on a pass whose only change since the hide is the hide
+   *  itself: the full set cannot fit an allocation it just overflowed. The reconstruction above is
+   *  exact only while every cached header width is content-driven; under `table-layout: fixed` the
+   *  headers carry allocation shares instead, which sum back to the container on the very pass that
+   *  hid a spilling tier, and a re-admission there would re-overflow, re-hide, and loop without end
+   *  (each flip's own update queues the next pass as a microtask, so the loop never yields). The
+   *  border box, unlike `clientWidth`, does not shrink when the table's own scrollbar appears. */
+  private readonly priorityTierHiddenAllocation = new Map<'low' | 'medium', number>();
+  /** Allocation at which a hidden tier was just re-admitted, until the next measured pass either
+   *  keeps it (the re-admission held) or hides it again. Hiding it again raises the tier's
+   *  `priorityTierHiddenAllocation` to this width, because the re-admission itself shrank the
+   *  allocation -- a page scrollbar that only appears while every column renders, or a
+   *  shrink-to-fit ancestor -- so the tier cannot come back until the room genuinely grows. */
+  private readonly priorityTierRevealAllocation = new Map<'low' | 'medium', number>();
+
   private parsePixelLength(value: string | undefined): number | undefined {
     if (!value) return undefined;
     const trimmed = value.trim();
@@ -2016,7 +2033,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `[part='base']`'s/`[part='table']`'s own measured size) a fixed point rather than a layout
    *  thrash: the next pass reconstructs the same full width from the same cached natural widths,
    *  reaches the same decision, and writes nothing further -- in either direction, hiding or
-   *  restoring. Called from `updated()` (covers a change driven by
+   *  restoring. That reconstruction is only as good as its cached widths, which are allocation shares
+   *  rather than content widths under `table-layout: fixed`, and the allocation can itself move when
+   *  a tier returns; `settlePriorityTier()` therefore holds an actually-hidden tier until the allocation
+   *  grows past the width it was hidden at, which keeps every pass a fixed point regardless of how the
+   *  columns are sized. Called from `updated()` (covers a change driven by
    *  `columns`/`rows`/`priorityColumnsVisible` rather than a container resize) and
    *  from the `ResizeObserver` callback (covers a container resize with no
    *  Lit-tracked property change at all). */
@@ -2028,6 +2049,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (!hasLowColumn && !hasMediumColumn) {
       this.priorityTierNaturalWidth.clear();
       this.alwaysVisibleNaturalWidth = undefined;
+      this.priorityTierHiddenAllocation.clear();
+      this.priorityTierRevealAllocation.clear();
       base?.removeAttribute('data-hide-priority-low');
       base?.removeAttribute('data-hide-priority-medium');
       this.rehomeFocusedColumn();
@@ -2094,12 +2117,21 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       : base.scrollWidth;
     const overflowAtFull = fullWidth - base.clientWidth;
 
-    const needsLow = hasLowColumn && overflowAtFull > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
-    const overflowAfterLow = needsLow ? overflowAtFull - lowNaturalWidth : overflowAtFull;
-    const needsMedium = hasMediumColumn && overflowAfterLow > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+    const measuredLow = hasLowColumn && overflowAtFull > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+    const overflowAfterLow = measuredLow ? overflowAtFull - lowNaturalWidth : overflowAtFull;
+    const measuredMedium = hasMediumColumn && overflowAfterLow > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
 
-    base.toggleAttribute('data-hide-priority-low', needsLow);
-    base.toggleAttribute('data-hide-priority-medium', needsMedium);
+    // `'medium'` settles first so that a medium tier held hidden below also keeps `'low'` hidden:
+    // `'low'` always goes first, whichever rule is holding the higher tier back.
+    const allocation = base.offsetWidth;
+    const needsMedium = this.settlePriorityTier(base, 'medium', measuredMedium, mediumActuallyHidden, allocation);
+    const needsLow = this.settlePriorityTier(
+      base,
+      'low',
+      hasLowColumn && (measuredLow || needsMedium),
+      lowActuallyHidden,
+      allocation
+    );
     this.rehomeFocusedColumn();
 
     // The rendered state the two writes above produce: `[part='base'][data-force-visible]` (rendered
@@ -2113,6 +2145,39 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (this.hasHiddenPriorityColumns !== anyPriorityHidden) {
       this.hasHiddenPriorityColumns = anyPriorityHidden;
     }
+  }
+
+  /** Writes one tier's hide decision to `[part='base']` and returns it. A measured need to hide
+   *  always wins. Without one, a tier that is actually hidden stays hidden while the allocation is no
+   *  wider than the width it was hidden at (`priorityTierHiddenAllocation`), so a pass the hide itself
+   *  triggered cannot undo it; a force-visible tier renders anyway, so its live measurement decides
+   *  alone. A re-admission is remembered until the next measured pass, which raises the tier's
+   *  hidden-at width to the re-admission's own allocation if it has to hide the tier again. */
+  private settlePriorityTier(
+    base: HTMLElement,
+    tier: 'low' | 'medium',
+    measured: boolean,
+    actuallyHidden: boolean,
+    allocation: number
+  ): boolean {
+    const attribute = tier === 'low' ? 'data-hide-priority-low' : 'data-hide-priority-medium';
+    const wasMarked = base.hasAttribute(attribute);
+    const revealedAt = this.priorityTierRevealAllocation.get(tier);
+    this.priorityTierRevealAllocation.delete(tier);
+    const hiddenAt = this.priorityTierHiddenAllocation.get(tier);
+    const held =
+      actuallyHidden && hiddenAt !== undefined && allocation <= hiddenAt + TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+    const hide = measured || held;
+    if (hide) {
+      if (!wasMarked || hiddenAt === undefined) {
+        this.priorityTierHiddenAllocation.set(tier, Math.max(allocation, revealedAt ?? allocation));
+      }
+    } else {
+      this.priorityTierHiddenAllocation.delete(tier);
+      if (wasMarked && actuallyHidden) this.priorityTierRevealAllocation.set(tier, allocation);
+    }
+    base.toggleAttribute(attribute, hide);
+    return hide;
   }
 
   private rehomeFocusedColumn(): void {

@@ -11,7 +11,7 @@ export const styles = css`
      region, kept free of focusable descendants (class doc's nested-interactive note). Row-level
      hover/active backgrounds live here so hovering anywhere -- rename/actions controls included --
      highlights the whole row. */
-  [part='base'] {
+  [part~='base'] {
     position: relative;
     display: flex;
     /* Undeclared on :host -- a consumer opts a whole list into e.g. 'center' at an ancestor
@@ -50,11 +50,16 @@ export const styles = css`
      here; retune via the host's inherited font-size). The excerpt stays visible too: single-line
      ellipsised and ?hidden-bindable per row, it costs one line, and hiding it is a consumer
      decision. */
-  :host([compact]) [part='base'] {
+  :host([compact]) [part~='base'] {
     padding: var(--lr-conversation-item-compact-padding, var(--lr-space-xs) var(--lr-space-s));
     gap: var(--lr-conversation-item-compact-gap, var(--lr-space-2xs));
   }
-  :host(:hover) [part='base'] {
+  /* base-menu-open: a menu opened from the actions slot sits in the browser top layer, where
+     Chromium and WebKit stop matching :hover on this row while the pointer is inside the menu. The
+     row keeps its hover tint for as long as the menu is open instead of dropping it mid-choice.
+     (0,1,0), so the pressed and active rules below still win exactly as they win over hover. */
+  :host(:hover) [part~='base'],
+  [part~='base-menu-open'] {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
   /* Pressed. :host(:active) is the transient pointer/keyboard press; :host([active]) below is 'this
@@ -62,13 +67,13 @@ export const styles = css`
      toward --lr-color-mix-partner (which tracks the text color), so it moves the right way on light
      and dark surfaces alike. :active propagates up from the pressed [part='select-button'], so this
      plain wrapper div answers a press the way it answers hover. */
-  :host(:active) [part='base'] {
+  :host(:active) [part~='base'] {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   /* Both rules above are (0,3,0), like this one, so being written last hands this rule BOTH
      contests: an active-and-hovered row keeps the stronger active tint instead of two backgrounds
      competing. Right for hover, wrong for press -- hence the rule below. */
-  :host([active]) [part='base'] {
+  :host([active]) [part~='base'] {
     background: var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet));
   }
   /* The open session's own held state: without it the already-open row answers a click with
@@ -78,7 +83,7 @@ export const styles = css`
      against the [active] rule on specificity, not ordering. The mix starts from
      --lr-conversation-item-active-bg rather than transparent, so retinting the active row deepens
      THAT colour, not the stock one. */
-  :host([active]:active) [part='base'] {
+  :host([active]:active) [part~='base'] {
     background: color-mix(
       in oklab,
       var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet)),
@@ -231,7 +236,7 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='base'],
+    [part~='base'],
     [part='rename-button'] {
       transition: none !important;
     }

@@ -8,6 +8,7 @@ import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { styles } from './flow-node.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -29,7 +30,9 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  * @slot icon - Leading header glyph.
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge. Always visible on coarse-pointer/no-hover
- *   devices; pointer-hover and focus-within reveal it elsewhere.
+ *   devices; pointer-hover and focus-within reveal it elsewhere, and it stays revealed while an
+ *   `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open (that menu sits in the
+ *   browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on the node).
  * @csspart base - The row wrapping the input handles, the card, and the output handles. Carries no
  *   card chrome of its own — style the card itself through the `card` part.
  * @csspart card - The bordered, filled node card.
@@ -168,6 +171,10 @@ export class LyraFlowNode extends LyraElement {
   @state() private hasBodySlot = false;
   @state() private hasToolbarSlot = false;
   @state() private pulsesRing = false;
+  /** Keeps the hover/focus-revealed toolbar visible while a menu opened from it is open. */
+  private readonly toolbarOverlay = new SlottedOverlayController(this, () =>
+    this.renderRoot?.querySelector<HTMLSlotElement>('slot[name="toolbar"]')
+  );
   private browserStateSeeded = false;
 
   private sampleSlotPresence(): void {
@@ -318,7 +325,11 @@ export class LyraFlowNode extends LyraElement {
         <div part="body" ?hidden=${!this.hasBodySlot}>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
-        <div part="toolbar" ?hidden=${!this.hasToolbarSlot}>
+        <div
+          part="toolbar"
+          ?hidden=${!this.hasToolbarSlot}
+          ?data-menu-open=${this.toolbarOverlay.open}
+        >
           <slot name="toolbar" @slotchange=${this.onSlotChange}></slot>
         </div>
       </div>

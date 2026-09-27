@@ -3368,7 +3368,10 @@ owns none of that.
 
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
-hover-capable devices and always visible with a coarse pointer or no hover).
+hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
+while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open, because that menu
+sits in the browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on
+the node).
 
 **CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
 carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,

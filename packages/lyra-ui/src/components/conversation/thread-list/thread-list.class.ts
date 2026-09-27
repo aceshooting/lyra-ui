@@ -373,6 +373,13 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   above wrap this component's own callback output and are a different surface. Styling row
  *   density here replaces the older `::part(row) { --lr-theme-*: … }` workaround, which retheme'd
  *   the whole row subtree (`renderActions` popups included).
+ * @csspart row-item-base-menu-open - Data mode: state alias on `row-item-base` while a menu that
+ *   `renderActions` opened from that row is open (the row item's own `base-menu-open`). Key a
+ *   hover- or focus-revealed row-menu trigger on it as well as on `:hover`/`:focus-within`, e.g.
+ *   `::part(row-item-base-menu-open) { --app-row-actions-opacity: 1; }` read by
+ *   `::part(row-actions)`: the open menu sits in the browser top layer, where Chromium and WebKit
+ *   stop matching `:hover` and `:focus-within` on the row while the pointer or focus is inside it.
+ *   The row also keeps its built-in hover tint while the menu is open.
  * @csspart row-item-active-indicator - Data mode: the row item's decorative active indicator,
  *   exported from `lr-conversation-item`.
  * @csspart row-item-select-button - Data mode: the row item's selectable button-like region.
@@ -558,8 +565,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  default to the `fixed` strategy inside the virtual row and open at full size outside the list
    *  (in the browser top layer where the native Popover API exists), in both directions; a
    *  promoted menu whose trigger scrolls out of the list is hidden until the trigger returns. An
-   *  explicit `positioning-strategy="absolute"` keeps a menu inside the row. Unset (the default)
-   *  leaves `rowActions`' output byte-for-byte unchanged. */
+   *  explicit `positioning-strategy="absolute"` keeps a menu inside the row. While such a menu is
+   *  open its row carries `row-item-base-menu-open`, so a trigger revealed on row hover or focus
+   *  can stay revealed while the pointer or focus is inside the top-layer menu. Arrow, Home and End
+   *  keys a returned control already handled (`preventDefault()`, as `lr-menu` does) stay with that
+   *  control instead of also moving between rows. Unset (the default) leaves `rowActions`' output
+   *  byte-for-byte unchanged. */
   @property({ attribute: false }) renderActions?: (
     thread: LyraChatThread
   ) => TemplateResult;
@@ -1182,6 +1193,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       e.key !== 'End'
     )
       return;
+    // A control inside a row already consumed this key -- an open `renderActions` `lr-menu` moving
+    // between its own items, or a dropdown trigger opening its menu. Row navigation on top of that
+    // would pull focus out of the menu it just moved within.
+    if (e.defaultPrevented) return;
     const origin = e.composedPath()[0];
     if (
       (origin as Partial<Node> | undefined)?.nodeType === 1 &&
@@ -1391,7 +1406,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const source = this.sourceThread(thread);
     const row = html`
       <lr-conversation-item
-        exportparts="base:row-item-base, active-indicator:row-item-active-indicator, select-button:row-item-select-button, start:row-item-start, content:row-item-content, label:row-item-label, label-input:row-item-label-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
+        exportparts="base:row-item-base, base-menu-open:row-item-base-menu-open, active-indicator:row-item-active-indicator, select-button:row-item-select-button, start:row-item-start, content:row-item-content, label:row-item-label, label-input:row-item-label-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
         conversation-id=${thread.id}
         label=${thread.title}
         excerpt=${thread.excerpt ?? ''}
@@ -1627,7 +1642,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 : this.localize('threadListEmpty')}
             </div>`
           : html`<lr-virtual-list
-              exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+              exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-base-menu-open:row-item-base-menu-open, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
               row-height="auto"
               .items=${items}
               .groups=${this.stickyGroups

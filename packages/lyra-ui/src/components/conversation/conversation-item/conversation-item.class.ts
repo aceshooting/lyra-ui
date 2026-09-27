@@ -17,6 +17,9 @@ import {
   spellcheckConverter,
 } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -142,6 +145,14 @@ export interface LyraConversationItemEventMap {
  * whereas a button is independently focusable, has its own accessible name,
  * and composes cleanly with click-to-select.
  *
+ * While an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from the `actions` slot is open
+ * (including one composed inside another component's shadow root), the row is in its menu-open state:
+ * the host matches `:state(menu-open)`, `[part="base"]` also carries `base-menu-open`, and the row
+ * keeps its hover tint. The menu opens into the browser top layer, where Chromium and WebKit stop
+ * matching `:hover` and `:focus-within` on the row while the pointer or focus is inside it, so key
+ * a hover- or focus-revealed actions trigger on this state as well -- otherwise the trigger hides
+ * while its menu is open, and a `display`-based reveal hides the menu with it.
+ *
  * @customElement lr-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
  * button or a `lr-menu` trigger) rendered at the trailing edge of the row.
@@ -172,7 +183,11 @@ export interface LyraConversationItemEventMap {
  * (that's treated as an implicit cancel).
  * @event blur - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @event focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
- * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="select-button"]`, the rename button, and `actions`.
+ * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="select-button"]`, the rename button, and `actions`. Also carries `base-menu-open` while a menu opened from `actions` is open.
+ * @csspart base-menu-open - State alias on `base` while an `lr-dropdown`, `lr-popover` or
+ *   `lr-context-menu` opened from the `actions` slot is open. Style a hover- or focus-revealed actions trigger on it too, e.g.
+ *   `::part(base-menu-open) { --app-actions-opacity: 1; }`: the open menu sits in the top layer,
+ *   where Chromium and WebKit stop matching `:hover`/`:focus-within` on the row.
  * @csspart active-indicator - A decorative inline indicator rendered only while the row is active.
  * @csspart select-button - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
  * @csspart start - The wrapper around the `start` slot, inside `select-button`. Always rendered, but `hidden` while the slot is empty.
@@ -208,6 +223,8 @@ export interface LyraConversationItemEventMap {
  *   plus an `excerpt`); `center` reads better for a reliably single-line row with a taller trailing
  *   action (e.g. `actions`), but is not the default because it would misalign every existing
  *   multi-line row's title against its own baseline.
+ * @cssstate menu-open - Present while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened
+ *   from the `actions` slot is open, e.g. `lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu`.
  * @status stable
  * @since 4.0.0
  */
@@ -302,6 +319,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   @query('[part="label-input"]') private labelInput?: HTMLInputElement;
   private blurCommitGeneration = 0;
+  private readonly internals = attachInternalsSafely(this);
+  /** Whether a menu opened from the `actions` slot is open -- see the class doc's menu-open note. */
+  private readonly actionsOverlay = new SlottedOverlayController(this, () =>
+    this.renderRoot?.querySelector<HTMLSlotElement>('slot[name="actions"]')
+  );
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -333,6 +355,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     if (changed.has('renamable') && !this.renamable && this.renaming) {
       this.cancelRename();
     }
+    setCustomState(this.internals, 'menu-open', this.actionsOverlay.open);
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -525,7 +548,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     });
 
     return html`
-      <div part="base">
+      <div part=${this.actionsOverlay.open ? 'base base-menu-open' : 'base'}>
         ${this.active
           ? html`<span part="active-indicator" aria-hidden="true"></span>`
           : nothing}

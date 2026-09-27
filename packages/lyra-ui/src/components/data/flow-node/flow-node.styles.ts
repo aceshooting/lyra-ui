@@ -134,12 +134,16 @@ export const styles = css`
     justify-content: flex-end;
     opacity: 0;
   }
+  /* data-menu-open: a menu opened from the toolbar sits in the browser top layer, where Chromium
+     and WebKit stop matching :hover and :focus-within on this node while the pointer or focus is
+     inside it -- the toolbar would otherwise hide the trigger of the menu the user is in. */
   /* no-pressed-state: the toolbar is not a target -- it is the container for the node's own
      slotted action buttons, revealed by hovering/focusing the CARD. Pressing it means pressing one
      of those buttons, each with its own pressed state; a treatment on the container would fire for
      all of them and say nothing about which. */
   :host(:hover) [part='toolbar'],
-  :host(:focus-within) [part='toolbar'] {
+  :host(:focus-within) [part='toolbar'],
+  [part='toolbar'][data-menu-open] {
     opacity: 1;
   }
   @media (hover: none), (pointer: coarse) {

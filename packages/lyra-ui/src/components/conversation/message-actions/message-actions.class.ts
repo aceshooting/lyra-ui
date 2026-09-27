@@ -27,6 +27,7 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
+import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
@@ -383,7 +384,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     );
   }
 
-  /** Visually hides the bar until the enclosing message is hovered or any control inside has focus. */
+  /** Visually hides the bar until the enclosing message is hovered or any control inside has focus.
+   *  The bar also stays revealed while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened
+   *  from a slotted control is open: that menu sits in the browser top layer, where Chromium and
+   *  WebKit stop matching `:focus-within` here while focus is inside it. */
   @property({
     type: Boolean,
     reflect: true,
@@ -410,6 +414,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   @state() private revealed = false;
 
   private hoverTarget: HTMLElement | null = null;
+  /** Whether a menu opened from a slotted control is open -- see `revealOnInteraction`. */
+  private readonly slottedOverlay = new SlottedOverlayController(this, () =>
+    this.renderRoot?.querySelector<HTMLSlotElement>('[part="base"] > slot:not([name])')
+  );
+  private slottedOverlayWasOpen = false;
   private stopSyncGeneration = 0;
   private stopObserver?: MutationObserver;
   private managedStops: ManagedToolbarAction[] = [];
@@ -470,6 +479,16 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       if (this.revealOnInteraction) this.bindHoverTarget();
       else this.unbindHoverTarget();
     }
+    const overlayOpen = this.slottedOverlay.open;
+    if (overlayOpen !== this.slottedOverlayWasOpen) {
+      this.slottedOverlayWasOpen = overlayOpen;
+      // Opening reveals; closing hands the reveal back to hover and focus, which neither
+      // pointerleave nor focusout re-checks once the menu that held the bar open has gone.
+      if (overlayOpen) this.revealed = true;
+      else if (!this.hoverTarget?.matches(':hover') && !this.matches(':focus-within')) {
+        this.revealed = false;
+      }
+    }
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -525,7 +544,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onHoverTargetLeave = (): void => {
-    if (!this.matches(':focus-within')) this.revealed = false;
+    if (!this.matches(':focus-within') && !this.slottedOverlay.open) this.revealed = false;
   };
 
   private onFocusIn = (event: Event): void => {
@@ -556,7 +575,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onFocusOut = (event: Event): void => {
-    if (!this.hoverTarget?.matches(':hover')) this.revealed = false;
+    if (!this.hoverTarget?.matches(':hover') && !this.slottedOverlay.open) this.revealed = false;
     const destination = (event as FocusEvent).relatedTarget;
     if (
       destination &&

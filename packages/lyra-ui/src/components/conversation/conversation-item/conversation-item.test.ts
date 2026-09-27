@@ -1656,3 +1656,170 @@ describe("align", () => {
     expect(alignItemsOf(el, "base")).to.equal("flex-start");
   });
 });
+
+// A menu opened from the actions slot sits in the browser top layer, where Chromium and WebKit
+// stop matching `:hover`/`:focus-within` on the row while the pointer or focus is inside the menu.
+// The menu-open state is what a hover/focus-revealed trigger and the row's own tint key on instead.
+describe("menu-open state", () => {
+  const supportsCustomStateSelector = (): boolean => {
+    try {
+      return CSS.supports("selector(:state(menu-open))");
+    } catch {
+      return false;
+    }
+  };
+  const baseEl = (el: LyraConversationItem): HTMLElement =>
+    el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const menuOpen = (el: LyraConversationItem): boolean =>
+    baseEl(el).part.contains("base-menu-open");
+
+  before(async () => {
+    await import("../../overlays/overlay/dropdown.js");
+    await import("../../overlays/context-menu/context-menu.js");
+    await import("../../layout/menu/menu.js");
+    await import("../../layout/menu/menu-item.js");
+  });
+
+  async function itemWithDropdown(extra = ""): Promise<{
+    el: LyraConversationItem;
+    dropdown: HTMLElement & { open: boolean; show(): Promise<void>; hide(options?: { focusTrigger?: boolean }): Promise<void> };
+  }> {
+    const el = await fixtureItem(html`<lr-conversation-item label="Session" ?active=${extra === "active"}>
+      <lr-dropdown slot="actions" style="--lr-transition-fast:0ms">
+        <button slot="trigger" type="button" aria-label="Session actions">⋮</button>
+        <lr-menu label="Session actions">
+          <lr-menu-item value="rename">Rename</lr-menu-item>
+          <lr-menu-item value="delete">Delete</lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
+    </lr-conversation-item>`);
+    const dropdown = el.querySelector("lr-dropdown") as unknown as HTMLElement & {
+      open: boolean;
+      show(): Promise<void>;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    return { el, dropdown };
+  }
+
+  it("is unset by default, and is set with its part token and custom state only while an actions-slot dropdown is open", async () => {
+    const { el, dropdown } = await itemWithDropdown();
+    const base = baseEl(el);
+    // Transitions off: read the settled tint.
+    base.style.transition = "none";
+    const resting = getComputedStyle(base).backgroundColor;
+    expect(base.getAttribute("part")).to.equal("base");
+    if (supportsCustomStateSelector()) expect(el.matches(":state(menu-open)")).to.equal(false);
+
+    await dropdown.show();
+    await waitUntil(() => menuOpen(el), "opening the actions menu sets base-menu-open");
+    if (supportsCustomStateSelector()) expect(el.matches(":state(menu-open)")).to.equal(true);
+    expect(el.matches(":hover"), "the pointer is not over the row").to.equal(false);
+    expect(
+      getComputedStyle(base).backgroundColor,
+      "the row keeps its hover tint while its menu is open"
+    ).to.not.equal(resting);
+
+    await dropdown.hide({ focusTrigger: false });
+    await waitUntil(() => !menuOpen(el), "closing the actions menu clears base-menu-open");
+    expect(base.getAttribute("part")).to.equal("base");
+    if (supportsCustomStateSelector()) expect(el.matches(":state(menu-open)")).to.equal(false);
+    expect(getComputedStyle(base).backgroundColor).to.equal(resting);
+  });
+
+  it("keeps the active row's own tint while its menu is open", async () => {
+    const { el, dropdown } = await itemWithDropdown("active");
+    const base = baseEl(el);
+    base.style.transition = "none";
+    const activeBackground = getComputedStyle(base).backgroundColor;
+    await dropdown.show();
+    await waitUntil(() => menuOpen(el));
+    expect(getComputedStyle(base).backgroundColor).to.equal(activeBackground);
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it("stays unset when the menu's lr-show is vetoed", async () => {
+    const { el, dropdown } = await itemWithDropdown();
+    el.addEventListener("lr-show", (event) => event.preventDefault(), { once: true });
+    await dropdown.show();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    expect(dropdown.open).to.equal(false);
+    expect(menuOpen(el)).to.equal(false);
+  });
+
+  it("tracks an lr-context-menu opened from the actions slot", async () => {
+    const el = await fixtureItem(html`<lr-conversation-item label="Session">
+      <lr-context-menu slot="actions" label="Session actions">
+        <button slot="trigger" type="button" aria-label="Session actions">⋯</button>
+        <lr-menu-item value="rename">Rename</lr-menu-item>
+      </lr-context-menu>
+    </lr-conversation-item>`);
+    const contextMenu = el.querySelector("lr-context-menu") as unknown as HTMLElement & {
+      open: boolean;
+      showAt(point: { x: number; y: number; contextElement?: Element }): void;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    const trigger = contextMenu.querySelector<HTMLElement>('[slot="trigger"]')!;
+    const rect = trigger.getBoundingClientRect();
+    contextMenu.showAt({ x: rect.left + 2, y: rect.bottom - 2, contextElement: trigger });
+    await waitUntil(() => contextMenu.open && menuOpen(el), "the open context menu sets base-menu-open");
+    await contextMenu.hide({ focusTrigger: false });
+    await waitUntil(() => !menuOpen(el), "closing it clears base-menu-open");
+  });
+
+  it("ignores an overlay in another slot of the same row", async () => {
+    // The overlay's lifecycle events reach the row's own listener here, so only the actions-slot
+    // filter keeps this out of the menu-open state.
+    const el = await fixtureItem(html`<lr-conversation-item label="Session">
+      <lr-dropdown slot="meta" style="--lr-transition-fast:0ms">
+        <button slot="trigger" type="button">Elsewhere</button>
+        <lr-menu label="Elsewhere">
+          <lr-menu-item value="x">X</lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
+    </lr-conversation-item>`);
+    const dropdown = el.querySelector("lr-dropdown") as unknown as HTMLElement & {
+      open: boolean;
+      show(): Promise<void>;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    let reachedRow = 0;
+    el.addEventListener("lr-after-show", () => reachedRow++);
+    await dropdown.show();
+    await waitUntil(() => dropdown.open && reachedRow > 0, "the meta-slot dropdown opened");
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await el.updateComplete;
+    expect(menuOpen(el), "a meta-slot overlay does not set base-menu-open").to.equal(false);
+    expect(baseEl(el).getAttribute("part")).to.equal("base");
+    if (supportsCustomStateSelector()) {
+      expect(el.matches(":state(menu-open)"), "nor the menu-open state").to.equal(false);
+    }
+    await dropdown.hide({ focusTrigger: false });
+  });
+
+  it("clears on disconnect and restores on reconnect while the menu stays open", async () => {
+    const { el, dropdown } = await itemWithDropdown();
+    await dropdown.show();
+    await waitUntil(() => menuOpen(el));
+    const parent = el.parentNode!;
+    el.remove();
+    await el.updateComplete;
+    expect(menuOpen(el), "a detached row drops its transient menu-open state").to.equal(false);
+    parent.appendChild(el);
+    await waitUntil(
+      () => !dropdown.open || menuOpen(el),
+      "a row reconnected with its menu still open is menu-open again"
+    );
+    if (dropdown.open) await dropdown.hide({ focusTrigger: false });
+    await waitUntil(() => !menuOpen(el));
+  });
+
+  it("is accessible while its actions menu is open", async () => {
+    const { el, dropdown } = await itemWithDropdown();
+    await dropdown.show();
+    await waitUntil(() => menuOpen(el));
+    await expect(el).to.be.accessible();
+    await dropdown.hide({ focusTrigger: false });
+  });
+});

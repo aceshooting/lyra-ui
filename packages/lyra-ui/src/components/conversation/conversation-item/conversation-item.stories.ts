@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './conversation-item.js';
+import '../../overlays/overlay/dropdown.js';
+import '../../layout/menu/menu.js';
+import '../../layout/menu/menu-item.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const storyLocale = (): string => document.documentElement.lang || navigator.language;
@@ -312,6 +315,48 @@ export const ActiveIndicator: Story = {
         style="--lr-conversation-item-active-indicator-color: var(--lr-color-warning); --lr-conversation-item-active-indicator-width: var(--lr-size-4px);"
       ></lr-conversation-item>
       <lr-conversation-item label="Inactive row" excerpt="No indicator is rendered while inactive."></lr-conversation-item>
+    </nav>
+  `,
+};
+
+/** A trigger revealed on row hover or focus keys on `:state(menu-open)` too: the menu opens into the
+ *  browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on the row
+ *  while the pointer or focus is inside it. The row also keeps its hover tint while its menu is
+ *  open (`base` then carries `base-menu-open`). */
+export const MenuOpenState: Story = {
+  name: 'Hover-revealed menu (menu-open state)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Hover a row to reveal its menu trigger, open the menu, then move the pointer into it or anywhere else: the trigger stays visible and the row keeps its hover tint until the menu closes, because the reveal also keys on `:state(menu-open)`.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .menu-open-story .row-menu {
+        opacity: 0;
+      }
+      .menu-open-story lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu {
+        opacity: 1;
+      }
+    </style>
+    <nav class="menu-open-story" style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
+      ${['Quarterly planning', 'Release checklist', 'Support escalation'].map(
+        (label) => html`
+          <lr-conversation-item label=${label} excerpt="Hover me, then open my menu." .timestamp=${new Date()}>
+            <lr-dropdown class="row-menu" slot="actions" placement="bottom-end">
+              <button slot="trigger" type="button" aria-label=${`Actions for ${label}`}>⋮</button>
+              <lr-menu label=${`Actions for ${label}`}>
+                <lr-menu-item value="rename">Rename</lr-menu-item>
+                <lr-menu-item value="archive">Archive</lr-menu-item>
+                <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+              </lr-menu>
+            </lr-dropdown>
+          </lr-conversation-item>
+        `
+      )}
     </nav>
   `,
 };

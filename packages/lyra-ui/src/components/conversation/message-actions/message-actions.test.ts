@@ -1408,3 +1408,82 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
     }
   });
 });
+
+// A slotted menu opened from a message in a virtualized transcript sits in the browser top layer,
+// where Chromium and WebKit stop matching `:focus-within` on the toolbar while focus is inside the
+// menu. `reveal-on-interaction` must not hide the trigger of a menu that is still open.
+describe("reveal-on-interaction with a slotted menu", () => {
+  afterEach(async () => {
+    const { resetMouse } = await import("../../../../test/wtr-mouse.js");
+    await resetMouse();
+  });
+
+  it("stays revealed while a menu opened from the toolbar is open, even after the pointer leaves the message", async () => {
+    const { hoverUntilMatched, sendMouse } = await import("../../../../test/wtr-mouse.js");
+    await import("../../layout/virtual-list/virtual-list.js");
+    await import("../../overlays/overlay/dropdown.js");
+    await import("../../layout/menu/menu.js");
+    await import("../../layout/menu/menu-item.js");
+    const list = (await fixture(html`
+      <lr-virtual-list style="--lr-virtual-list-height:300px; inline-size:420px"></lr-virtual-list>
+    `)) as HTMLElement & {
+      items: unknown[];
+      renderItem: (item: unknown) => unknown;
+      updateComplete: Promise<unknown>;
+    };
+    list.renderItem = (item: unknown) => html`
+      <div class="message" data-id=${String(item)} style="padding:8px">
+        Message ${String(item)}
+        <lr-message-actions reveal-on-interaction>
+          <lr-dropdown placement="bottom-start" style="--lr-transition-fast:0ms">
+            <button slot="trigger" type="button" aria-label="More for ${String(item)}">⋮</button>
+            <lr-menu label="More">
+              <lr-menu-item value="share">Share</lr-menu-item>
+              <lr-menu-item value="report">Report</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>
+        </lr-message-actions>
+      </div>`;
+    list.items = ["a", "b"];
+    await list.updateComplete;
+    await waitUntil(() => list.shadowRoot!.querySelector('.message[data-id="a"] lr-message-actions'));
+    const message = list.shadowRoot!.querySelector<HTMLElement>('.message[data-id="a"]')!;
+    const actions = message.querySelector("lr-message-actions") as LyraMessageActions;
+    await actions.updateComplete;
+    const dropdown = actions.querySelector("lr-dropdown") as HTMLElement & {
+      open: boolean;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
+    const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+    await hoverUntilMatched(message, "the pointer reached the message");
+    await waitUntil(() => actions.hasAttribute("data-revealed"), "hovering the message reveals the toolbar");
+    const triggerRect = trigger.getBoundingClientRect();
+    await sendMouse({
+      type: "click",
+      position: [
+        Math.round(triggerRect.left + triggerRect.width / 2),
+        Math.round(triggerRect.top + triggerRect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => dropdown.open && popup.style.left !== "" && popup.getBoundingClientRect().height > 0,
+      "the menu opened"
+    );
+    await sendMouse({ type: "move", position: [700, 580] });
+    await waitUntil(() => !message.matches(":hover"), "the pointer left the message");
+    await aTimeout(50);
+    expect(dropdown.open, "moving the pointer away does not close the menu").to.equal(true);
+    expect(
+      actions.hasAttribute("data-revealed"),
+      "the toolbar stays revealed while its menu is open"
+    ).to.equal(true);
+
+    await dropdown.hide({ focusTrigger: false });
+    await waitUntil(
+      () => actions.hasAttribute("data-revealed") === actions.matches(":focus-within"),
+      "closing the menu hands the reveal back to hover and focus"
+    );
+  });
+});

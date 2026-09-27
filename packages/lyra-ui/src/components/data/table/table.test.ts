@@ -2844,6 +2844,168 @@ for (const extraColumn of ['expansion', 'total', 'both'] as const) {
   }
 }
 
+/** Counts flips of `[part='base']`'s priority-hide attributes and detaches `el` once they pass
+ *  `limit`. A hide/reveal loop runs entirely in microtasks, starving timers and animation frames
+ *  alike, so without this the regression would wedge the whole file instead of failing one test. */
+function watchPriorityChurn(el: LyraTable<Row>, limit = 16) {
+  let mutations = 0;
+  const observer = new MutationObserver((records) => {
+    mutations += records.length;
+    if (mutations > limit) el.remove();
+  });
+  observer.observe(el.shadowRoot!, {
+    attributes: true,
+    subtree: true,
+    attributeFilter: ['data-hide-priority-low', 'data-hide-priority-medium'],
+  });
+  return { count: () => mutations, disconnect: () => observer.disconnect() };
+}
+
+const nextPriorityFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+it('settles under layout="fixed" when priority header content spills out of its fixed column share', async () => {
+  // `table-layout: fixed` sizes every column from the allocation, not from its content, so these
+  // 300px/350px headers spill out of an even ~100px share instead of widening their columns. The
+  // table's own box then always matches the container, and a reconstruction of the fully-visible
+  // width from those shares re-admits the very columns that just overflowed.
+  const el = await fixture<LyraTable<Row>>(
+    html`<lr-table layout="fixed" style="display: block; inline-size: 300px;"></lr-table>`
+  );
+  const churn = watchPriorityChurn(el);
+  try {
+    el.columns = priorityColumns;
+    el.rows = rows;
+    for (let frame = 0; frame < 6; frame++) {
+      await nextPriorityFrame();
+      expect(el.isConnected, 'priority hiding must settle without a hide/reveal loop').to.be.true;
+    }
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const low = el.shadowRoot!.querySelector<HTMLElement>('th[data-priority="low"]')!;
+    expect(el.hasHiddenPriorityColumns).to.be.true;
+    expect(getComputedStyle(low).display).to.equal('none');
+    const settled = churn.count();
+    const settledMedium = base.hasAttribute('data-hide-priority-medium');
+    for (let frame = 0; frame < 6; frame++) {
+      await nextPriorityFrame();
+      expect(churn.count(), 'the settled decision must not flip on later layout passes').to.equal(settled);
+      expect(base.hasAttribute('data-hide-priority-low')).to.be.true;
+      expect(base.hasAttribute('data-hide-priority-medium')).to.equal(settledMedium);
+    }
+
+    // A real allocation change is still honored in both directions.
+    el.style.inlineSize = '2400px';
+    await waitUntil(() => !el.hasHiddenPriorityColumns, 'priority columns did not return after widening');
+    for (const header of el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-priority]')) {
+      expect(getComputedStyle(header).display).to.not.equal('none');
+    }
+    el.style.inlineSize = '300px';
+    await waitUntil(() => el.hasHiddenPriorityColumns, 'priority columns did not hide again after narrowing');
+    for (let frame = 0; frame < 3; frame++) {
+      await nextPriorityFrame();
+      expect(el.isConnected, 'narrowing again must settle without a hide/reveal loop').to.be.true;
+    }
+    expect(getComputedStyle(low).display).to.equal('none');
+  } finally {
+    churn.disconnect();
+  }
+});
+
+it('settles when revealing a priority column shrinks the table allocation itself', async () => {
+  // Models a page scrollbar that only appears while every column renders: the host is narrower
+  // while nothing is hidden than while a tier is. The full set overflows the narrower allocation,
+  // so the only stable answer is to keep the tier hidden rather than re-admit it each time hiding
+  // it hands the room back.
+  const wrapper = await fixture(html`<div>
+    <style>
+      .shrinks-on-reveal {
+        display: block;
+        inline-size: var(--revealed-inline-size);
+      }
+      .shrinks-on-reveal[has-hidden-priority-columns] {
+        inline-size: var(--hidden-inline-size);
+      }
+    </style>
+    <lr-table
+      class="shrinks-on-reveal"
+      priority-columns-visible
+      style="--revealed-inline-size: 100px; --hidden-inline-size: 100px"
+      .columns=${[
+        { key: 'name', label: 'Name', headerCell: forcedWidthHeaderCell(200, 'Name'), cell: (row: Row) => row.name },
+        { key: 'id', label: 'Id', priority: 'low', headerCell: forcedWidthHeaderCell(200, 'Id'), cell: (row: Row) => row.id },
+      ] satisfies TableColumn<Row>[]}
+      .rows=${rows}
+    ></lr-table>
+  </div>`);
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  await el.updateComplete;
+  await nextPriorityFrame();
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  // Derived from rendered geometry so font metrics and borders can vary by engine.
+  const fullWidth = base.scrollWidth;
+  const borderWidth = el.getBoundingClientRect().width - base.clientWidth;
+  el.style.setProperty('--revealed-inline-size', `${fullWidth - 12 + borderWidth}px`);
+  el.style.setProperty('--hidden-inline-size', `${fullWidth + 12 + borderWidth}px`);
+  await nextPriorityFrame();
+
+  const churn = watchPriorityChurn(el);
+  try {
+    el.priorityColumnsVisible = false;
+    for (let frame = 0; frame < 6; frame++) {
+      await nextPriorityFrame();
+      expect(el.isConnected, 'priority hiding must settle without a hide/reveal loop').to.be.true;
+    }
+    expect(el.hasHiddenPriorityColumns).to.be.true;
+    const settled = churn.count();
+    for (let frame = 0; frame < 4; frame++) {
+      await nextPriorityFrame();
+      expect(churn.count(), 'the settled decision must not flip on later layout passes').to.equal(settled);
+    }
+    const low = el.shadowRoot!.querySelector<HTMLElement>('th[data-priority="low"]')!;
+    expect(getComputedStyle(low).display).to.equal('none');
+
+    // Once the allocation genuinely grows past both sizes, the column returns.
+    el.style.setProperty('--hidden-inline-size', '1200px');
+    el.style.setProperty('--revealed-inline-size', '1200px');
+    await waitUntil(() => !el.hasHiddenPriorityColumns, 'the column did not return after widening');
+    expect(getComputedStyle(low).display).to.not.equal('none');
+  } finally {
+    churn.disconnect();
+  }
+});
+
+it('keeps hiding and re-admitting declared-width priority columns by their declared widths', async () => {
+  // Declared widths already select `table-layout: fixed`, and their column boxes -- unlike an even
+  // share -- do not depend on the allocation, so this path must keep its existing thresholds.
+  const el = await fixture<LyraTable<Row>>(html`<lr-table style="display: block; inline-size: 500px;"></lr-table>`);
+  const churn = watchPriorityChurn(el);
+  try {
+    el.columns = [
+      { key: 'name', label: 'Name', width: '200px', cell: (row) => row.name },
+      { key: 'score', label: 'Score', width: '200px', cell: (row) => row.score },
+      { key: 'id', label: 'Id', priority: 'low', width: '200px', cell: (row) => row.id },
+    ];
+    el.rows = rows;
+    await waitUntil(() => el.hasHiddenPriorityColumns, 'the low column did not hide in a narrow container');
+    const low = el.shadowRoot!.querySelector<HTMLElement>('th[data-priority="low"]')!;
+    expect(getComputedStyle(low).display).to.equal('none');
+    for (let frame = 0; frame < 4; frame++) {
+      await nextPriorityFrame();
+      expect(el.isConnected).to.be.true;
+      expect(el.hasHiddenPriorityColumns).to.be.true;
+    }
+
+    el.style.inlineSize = '800px';
+    await waitUntil(() => !el.hasHiddenPriorityColumns, 'the low column did not return after widening');
+    expect(getComputedStyle(low).display).to.not.equal('none');
+
+    el.style.inlineSize = '500px';
+    await waitUntil(() => el.hasHiddenPriorityColumns, 'the low column did not hide again after narrowing');
+    expect(churn.count()).to.equal(3);
+  } finally {
+    churn.disconnect();
+  }
+});
+
 it('swaps the reveal-columns-button label between revealColumnsLabel and hideColumnsLabel on toggle', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;

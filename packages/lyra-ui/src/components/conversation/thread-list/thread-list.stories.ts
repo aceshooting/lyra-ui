@@ -148,6 +148,50 @@ export const ShortListRowActions: Story = {
     </div>`,
 };
 
+/** A row-menu trigger revealed on row hover or focus. The open menu sits in the browser top layer,
+ *  where Chromium and WebKit stop matching `:hover`/`:focus-within` on the row, so the reveal also
+ *  keys on `row-item-base-menu-open` -- carried through an inherited custom property, since
+ *  `::part()` cannot be followed by a descendant. The trigger stays visible and the row keeps its
+ *  hover tint until the menu closes, wherever the pointer or focus goes meanwhile. */
+export const HoverRevealedRowMenu: Story = {
+  render: () =>
+    html`<style>
+        .hover-revealed-row-menu lr-thread-list::part(row-item-base):hover,
+        .hover-revealed-row-menu lr-thread-list::part(row-item-base):focus-within,
+        .hover-revealed-row-menu lr-thread-list::part(row-item-base-menu-open) {
+          --story-row-actions-opacity: 1;
+        }
+        .hover-revealed-row-menu lr-thread-list::part(row-actions) {
+          opacity: var(--story-row-actions-opacity, 0);
+        }
+      </style>
+      <div
+        class="hover-revealed-row-menu"
+        style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);"
+      >
+        <lr-thread-list
+          active-conversation-id="2"
+          .threads=${threads}
+          .renderActions=${(thread: LyraChatThread) => html`
+            <lr-dropdown placement="bottom-end">
+              <button
+                slot="trigger"
+                aria-label=${`Actions for ${thread.title}`}
+                style="border:none;background:none;cursor:pointer;font-size:1.25rem;line-height:1;padding:0.25rem;"
+              >
+                ⋮
+              </button>
+              <lr-menu label="Conversation actions">
+                <lr-menu-item value="rename">Rename</lr-menu-item>
+                <lr-menu-item value="archive">Archive</lr-menu-item>
+                <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+              </lr-menu>
+            </lr-dropdown>
+          `}
+        ></lr-thread-list>
+      </div>`,
+};
+
 export const WithArchivedShown: Story = {
   render: () =>
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">

@@ -669,3 +669,96 @@ describe('compact density and the card part', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// A node menu opens into the browser top layer (the canvas translates and clips its nodes), where
+// Chromium and WebKit stop matching `:hover`/`:focus-within` on the node while the pointer or focus
+// is inside that menu. The hover/focus-revealed toolbar must not hide the trigger of its open menu.
+describe('toolbar menu', () => {
+  afterEach(async () => {
+    const { resetMouse } = await import('../../../../test/wtr-mouse.js');
+    await resetMouse();
+  });
+
+  it('keeps the toolbar revealed while a menu opened from it is open, wherever the pointer goes', async () => {
+    const { waitUntil } = await import('@open-wc/testing');
+    const { hoverUntilMatched, sendMouse } = await import('../../../../test/wtr-mouse.js');
+    await import('../flow-canvas/flow-canvas.js');
+    await import('../../overlays/overlay/dropdown.js');
+    await import('../../layout/menu/menu.js');
+    await import('../../layout/menu/menu-item.js');
+    // Bind the node data before the canvas connects: an authored `node-id` child that matches no
+    // node yet is a (strict-console) dev warning.
+    const canvas = (await fixture(html`
+      <lr-flow-canvas
+        style="inline-size:420px; block-size:300px"
+        .nodes=${[{ id: 'a', position: { x: 10, y: 10 } }]}
+      >
+        <lr-flow-node node-id="a" heading="Fetch">
+          Body
+          <lr-dropdown slot="toolbar" placement="bottom-end" style="--lr-transition-fast:0ms">
+            <button slot="trigger" type="button" aria-label="Node actions">⋮</button>
+            <lr-menu label="Node actions">
+              <lr-menu-item value="run">Run</lr-menu-item>
+              <lr-menu-item value="skip">Skip</lr-menu-item>
+              <lr-menu-item value="delete">Delete</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>
+        </lr-flow-node>
+      </lr-flow-canvas>
+    `)) as HTMLElement & { updateComplete: Promise<unknown> };
+    await canvas.updateComplete;
+    const node = canvas.querySelector('lr-flow-node') as LyraFlowNode;
+    await node.updateComplete;
+    const toolbar = node.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+    const dropdown = node.querySelector('lr-dropdown') as HTMLElement & {
+      open: boolean;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
+    const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    const items = [...dropdown.querySelectorAll<HTMLElement>('lr-menu-item')];
+    expect(getComputedStyle(toolbar).opacity).to.equal('0');
+
+    await hoverUntilMatched(trigger, 'the pointer reached the toolbar trigger');
+    await waitUntil(() => getComputedStyle(toolbar).opacity === '1', 'hovering the node reveals its toolbar');
+    const triggerRect = trigger.getBoundingClientRect();
+    await sendMouse({
+      type: 'click',
+      position: [
+        Math.round(triggerRect.left + triggerRect.width / 2),
+        Math.round(triggerRect.top + triggerRect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => dropdown.open && popup.style.left !== '' && popup.getBoundingClientRect().height > 0,
+      'the node menu opened'
+    );
+    const last = items[items.length - 1]!;
+    const lastRect = last.getBoundingClientRect();
+    expect(lastRect.top, 'the last item sits below the node card').to.be.greaterThan(
+      node.getBoundingClientRect().bottom
+    );
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(lastRect.left + lastRect.width / 2), Math.round(lastRect.top + lastRect.height / 2)],
+    });
+    await waitUntil(() => last.matches(':hover'), 'the pointer reached the open menu');
+    await waitUntil(
+      () => getComputedStyle(toolbar).opacity === '1',
+      'the toolbar stays revealed while the pointer is inside its open menu'
+    );
+    await sendMouse({ type: 'move', position: [700, 580] });
+    await waitUntil(() => !node.matches(':hover') && !last.matches(':hover'));
+    expect(
+      getComputedStyle(toolbar).opacity,
+      'the toolbar stays revealed while its menu is open, even with the pointer elsewhere'
+    ).to.equal('1');
+    expect(dropdown.open).to.equal(true);
+
+    await dropdown.hide({ focusTrigger: false });
+    await waitUntil(
+      () => getComputedStyle(toolbar).opacity === (node.matches(':hover, :focus-within') ? '1' : '0'),
+      'closing the menu hands the reveal back to hover and focus'
+    );
+  });
+});

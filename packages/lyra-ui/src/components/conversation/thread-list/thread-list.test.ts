@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { nothing } from "lit";
 import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import "./thread-list.js";
 import "../../overlays/chip/chip.js";
 import "../../layout/menu/menu.js";
@@ -1666,6 +1667,246 @@ describe("data mode", () => {
         '.row-wrapper[data-thread-id="t1"]'
       )!;
       expect(wrapper.querySelector(".custom-action")).to.exist;
+    });
+  });
+
+  // A renderActions menu opens into the browser top layer. Chromium and WebKit then stop matching
+  // `:hover` and `:focus-within` on the row while the pointer or focus is inside that popup, so a
+  // row that reveals its menu trigger on hover/focus used to hide the trigger of the menu the user
+  // was in -- and a `display`-based reveal also hid the menu itself, because a positioned popup is
+  // concealed once its trigger stops being measurable. `row-item-base-menu-open` is the row state
+  // that stays set for as long as the menu is open, however it was opened.
+  describe("row menu-open state", () => {
+    const menuThreads = [
+      { id: "m1", title: "First thread", timestamp: now },
+      { id: "m2", title: "Second thread", timestamp: now },
+      { id: "m3", title: "Third thread", timestamp: now },
+    ];
+
+    async function menuRowFixture(reveal: "opacity" | "display") {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div
+          class="menu-open-${reveal}"
+          style="block-size:400px; inline-size:320px; display:flex; flex-direction:column"
+        >
+          <style>
+            /* The row's hover tint transitions; read it settled. */
+            .menu-open-opacity lr-thread-list::part(row-item-base),
+            .menu-open-display lr-thread-list::part(row-item-base) {
+              transition: none;
+            }
+            .menu-open-opacity lr-thread-list::part(row-item-base):hover,
+            .menu-open-opacity lr-thread-list::part(row-item-base):focus-within,
+            .menu-open-opacity lr-thread-list::part(row-item-base-menu-open) {
+              --test-row-actions-opacity: 1;
+            }
+            .menu-open-opacity lr-thread-list::part(row-actions) {
+              opacity: var(--test-row-actions-opacity, 0);
+            }
+            .menu-open-display lr-thread-list::part(row-item-base):hover,
+            .menu-open-display lr-thread-list::part(row-item-base):focus-within,
+            .menu-open-display lr-thread-list::part(row-item-base-menu-open) {
+              --test-row-actions-display: inline-flex;
+            }
+            .menu-open-display lr-thread-list::part(row-actions) {
+              display: var(--test-row-actions-display, none);
+            }
+          </style>
+          <lr-thread-list
+            grouping="none"
+            style="flex:1; min-block-size:0"
+            .threads=${menuThreads}
+            .renderActions=${(thread: { id: string }) => html`
+              <lr-dropdown placement="bottom-end" style="--lr-transition-fast:0ms">
+                <button slot="trigger" type="button" aria-label="Actions for ${thread.id}">⋮</button>
+                <lr-menu label="Conversation actions">
+                  <lr-menu-item value="rename">Rename</lr-menu-item>
+                  <lr-menu-item value="archive">Archive</lr-menu-item>
+                  <lr-menu-item value="delete">Delete</lr-menu-item>
+                </lr-menu>
+              </lr-dropdown>
+            `}
+          ></lr-thread-list>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+      const item = dataRow(el, "m1");
+      const base = item.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      const actions = item.querySelector<HTMLElement>('[part~="row-actions"]')!;
+      const dropdown = item.querySelector("lr-dropdown") as LyraDropdown;
+      const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
+      const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      const menuItems = [...dropdown.querySelectorAll<HTMLElement>("lr-menu-item")];
+      return { el, list, item, base, actions, dropdown, trigger, popup, menuItems };
+    }
+
+    const hasMenuOpenPart = (base: HTMLElement): boolean =>
+      base.part.contains("base-menu-open");
+
+    /** Moves the real pointer onto `target` and waits until the browser reports it hovered,
+     *  without the reset-to-origin `hoverUntilMatched()` performs between attempts. */
+    async function movePointerOnto(target: Element, message: string): Promise<void> {
+      for (let attempt = 0; attempt < 4 && !target.matches(":hover"); attempt += 1) {
+        const rect = target.getBoundingClientRect();
+        await sendMouse({
+          type: "move",
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(() => target.matches(":hover"), message, { timeout: 1000 }).catch(
+          () => undefined
+        );
+      }
+      expect(target.matches(":hover"), message).to.equal(true);
+    }
+
+    afterEach(async () => {
+      await resetMouse();
+    });
+
+    it("keeps a hover-revealed trigger visible and the row hover-tinted while the pointer is inside its open top-layer menu", async () => {
+      const { item, base, actions, dropdown, trigger, popup, menuItems } =
+        await menuRowFixture("opacity");
+      const restingBackground = getComputedStyle(base).backgroundColor;
+      expect(getComputedStyle(actions).opacity).to.equal("0");
+      expect(hasMenuOpenPart(base)).to.equal(false);
+
+      await hoverUntilMatched(trigger, "the pointer reached the row's menu trigger");
+      await waitUntil(
+        () => getComputedStyle(actions).opacity === "1",
+        "hovering the row reveals its menu trigger"
+      );
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== restingBackground,
+        "hovering the row paints its hover tint"
+      );
+      const hoverBackground = getComputedStyle(base).backgroundColor;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      await sendMouse({
+        type: "click",
+        position: [
+          Math.round(triggerRect.left + triggerRect.width / 2),
+          Math.round(triggerRect.top + triggerRect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => dropdown.open && popup.style.left !== "" && popup.getBoundingClientRect().height > 0,
+        "the row menu opened"
+      );
+
+      const deleteItem = menuItems[2]!;
+      const rowRect = item.getBoundingClientRect();
+      const deleteRect = deleteItem.getBoundingClientRect();
+      expect(deleteRect.top, "Delete sits below the row's own hover box").to.be.greaterThan(
+        rowRect.bottom
+      );
+      await movePointerOnto(deleteItem, "the pointer reached the open menu's Delete item");
+
+      await waitUntil(
+        () => getComputedStyle(actions).opacity === "1",
+        "the trigger of the open menu stays revealed while the pointer is inside the menu"
+      );
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor === hoverBackground,
+        "the row keeps its hover tint while the pointer is inside its menu"
+      );
+      expect(
+        hasMenuOpenPart(base),
+        "the row carries base-menu-open (row-item-base-menu-open) while its menu is open"
+      ).to.equal(true);
+      expect(dropdown.open, "moving into the menu does not close it").to.equal(true);
+
+      await dropdown.hide({ focusTrigger: false });
+      await waitUntil(() => !hasMenuOpenPart(base), "closing the menu clears the row state");
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor === restingBackground,
+        "the hover tint goes once the menu closes with the pointer outside the row"
+      );
+      // Once the state clears, the reveal follows the row's own pseudo-classes again. Where focus
+      // lands after a pointer-driven close is engine-specific (WebKit keeps it in the row).
+      expect(getComputedStyle(actions).opacity).to.equal(
+        base.matches(":hover, :focus-within") ? "1" : "0"
+      );
+    });
+
+    it("keeps a display-revealed trigger laid out so its open menu stays visible once the pointer leaves the row", async () => {
+      const { item, base, actions, dropdown, trigger, popup, menuItems } =
+        await menuRowFixture("display");
+      expect(getComputedStyle(actions).display).to.equal("none");
+
+      await hoverUntilMatched(item, "the pointer reached the row");
+      await waitUntil(
+        () => getComputedStyle(actions).display !== "none",
+        "hovering the row lays out its menu trigger"
+      );
+      const triggerRect = trigger.getBoundingClientRect();
+      await sendMouse({
+        type: "click",
+        position: [
+          Math.round(triggerRect.left + triggerRect.width / 2),
+          Math.round(triggerRect.top + triggerRect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => dropdown.open && popup.style.left !== "" && popup.getBoundingClientRect().height > 0,
+        "the row menu opened"
+      );
+
+      const deleteItem = menuItems[2]!;
+      expect(deleteItem.getBoundingClientRect().top).to.be.greaterThan(
+        item.getBoundingClientRect().bottom
+      );
+      await movePointerOnto(
+        deleteItem,
+        "the open menu stays visible and hit-testable once the pointer leaves the row for it"
+      );
+      expect(getComputedStyle(popup).visibility).to.equal("visible");
+      expect(getComputedStyle(actions).display).to.not.equal("none");
+      expect(hasMenuOpenPart(base)).to.equal(true);
+      expect(dropdown.open).to.equal(true);
+      await dropdown.hide({ focusTrigger: false });
+    });
+
+    it("keeps a focus-revealed trigger visible while keyboard focus is inside the open menu, and arrow keys stay in that menu", async () => {
+      const { list, base, actions, dropdown, trigger, menuItems } =
+        await menuRowFixture("opacity");
+      const focused = (target: Element): boolean => list.shadowRoot!.activeElement === target;
+
+      await focusByKeyboard(trigger);
+      await waitUntil(
+        () => getComputedStyle(actions).opacity === "1",
+        "keyboard focus on the trigger reveals it"
+      );
+      await sendKeys({ press: "Enter" });
+      await waitUntil(
+        () => dropdown.open && focused(menuItems[0]!),
+        "Enter opens the row menu and focuses its first item"
+      );
+      await waitUntil(
+        () => getComputedStyle(actions).opacity === "1",
+        "the trigger stays revealed while focus is inside its open menu"
+      );
+      expect(
+        hasMenuOpenPart(base),
+        "the row carries base-menu-open while keyboard focus is inside its menu"
+      ).to.equal(true);
+
+      await sendKeys({ press: "ArrowDown" });
+      await waitUntil(
+        () => focused(menuItems[1]!),
+        "ArrowDown moves to the next menu item instead of the next conversation row"
+      );
+      expect(dropdown.open).to.equal(true);
+      expect(hasMenuOpenPart(base)).to.equal(true);
+
+      await sendKeys({ press: "Escape" });
+      await waitUntil(() => !dropdown.open, "Escape closes the menu");
+      await waitUntil(() => focused(trigger), "Escape returns focus to the trigger");
+      await waitUntil(() => !hasMenuOpenPart(base), "closing the menu clears the row state");
+      expect(getComputedStyle(actions).opacity).to.equal("1");
     });
   });
 
