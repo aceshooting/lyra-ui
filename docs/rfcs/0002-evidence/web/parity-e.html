@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>tokens-once parity (revised proposal)</title>
+    <script>
+      // theme=0 omits theme.css (zero-configuration page). design-tokens.css has no :root default, so
+      // loading it only affects its own .lr-token-* / [data-lr-design-token-mode] scopes.
+      const params = new URLSearchParams(location.search);
+      if (params.get('theme') !== '0') document.write('<link rel="stylesheet" href="/dist-a/theme.css" />');
+      // shadcn=1 adds the deprecated fixed shadcn look, which answers to .light and .dark anywhere.
+      if (params.get('shadcn') === '1') document.write('<link rel="stylesheet" href="/dist-a/themes/shadcn.css" />');
+      document.write('<link rel="stylesheet" href="/dist-a/styles/design-tokens.css" />');
+      // app=motion|color: unlayered application CSS retuning published outputs on :root.
+      const APP = {
+        motion: ':root{--lr-duration-fast:400ms;--lr-duration-base:400ms;--lr-transition-fast:400ms ease;--lr-transition-base:400ms ease;--lr-transition-interactive:background-color 400ms ease,color 400ms ease,border-color 400ms ease}',
+        color: ':root{--lr-color-surface:#fafafa;--lr-color-text:#333333;--lr-color-border:#ff0000;--lr-focus-ring-color:#ff0000;--lr-color-brand:#ff00ff;--lr-color-mix-partner:#00ff00}',
+      };
+      if (APP[params.get('app')]) document.write(`<style>${APP[params.get('app')]}</style>`);
+    </script>
+    <style>
+      body { margin: 0; font: 14px system-ui, sans-serif; }
+      section { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; align-items: center; inline-size: 1200px; }
+      lr-card, lr-input { inline-size: 12rem; }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      const variant = params.get('variant');
+      if (params.get('foreign') === 'always') globalThis.__spikeForeignAdopt = 'always';
+      if (params.get('root')) document.documentElement.setAttribute('data-lr-theme', params.get('root'));
+      const UNIT = (hostAttrs = '') => [
+        `<lr-button variant="brand" ${hostAttrs}>Save</lr-button>`,
+        `<lr-input label="Name" placeholder="Type here" ${hostAttrs}></lr-input>`,
+        `<lr-card ${hostAttrs}>Card body text</lr-card>`,
+        `<lr-badge variant="success" ${hostAttrs}>New</lr-badge>`,
+        `<lr-icon name="check" label="Done" ${hostAttrs}></lr-icon>`,
+        `<lr-switch checked ${hostAttrs}>Notify</lr-switch>`,
+        `<lr-graph-legend label="Types" ${hostAttrs}></lr-graph-legend>`,
+      ].join('');
+      const override = '--lr-theme-color-brand-fill-loud:#8b008b;--lr-theme-color-surface-default:#fffbe6;--lr-theme-color-text-normal:#3b2f00;--lr-theme-space-m:1.25rem';
+      const feed = '--lr-focus-ring-color:#ff0000;--lr-color-brand-fill-loud:#800080;--lr-color-border:#ff0000';
+      const SECTIONS = {
+        'default': `<section>${UNIT()}</section>`,
+        'dark-attr-scope': `<section data-lr-theme="dark">${UNIT()}</section>`,
+        'dark-class-scope': `<section class="lr-dark">${UNIT()}</section>`,
+        'light-class-scope': `<section class="lr-light">${UNIT()}</section>`,
+        'light-island-in-dark': `<section class="lr-dark"><section class="lr-light">${UNIT()}</section></section>`,
+        'dark-on-host': `<section>${UNIT('data-lr-theme="dark"')}</section>`,
+        'neutral-scope': `<section data-lr-theme-scope>${UNIT()}</section>`,
+        'neutral-in-dark-class': `<section class="lr-dark"><div data-lr-theme-scope>${UNIT()}</div></section>`,
+        'neutral-in-dark-attr': `<section data-lr-theme="dark"><div data-lr-theme-scope>${UNIT()}</div></section>`,
+        'marked-host-in-dark': `<section class="lr-dark">${UNIT('data-lr-theme-scope')}</section>`,
+        'marked-input-wrapper-in-dark': `<section class="lr-dark"><div data-lr-theme-scope style="${override}">${UNIT()}</div></section>`,
+        'theme-input-on-plain-ancestor': `<section style="${override}">${UNIT()}</section>`,
+        'theme-input-on-marked-scope': `<section data-lr-theme-scope style="${override}">${UNIT()}</section>`,
+        'theme-input-on-host': `<section>${UNIT(`style="${override}"`)}</section>`,
+        'theme-input-on-marked-host': `<section>${UNIT(`data-lr-theme-scope style="${override}"`)}</section>`,
+        'output-token-on-ancestor': `<section style="--lr-color-brand-fill-loud:#8b008b;--lr-color-text:#8b008b">${UNIT()}</section>`,
+        'output-feeding-on-host': `<section>${UNIT(`style="${feed}"`)}</section>`,
+        'output-feeding-on-marked-host': `<section>${UNIT(`data-lr-theme-scope style="${feed}"`)}</section>`,
+        'design-token-dark-class': `<section class="lr-token-dark">${UNIT()}</section>`,
+        'design-token-dark-attr-nested': `<section data-lr-design-token-mode="dark"><div data-lr-theme-scope>${UNIT()}</div></section>`,
+        'rtl': `<section dir="rtl">${UNIT()}</section>`,
+        'shadcn-dark-region': `<section class="dark">${UNIT()}</section>`,
+        'shadcn-light-in-dark': `<section class="dark"><div class="light">${UNIT()}</div></section>`,
+        'foreign-root': `<section><app-shell data-kind="plain"></app-shell></section>`,
+        'foreign-root-dark-host': `<section><app-shell data-kind="dark-host"></app-shell></section>`,
+        'foreign-root-dark-region': `<section><app-shell data-kind="dark-region"></app-shell></section>`,
+        'foreign-root-neutral-in-dark': `<section class="lr-dark"><app-shell data-kind="neutral"></app-shell></section>`,
+        'foreign-host-inputs': `<section><app-themed></app-themed></section>`,
+        'foreign-host-inputs-marked': `<section><app-themed data-lr-theme-scope></app-themed></section>`,
+        'lyra-subclass-dark-region': `<section><app-lyra-panel></app-lyra-panel></section>`,
+      };
+      // An application's own shadow-DOM components (Lit/Stencil style), with Lyra elements inside.
+      const SHELL = {
+        'plain': () => UNIT(),
+        'dark-host': () => UNIT('data-lr-theme="dark"'),
+        'dark-region': () => `<div class="lr-dark">${UNIT()}</div>`,
+        'neutral': () => `<div data-lr-theme-scope>${UNIT()}</div>`,
+      };
+      customElements.define('app-shell', class extends HTMLElement {
+        connectedCallback() { if (!this.shadowRoot) this.attachShadow({ mode: 'open' }).innerHTML = SHELL[this.dataset.kind](); }
+      });
+      customElements.define('app-themed', class extends HTMLElement {
+        connectedCallback() {
+          if (!this.shadowRoot) this.attachShadow({ mode: 'open' }).innerHTML = `<style>:host{display:block;${override}}</style>${UNIT()}`;
+        }
+      });
+      document.body.innerHTML = Object.entries(SECTIONS)
+        .map(([id, html]) => html.replace('<section', `<section id="${id}"`))
+        .join('');
+      await import(`/out/parity-bundle-${variant}.js`);
+      // A consumer subclass of the public LyraElement base (the direct subclass of LitElement).
+      let LyraElement = customElements.get('lr-icon');
+      while (!Object.prototype.hasOwnProperty.call(Object.getPrototypeOf(LyraElement), '_$litElement$')) LyraElement = Object.getPrototypeOf(LyraElement);
+      customElements.define('app-lyra-panel', class extends LyraElement {
+        connectedCallback() {
+          super.connectedCallback();
+          if (!this.filled) { this.filled = true; this.renderRoot.innerHTML = `<div class="lr-dark">${UNIT()}</div>`; }
+        }
+      });
+      /** Lyra elements in a subtree, including inside application shadow roots but not inside Lyra's. */
+      const lyraIn = (root, out = []) => {
+        for (const el of root.querySelectorAll('*')) {
+          if (/^lr-/.test(el.localName)) out.push(el);
+          else if (el.shadowRoot) lyraIn(el.shadowRoot, out);
+        }
+        return out;
+      };
+      const everyLyra = (root, out = []) => {
+        for (const el of root.querySelectorAll('*')) {
+          if (/^lr-/.test(el.localName)) out.push(el);
+          if (el.shadowRoot) everyLyra(el.shadowRoot, out);
+        }
+        return out;
+      };
+      await Promise.all(['lr-button', 'lr-input', 'lr-card', 'lr-badge', 'lr-icon', 'lr-switch', 'lr-graph-legend'].map((t) => customElements.whenDefined(t)));
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+      for (const legend of everyLyra(document)) if (legend.localName === 'lr-graph-legend') legend.types = [{ type: 'Person' }, { type: 'Place' }, { type: 'Thing' }];
+      await Promise.all(everyLyra(document).map((e) => e.updateComplete));
+      document.body.offsetHeight;
+      const PROPS = ['color', 'background-color', 'border-top-color', 'border-top-width', 'border-top-left-radius', 'box-shadow',
+        'outline-color', 'padding-inline-start', 'padding-block-start', 'font-size', 'font-family', 'font-weight', 'gap',
+        'inline-size', 'block-size', 'transition-duration', 'animation-duration', 'color-scheme'];
+      // Resolved token values on each host, including the specialist palette and the composites.
+      const HOST_TOKENS = ['--lr-color-surface', '--lr-color-text', '--lr-color-brand', '--lr-color-brand-fill-loud', '--lr-color-border',
+        '--lr-color-border-subtle', '--lr-focus-ring', '--lr-focus-ring-color', '--lr-color-mix-partner', '--lr-color-surface-overlay',
+        '--lr-shadow-m', '--lr-transition-interactive', '--lr-transition-fast', '--lr-duration-fast', '--lr-space-m',
+        '--lr-graph-cat-1', '--lr-color-chart-1', '--lr-terminal-color-red'];
+      const tidy = (v) => v.trim().replace(/\s+/g, ' ');
+      const signature = (el) => {
+        const hostStyle = getComputedStyle(el);
+        const tokens = `${el.localName}{${HOST_TOKENS.map((n) => tidy(hostStyle.getPropertyValue(n))).join('|')}}`;
+        const nodes = [el, ...(el.shadowRoot ? el.shadowRoot.querySelectorAll('*') : [])];
+        return [tokens, ...nodes.filter((n) => n.localName !== 'style' && n.localName !== 'slot').map((n) => {
+          const cs = getComputedStyle(n);
+          return `${n.localName}:${PROPS.map((p) => cs.getPropertyValue(p)).join('|')}`;
+        })];
+      };
+      /** Let every running transition or animation (media emulation can start some) finish. */
+      window.settle = async () => {
+        const roots = [document, ...everyLyra(document).map((e) => e.shadowRoot).filter(Boolean)];
+        const animations = roots.flatMap((r) => r.getAnimations());
+        await Promise.race([Promise.all(animations.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 3000))]);
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+        return animations.length;
+      };
+      window.paritySignature = () => Object.fromEntries(
+        Object.keys(SECTIONS).map((id) => [id, lyraIn(document.getElementById(id)).map(signature)]),
+      );
+      window.sectionIds = Object.keys(SECTIONS);
+      window.parityReady = true;
+    </script>
+  </body>
+</html>

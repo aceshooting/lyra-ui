@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>tokens-once parity</title>
+    <link rel="stylesheet" href="/dist-a/theme.css" />
+    <style>
+      body { margin: 0; font: 14px system-ui, sans-serif; }
+      section { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; align-items: center; inline-size: 1200px; }
+      lr-card, lr-input { inline-size: 12rem; }
+      /* Ordinary page CSS carries the surface so screenshots show the scope backgrounds. */
+      section { background: var(--lr-theme-color-surface-default); }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const variant = params.get('variant');
+      if (params.get('root')) document.documentElement.setAttribute('data-lr-theme', params.get('root'));
+      const UNIT = (hostAttrs = '') => [
+        `<lr-button variant="brand" ${hostAttrs}>Save</lr-button>`,
+        `<lr-input label="Name" placeholder="Type here" ${hostAttrs}></lr-input>`,
+        `<lr-card ${hostAttrs}>Card body text</lr-card>`,
+        `<lr-badge variant="success" ${hostAttrs}>New</lr-badge>`,
+        `<lr-icon name="check" label="Done" ${hostAttrs}></lr-icon>`,
+        `<lr-switch checked ${hostAttrs}>Notify</lr-switch>`,
+      ].join('');
+      const override = '--lr-theme-color-brand-fill-loud:#8b008b;--lr-theme-color-surface-default:#fffbe6;--lr-theme-color-text-normal:#3b2f00;--lr-theme-space-m:1.25rem';
+      const SECTIONS = {
+        'default': `<section>${UNIT()}</section>`,
+        'dark-attr-scope': `<section data-lr-theme="dark">${UNIT()}</section>`,
+        'dark-class-scope': `<section class="lr-dark">${UNIT()}</section>`,
+        'light-island-in-dark': `<section class="lr-dark"><section class="lr-light">${UNIT()}</section></section>`,
+        'dark-on-host': `<section>${UNIT('data-lr-theme="dark"')}</section>`,
+        'theme-input-on-plain-ancestor': `<section style="${override}">${UNIT()}</section>`,
+        'theme-input-on-marked-scope': `<section data-lr-theme style="${override}">${UNIT()}</section>`,
+        'theme-input-on-host': `<section>${UNIT(`style="${override}"`)}</section>`,
+        'theme-input-on-marked-host': `<section>${UNIT(`data-lr-theme style="${override}"`)}</section>`,
+        'output-token-on-ancestor': `<section style="--lr-color-brand-fill-loud:#8b008b;--lr-color-text:#8b008b">${UNIT()}</section>`,
+        'rtl': `<section dir="rtl">${UNIT()}</section>`,
+      };
+      document.body.innerHTML = Object.entries(SECTIONS)
+        .map(([id, html]) => html.replace('<section', `<section id="${id}"`))
+        .join('');
+      await import(`/out/bundle-${variant}.js`);
+      const all = (root, out = []) => {
+        for (const el of root.querySelectorAll('*')) {
+          if (el.localName.startsWith('lr-')) out.push(el);
+          if (el.shadowRoot) all(el.shadowRoot, out);
+        }
+        return out;
+      };
+      await Promise.all(all(document).map((e) => e.updateComplete));
+      document.body.offsetHeight;
+      const PROPS = ['color', 'background-color', 'border-top-color', 'border-top-width', 'border-top-left-radius', 'box-shadow',
+        'outline-color', 'padding-inline-start', 'padding-block-start', 'font-size', 'font-family', 'font-weight', 'gap',
+        'inline-size', 'block-size', 'transition-duration', 'color-scheme'];
+      const signature = (el) => {
+        const nodes = [el, ...(el.shadowRoot ? el.shadowRoot.querySelectorAll('*') : [])];
+        return nodes.filter((n) => n.localName !== 'style' && n.localName !== 'slot').map((n) => {
+          const cs = getComputedStyle(n);
+          return `${n.localName}:${PROPS.map((p) => cs.getPropertyValue(p)).join('|')}`;
+        });
+      };
+      // Computed on demand, so the runner can (re)apply media emulation after navigation first.
+      window.paritySignature = () => Object.fromEntries(
+        Object.keys(SECTIONS).map((id) => [id, Array.from(document.getElementById(id).querySelectorAll('lr-button,lr-input,lr-card,lr-badge,lr-icon,lr-switch'), signature)]),
+      );
+      window.parityReady = true;
+    </script>
+  </body>
+</html>

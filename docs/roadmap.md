@@ -48,12 +48,13 @@ remain through v23 and can be removed no earlier than v24, through a later `lyra
 A rename onto a name another component already uses widens existing code and therefore lands in
 v22. Event-detail shape changes cannot be aliased: they also land in v22, and the migration script
 reports affected listeners. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change.
+change. See [RFC 0003](rfcs/0003-lyra-v21-migration-profile.md).
 
 ### Themes and styling
 
-1. An RFC, then independent style axes: look, surface (glass), density, mode and accent as separate
-   persisted choices with their own attributes and cascade layer, replacing the single token-preset slot.
+1. Implement [RFC 0001](rfcs/0001-independent-style-axes.md): look, surface (glass), density, mode
+   and accent as separate persisted choices with their own attributes and cascade layer, replacing
+   the single token-preset slot.
 2. Additive token foundations: a radius scale with button and container radius, a fill-relative
    state-layer mix, tonal surface-container steps, a heading font input and a table row-height input.
    Every new input resolves to today's value when unset.
@@ -124,7 +125,8 @@ or a rename onto a name another component already uses, lands in v22.
 
 ### Architecture and packaging
 
-30. Declare design tokens once per document instead of on every element host, after a style-recalc spike.
+30. Implement [RFC 0002](rfcs/0002-tokens-once-per-document.md): declare design tokens once per
+    document instead of on every element host, conditional on its performance release gate.
 31. A package root with no component classes; classes come from their own subpaths.
 32. One registration import path per component.
 33. Remove the `ssr-loader.js` compatibility entry.

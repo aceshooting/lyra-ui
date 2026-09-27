@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>tokens-once spike</title>
+    <link rel="stylesheet" href="/dist-a/theme.css" />
+    <style>
+      body { margin: 0; font: 14px system-ui, sans-serif; }
+      .row, .app-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; align-items: center; }
+      lr-card { inline-size: 12rem; }
+      lr-input { inline-size: 12rem; }
+    </style>
+  </head>
+  <body>
+    <div id="host"></div>
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const variant = params.get('variant');
+      // mix=all: six types. mix=nocard: lr-card derives its accessible text from computed style
+      // during its first update, which forces style recalculation inside the script phase; without
+      // it, "first style+layout" holds the whole initial style cost in every engine.
+      const mix = params.get('mix') ?? 'all';
+      const ALL = {
+        'lr-button': '<lr-button variant="brand">Save</lr-button>',
+        'lr-input': '<lr-input label="Name" placeholder="Type here"></lr-input>',
+        'lr-card': '<lr-card>Card body text</lr-card>',
+        'lr-badge': '<lr-badge variant="success">New</lr-badge>',
+        'lr-icon': '<lr-icon name="check" label="Done"></lr-icon>',
+        'lr-switch': '<lr-switch checked>Notify</lr-switch>',
+      };
+      const TYPES = Object.keys(ALL).filter((t) => mix !== 'nocard' || t !== 'lr-card');
+      const UNIT = TYPES.map((t) => ALL[t]);
+      const frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
+      // scopes=K wraps the rows in K theme-scope elements (an empty data-lr-theme attribute, the
+      // prototype's stand-in for the proposed marker), as chains nested five deep.
+      const scopes = Number(params.get('scopes') ?? 0);
+      // rowScopes=1 marks every row as a theme scope (what a codemod does for per-row inline inputs).
+      const rowScopes = params.get('rowScopes') === '1';
+      // roots=1 puts every row inside its own application shadow root (declarative shadow DOM on a
+      // plain host), as in a Lit or Stencil application whose components contain Lyra elements.
+      const roots = params.get('roots') === '1';
+      // hostScope=1 (variant E only) also makes each such foreign host a scope, as the first draft did.
+      if (params.get('hostScope') === '1') globalThis.__spikeHostScope = true;
+      // foreign=always (variant E only) adopts the layer into every application shadow root that
+      // contains a Lyra element; the default adopts only where a scope needs it.
+      if (params.get('foreign') === 'always') globalThis.__spikeForeignAdopt = 'always';
+
+      const wrapRow = (inner) => roots
+        ? `<div class="app-row"><template shadowrootmode="open">${inner}</template></div>`
+        : `<div class="row"${rowScopes ? ' data-lr-theme-scope' : ''}>${inner}</div>`;
+
+      function markup(n) {
+        const rows = [];
+        let row = [];
+        for (let i = 0; i < n; i++) {
+          row.push(UNIT[i % UNIT.length]);
+          if (row.length === UNIT.length) { rows.push(wrapRow(row.join(''))); row = []; }
+        }
+        if (row.length) rows.push(wrapRow(row.join('')));
+        if (!scopes) return rows.join('');
+        const buckets = Array.from({ length: scopes }, () => []);
+        rows.forEach((r, i) => buckets[i % scopes].push(r));
+        let html = '';
+        for (let chain = 0; chain < scopes; chain += 5) {
+          let inner = '';
+          for (let level = Math.min(chain + 4, scopes - 1); level >= chain; level--) {
+            inner = `<div data-lr-theme="">${buckets[level].join('')}${inner}</div>`;
+          }
+          html += inner;
+        }
+        return html;
+      }
+
+      /** Lyra elements that are rows' children, inside application shadow roots too. */
+      function lyraTop(container) {
+        if (!roots) return Array.from(container.querySelectorAll(TYPES.join(',')));
+        return Array.from(container.querySelectorAll('.app-row'), (h) => Array.from(h.shadowRoot.children)).flat();
+      }
+
+      /** Every lr-* element, including ones a component composes inside its own shadow root. */
+      function allLyra(root, out = []) {
+        for (const el of root.querySelectorAll('*')) {
+          if (el.localName.startsWith('lr-')) out.push(el);
+          if (el.shadowRoot) allLyra(el.shadowRoot, out);
+        }
+        return out;
+      }
+
+      await import(`/out/bundle-${variant}.js`);
+      await Promise.all(Object.keys(ALL).map((t) => customElements.whenDefined(t)));
+
+      window.spike = {
+        variant,
+        isolated: self.crossOriginIsolated,
+        async render(n, incremental = false) {
+          const container = document.getElementById('host');
+          const html = markup(n);
+          await frame();
+          const t0 = performance.now();
+          if (incremental) {
+            // Streamed rows: append one row at a time and let style and layout settle after each,
+            // the way a chat transcript, a feed or a lazily rendered list grows.
+            const template = document.createElement('template');
+            template.innerHTML = html;
+            for (const row of Array.from(template.content.children)) {
+              container.append(row);
+              await Promise.all(Array.from(row.children, (e) => e.updateComplete));
+              document.body.offsetHeight;
+            }
+          } else if (roots) {
+            container.setHTMLUnsafe(html);
+          } else {
+            container.innerHTML = html;
+          }
+          const top = lyraTop(container);
+          await Promise.all(Array.from(top, (e) => e.updateComplete));
+          const t1 = performance.now();
+          document.body.offsetHeight; // forces style + layout for the whole document
+          const t2 = performance.now();
+          await frame();
+          const t3 = performance.now();
+          const nested = allLyra(container).length;
+          return { script: t1 - t0, styleLayout: t2 - t1, total: t2 - t0, toNextFrame: t3 - t0, top: top.length, allLyra: nested };
+        },
+        /** Plain application markup with no Lyra element, for the first-adoption measurement. */
+        async appRows(n) {
+          const app = document.createElement('div');
+          app.innerHTML = Array.from({ length: n }, (_, i) => `<div class="app"><span>Row ${i}</span><span>value</span></div>`).join('');
+          document.body.append(app);
+          document.body.offsetHeight;
+          await frame();
+        },
+        /** Connect one Lyra element to a page that has none yet: the first adoption of the layer. */
+        async lateAdopt() {
+          await frame();
+          const t0 = performance.now();
+          const el = document.createElement('lr-badge');
+          el.textContent = 'Late';
+          document.body.prepend(el);
+          await el.updateComplete;
+          document.body.offsetHeight;
+          return performance.now() - t0;
+        },
+        async themeSwitch(kind, reps) {
+          const root = document.documentElement;
+          const times = [];
+          for (let i = 0; i < reps; i++) {
+            await frame();
+            const t0 = performance.now();
+            if (kind === 'mode') {
+              root.setAttribute('data-lr-theme', root.getAttribute('data-lr-theme') === 'dark' ? 'light' : 'dark');
+            } else if (kind === 'accent') {
+              root.style.setProperty('--lr-theme-color-brand-fill-loud', i % 2 ? '#035ec6' : '#8b008b');
+            } else if (kind === 'space') {
+              root.style.setProperty('--lr-theme-space-m', i % 2 ? '0.75rem' : '1rem');
+            }
+            document.body.offsetHeight;
+            times.push(performance.now() - t0);
+          }
+          root.removeAttribute('data-lr-theme');
+          root.style.removeProperty('--lr-theme-color-brand-fill-loud');
+          root.style.removeProperty('--lr-theme-space-m');
+          await frame();
+          return times;
+        },
+      };
+      window.spikeReady = true;
+    </script>
+  </body>
+</html>
