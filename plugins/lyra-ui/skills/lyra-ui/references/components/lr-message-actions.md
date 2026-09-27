@@ -47,7 +47,10 @@ MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the 
 opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only while the current built-in
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
-the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
+the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus. It
+also stays revealed while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from a slotted
+control is open, since that menu sits in the browser top layer, where focus inside it does not
+count as focus within the toolbar in Chromium and WebKit.
 `label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null =

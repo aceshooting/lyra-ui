@@ -15631,7 +15631,10 @@ owns none of that.
 
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
-hover-capable devices and always visible with a coarse pointer or no hover).
+hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
+while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open, because that menu
+sits in the browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on
+the node).
 
 **CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
 carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
@@ -38427,9 +38430,27 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 
 `start`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
-**CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`),
+**CSS parts:** `base`, `base-menu-open` (state alias on `base` while a menu opened from the
+`actions` slot is open), `active-indicator` (decorative, rendered only while `active`),
 `select-button`, `start`, `content`, `label`, `label-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
 `actions`
+
+**Custom state:** `menu-open` — the host matches `:state(menu-open)` while an `lr-dropdown`,
+`lr-popover` or `lr-context-menu` opened from the `actions` slot is open (including one composed
+inside another component's shadow root), however it was opened; `[part="base"]` then also carries
+`base-menu-open`, and the row keeps its hover tint (an `active` row keeps its active tint). The menu
+sits in the browser top layer, where Chromium and WebKit stop matching `:hover` and `:focus-within`
+on the row while the pointer or focus is inside it, so a hover- or focus-revealed actions trigger
+must key on this state as well:
+
+```css
+lr-conversation-item .row-menu {
+  opacity: 0;
+}
+lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu {
+  opacity: 1;
+}
+```
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
@@ -39800,7 +39821,10 @@ MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the 
 opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only while the current built-in
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
-the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
+the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus. It
+also stays revealed while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from a slotted
+control is open, since that menu sits in the browser top layer, where focus inside it does not
+count as focus within the toolbar in Chromium and WebKit.
 `label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
 label. `accessibleLabel: string | null =
@@ -40357,8 +40381,11 @@ ancestor `--lr-positioning-strategy` still wins), and a trapped `fixed` menu ope
 outside the list, in the browser top layer where the native Popover API exists, in left-to-right
 and right-to-left documents, with no consumer CSS. A promoted menu whose trigger scrolls out of the
 list is hidden until the trigger returns. Where the Popover API is absent, the row holding an open
-`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. Unset renders
-only the built-in
+`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. While such a
+menu is open its row carries `row-item-base-menu-open` (see the parts below) and keeps its built-in
+hover tint. Arrow, Home and End keys a returned control already handled (`lr-menu` moving between
+its own items, a dropdown trigger opening its menu) stay with that control rather than also moving
+focus to another row. Unset renders only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -40441,9 +40468,29 @@ reach callback-rendered descendants through these parts). `row-excerpt` wraps `r
 output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
-prefix: `row-item-base`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
+prefix: `row-item-base`, `row-item-base-menu-open`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
 `row-item-label`, `row-item-label-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Row menu-open state:** `row-item-base-menu-open` is carried by `row-item-base` while a menu that
+`renderActions` opened from that row (`lr-dropdown`, `lr-popover` or `lr-context-menu`) is open,
+however it was opened. That menu sits in the browser top layer, where Chromium and WebKit stop
+matching `:hover` and `:focus-within` on the row while the pointer or keyboard focus is inside it.
+A menu trigger revealed on row hover or focus must key on this state too, or it hides while its own
+menu is open — and a `display`-based reveal hides the menu with it, because an open menu is
+concealed once its trigger stops being measurable. `::part()` cannot be followed by a descendant,
+so carry the reveal to `row-actions` through an inherited custom property:
+
+```css
+lr-thread-list::part(row-item-base):hover,
+lr-thread-list::part(row-item-base):focus-within,
+lr-thread-list::part(row-item-base-menu-open) {
+  --app-row-actions-opacity: 1;
+}
+lr-thread-list::part(row-actions) {
+  opacity: var(--app-row-actions-opacity, 0);
+}
+```
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
 `--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),

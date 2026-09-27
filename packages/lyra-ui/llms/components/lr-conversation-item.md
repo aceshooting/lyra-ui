@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -82,9 +82,27 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 
 `start`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
-**CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`),
+**CSS parts:** `base`, `base-menu-open` (state alias on `base` while a menu opened from the
+`actions` slot is open), `active-indicator` (decorative, rendered only while `active`),
 `select-button`, `start`, `content`, `label`, `label-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
 `actions`
+
+**Custom state:** `menu-open` — the host matches `:state(menu-open)` while an `lr-dropdown`,
+`lr-popover` or `lr-context-menu` opened from the `actions` slot is open (including one composed
+inside another component's shadow root), however it was opened; `[part="base"]` then also carries
+`base-menu-open`, and the row keeps its hover tint (an `active` row keeps its active tint). The menu
+sits in the browser top layer, where Chromium and WebKit stop matching `:hover` and `:focus-within`
+on the row while the pointer or focus is inside it, so a hover- or focus-revealed actions trigger
+must key on this state as well:
+
+```css
+lr-conversation-item .row-menu {
+  opacity: 0;
+}
+lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu {
+  opacity: 1;
+}
+```
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`

@@ -33777,6 +33777,10 @@
             "deprecated": null
           },
           {
+            "name": "base-menu-open",
+            "deprecated": null
+          },
+          {
             "name": "content",
             "deprecated": null
           },
@@ -33863,7 +33867,12 @@
             "default": "var(--lr-space-xs) var(--lr-space-s)"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "menu-open",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "click",
@@ -130154,6 +130163,10 @@
           },
           {
             "name": "row-item-base",
+            "deprecated": null
+          },
+          {
+            "name": "row-item-base-menu-open",
             "deprecated": null
           },
           {

@@ -12632,6 +12632,13 @@
               "test": "is accessible in a populated compact state",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
+              "line": 1818,
+              "test": "is accessible while its actions menu is open",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -12728,7 +12735,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 470,
+              "line": 493,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30230,7 +30237,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 833,
+              "line": 852,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46783,49 +46790,49 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4508,
+              "line": 4670,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5749,
+              "line": 5911,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6196,
+              "line": 6358,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6741,
+              "line": 6903,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 6955,
+              "line": 7117,
               "test": "is accessible with a select cell editor open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7523,
+              "line": 7685,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7636,
+              "line": 7798,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -48064,70 +48071,70 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 764,
+              "line": 765,
               "test": "uses one string group-label contract and renders rich adornments outside the toggle",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 820,
+              "line": 821,
               "test": "self-manages group collapse via the lr-group-toggle-request/lr-group-toggle pair by default, removing collapsed rows from virtual-list measurement",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2003,
+              "line": 2244,
               "test": "renders a keyboard-reachable button with a localized accessible name once the field has a value",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2297,
+              "line": 2538,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2297,
+              "line": 2538,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2878,
+              "line": 3119,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3039,
+              "line": 3280,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 3865,
+              "line": 4106,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 4054,
+              "line": 4295,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 4252,
+              "line": 4493,
               "test": "passes axe with a promoted row menu open",
               "target": "el",
               "state": "populated"

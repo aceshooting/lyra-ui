@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 41 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 42 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -127,8 +127,11 @@ ancestor `--lr-positioning-strategy` still wins), and a trapped `fixed` menu ope
 outside the list, in the browser top layer where the native Popover API exists, in left-to-right
 and right-to-left documents, with no consumer CSS. A promoted menu whose trigger scrolls out of the
 list is hidden until the trigger returns. Where the Popover API is absent, the row holding an open
-`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. Unset renders
-only the built-in
+`lr-dropdown` stops transforming while it is open, so its menu is still not clipped. While such a
+menu is open its row carries `row-item-base-menu-open` (see the parts below) and keeps its built-in
+hover tint. Arrow, Home and End keys a returned control already handled (`lr-menu` moving between
+its own items, a dropdown trigger opening its menu) stay with that control rather than also moving
+focus to another row. Unset renders only the built-in
 `rowActions`.
 `renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
@@ -211,9 +214,29 @@ reach callback-rendered descendants through these parts). `row-excerpt` wraps `r
 output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
-prefix: `row-item-base`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
+prefix: `row-item-base`, `row-item-base-menu-open`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
 `row-item-label`, `row-item-label-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Row menu-open state:** `row-item-base-menu-open` is carried by `row-item-base` while a menu that
+`renderActions` opened from that row (`lr-dropdown`, `lr-popover` or `lr-context-menu`) is open,
+however it was opened. That menu sits in the browser top layer, where Chromium and WebKit stop
+matching `:hover` and `:focus-within` on the row while the pointer or keyboard focus is inside it.
+A menu trigger revealed on row hover or focus must key on this state too, or it hides while its own
+menu is open — and a `display`-based reveal hides the menu with it, because an open menu is
+concealed once its trigger stops being measurable. `::part()` cannot be followed by a descendant,
+so carry the reveal to `row-actions` through an inherited custom property:
+
+```css
+lr-thread-list::part(row-item-base):hover,
+lr-thread-list::part(row-item-base):focus-within,
+lr-thread-list::part(row-item-base-menu-open) {
+  --app-row-actions-opacity: 1;
+}
+lr-thread-list::part(row-actions) {
+  opacity: var(--app-row-actions-opacity, 0);
+}
+```
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
 `--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),
