@@ -67,7 +67,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   them side by side; ignored for `type="line"`
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
-  Falls back to the built-in "nice numbers" formatter when unset.
+  Falls back to the built-in "nice numbers" formatter when unset. The returned string is painted
+  bidi-isolated, so `2.4 MiB/s` keeps its number-unit order under `dir="rtl"` (see
+  [Formatted labels in right-to-left layouts](#formatted-labels-in-right-to-left-layouts)).
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.
@@ -125,14 +127,20 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   actually render *text*: after the global record sampler runs, it selects from those retained
   categories, always shows the first and last sampled label, and roughly evenly distributes the
   rest between them. A number is authoritative up to the number of sampled categories. `'auto'`
-  derives the cap after each resize from the resolved plot width and widest rendered caller label,
-  using the same deterministic 7px-per-
-  character estimate as label ellipsis plus 10px of lane breathing room. It therefore responds to
-  either `layout` mode without DOM text measurement or browser-specific font metrics. Unset (the
-  default) renders every label, unchanged. Each rendered category label is allocation-aware:
-  narrow/long text is ellipsized before paint, with the complete caller label retained as its
-  accessible name. Independently, the global 1,000-record safety sampler may bound both marks and
-  labels for very large category×series input.
+  re-selects after each resize from the resolved tick positions and the widest rendered caller
+  label, using the same deterministic 7px-per-character estimate as label ellipsis. Whenever the
+  first and last labels fit side by side, it keeps at least 10px of breathing room between every
+  adjacent pair of labels; when even those two do not fit, only they remain and label ellipsis
+  prevents overlap. Each label is measured where it paints: centered on its tick, except the first
+  and last category, which anchor toward the plot interior (mirrored under RTL) and so occupy their
+  whole width on the inner side of their tick. Label centers are spaced evenly between those two
+  boundary labels, so neither boundary pair is crowded. A `barX` that reorders the ticks away from
+  source order falls back to the width-only cap (plot width divided by the widest label plus 10px).
+  It therefore responds to either `layout` mode without DOM text measurement or browser-specific
+  font metrics. Unset (the default) renders every label, unchanged. Each rendered category label
+  is allocation-aware: narrow/long text is ellipsized before paint, with the complete caller label
+  retained as its accessible name. Independently, the global 1,000-record safety sampler may bound
+  both marks and labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns

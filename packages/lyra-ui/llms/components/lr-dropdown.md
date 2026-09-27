@@ -92,6 +92,12 @@ its surface.
   inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
   cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
   when neither spelling is authored on the instance.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — inherited from `<lr-popover>`:
+  always shows the open menu in the browser top layer, placed `fixed` whatever
+  `positioning-strategy`/`hoist` say, so a dropdown in a `z-index`ed fixed header opens above a
+  sibling surface stacked higher. Submenus of a promoted menu stay above the sibling surface too.
+  Unset, a dropdown is promoted only when a trapping ancestor forces it (see **Anchored overlays
+  and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`

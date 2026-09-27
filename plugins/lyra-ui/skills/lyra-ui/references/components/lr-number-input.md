@@ -34,6 +34,10 @@ disabled state.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
 subclass does not redeclare them on its host.
+Beside the stepper pair it keeps `lr-input`'s constrained-row allocation: the number field gives up
+its spare width first, down to a four-character floor while a unit is shown, so a short `end` unit
+stays whole (the `Narrow Measurement Unit` story). A stepper row with a unit therefore needs room
+for the steppers plus that floor; without a unit the field still yields entirely to the steppers.
 It also installs the shared six-tier size sheet: stepper-bearing rows follow the same rendered
 action-height ladder as `lr-input` instead of remaining at the default tier for every `size`.
 

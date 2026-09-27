@@ -291,8 +291,12 @@ control, without making the control valid — see "The validity alias is cancela
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
 overrides `errorText`.
 
-The editable input shrinks first in a constrained row; `start` and `end` adornments are each
-capped at 40% and ellipsize unbroken content. Clear and calendar actions retain their fixed target.
+The editable input shrinks first in a constrained row. While a `start` or `end` adornment is shown
+it keeps a four-character floor, so a short adornment keeps its content width; without one it
+yields entirely to the clear and calendar actions. Adornments are sized to their content, each
+capped at 40%, and ellipsize unbroken content. Clear and calendar actions retain their fixed
+target, so a row with an adornment that is narrower than those actions plus the floor overflows
+rather than collapsing the field.
 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.

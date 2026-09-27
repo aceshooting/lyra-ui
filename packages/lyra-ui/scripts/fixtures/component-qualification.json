@@ -47,6 +47,7 @@
   },
   "knownLimitations": [
     "Human review for this change covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.",
+    "The three theming-shadcn--shadcn baselines were re-captured on 2026-09-27 on the CI-equivalent Linux host after the first capture rendered with a locally installed Inter/Geist font that CI does not have (the story's look sets its own font stack over the harness pin); the maintainer approved the re-capture of the already-reviewed story.",
     "The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.",
     "Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.",
     "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
@@ -4551,7 +4552,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4781,7 +4782,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5717,7 +5718,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7359,35 +7360,35 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 80,
+              "line": 91,
               "test": "drops malformed simplified dataset entries while retaining valid rendered series",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 1821,
+              "line": 1832,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6670,
+              "line": 6681,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 6670,
+              "line": 6681,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 7151,
+              "line": 7164,
               "test": "fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides",
               "target": "el",
               "state": "populated"
@@ -7511,7 +7512,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16102,7 +16103,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16855,7 +16856,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1067,
+              "line": 1088,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23804,7 +23805,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25119,7 +25120,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1676,
+              "line": 1855,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26929,7 +26930,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27030,21 +27031,21 @@
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 1930,
+              "line": 2056,
               "test": "stays accessible with a fixed pitch",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4530,
+              "line": 4656,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
-              "line": 4530,
+              "line": 4656,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -27161,7 +27162,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31577,7 +31578,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1676,
+              "line": 1855,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32680,7 +32681,7 @@
             },
             {
               "file": "src/components/forms/input/number-time-input.test.ts",
-              "line": 283,
+              "line": 343,
               "test": "is accessible with the steppers rendered",
               "target": "el",
               "state": "populated"
@@ -32694,7 +32695,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1676,
+              "line": 1855,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34665,7 +34666,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34874,7 +34875,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35439,7 +35440,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1067,
+              "line": 1088,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37298,7 +37299,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41019,7 +41020,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 558,
+              "line": 565,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48331,7 +48332,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1676,
+              "line": 1855,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51500,7 +51501,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1067,
+              "line": 1088,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

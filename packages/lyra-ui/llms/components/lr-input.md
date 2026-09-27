@@ -220,8 +220,15 @@ and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finit
 `prefix` (alias of `start`), `suffix` (alias of `end`),
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
-Long `start`/`end` adornments shrink and ellipsize inside their flex allocation rather than
-widening a narrow field; label, hint, and error text wrap at unbroken boundaries. The
+In a constrained row the native field gives up its spare width first, so a short adornment such
+as a measurement unit (`kWh`) stays whole beside a narrow value. While a `start` or `end` adornment
+is shown the field keeps a four-character floor; only then do the adornments shrink: each is
+capped at half the row, and genuinely long adornments ellipsize inside that allocation rather than
+widening a narrow field. The floor holds against the fixed clear, password-toggle and stepper
+actions too, so a row with an adornment that is narrower than those actions plus the floor
+overflows rather than hiding the value. A row without adornments has no floor: its field still
+yields entirely to those actions. A shrink-to-fit container still sizes the field to its native
+intrinsic width. Label, hint, and error text wrap at unbroken boundaries. The
 `Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on

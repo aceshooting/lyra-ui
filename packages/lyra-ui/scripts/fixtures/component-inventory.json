@@ -46832,6 +46832,16 @@
             "default": "undefined"
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "trigger",
             "property": "trigger",
             "type": "string",
@@ -47061,6 +47071,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "undefined"
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "trigger",
@@ -97145,6 +97165,16 @@
             "default": 0
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "trigger",
             "property": "trigger",
             "type": "string",
@@ -97335,6 +97365,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "trigger",

@@ -39,6 +39,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 ## Known limitations
 
 - Human review for this change covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.
+- The three theming-shadcn--shadcn baselines were re-captured on 2026-09-27 on the CI-equivalent Linux host after the first capture rendered with a locally installed Inter/Geist font that CI does not have (the story's look sets its own font stack over the harness pin); the maintainer approved the re-capture of the already-reviewed story.
 - The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.
 - Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.
 - Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.

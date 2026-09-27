@@ -6806,8 +6806,12 @@ control, without making the control valid — see "The validity alias is cancela
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
 overrides `errorText`.
 
-The editable input shrinks first in a constrained row; `start` and `end` adornments are each
-capped at 40% and ellipsize unbroken content. Clear and calendar actions retain their fixed target.
+The editable input shrinks first in a constrained row. While a `start` or `end` adornment is shown
+it keeps a four-character floor, so a short adornment keeps its content width; without one it
+yields entirely to the clear and calendar actions. Adornments are sized to their content, each
+capped at 40%, and ellipsize unbroken content. Clear and calendar actions retain their fixed
+target, so a row with an adornment that is narrower than those actions plus the floor overflows
+rather than collapsing the field.
 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
@@ -7997,8 +8001,15 @@ and cancellation rules. Never fires while `debounce` is unset, `0`, or non-finit
 `prefix` (alias of `start`), `suffix` (alias of `end`),
 `clear-button` (non-empty clearable `text`/`search` inputs only),
 `hint`/`form-control-help-text` (compatibility names on the same hint node), and `error`.
-Long `start`/`end` adornments shrink and ellipsize inside their flex allocation rather than
-widening a narrow field; label, hint, and error text wrap at unbroken boundaries. The
+In a constrained row the native field gives up its spare width first, so a short adornment such
+as a measurement unit (`kWh`) stays whole beside a narrow value. While a `start` or `end` adornment
+is shown the field keeps a four-character floor; only then do the adornments shrink: each is
+capped at half the row, and genuinely long adornments ellipsize inside that allocation rather than
+widening a narrow field. The floor holds against the fixed clear, password-toggle and stepper
+actions too, so a row with an adornment that is narrower than those actions plus the floor
+overflows rather than hiding the value. A row without adornments has no floor: its field still
+yields entirely to those actions. A shrink-to-fit container still sizes the field to its native
+intrinsic width. Label, hint, and error text wrap at unbroken boundaries. The
 `Narrow RTL (320px)` story exercises both adornments with a clear action and localized long copy.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
@@ -8278,6 +8289,10 @@ disabled state.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
 subclass does not redeclare them on its host.
+Beside the stepper pair it keeps `lr-input`'s constrained-row allocation: the number field gives up
+its spare width first, down to a four-character floor while a unit is shown, so a short `end` unit
+stays whole (the `Narrow Measurement Unit` story). A stepper row with a unit therefore needs room
+for the steppers plus that floor; without a unit the field still yields entirely to the steppers.
 It also installs the shared six-tier size sheet: stepper-bearing rows follow the same rendered
 action-height ladder as `lr-input` instead of remaining at the default tier for every `size`.
 
@@ -23608,8 +23623,8 @@ that override no longer decides anything for their modal instances and can be dr
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
 doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
-promoted unless trapped (below), and otherwise go on stacking at `--lr-overlay-stack-index`,
-falling back to `--lr-layer-popover`.
+promoted unless trapped (below) or, for `lr-popover` and `lr-dropdown`, opted in with `top-layer`,
+and otherwise go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
 
 **Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
 (dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
@@ -23632,6 +23647,29 @@ at UI scale with either strategy. The full-viewport modal surfaces that are not 
 (`lr-command-palette`, `lr-lightbox`, the tool approval/result/select dialogs, a fullscreen
 `lr-widget`, the `lr-responsive-panel` overlay and `lr-tour`'s spotlight) still stack with
 `z-index`: do not place them under a transformed, filtered or contained ancestor.
+
+An ancestor that is only a **stacking context** does not trap an overlay, so it is not promoted: a
+popover inside a `position: fixed` (or `sticky`) header with `z-index: 1000` still paints beneath a
+sibling surface at `z-index: 1100`, and no `z-index` on the popup can lift it out of the header's
+context. For that case `lr-popover` and `lr-dropdown` take an explicit opt-in, `top-layer`: the open
+popup is always shown in the browser top layer, placed `fixed`, with anchoring, the arrow, RTL
+placement, focus, Escape, light dismiss and the transitions unchanged, and no DOM node moved.
+Stacking contexts are deliberately not detected automatically: every `fixed` or `sticky` ancestor
+creates one, and so does almost every `z-index`ed, translucent (`opacity`) or `isolation: isolate`d
+one; most of them never cover the overlay, and promoting through each would lift overlays above
+layers that pages order on purpose (including their own toasts and sticky chrome). Whether a
+stacking context actually hides an overlay depends on sibling layering elsewhere on the page, which
+only the page knows, so the page opts in per instance.
+
+```html
+<header style="position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 1000">
+  <lr-popover top-layer placement="bottom-start">
+    <button slot="trigger">Account</button>
+    <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+  </lr-popover>
+</header>
+<div class="search-panel" style="position: fixed; z-index: 1100">…</div>
+```
 
 **Initial focus.** An `[autofocus]` element anywhere in the slotted content takes focus when the
 overlay opens — including one inside a slotted custom element's own open shadow root, so
@@ -25099,6 +25137,16 @@ If the import fails, leave the native disclosure visible and usable.
   escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
   layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
   clips it (see **Anchored overlays and the top layer**).
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — always shows the open popup in
+  the browser top layer where the native Popover API exists, so it paints above every page layer
+  whatever the stacking contexts around it: the fix for a popover in a `z-index`ed fixed or sticky
+  header, toolbar or rail that a sibling surface stacked higher would otherwise cover. While set the
+  popup is placed with the `fixed` strategy whatever `positioning-strategy` resolves to (the
+  property still reads back its own value). Anchoring, the arrow, RTL placement, focus, Escape,
+  light dismiss, the hover bridge and the show/hide transition are unchanged, because no DOM node
+  moves; the popup stays promoted through its hide transition and leaves the top layer once it
+  settles closed. Changes apply live while open. Without native Popover API support the popup keeps
+  its ordinary `z-index` stacking. Unset, nothing changes: only a trapping ancestor promotes it.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
@@ -25628,6 +25676,12 @@ its surface.
   inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
   cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
   when neither spelling is authored on the instance.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — inherited from `<lr-popover>`:
+  always shows the open menu in the browser top layer, placed `fixed` whatever
+  `positioning-strategy`/`hoist` say, so a dropdown in a `z-index`ed fixed header opens above a
+  sibling surface stacked higher. Submenus of a promoted menu stay above the sibling surface too.
+  Unset, a dropdown is promoted only when a trapping ancestor forces it (see **Anchored overlays
+  and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
@@ -33687,7 +33741,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   them side by side; ignored for `type="line"`
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
-  Falls back to the built-in "nice numbers" formatter when unset.
+  Falls back to the built-in "nice numbers" formatter when unset. The returned string is painted
+  bidi-isolated, so `2.4 MiB/s` keeps its number-unit order under `dir="rtl"` (see
+  [Formatted labels in right-to-left layouts](#formatted-labels-in-right-to-left-layouts)).
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.
@@ -33745,14 +33801,20 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   actually render *text*: after the global record sampler runs, it selects from those retained
   categories, always shows the first and last sampled label, and roughly evenly distributes the
   rest between them. A number is authoritative up to the number of sampled categories. `'auto'`
-  derives the cap after each resize from the resolved plot width and widest rendered caller label,
-  using the same deterministic 7px-per-
-  character estimate as label ellipsis plus 10px of lane breathing room. It therefore responds to
-  either `layout` mode without DOM text measurement or browser-specific font metrics. Unset (the
-  default) renders every label, unchanged. Each rendered category label is allocation-aware:
-  narrow/long text is ellipsized before paint, with the complete caller label retained as its
-  accessible name. Independently, the global 1,000-record safety sampler may bound both marks and
-  labels for very large category×series input.
+  re-selects after each resize from the resolved tick positions and the widest rendered caller
+  label, using the same deterministic 7px-per-character estimate as label ellipsis. Whenever the
+  first and last labels fit side by side, it keeps at least 10px of breathing room between every
+  adjacent pair of labels; when even those two do not fit, only they remain and label ellipsis
+  prevents overlap. Each label is measured where it paints: centered on its tick, except the first
+  and last category, which anchor toward the plot interior (mirrored under RTL) and so occupy their
+  whole width on the inner side of their tick. Label centers are spaced evenly between those two
+  boundary labels, so neither boundary pair is crowded. A `barX` that reorders the ticks away from
+  source order falls back to the width-only cap (plot width divided by the widest label plus 10px).
+  It therefore responds to either `layout` mode without DOM text measurement or browser-specific
+  font metrics. Unset (the default) renders every label, unchanged. Each rendered category label
+  is allocation-aware: narrow/long text is ellipsized before paint, with the complete caller label
+  retained as its accessible name. Independently, the global 1,000-record safety sampler may bound
+  both marks and labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
@@ -34333,6 +34395,44 @@ loads are memoized per page.
   fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
   The transition into that state is announced through the shared document-level light-DOM
   assertive sink.
+
+---
+
+## Formatted labels in right-to-left layouts
+
+Every formatted chart label is bidi-isolated: it paints in the direction of its own first strong
+character, like `<bdi>` or a first-strong isolate, rather than in the chart's inherited direction.
+A number-first left-to-right string from `tickFormat`, `formatter`, `valueFormatter`,
+`tableCellFormatter`, `legendText` or an authored category label (`2.4 MiB/s`, `9:00 AM`, `-3`)
+therefore keeps its number-unit order inside `dir="rtl"`, and an Arabic- or Hebrew-script label
+keeps its own right-to-left order instead of being forced left-to-right. Axis placement, category
+order, boundary anchoring and label fitting are unchanged, and there is nothing to opt into — no
+text-direction hook is needed, and a formatter should return plain text without its own isolation
+controls.
+
+- `lr-lite-chart`: value-axis ticks, category ticks and axis titles (SVG `unicode-bidi: plaintext`);
+  the `legendText`/`formatter` legend value; the generated table's series headers, row headers and
+  cells; and, while visible, each value interpolated into a single-series data-list sentence (each
+  in its own `<bdi>`).
+- `lr-chart` (every typed subclass and `lr-histogram` included) and `lr-box-plot`: Chart.js tick
+  labels on every generated scale (radar/polar point labels included), axis titles, every tooltip
+  line, annotation labels and the `data-labels`/`stack-totals` labels are drawn inside a Unicode
+  directional embedding only where their first-strong direction differs from the canvas's (a
+  Chart.js `textDirection` set through `config` counts as the canvas's). A formatted value inside a
+  tooltip line (`Series: 2.4 MiB/s`) is also embedded on its own wherever it reads differently from
+  the line, so it keeps its order after an Arabic- or Hebrew-script series name. A left-to-right
+  chart with left-to-right labels therefore draws the formatter's strings exactly. A DOM legend
+  entry that shows a value isolates its label and value each in a `<bdi>`, and so do the generated
+  table's headers and cells.
+- Labels that a raw `config` passthrough draws on its own — scales, annotations or plugins it adds
+  beyond the generated ones — are drawn exactly as given; isolate those strings yourself if they
+  need it.
+- Isolation adds no bidi control characters to accessible names, live announcements, the visually
+  hidden data alternatives or CSV export. `lr-lite-chart`'s per-mark native SVG `<title>` hover
+  text stays the plain `pointText`/built-in string: the browser also exposes it as the mark's
+  accessible description, where control characters would reach speech and braille output.
+- The same rule covers `lr-gauge`'s value and label captions and `lr-heatmap`'s hover tooltip and
+  legend scale labels.
 
 ---
 

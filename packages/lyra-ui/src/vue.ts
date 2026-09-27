@@ -4145,6 +4145,7 @@ export type LyraDropdownVueProps = LyraVueCustomElement<
   | 'stayOpenOnSelect'
   | 'strings'
   | 'sync'
+  | 'topLayer'
   | 'trigger'
   | 'withoutArrow',
   {},
@@ -4175,6 +4176,7 @@ export type LyraDropdownVueProps = LyraVueCustomElement<
     'positioning-strategy'?: LyraDropdown['positioningStrategy'];
     'show-delay'?: LyraDropdown['showDelay'];
     'stay-open-on-select'?: LyraDropdown['stayOpenOnSelect'];
+    'top-layer'?: LyraDropdown['topLayer'];
     'without-arrow'?: LyraDropdown['withoutArrow'];
   }
 >;
@@ -8264,6 +8266,7 @@ export type LyraPopoverVueProps = LyraVueCustomElement<
   | 'showDelay'
   | 'skidding'
   | 'strings'
+  | 'topLayer'
   | 'trigger'
   | 'withoutArrow',
   {},
@@ -8292,6 +8295,7 @@ export type LyraPopoverVueProps = LyraVueCustomElement<
     'popup-role'?: LyraPopover['popupRole'];
     'positioning-strategy'?: LyraPopover['positioningStrategy'];
     'show-delay'?: LyraPopover['showDelay'];
+    'top-layer'?: LyraPopover['topLayer'];
     'without-arrow'?: LyraPopover['withoutArrow'];
   }
 >;

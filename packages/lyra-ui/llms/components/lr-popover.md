@@ -76,6 +76,16 @@ If the import fails, leave the native disclosure visible and usable.
   escapes transformed, filtered or contained ancestors by promoting the popup into the browser top
   layer where the native Popover API exists; otherwise, as before, such an ancestor contains and
   clips it (see **Anchored overlays and the top layer**).
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — always shows the open popup in
+  the browser top layer where the native Popover API exists, so it paints above every page layer
+  whatever the stacking contexts around it: the fix for a popover in a `z-index`ed fixed or sticky
+  header, toolbar or rail that a sibling surface stacked higher would otherwise cover. While set the
+  popup is placed with the `fixed` strategy whatever `positioning-strategy` resolves to (the
+  property still reads back its own value). Anchoring, the arrow, RTL placement, focus, Escape,
+  light dismiss, the hover bridge and the show/hide transition are unchanged, because no DOM node
+  moves; the popup stays promoted through its hide transition and leaves the top layer once it
+  settles closed. Changes apply live while open. Without native Popover API support the popup keeps
+  its ordinary `z-index` stacking. Unset, nothing changes: only a trapping ancestor promotes it.
 - `trigger: string = 'click'` — a _space-separated_ list of `click` (the shipped behaviour),
   `hover`, `focus` and `manual`, spelled exactly the way `<lr-tooltip>`'s `trigger` is, so
   `trigger="hover focus"` means the same thing on both. `LyraPopoverTrigger` is the type of one
