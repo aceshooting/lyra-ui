@@ -1,6 +1,12 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'close', 'durationSeconds', 'maximize', 'statusPending', 'toolCall',
+]);
 
 // A stand-in for a slotted component (e.g. lr-tab-group) whose real focusable
 // target lives inside its own shadow root rather than the host tag's

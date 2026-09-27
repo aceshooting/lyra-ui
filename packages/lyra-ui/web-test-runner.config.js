@@ -390,7 +390,10 @@ export default {
   // probe releases the candidate before the server binds it, so two processes can select the
   // same port and one then fails with EADDRINUSE. Ordinary standalone runs retain auto-discovery.
   ...(testServerPort === undefined ? {} : { port: testServerPort }),
-  nodeResolve: true,
+  // The dev server serves every imported module without tree shaking. Skip the package's large
+  // sideEffects filter here: reparsing its globs on every resolution can stall the root import.
+  // Export resolution stays enabled; packed-consumer gates verify tree-shaking metadata.
+  nodeResolve: { ignoreSideEffectsForRoot: true },
   browsers: [playwrightLauncher(launcherConfig)],
   // The runner otherwise opens half the host's reported CPU count in browser pages.
   // WebKit retains a bounded default; Firefox uses one page per process because

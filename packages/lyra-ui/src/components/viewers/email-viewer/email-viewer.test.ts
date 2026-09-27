@@ -6,6 +6,15 @@ import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('ar', [
+  'documentPreviewEmpty', 'documentPreviewTypeEmail', 'emailViewerAttachments',
+  'emailViewerDate', 'emailViewerFrom', 'emailViewerLabel', 'emailViewerNoSubject',
+  'emailViewerOpenAttachment', 'emailViewerSubject', 'emailViewerTo', 'fileSizeUnitB',
+  'loadingDocument',
+]);
 
 const SAMPLE_EML = [
   "From: Ada Lovelace <ada@example.test>",

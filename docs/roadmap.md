@@ -4,11 +4,11 @@
 
 v22 is the next major release. Beyond the switchable-styling work below, it commits to:
 
-- **A Material-inspired look and a Liquid Glass-inspired surface treatment.** Both ship as optional
-  looks alongside the original Lyra look and the shadcn look, built on the same token presets, so an
-  application can switch between Lyra, shadcn, Material, and glass without changing markup. They are
-  original Lyra definitions derived from public design principles, not copies of either platform's
-  assets or exact native rendering. See the delivery order and glass scope below.
+- **A Material-inspired look and a Liquid Glass-inspired surface treatment.** Applications can
+  choose the Lyra, shadcn or Material look and independently enable the glass surface treatment,
+  without changing component markup. They are original Lyra definitions derived from public design
+  principles, not copies of either platform's assets or exact native rendering. See the delivery
+  order and glass scope below.
 - **Lighter component cores.** Load tooltip and top-layer support only in components that use it,
   instead of in every component's base, and publish the measured bundle-size change.
 - **`lr-button-group` fill default.** Stop stretching to full width in narrow containers by default,
@@ -40,11 +40,15 @@ Fixes:
 
 ### Rename and removal policy
 
-Renames of Lyra-only names ship in v22 as the new canonical name plus a deprecated alias that keeps
-working through the v22 line, with a `--origin=lyra-v21` profile in the migration script that rewrites
-attributes, properties, events and `::part()` selectors. Aliases are removed in v23. Event-detail shape
-changes cannot be aliased; the migration script reports affected listeners. Names mirrored from Web
-Awesome or Shoelace, and their defaults, never change.
+Renames of Lyra-only names ship additively in 21.x minor releases: the new canonical name plus a
+deprecated alias that keeps working, with a `--origin=lyra-v21` profile in the migration script that
+rewrites attributes, properties, events and `::part()` selectors. The unchanged one-full-major
+deprecation rule permits removal of those 21.x aliases in v23. A rename introduced in 22.x must
+remain through v23 and can be removed no earlier than v24, through a later `lyra-v22` profile.
+A rename onto a name another component already uses widens existing code and therefore lands in
+v22. Event-detail shape changes cannot be aliased: they also land in v22, and the migration script
+reports affected listeners. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change.
 
 ### Themes and styling
 
@@ -89,7 +93,11 @@ Awesome or Shoelace, and their defaults, never change.
     non-item content in `lr-menu`'s default slot; the unprefixed `DocumentFile` and
     `DocumentRendererDefinition` types; and one of the two overlapping localization entry points.
 
-### API harmonization (Lyra-only names)
+### API harmonization (Lyra-only names): renames in 21.x minors
+
+Each rename below ships additively in a 21.x minor release with its deprecated alias and migration
+profile entry. What no alias can keep compatible, such as a changed event-detail shape or default,
+or a rename onto a name another component already uses, lands in v22.
 
 17. One veto grammar: a cancelable `lr-<noun>-request` fires before a change; `-change` notifications
     are never cancelable.

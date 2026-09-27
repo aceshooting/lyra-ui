@@ -4,6 +4,13 @@ import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } 
 import type { LyraToolCallChip } from '../tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultView } from '../tool-result-view/tool-result-view.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'accessibleLabelSeparator', 'approve', 'deny', 'edit', 'envListValueHidden', 'jsonObject',
+  'statusSuccess', 'toolApprovalGenericTool', 'toolApprovalHeading', 'toolTimelineDetailsFor',
+]);
 
 function entriesEl(el: LyraToolTimeline): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="entry"]')];

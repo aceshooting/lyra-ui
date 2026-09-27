@@ -2,6 +2,12 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'noData', 'trendOf',
+]);
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sparkline', 'values');

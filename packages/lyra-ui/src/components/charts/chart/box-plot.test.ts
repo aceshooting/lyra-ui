@@ -8,6 +8,21 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { resolveLyraLocale } from '../../../localization.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'boxPlot', 'boxPlotData', 'boxPlotMax', 'boxPlotMedian', 'boxPlotMin', 'boxPlotQ1',
+  'boxPlotQ3', 'boxPlotSeriesSummary', 'boxPlotSummaryEmpty', 'boxPlotSummaryWithData',
+  'chartCategory', 'chartPointLabel', 'chartSeriesLabel', 'chartSummarySeparator',
+  'chartTrendFlat', 'chartTrendIncreasing', 'loading',
+]);
+expectLocaleFallback('ar-EG', [
+  'boxPlot', 'boxPlotData', 'boxPlotMax', 'boxPlotMedian', 'boxPlotMin', 'boxPlotQ1',
+  'boxPlotQ3', 'boxPlotSeriesSummary', 'boxPlotSummaryEmpty', 'boxPlotSummaryWithData',
+  'chartCategory', 'chartPointLabel', 'chartSeriesLabel', 'chartSummarySeparator',
+  'chartTrendFlat', 'loading',
+]);
 
 function assertiveSink(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);

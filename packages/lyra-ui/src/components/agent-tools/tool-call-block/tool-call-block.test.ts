@@ -5,6 +5,12 @@ import './tool-call-block.js';
 import { registerToolRenderer } from '../tool-result-view/registry.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'durationSeconds', 'toolCallBlockHeaderPending',
+]);
 
 type Block = LyraToolCallBlock;
 let uniqueCounter = 0;

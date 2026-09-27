@@ -3,6 +3,14 @@ import { sendKeys } from '@web/test-runner-commands';
 import type { Chart } from 'chart.js';
 import './chart.js';
 import type { LyraChart, LyraChartDatumVisibilityChangeDetail as DatumVisibility } from './chart.class.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('fr', [
+  'chart', 'chartCategory', 'chartData', 'chartSummary', 'chartSummarySeparator',
+  'chartSummaryWithData', 'chartTrendDecreasing', 'chartTrendFlat', 'chartTrendIncreasing',
+  'chartTypeDoughnut', 'chartValueLabel',
+]);
 const buttons = (el: LyraChart): HTMLButtonElement[] =>
   [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="legend-item"]')];
 const labels = (el: LyraChart): string[] => buttons(el).map((button) => button.textContent!.trim());

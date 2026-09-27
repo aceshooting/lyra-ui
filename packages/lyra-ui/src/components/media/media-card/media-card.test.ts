@@ -5,6 +5,12 @@ import '../../conversation/chat-message/chat-message.js';
 import type { LyraMediaCard } from './media-card.js';
 import * as mediaCardExports from './media-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('ar', [
+  'mediaCardOpenName', 'promptStudioRoleAssistant',
+]);
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-media-card', 'appearance');

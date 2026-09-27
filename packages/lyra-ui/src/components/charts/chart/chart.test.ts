@@ -14,9 +14,27 @@ import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { resolveLyraLocale } from '../../../localization.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
-// Removed-attribute regression tests below deliberately author these; see the helper.
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'chart', 'chartCategory', 'chartData', 'chartPointLabel', 'chartSummary', 'chartSummaryEmpty',
+  'chartSummarySeparator', 'chartSummaryWithData', 'chartTrendIncreasing', 'chartTypeBar',
+  'loading',
+]);
+expectLocaleFallback('ar', [
+  'chart', 'chartCategory', 'chartData', 'chartSummary', 'chartSummarySeparator',
+  'chartSummaryWithData', 'chartTrendIncreasing', 'chartTypeBar', 'chartValueLabel',
+  'liteChartMarkSummary', 'loading',
+]);
+expectLocaleFallback('ar-EG', [
+  'chart', 'chartCategory', 'chartData', 'chartPointLabel', 'chartSummary', 'chartSummaryEmpty',
+  'chartSummarySeparator', 'chartSummaryWithData', 'chartTrendFlat', 'chartTypeBar', 'loading',
+]);
+
+// Unsupported-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-chart', 'horizontal');
+expectStaleAttribute('lr-chart', 'annotations');
 
 function announcementSink(
   doc: Document = document,

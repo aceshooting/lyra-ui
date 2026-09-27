@@ -4,6 +4,12 @@ import type { LyraToolCallChip } from './tool-call-chip.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
+expectLocaleFallback('de-DE', [
+  'accessibleLabelSeparator', 'durationSeconds', 'statusPending', 'toolCall',
+]);
 
 it('defaults to status="pending" with empty name/category/summary/icon/call-id and no duration', async () => {
   const el = (await fixture(html`<lr-tool-call-chip></lr-tool-call-chip>`)) as LyraToolCallChip;
