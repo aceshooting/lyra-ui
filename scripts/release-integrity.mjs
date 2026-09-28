@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, readFileSync, statSync } from 'node:fs';
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -340,6 +340,49 @@ export function validateWorkflowSource({
   return { tag, commitSha: githubSha, ref: githubRef, eventName };
 }
 
+/**
+ * Chooses the release tags a manually dispatched Release run creates. Each publishable workspace
+ * package contributes `<directory>@<version>` from its committed package.json. A named selection
+ * must be unreleased; `all` releases every package whose current version has no tag yet and
+ * skips the rest, so an unchanged companion package does not block the release. Fails closed on
+ * an unknown selection, a non-stable version, or when nothing is left to release.
+ */
+export function planReleaseTags({ packages, existingTags, selection = 'all' }) {
+  if (selection !== 'all' && !Object.hasOwn(RELEASE_PACKAGES, selection)) {
+    throw new Error(
+      `Unknown release package '${selection}'. Expected all, ${Object.keys(RELEASE_PACKAGES).join(', ')}.`,
+    );
+  }
+  const existing = new Set(existingTags);
+  const planned = [];
+  for (const pkg of packages) {
+    if (pkg.private) continue;
+    const directoryName = path.posix.basename(pkg.directory);
+    if (!Object.hasOwn(RELEASE_PACKAGES, directoryName)) {
+      throw new Error(`Publishable package directory '${pkg.directory}' has no release tag mapping.`);
+    }
+    if (selection !== 'all' && selection !== directoryName) continue;
+    const expected = parseReleaseTag(`${directoryName}@${pkg.version}`);
+    validateTarballIdentity({ name: pkg.name, version: pkg.version }, expected);
+    if (existing.has(expected.tag)) {
+      if (selection !== 'all') {
+        throw new Error(
+          `Release tag '${expected.tag}' already exists; bump the version with pnpm release:prepare first.`,
+        );
+      }
+      continue;
+    }
+    planned.push(expected);
+  }
+  if (planned.length === 0) {
+    throw new Error(
+      'Every selected package version already has a release tag; nothing to release. ' +
+        'Run pnpm release:prepare, commit, and push the bumped versions first.',
+    );
+  }
+  return planned;
+}
+
 export function selectReleaseTarball(files) {
   const candidates = [...files].filter((file) => String(file).endsWith('.tgz'));
   if (candidates.length !== 1 || candidates.length !== files.length) {
@@ -530,6 +573,42 @@ function resolveTagCli(options) {
     `dir=${expected.directory}\nname=${expected.packageName}\nversion=${expected.version}\n`,
   );
   console.log(`${expected.tag} resolves to ${expected.packageName} in ${expected.directory}.`);
+}
+
+function planReleaseCli(options) {
+  const remote = options.remote ?? 'origin';
+  const packagesRoot = path.join(repoRoot, 'packages');
+  const packages = readdirSync(packagesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(packagesRoot, entry.name, 'package.json'))
+    .filter((file) => existsSync(file))
+    .map((file) => {
+      const packageJson = JSON.parse(readFileSync(file, 'utf8'));
+      return {
+        directory: path.posix.join('packages', path.basename(path.dirname(file))),
+        name: packageJson.name,
+        version: packageJson.version,
+        private: packageJson.private === true,
+      };
+    });
+  const existingTags = execFileSync('git', ['ls-remote', '--tags', '--refs', remote], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .map((line) => line.split('\t')[1] ?? '')
+    .filter((ref) => ref.startsWith('refs/tags/'))
+    .map((ref) => ref.slice('refs/tags/'.length));
+  const planned = planReleaseTags({
+    packages,
+    existingTags,
+    selection: options.package ?? 'all',
+  });
+  const outputFile = requireOption(options, 'github_output');
+  appendFileSync(outputFile, `tags=${planned.map(({ tag }) => tag).join(' ')}\n`);
+  for (const { tag, packageName, directory } of planned) {
+    console.log(`${tag} will release ${packageName} from ${directory}.`);
+  }
 }
 
 function validateGitTagCli(options) {
@@ -737,6 +816,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'wait-test-all-browsers') {
     return waitTestAllBrowsersCli(options);
   }
+  if (options.command === 'plan-release') return planReleaseCli(options);
   if (options.command === 'resolve-tag') return resolveTagCli(options);
   if (options.command === 'validate-git-tag') return validateGitTagCli(options);
   if (options.command === 'validate-workflow-source') return validateWorkflowSourceCli(options);
@@ -744,7 +824,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'compare-rebuild') return compareRebuildCli(options);
   if (options.command === 'verify-site-freshness') return verifySiteFreshnessCli(options);
   throw new Error(
-    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
+    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|plan-release|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
   );
 }
 

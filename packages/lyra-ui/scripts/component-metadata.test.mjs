@@ -857,8 +857,8 @@ test('CEM projection reports drift and marks a new assigned tag unreleased once 
   // actually shipped at the current package version's release tag. A brand-new tag that isn't
   // part of that snapshot hasn't shipped yet -- it's unreleased until the next version bump, not
   // retroactively "since" a version that already went out without it. That only holds once
-  // taggedCurrent is actually populated, though: scripts/publish.sh runs this exact suite between
-  // bumping package.json and creating the release tag, a window where
+  // taggedCurrent is actually populated, though: CI runs this exact suite on the release commit,
+  // between bumping package.json and creating the release tag, a window where
   // generate-component-metadata.mjs --write deliberately nulls taggedCurrent out (the just-bumped
   // version genuinely isn't tagged yet -- see reconcileCurrentReleaseHistory's rolloverCurrent
   // branch). In that transient state a brand-new tag is correctly stamped "since: packageVersion"

@@ -27,6 +27,7 @@ import {
   evaluateFullEngineRun,
   evaluateTestAllBrowsersRun,
   parseReleaseTag,
+  planReleaseTags,
   selectReleaseTarball,
   validateAnnotatedTag,
   validateRebuiltTarballBytes,
@@ -2064,214 +2065,65 @@ test('release workflows verify tagged-source bytes without exposing protected cr
   );
 });
 
-test('release script pins its repository and pushes release refs atomically', () => {
-  const publishScript = readFileSync(
-    path.join(repoRoot, 'scripts/publish.sh'),
+test('release workflow qualifies the exact main commit before tagging, releasing, and publishing', () => {
+  const releaseWorkflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/release.yml'),
     'utf8'
   );
-
-  assert.match(publishScript, /GH_REPOSITORY="\$GH_ACCOUNT\/lyra-ui"/);
-  assert.match(publishScript, /git remote get-url --push --all origin/);
-  assert.match(publishScript, /git remote get-url --all origin/);
-  assert.match(publishScript, /origin fetch URL/);
-  assert.match(publishScript, /git ls-remote --tags origin/);
-  assert.match(
-    publishScript,
-    /git push origin "\$release_sha:refs\/heads\/main"/
-  );
-  assert.doesNotMatch(publishScript, /git push origin HEAD:/);
-  assert.match(
-    publishScript,
-    /git tag -a "\$\{TAG\[\$dir\]\}" -m "Release \$\{TAG\[\$dir\]\}" "\$release_sha"/
-  );
-  assert.match(
-    publishScript,
-    /current_head="\$\(git rev-parse HEAD\^\{commit\}\)"/
-  );
-  assert.match(
-    publishScript,
-    /local HEAD moved during exact-commit qualification/
-  );
-  assert.match(
-    publishScript,
-    /working tree changed during exact-commit qualification/
-  );
-  assert.match(publishScript, /git push --atomic origin "\$\{tag_args\[@\]\}"/);
-  assert.match(
-    publishScript,
-    /gh release create[\s\S]*--repo "\$GH_REPOSITORY"/
-  );
-  assert.doesNotMatch(publishScript, /git add -A/);
-  assert.doesNotMatch(publishScript, /export GH_TOKEN/);
-  assert.match(publishScript, /Working tree is not clean/);
-  assert.match(
-    publishScript,
-    /pnpm --filter "\$name" --if-present run package-metadata/
-  );
-  assert.match(publishScript, /src\/internal\/package-metadata\.ts/);
-  assert.match(publishScript, /scripts\/fixtures\/component-metadata\.json/);
-  assert.match(publishScript, /scripts\/fixtures\/component-inventory\.json/);
-  assert.match(publishScript, /git diff --name-only/);
-  assert.match(publishScript, /node scripts\/update-readme-status\.mjs/);
-  assert.match(publishScript, /git add README\.md/);
-  assert.match(publishScript, /node scripts\/sync-plugin-version\.mjs/);
-  assert.match(publishScript, /\.\/package\.sh/);
-  assert.match(publishScript, /pnpm skill:check/);
-  assert.match(
-    publishScript,
-    /plugins\/lyra-ui\/\.claude-plugin\/plugin\.json/
-  );
-  assert.match(publishScript, /plugins\/lyra-ui\/\.codex-plugin\/plugin\.json/);
-  assert.match(publishScript, /\.claude-plugin\/marketplace\.json/);
-  assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/CHANGELOG\.md/);
-  assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/references/);
-  assert.match(publishScript, /skills\/lyra-ui\.skill/);
-  assert.match(publishScript, /skills\/compose-lyra-interfaces\.skill/);
-  assert.match(publishScript, /git --no-pager diff --stat/);
-  assert.match(publishScript, /gh workflow run full-engine\.yml/);
-  assert.match(
-    publishScript,
-    /gh workflow run test-all-browsers\.yml[\s\S]*--ref main[\s\S]*-f browsers=chromium,firefox,chrome,edge,safari/
-  );
-  assert.match(publishScript, /wait-ci/);
-  assert.match(publishScript, /wait-test-all-browsers/);
-  assert.match(publishScript, /wait-full-engine/);
-  assert.match(publishScript, /not a stable core semver/);
-  assert.match(publishScript, /QUALIFICATION_PASSED/);
-  assert.match(publishScript, /Do NOT tag or release this commit/);
-  assert.match(
-    publishScript,
-    /custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/
-  );
-  const changedReleaseBlock = publishScript.slice(
-    publishScript.indexOf('RELEASE_DIRS=()'),
-    publishScript.indexOf('declare -A NEW_VERSION')
-  );
-  assert.match(changedReleaseBlock, /for dir in "\$\{PKG_DIRS\[@\]\}"/);
-  assert.doesNotMatch(
-    changedReleaseBlock,
-    /for name in "\$\{EFFECTIVE_NAMES\[@\]\}"/
-  );
-  assert.match(changedReleaseBlock, /AUTO_EXPANDED_RELEASE_DIRS/);
-  assert.match(
-    changedReleaseBlock,
-    /Changesets expanded the release to publishable dependents/
-  );
-  assert.match(publishScript, /Changesets auto-expanded dependent/);
-  assert.match(publishScript, /node scripts\/changeset-release-plan\.mjs/);
-  assert.doesNotMatch(publishScript, /matchAll\(\/\^"/u);
-  let gateCursor = publishScript.indexOf('pnpm changeset version');
-  for (const command of [
-    'run package-metadata',
-    'run manifest',
-    'run component-metadata',
-    'run manifest',
-    // llms must regenerate before lint: lint's own check-llms-freshness.mjs/
-    // check-llms-artifacts.mjs verify llms/ against the manifest and package-metadata-embedded
-    // version this loop just regenerated above, so running llms generation after lint (the
-    // order this test used to encode as correct) meant every release that changed manifest
-    // content or bumped the version failed lint on stale llms/ output.
-    'run default-string-slices',
-    'run framework-types',
-    'run design-tokens',
-    'run generate-editor-data',
-    'run llms',
-    'run lint',
-    'run build',
-    'run check:public-api',
-    'run component-quality',
-    'run test',
-  ]) {
-    const commandIndex = publishScript.indexOf(command, gateCursor + 1);
-    assert.ok(
-      commandIndex > gateCursor,
-      `${command} must follow the preceding release gate`
+  const job = (name, next) =>
+    releaseWorkflow.slice(
+      releaseWorkflow.indexOf(`\n  ${name}:\n`),
+      next ? releaseWorkflow.indexOf(`\n  ${next}:\n`) : undefined
     );
-    gateCursor = commandIndex;
-  }
-  for (const command of [
-    'node scripts/sync-plugin-version.mjs',
-    './package.sh',
-    'pnpm skill:check',
-  ]) {
-    const commandIndex = publishScript.indexOf(command, gateCursor + 1);
-    assert.ok(
-      commandIndex > gateCursor,
-      `${command} must follow release-time LLM generation`
-    );
-    gateCursor = commandIndex;
-  }
-  const stagingBlock = publishScript.slice(
-    publishScript.indexOf('git add README.md'),
-    publishScript.indexOf('unexpected_tracked_changes=')
-  );
-  for (const generatedEvidence of [
-    'scripts/fixtures/component-qualification.json',
-    'scripts/fixtures/component-integration.json',
-    'docs/component-quality.md',
-    'docs/component-integration.md',
-  ]) {
-    assert.match(
-      stagingBlock,
-      new RegExp(generatedEvidence.replaceAll('.', '\\.'), 'u'),
-      `release commit must include regenerated ${generatedEvidence}`
-    );
-  }
-  const pushMain = publishScript.indexOf(
-    'git push origin "$release_sha:refs/heads/main"'
-  );
-  const dispatch = publishScript.indexOf('gh workflow run full-engine.yml');
-  const dispatchTestAll = publishScript.indexOf(
-    'gh workflow run test-all-browsers.yml',
-    dispatch
-  );
-  const waitCi = publishScript.indexOf('wait-ci', dispatchTestAll);
-  const waitTestAll = publishScript.indexOf(
-    'wait-test-all-browsers',
-    waitCi
-  );
-  const waitFullEngine = publishScript.indexOf('wait-full-engine', waitTestAll);
-  const qualificationDriftGuard = publishScript.indexOf(
-    'current_head="$(git rev-parse HEAD^{commit})"',
-    waitFullEngine
-  );
-  const qualificationStatus = publishScript.indexOf(
-    'qualification_status="$(git status --porcelain)"',
-    qualificationDriftGuard
-  );
-  const qualificationPassed = publishScript.indexOf(
-    'QUALIFICATION_PASSED=1',
-    waitFullEngine
-  );
-  const tag = publishScript.indexOf('git tag -a', waitFullEngine);
-  const pushTags = publishScript.indexOf('git push --atomic origin', tag);
-  const release = publishScript.lastIndexOf('gh release create');
-  assert.ok(pushMain < dispatch);
-  assert.ok(dispatch < dispatchTestAll);
-  assert.ok(dispatchTestAll < waitCi);
-  assert.ok(waitCi < waitTestAll);
-  assert.ok(waitTestAll < waitFullEngine);
-  assert.ok(waitFullEngine < qualificationDriftGuard);
-  assert.ok(qualificationDriftGuard < qualificationStatus);
-  assert.ok(qualificationStatus < qualificationPassed);
-  assert.ok(qualificationPassed < tag);
-  assert.ok(tag < pushTags);
-  assert.ok(pushTags < release);
+  const plan = job('plan', 'pack');
+  const pack = job('pack', 'release');
+  const release = job('release');
 
-  const qualificationGuardBlock = publishScript.slice(
-    qualificationDriftGuard,
-    tag
+  const triggers = releaseWorkflow.slice(
+    releaseWorkflow.indexOf('\non:\n'),
+    releaseWorkflow.indexOf('\npermissions:\n')
   );
+  assert.match(triggers, /^\non:\n  workflow_dispatch:\n/);
+  assert.doesNotMatch(triggers, /\n  (push|release|schedule|pull_request|workflow_run):/);
+  assert.match(releaseWorkflow, /\npermissions:\n  contents: read\n/);
+  for (const uses of releaseWorkflow.match(/uses: \S+/g) ?? []) {
+    assert.match(uses, /@[0-9a-f]{40}$/u, `${uses} must be pinned to a commit SHA`);
+  }
+
+  // Plan: main only, unreleased tags from committed versions, all three gates on the exact SHA.
+  assert.match(plan, /"\$GITHUB_REF" != "refs\/heads\/main"/);
+  assert.match(plan, /release-integrity\.mjs plan-release/);
   assert.match(
-    qualificationGuardBlock,
-    /qualification_status="\$\(git status --porcelain\)"/
+    plan,
+    /wait-ci[\s\S]*--sha "\$SHA" --workflow ci\.yml[\s\S]*wait-test-all-browsers[\s\S]*--sha "\$SHA" --workflow test-all-browsers\.yml[\s\S]*wait-full-engine[\s\S]*--sha "\$SHA" --workflow full-engine\.yml/
   );
+  assert.doesNotMatch(plan, /contents: write|actions: write/);
 
-  const packageExecution = publishScript.slice(
-    publishScript.indexOf('pnpm install'),
-    publishScript.indexOf('release_sha=')
+  // Pack: credential-free, pinned toolchain, the same pack command the publish rebuild compares.
+  assert.match(pack, /persist-credentials: false/);
+  assert.match(pack, /node-version: 22\.23\.2/);
+  assert.match(pack, /pnpm install --frozen-lockfile/);
+  assert.match(pack, /pnpm --filter "\$name" --fail-if-no-match pack --pack-destination/);
+  assert.match(pack, /check:component-quality:built/);
+  assert.match(pack, /validate-tarball --tag "\$tag"/);
+  assert.match(pack, /CHANGELOG\.md[\s\S]*custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/);
+  assert.match(pack, /git diff --exit-code/);
+  assert.doesNotMatch(pack, /contents: write|GH_TOKEN/);
+
+  // Release: no checkout or repository script under the write token; atomic annotated tags on
+  // the qualified SHA, then releases, then an explicit publish dispatch on each tag.
+  assert.match(release, /needs: \[plan, pack\]/);
+  assert.doesNotMatch(release, /actions\/checkout@|pnpm |scripts\//);
+  const tag = release.indexOf('git tag -a "$tag" -m "Release $tag" "$SHA"');
+  const pushTags = release.indexOf('git push --atomic origin');
+  const createRelease = release.indexOf('gh release create "$tag"');
+  const dispatch = release.indexOf(
+    'gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag"'
   );
-  assert.doesNotMatch(packageExecution, /GH_TOKEN=/);
+  assert.ok(tag > 0 && tag < pushTags);
+  assert.ok(pushTags < createRelease);
+  assert.ok(createRelease < dispatch);
+  assert.match(release, /--verify-tag/);
 
   const readme = readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   assert.doesNotMatch(readme, /`@aceshooting\/lyra-ui` is published at/);
@@ -2286,6 +2138,51 @@ test('release script pins its repository and pushes release refs atomically', ()
     ciWorkflow.indexOf('\n  lint:')
   );
   assert.match(lintShardJob, /fetch-depth: 0/);
+});
+
+test('release planning tags only unreleased stable package versions', () => {
+  const packages = [
+    { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '22.0.0', private: false },
+    { directory: 'packages/lyra-flags', name: '@aceshooting/lyra-flags', version: '2.3.0', private: false },
+    { directory: 'packages/tooling', name: 'tooling', version: '1.0.0', private: true },
+  ];
+  const existingTags = ['lyra-ui@21.2.0', 'lyra-flags@2.3.0'];
+  assert.deepEqual(
+    planReleaseTags({ packages, existingTags }).map(({ tag }) => tag),
+    ['lyra-ui@22.0.0']
+  );
+  assert.deepEqual(
+    planReleaseTags({ packages, existingTags, selection: 'lyra-ui' }).map(({ tag }) => tag),
+    ['lyra-ui@22.0.0']
+  );
+  assert.throws(
+    () => planReleaseTags({ packages, existingTags, selection: 'lyra-flags' }),
+    /'lyra-flags@2\.3\.0' already exists/u
+  );
+  assert.throws(
+    () => planReleaseTags({ packages, existingTags: [...existingTags, 'lyra-ui@22.0.0'] }),
+    /nothing to release/u
+  );
+  assert.throws(
+    () => planReleaseTags({ packages, existingTags, selection: 'tooling' }),
+    /Unknown release package/u
+  );
+  assert.throws(
+    () =>
+      planReleaseTags({
+        packages: [{ ...packages[0], version: '22.0.0-next.1' }],
+        existingTags,
+      }),
+    /Unsupported release tag/u
+  );
+  assert.throws(
+    () =>
+      planReleaseTags({
+        packages: [{ ...packages[0], name: '@aceshooting/other' }],
+        existingTags,
+      }),
+    /does not match tag package/u
+  );
 });
 
 test('package freshness gates track the standalone skill changelog', () => {
@@ -2312,32 +2209,6 @@ test('package freshness gates track the standalone skill changelog', () => {
     regenScript.indexOf('git status --short -- "${CHANGED_PATHS[@]}"')
   );
   assert.ok(changedPathsBlock.includes(changelogPath));
-});
-
-test('release script exits non-zero when the published upgrade feed stays stale', () => {
-  const publishScript = readFileSync(
-    path.join(repoRoot, 'scripts/publish.sh'),
-    'utf8'
-  );
-  const verificationStart = publishScript.indexOf('primary_dir=""');
-  assert.ok(verificationStart >= 0, 'published-feed verification block must exist');
-  const verificationBlock = publishScript.slice(verificationStart);
-  const harness = `
-set -u
-RELEASE_DIRS=('packages/lyra-ui')
-declare -A PKG_NAME NEW_VERSION
-PKG_NAME['packages/lyra-ui']='@aceshooting/lyra-ui'
-NEW_VERSION['packages/lyra-ui']='12.1.3'
-node() { return 1; }
-${verificationBlock}
-`;
-  const result = spawnSync('bash', ['-c', harness], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
-
-  assert.notEqual(result.status, 0, result.stderr);
-  assert.match(result.stderr, /RELEASE INCOMPLETE/);
 });
 
 test('package lifecycle and root custom-elements metadata are clean-checkout safe', () => {
@@ -2731,7 +2602,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/publish.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

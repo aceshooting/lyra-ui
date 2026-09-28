@@ -7,10 +7,9 @@
 # releases across two reports; one of the skipped releases carried a bug fix a consumer was waiting
 # for.
 #
-# scripts/publish.sh waits for this at its tail, but publish.sh is not the only way a version
-# reaches npm: publish.yml also runs on `workflow_dispatch` (the re-publish/recovery path) and on
-# any `release: published` event, and on those paths nothing was watching. This workflow is that
-# missing half.
+# Every path to npm runs publish.yml -- dispatched by release.yml, dispatched manually for
+# recovery, or on a `release: published` event -- so this workflow follows each successful Publish
+# run and keeps the release visibly incomplete until the feed catches up.
 #
 # It deliberately lives OUTSIDE publish.yml. Everything from publish.yml's `publish:` job to the end
 # of that file is a credential-bearing region that must not check out source or install

@@ -12,13 +12,13 @@ package contract they enforce.
 | `./scripts/test.sh` | Run the complete Chromium, Firefox and WebKit test sweep plus SSR, hydration, visual and workspace checks. |
 | `./scripts/test_all_browsers.sh` | Run all four five-browser workflow shards locally, or a selected shard subset. |
 | `./scripts/regen.sh` | Regenerate checked-in derived artifacts. |
-| `./scripts/publish.sh` | Run the release and publish workflow. |
+| `pnpm release:prepare` | Bump versions from pending changesets and regenerate version-derived artifacts; the Release workflow on GitHub does the rest. |
 
 ## Root script groups
 
 - `check-*`: repository-wide documentation, consumer, workflow, secret and Storybook checks.
 - `docs-*`, `generate-sitemap.mjs`, and `storybook-*`: documentation and site contracts.
-- `release-*`, `publish.sh`, `upgrade.sh`, and metadata sync helpers: release maintenance.
+- `release-*`, `upgrade.sh`, and metadata sync helpers: release maintenance.
 - `*-test.mjs`: focused contract tests for the adjacent repository-level module.
 
 ## Adding a script

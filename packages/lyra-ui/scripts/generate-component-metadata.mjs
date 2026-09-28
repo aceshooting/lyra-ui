@@ -66,7 +66,7 @@ function writeSourceAnnotations(changes) {
 
 /**
  * The metadata a write persists: the reconciled history, plus -- on a version rollover, which is
- * when `scripts/publish.sh` runs this after `changeset version` -- every `since: 'unreleased'`
+ * when `pnpm release:prepare` runs this after `changeset version` -- every `since: 'unreleased'`
  * deprecation stamped with the version being released, so no record ships reading `unreleased`.
  */
 export function nextWriteMetadata(

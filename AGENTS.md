@@ -113,6 +113,7 @@ pnpm lint           # -r; full contract-policy chain + every tsc contract
 pnpm manifest       # custom-elements.json
 pnpm registrations  # all.ts imports, tag aliases, allowlist, sideEffects, subpath exports
 pnpm plugin:sync    # lyra-ui version -> agent manifests + Claude marketplace entry
+pnpm release:prepare # consume changesets, regenerate version-derived files; no commit/tag/push
 pnpm docs           # Storybook on localhost:6006
 pnpm create:component --family utility --name status-panel  # validated scaffold
 ./scripts/test.sh   # complete 3-engine + SSR/visual sweep; before publishing, not per commit
@@ -123,9 +124,13 @@ three-engine baseline: **[docs/agents/component-scaffold.md](docs/agents/compone
 
 - `packages/lyra-ui/package.json#scripts.contract-policy` and `.github/workflows/ci.yml` are the
   authoritative gate lists; reproduce CI failures in that order, never from a prose copy.
-- Releases need push CI, all Test All Browsers aggregates and all full-engine shards green on the
-  exact main commit. `./scripts/test.sh` mirrors full-engine's split via `TEST_SH_ENGINE_SHARDS`
-  (a count, default `1`), so a failing CI shard reproduces as the same-numbered local shard.
+- Release flow: `pnpm release:prepare`, review, commit `chore(release): <pkg>@<version>`, push to
+  main; push CI, all Test All Browsers aggregates and all full-engine shards must pass on that exact
+  commit; then `gh workflow run release.yml --ref main` tags, releases and dispatches `publish.yml`
+  (approve `npm-publish`). Nothing is tagged or published locally
+  ([release integrity](docs/agents/ci-and-gates.md#release-integrity)).
+- `./scripts/test.sh` mirrors full-engine's split via `TEST_SH_ENGINE_SHARDS` (a count, default
+  `1`), so a failing CI shard reproduces as the same-numbered local shard.
 - `prepack` stamps version metadata and regenerates editor data; CI freshness-checks it too.
 - `check:hit-area` and `check:numeric-guards` block `pnpm lint`;
   `ls packages/lyra-ui/scripts/check-*.mjs` is the real inventory.

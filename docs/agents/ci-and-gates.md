@@ -446,37 +446,40 @@ is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a
 release, not on every commit -- see [AGENTS.md](../../AGENTS.md)'s "Dev commands and gates" section
-and the release checklist in `scripts/publish.sh`.
+and the release flow below.
 
 ## Release integrity
 
-`scripts/publish.sh` is self-contained in this repository. It does not read or run a sibling
-website checkout; website synchronization is a separate, opt-in post-release operation. It refuses
-to start from a dirty tree, requires one canonical fetch URL and one canonical push URL, and keeps
-the maintainer GitHub token out of dependency and package lifecycle processes. Changesets may
-auto-expand the release to publishable dependents; every actual package-version delta is therefore
-generated, tested, reviewed, packed, tagged, and released. Only stable core `major.minor.patch`
-versions are accepted. Package ownership is derived from `pnpm changeset status --output`, so the
-release script accepts every frontmatter spelling that Changesets itself accepts, including
-single-quoted package names.
+Releases run in four steps; nothing is tagged or published from a workstation.
 
-For each released package it regenerates package, component, manifest, default-string, framework,
-design-token, editor, and LLM artifacts, then runs lint → build → component-quality → test. It
-updates the narrowly anchored README source-version line (which deliberately makes no pre-publish
-registry claim). For a lyra-ui release it also synchronizes the Claude and Codex plugin manifests
-plus the version-bearing Claude marketplace entry, regenerates the plugin references and standalone
-skill archives, and verifies the complete plugin contract. It then shows the complete clean-start
-worktree and diff stat before confirmation. Packing reruns the same deterministic lifecycle. The
-script stages the full version-derived CEM, inventory, quality, editor, framework, token, LLM, and
-plugin set; any other unstaged tracked output aborts for review. A flags-only release does not touch
-the lyra-ui plugin.
-
-The release commit is pushed alone to `origin/main`, which starts CI. The script dispatches
-`test-all-browsers.yml` and `full-engine.yml` from `main`, then requires the exact-SHA `push`/`main`
-CI run plus exact-SHA `workflow_dispatch`/`main` runs for both browser workflows. It creates no tag
-unless all three runs qualify. Only then does it create annotated tags, push the multi-package tag
-set atomically, and create the GitHub Releases that trigger `publish.yml`. Recovery output is
-phase-aware and never suggests a release after failed qualification.
+1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
+   `.nvmrc` Node patch, a clean tree, and a HEAD containing `origin/main`. It consumes every pending
+   changeset with `pnpm changeset version`, refreshes the lockfile with `pnpm install`, and for each
+   package whose version changed runs, in order: `package-metadata`, `manifest`,
+   `component-metadata`, `manifest` again, `component-inventory` (it records the deprecations the
+   bump just stamped), `default-string-slices`, `framework-types`, `design-tokens`,
+   `generate-editor-data`, `llms`, `build`, and `component-quality`. A lyra-ui release then syncs
+   the Claude/Codex plugin versions, runs `./package.sh`, and rebuilds and remeasures because
+   `package.sh` writes source. `node scripts/update-readme-status.mjs` runs last. The script never
+   lints, tests, packs, commits, tags, or pushes. Changesets can auto-expand a release to a
+   publishable dependent; the package-version delta, not the changeset list, is the release set.
+   Only stable `major.minor.patch` versions are accepted.
+2. **Commit and qualify.** Review the diff, commit it as `chore(release): <pkg>@<version>`, and push
+   to main. Push CI runs on that commit; dispatch `test-all-browsers.yml` (all five browsers) and
+   `full-engine.yml` on main for the same commit. Any failure is fixed with a new commit, and the
+   new HEAD is requalified.
+3. **Release on GitHub.** `gh workflow run release.yml --ref main` plans one
+   `<directory>@<version>` tag per publishable package whose committed version has no tag yet (a
+   named `package` input must be unreleased), and requires the exact-SHA `push`/`main` CI run and
+   `workflow_dispatch`/`main` runs of both browser workflows through `release-integrity.mjs`. A
+   credential-free job packs each tarball with the pinned Node and pnpm, using the same command the
+   publish verification rebuilds with, and fails if packing changes tracked files. A job with no
+   checkout then pushes the annotated tags atomically, creates each GitHub Release with the
+   tarball, `CHANGELOG.md`, `custom-elements.json`, `llms.txt`, and `llms-full.txt`, and dispatches
+   `publish.yml` on each tag. A release created with `GITHUB_TOKEN` emits no `release: published`
+   event to other workflows, so that dispatch is the only publish trigger.
+4. **Publish.** Approve the `npm-publish` environment on each Publish run, then deploy the website
+   so `release-feed-freshness.yml` can confirm the upgrade feed matches npm.
 
 The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's
 peeled commit is both the exact checkout and the workflow invocation ref/SHA, then waits for one
@@ -740,6 +743,7 @@ pnpm docs        # Storybook (.storybook/), demos every component live at localh
 pnpm create:component --family utility --name status-panel # validated new-component scaffold
 ./scripts/test.sh # full Chromium+Firefox+WebKit test sweep (parallel lanes) + SSR/hydration/
                  #     visual/workspace tests -- run before publishing, NOT on every commit
+pnpm release:prepare # consume changesets + regenerate version-derived artifacts (no commit/tag)
 ```
 
 ## `./package.sh` and the packaged references
