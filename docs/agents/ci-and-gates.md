@@ -237,13 +237,16 @@ the PR checks list tells you which of these to reproduce locally:
    needs `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage`
    needs, so it gets its own `pnpm build` rather than waiting on that job. It verifies the tarball's
    required files, then runs the complete packed install/import/declaration/bundle/framework
-   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 935 non-CSS package
-   exports are sorted and round-robin partitioned across four independent runners (234/234/234/233),
-   cutting the measured ~15-minute monolithic type-resolution path to roughly four minutes without
-   increasing ATTW process concurrency. Each shard runs `pnpm pack`, so it analyzes exact
-   publishable bytes rather than the source directory. In parallel, the public-API lane consumes
-   the shared dist artifact from `build_and_coverage_build` and runs the networked public-API
-   semver gate. The aggregate requires the contract lane, all four ATTW shards, and the public-API
+   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 2,730 typed package
+   export routes are sorted and round-robin partitioned across sixteen runners (ten with 171
+   routes and six with 170). One producer runs real `pnpm pack`, verifies tracked-source freshness,
+   and uploads the tarball with its SHA-256 checksum. Every worker verifies those same bytes and
+   checks the packed name, version, and ordered exports against its checkout before selecting its
+   partition. The 12-minute worker limit is unchanged; a measured 171-route partition took 4m55s,
+   whereas eight-way partitions took up to 10m42s before installation overhead. In parallel, the
+   public-API lane consumes the shared dist artifact from `build_and_coverage_build` and runs the
+   networked public-API semver gate. The aggregate requires the contract lane, all sixteen ATTW
+   shards (which require the package producer), and the public-API
    lane. The ordinary local `pnpm check:packed-consumer` remains complete and unsharded; the
    CI-specific `pnpm check:packed-consumer:contracts` is the only path that skips ATTW.
 

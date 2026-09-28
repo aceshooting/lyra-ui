@@ -868,13 +868,14 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   const rootPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
   );
+  const tarballStart = workflow.indexOf('\n  packed_consumer_tarball:');
   const contractStart = workflow.indexOf('\n  packed_consumer_contract:');
   const attwStart = workflow.indexOf('\n  packed_consumer_attw:');
   const publicApiStart = workflow.indexOf('\n  packed_consumer_public_api:');
   const aggregateStart = workflow.indexOf('\n  packed-consumer:');
   const docsStart = workflow.indexOf('\n  docs_build:');
   assert.ok(
-    contractStart > 0 &&
+    tarballStart > 0 && contractStart > tarballStart &&
       attwStart > contractStart &&
       publicApiStart > attwStart &&
       aggregateStart > publicApiStart &&
@@ -882,20 +883,31 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     'CI must retain separate packed contract, ATTW, public-API, and aggregate jobs'
   );
 
+  const tarballJob = workflow.slice(tarballStart, contractStart);
   const contractJob = workflow.slice(contractStart, attwStart);
   const attwJob = workflow.slice(attwStart, publicApiStart);
   const publicApiJob = workflow.slice(publicApiStart, aggregateStart);
   const aggregateJob = workflow.slice(aggregateStart, docsStart);
   assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
   assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
-  assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/4/u);
+  assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/16/u);
   assert.match(publicApiJob, /--filter @aceshooting\/lyra-ui check:public-api/u);
   assert.match(publicApiJob, /--filter @aceshooting\/lyra-flags check:public-api/u);
-  assert.match(attwJob, /shard_index: \[1, 2, 3, 4\]/u);
+  assert.match(attwJob, /shard_index: \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16\]/u);
   assert.match(
     attwJob,
-    /pnpm check:packed-attw --shard-index \$\{\{ matrix\.shard_index \}\} --shard-total 4/u
+    /pnpm check:packed-attw --shard-index \$\{\{ matrix\.shard_index \}\} --shard-total 16 --tarball artifacts\/packed-attw\/\*\.tgz/u
   );
+  assert.match(tarballJob, /pnpm pack --pack-destination/u);
+  assert.match(tarballJob, /git diff --exit-code/u);
+  assert.match(tarballJob, /sha256sum.*> SHA256SUMS/u);
+  assert.match(tarballJob, /name: packed-attw-tarball/u);
+  assert.match(tarballJob, /if-no-files-found: error/u);
+  assert.match(attwJob, /needs: packed_consumer_tarball/u);
+  assert.match(attwJob, /name: packed-attw-tarball/u);
+  assert.match(attwJob, /sha256sum --check SHA256SUMS/u);
+  assert.match(attwJob, /timeout-minutes: 12/u);
+  assert.doesNotMatch(attwJob, /pnpm pack|pnpm build/u);
   for (const dependency of [
     'packed_consumer_contract',
     'packed_consumer_attw',

@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readdir, readFile, mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   attwCommandArguments,
-  attwEntrypoints,
+  validatePackedAttwManifest,
   parseAttwArguments,
   partitionAttwEntrypoints,
 } from './packed-attw.mjs';
@@ -58,10 +59,15 @@ async function main() {
       : await pack(uiPackage, workspace);
     const tarballStat = await stat(tarball);
     if (!tarballStat.isFile()) throw new TypeError(`ATTW tarball is not a file: ${tarball}`);
-    // prepack may refresh the explicit exports map, so derive the exhaustive set only after the
-    // tarball exists. The source manifest is then the exact manifest pnpm just packed.
+    // Read after prepack, which can refresh exports. A supplied artifact must describe exactly
+    // this checkout too; never silently choose its checked routes from a different manifest.
     const manifest = JSON.parse(await readFile(join(uiPackage, 'package.json'), 'utf8'));
-    const allEntrypoints = attwEntrypoints(manifest);
+    const packedManifest = JSON.parse(execFileSync('tar', ['-xOf', tarball, 'package/package.json'], {
+      encoding: 'utf8', maxBuffer: 1024 * 1024,
+    }));
+    const allEntrypoints = validatePackedAttwManifest(packedManifest, manifest);
+    const sha256 = createHash('sha256').update(await readFile(tarball)).digest('hex');
+    console.log(`ATTW package SHA-256: ${sha256}`);
     const entrypoints = partitionAttwEntrypoints(allEntrypoints, shardIndex, shardTotal);
 
     console.log(

@@ -1,4 +1,4 @@
-export const ATTW_CI_SHARD_TOTAL = 4;
+export const ATTW_CI_SHARD_TOTAL = 16;
 
 function positiveInteger(value, label) {
   if (!/^\d+$/u.test(value ?? '')) {
@@ -142,4 +142,20 @@ export function attwCommandArguments(entrypoints, tarball) {
     '--summary',
     tarball,
   ];
+}
+
+/** Validate the actual packed surface before choosing any partition of it. Condition order matters. */
+export function validatePackedAttwManifest(packed, workspace) {
+  if (!packed || typeof packed !== 'object' || Array.isArray(packed)) {
+    throw new TypeError('The packed package manifest must be an object.');
+  }
+  for (const key of ['name', 'version']) {
+    if (typeof packed[key] !== 'string' || packed[key] !== workspace?.[key]) {
+      throw new TypeError(`Packed package ${key} does not match the workspace manifest.`);
+    }
+  }
+  if (JSON.stringify(packed.exports) !== JSON.stringify(workspace?.exports)) {
+    throw new TypeError('Packed package exports do not match the workspace manifest.');
+  }
+  return attwEntrypoints(packed);
 }

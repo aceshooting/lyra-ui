@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import {
   ATTW_CI_SHARD_TOTAL,
   attwCommandArguments,
   attwEntrypoints,
+  validatePackedAttwManifest,
   parseAttwArguments,
   parsePackedConsumerArguments,
   partitionAttwEntrypoints,
@@ -16,14 +21,8 @@ const manifest = JSON.parse(
 
 test('derives every non-CSS package export and partitions it exhaustively once', () => {
   const entrypoints = attwEntrypoints(manifest);
-  // Deliberately a reviewed literal, not a derived count: this gate's purpose is that growing the
-  // PUBLISHED export surface requires a human to look. 16.1.0 adds exactly one --
-  // ./components/layout/filter-bar/filter-bar-register.js, the lean registration entry that lets a
-  // text+select filter bar avoid pulling in combobox and date-picker. 21.0.0 adds 24: the
-  // class, registration, and lr-* alias exports of lr-toggle, lr-toggle-group,
-  // lr-navigation-menu, lr-navigation-menu-item, lr-context-menu, and lr-tool-call-block, plus the
-  // same three for lr-menubar and lr-menubar-item.
-  assert.equal(entrypoints.length, 984, 'the reviewed package has 984 typed exports');
+  // Reviewed 22.0.0 surface, including exact locale declaration redirects.
+  assert.equal(entrypoints.length, 2730, 'the reviewed package has 2730 typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -33,7 +32,7 @@ test('derives every non-CSS package export and partitions it exhaustively once',
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [246, 246, 246, 246]);
+  assert.deepEqual(shards.map((shard) => shard.length), [171, 171, 171, 171, 171, 171, 171, 171, 171, 171, 170, 170, 170, 170, 170, 170]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });
@@ -92,4 +91,42 @@ test('rejects malformed exports maps instead of silently checking an empty subse
   assert.throws(() => attwEntrypoints({}), /exports object/u);
   assert.throws(() => attwEntrypoints({ exports: {} }), /no typed/u);
   assert.throws(() => attwEntrypoints({ exports: { public: './dist/public.js' } }), /Invalid/u);
+});
+
+
+test('packed manifest must match checkout identity and ordered export conditions', () => {
+  const source = { name: '@example/ui', version: '22.0.0', exports: {
+    '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+    './style.css': './dist/style.css',
+  } };
+  const packed = structuredClone(source);
+  assert.deepEqual(validatePackedAttwManifest(packed, source), ['.']);
+  for (const key of ['name', 'version']) {
+    assert.throws(() => validatePackedAttwManifest({ ...packed, [key]: 'wrong' }, source), new RegExp(key, 'u'));
+  }
+  for (const exports of [undefined, {}, { ...packed.exports, './extra.js': './extra.js' },
+    { ...packed.exports, '.': { types: './wrong.d.ts', default: './dist/index.js' } },
+    { ...packed.exports, '.': { default: './dist/index.js', types: './dist/index.d.ts' } }]) {
+    assert.throws(() => validatePackedAttwManifest({ ...packed, exports }, source), /exports/u);
+  }
+  assert.throws(() => validatePackedAttwManifest(null, source), /manifest/u);
+});
+
+
+test('runner rejects a foreign real tarball before invoking ATTW', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-attw-manifest-'));
+  try {
+    await mkdir(join(directory, 'package'));
+    await writeFile(join(directory, 'package/package.json'), JSON.stringify({ ...manifest, version: '0.0.0-foreign' }));
+    const tarball = join(directory, 'foreign.tgz');
+    execFileSync('tar', ['-czf', tarball, '-C', directory, 'package']);
+    const result = spawnSync(process.execPath, [
+      fileURLToPath(new URL('./check-packed-attw.mjs', import.meta.url)), '--tarball', tarball,
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Packed package version does not match/u);
+    assert.doesNotMatch(result.stdout, /ATTW shard|package SHA-256/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
