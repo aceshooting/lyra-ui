@@ -434,6 +434,11 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Regenerate manifest with current component metadata"
   pnpm --filter "$name" --if-present run manifest
   echo
+  # The bump stamps `since: 'unreleased'` deprecation records with the new version, and the
+  # component inventory records each deprecation, so it must follow the stamped metadata.
+  echo "==> [$name] Regenerate component inventory"
+  pnpm --filter "$name" --if-present run component-inventory
+  echo
   echo "==> [$name] Generate default-string slices"
   pnpm --filter "$name" --if-present run default-string-slices
   echo

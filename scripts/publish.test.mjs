@@ -166,3 +166,13 @@ test('publish.sh keeps every deliberate --upgrade-deps output in its preview, ab
     'the release commit must stage the complete deliberate upgrade-output set',
   );
 });
+
+test('publish.sh regenerates the component inventory after the bump stamps deprecation versions', () => {
+  const metadataIndex = publishScript.indexOf('run component-metadata');
+  const manifestIndex = publishScript.indexOf('run manifest', metadataIndex + 1);
+  const inventoryIndex = publishScript.indexOf('run component-inventory', manifestIndex + 1);
+  const lintIndex = publishScript.indexOf('run lint', inventoryIndex + 1);
+  assert.ok(metadataIndex > 0 && manifestIndex > metadataIndex, 'component metadata precedes the manifest refresh');
+  assert.ok(inventoryIndex > manifestIndex, 'the inventory follows the stamped metadata and manifest');
+  assert.ok(lintIndex > inventoryIndex, 'lint runs against the regenerated inventory');
+});
