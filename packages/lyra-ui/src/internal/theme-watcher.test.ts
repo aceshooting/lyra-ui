@@ -65,6 +65,50 @@ function hubForRealm(realm: Window): TestableThemeHub {
 }
 
 describe('ThemeWatcher', () => {
+  for (const [attribute, value] of [
+    ['data-lr-mode', 'dark'],
+    ['data-lr-look', 'shadcn'],
+    ['data-lr-surface', 'glass'],
+    ['data-lr-density', 'compact'],
+    ['data-lr-accent', 'ruby'],
+    ['data-lr-theme-scope', ''],
+  ] as const) {
+    it(`invalidates inherited theme measurements when ${attribute} changes`, async () => {
+      const { host, connect, disconnect } = await makeHost();
+      const scope = document.createElement('div');
+      host.replaceWith(scope);
+      scope.attachShadow({ mode: 'open' }).append(host);
+      const style = document.createElement('style');
+      style.textContent = `div { --test-theme-value: 0; } div[${attribute}] { --test-theme-value: 1; }`;
+      scope.before(style);
+      let observed = '';
+      let calls = 0;
+      new ThemeWatcher(host, () => {
+        observed = getComputedStyle(host).getPropertyValue('--test-theme-value').trim();
+        calls++;
+      });
+      connect();
+      try {
+        scope.setAttribute(attribute, value);
+        await aTimeout(0);
+        expect(observed).to.equal('1');
+        expect(calls).to.equal(1);
+        scope.removeAttribute(attribute);
+        await aTimeout(0);
+        expect(observed).to.equal('0');
+        expect(calls).to.equal(2);
+        disconnect();
+        scope.setAttribute(attribute, value);
+        await aTimeout(0);
+        expect(calls).to.equal(2);
+      } finally {
+        disconnect();
+        scope.remove();
+        style.remove();
+      }
+    });
+  }
+
   it('invokes onChange (coalesced) when a watched attribute mutates on the host', async () => {
     const { host, connect } = await makeHost();
     let calls = 0;

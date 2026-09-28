@@ -1,4 +1,5 @@
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { flattenedThemeParent, THEME_ATTRIBUTES } from '../../../internal/theme-observation.js';
 
 function parseRgbTriplet(value: string): [number, number, number] | null {
   const match = value.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
@@ -107,8 +108,8 @@ export function resolveIsDarkTheme(host: Element): boolean {
 }
 
 /** Re-invokes `onChange` whenever the resolved theme might have changed: an OS-level
- *  prefers-color-scheme flip, or a class/style/data-theme/data-color-scheme attribute change
- *  anywhere in `host`'s ancestor chain. A consumer re-theming via `--lr-theme-*` custom properties
+ *  prefers-color-scheme flip, or a theme attribute change anywhere in `host`'s flattened ancestor
+ *  chain, including slots and shadow hosts. A consumer re-theming via `--lr-theme-*` custom properties
  *  fires no DOM event on its own -- this mirrors qr-code.class.ts's/heatmap.class.ts's/
  *  chart.class.ts's own theme-reactive canvases, the established pattern in this codebase for a
  *  component that can't just let CSS repaint itself. Returns a cleanup function. */
@@ -136,22 +137,17 @@ export function watchDarkTheme(
   const Observer = view.MutationObserver;
   if (typeof Observer === 'function') {
     const targets: Element[] = [host];
-    let parent = host.parentElement;
-    while (parent) {
+    let parent = flattenedThemeParent(host);
+    while (parent && !targets.includes(parent)) {
       targets.push(parent);
-      parent = parent.parentElement;
+      parent = flattenedThemeParent(parent);
     }
     try {
       observer = new Observer(update);
       for (const target of targets) {
         observer.observe(target, {
           attributes: true,
-          attributeFilter: [
-            'class',
-            'style',
-            'data-theme',
-            'data-color-scheme',
-          ],
+          attributeFilter: [...THEME_ATTRIBUTES],
         });
       }
     } catch {

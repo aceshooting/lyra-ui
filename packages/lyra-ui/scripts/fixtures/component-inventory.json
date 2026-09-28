@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "21.0.0",
+    "lyraVersion": "21.1.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -58597,7 +58597,7 @@
             "tag": "lr-geojson-view",
             "kind": "component",
             "name": "lr-geojson-view",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "component",
               "name": "lr-geojson-viewer",
@@ -64199,7 +64199,7 @@
             "tag": "lr-icon",
             "kind": "css-property",
             "name": "--lr-icon-fixed-width",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "host-css-property",
               "name": "inline-size",
@@ -64227,7 +64227,7 @@
             "kind": "property",
             "name": "fixedWidth",
             "attribute": "fixed-width",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "host-css-property",
               "name": "inline-size",
@@ -64329,7 +64329,7 @@
               "kind": "property",
               "name": "fixedWidth",
               "attribute": "fixed-width",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
@@ -64504,7 +64504,7 @@
               "kind": "property",
               "name": "fixedWidth",
               "attribute": "fixed-width",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
@@ -64865,7 +64865,7 @@
               "tag": "lr-icon",
               "kind": "css-property",
               "name": "--lr-icon-fixed-width",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "host-css-property",
                 "name": "inline-size",
@@ -75855,7 +75855,7 @@
             "kind": "property",
             "name": "codeBlockChrome",
             "attribute": "code-block-chrome",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "codeBlockHeader",
@@ -75910,7 +75910,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -76115,7 +76115,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -76669,7 +76669,7 @@
             "kind": "property",
             "name": "codeBlockChrome",
             "attribute": "code-block-chrome",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "codeBlockHeader",
@@ -76717,7 +76717,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -76922,7 +76922,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -77730,7 +77730,7 @@
             "tag": "lr-media-card",
             "kind": "event",
             "name": "lr-before-media-download",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "event",
               "name": "lr-media-download-request",
@@ -78002,7 +78002,7 @@
               "tag": "lr-media-card",
               "kind": "event",
               "name": "lr-before-media-download",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-media-download-request",
@@ -78784,7 +78784,7 @@
               "lr-menu-item",
               "lr-menu-label"
             ],
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "slot",
               "name": "header",
@@ -80726,7 +80726,7 @@
             "kind": "property",
             "name": "codeBlockChrome",
             "attribute": "code-block-chrome",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "codeBlockHeader",
@@ -80797,7 +80797,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -80900,7 +80900,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -83474,7 +83474,7 @@
             "kind": "property",
             "name": "characterData",
             "attribute": "character-data",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "charData",
@@ -83488,7 +83488,7 @@
             "kind": "property",
             "name": "observeAttributes",
             "attribute": "attributes",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "attr",
@@ -83559,7 +83559,7 @@
               "kind": "property",
               "name": "observeAttributes",
               "attribute": "attributes",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "attr",
@@ -83602,7 +83602,7 @@
               "kind": "property",
               "name": "characterData",
               "attribute": "character-data",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "charData",
@@ -83697,7 +83697,7 @@
               "kind": "property",
               "name": "characterData",
               "attribute": "character-data",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "charData",
@@ -83770,7 +83770,7 @@
               "kind": "property",
               "name": "observeAttributes",
               "attribute": "attributes",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "attr",
@@ -118170,7 +118170,7 @@
             "tag": "lr-sparkline",
             "kind": "css-property",
             "name": "--lr-sparkline-stroke-width",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "css-property",
               "name": "--line-width",
@@ -118183,7 +118183,7 @@
             "tag": "lr-sparkline",
             "kind": "part",
             "name": "area",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "part",
               "name": "fill",
@@ -118444,7 +118444,7 @@
               "tag": "lr-sparkline",
               "kind": "part",
               "name": "area",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "part",
                 "name": "fill",
@@ -118512,7 +118512,7 @@
               "tag": "lr-sparkline",
               "kind": "css-property",
               "name": "--lr-sparkline-stroke-width",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "css-property",
                 "name": "--line-width",
@@ -118755,7 +118755,7 @@
             "tag": "lr-split-panel",
             "kind": "part",
             "name": "split-panel",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "part",
               "name": "base",
@@ -119025,7 +119025,7 @@
               "tag": "lr-split-panel",
               "kind": "part",
               "name": "split-panel",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "part",
                 "name": "base",
@@ -119837,7 +119837,7 @@
             "tag": "lr-stat",
             "kind": "slot",
             "name": "",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "slot",
               "name": "start",
@@ -120237,7 +120237,7 @@
               "tag": "lr-stat",
               "kind": "slot",
               "name": "",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "slot",
                 "name": "start",
@@ -121042,7 +121042,7 @@
             "kind": "property",
             "name": "codeBlockChrome",
             "attribute": "code-block-chrome",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "codeBlockHeader",
@@ -121092,7 +121092,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -121287,7 +121287,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -121667,7 +121667,7 @@
             "kind": "property",
             "name": "codeBlockChrome",
             "attribute": "code-block-chrome",
-            "since": "unreleased",
+            "since": "21.1.0",
             "replacement": {
               "kind": "property",
               "name": "codeBlockHeader",
@@ -121717,7 +121717,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",
@@ -121912,7 +121912,7 @@
               "kind": "property",
               "name": "codeBlockChrome",
               "attribute": "code-block-chrome",
-              "since": "unreleased",
+              "since": "21.1.0",
               "replacement": {
                 "kind": "property",
                 "name": "codeBlockHeader",

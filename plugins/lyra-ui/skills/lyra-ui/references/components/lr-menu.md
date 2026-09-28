@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated slot-content** default-slot content other than `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` since `unreleased`; use slot `slot="header" (or slot="footer")`; removal not before `23.0.0` — Content other than items, labels and separators renders inside role="menu" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot.
+- **Deprecated slot-content** default-slot content other than `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` since `21.1.0`; use slot `slot="header" (or slot="footer")`; removal not before `23.0.0` — Content other than items, labels and separators renders inside role="menu" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot.
 - **Optional peers** none
 - **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)

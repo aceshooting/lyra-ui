@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated slot** default slot since `unreleased`; use slot `slot="start"`; removal not before `23.0.0` — start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected.
+- **Deprecated slot** default slot since `21.1.0`; use slot `slot="start"`; removal not before `23.0.0` — start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected.
 - **Optional peers** none
 - **Themeable via** 14 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

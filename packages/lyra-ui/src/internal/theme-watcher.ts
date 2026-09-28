@@ -1,4 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { flattenedThemeParent, THEME_ATTRIBUTES } from './theme-observation.js';
 
 export type LyraThemeRoot = Document | ShadowRoot | Element;
 
@@ -246,18 +247,6 @@ function containsStyleCarrier(node: Node): boolean {
   return node.nodeType === ELEMENT_NODE && Boolean((node as Element).querySelector('style, link'));
 }
 
-/** The flattened-tree parent whose inherited custom properties can reach `element`. A distributed
- * node inherits through its slot, not through its light-DOM parent; once a shadow tree's top is
- * reached, inheritance continues through that tree's host. */
-function flattenedParentElement(element: Element): Element | null {
-  if (element.assignedSlot) return element.assignedSlot;
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode();
-  return root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root
-    ? (root as ShadowRoot).host
-    : null;
-}
-
 function isComposedAncestor(candidate: Element, descendant: Element): boolean {
   let current: Element | null = descendant;
   const seen = new Set<Element>();
@@ -265,7 +254,7 @@ function isComposedAncestor(candidate: Element, descendant: Element): boolean {
     if (seen.has(current)) return false;
     seen.add(current);
     if (current === candidate) return true;
-    current = flattenedParentElement(current);
+    current = flattenedThemeParent(current);
   }
   return false;
 }
@@ -283,7 +272,7 @@ function observationRoots(host: Element): Array<Document | ShadowRoot> {
     if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) {
       roots.add(root as ShadowRoot);
     }
-    current = flattenedParentElement(current);
+    current = flattenedThemeParent(current);
   }
   return [...roots];
 }
@@ -333,7 +322,7 @@ function isInlineDeclarationOnComposedAncestry(
     ) {
       return true;
     }
-    current = flattenedParentElement(current);
+    current = flattenedThemeParent(current);
   }
   return false;
 }
@@ -420,16 +409,7 @@ export class ThemeWatcher implements ReactiveController {
       this.observer.observe(target, {
         attributes: true,
         attributeFilter: [
-          'class',
-          'style',
-          // The library's own light/dark switch. Both palette.styles.ts and tokens.styles.ts key
-          // their dark grids off :host([data-lr-theme='dark']) and an ancestor
-          // [data-lr-theme='dark'], so toggling it changes every resolved token value with no Lit
-          // property update and no stylesheet mutation to observe. Omitting it left a canvas
-          // component painted in the previous mode until something else invalidated the watcher.
-          'data-lr-theme',
-          'data-theme',
-          'data-color-scheme',
+          ...THEME_ATTRIBUTES,
           'media',
           'href',
           'rel',

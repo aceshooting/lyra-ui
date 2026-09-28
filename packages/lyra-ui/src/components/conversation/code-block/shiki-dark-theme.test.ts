@@ -1,5 +1,69 @@
-import { expect, fixture, html } from "@open-wc/testing";
+import { expect, fixture, html, aTimeout } from "@open-wc/testing";
 import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
+
+for (const [attribute, value] of [
+  ['data-lr-theme', 'dark'],
+  ['data-lr-mode', 'dark'],
+  ['data-lr-look', 'shadcn'],
+  ['data-lr-surface', 'glass'],
+  ['data-lr-density', 'compact'],
+  ['data-lr-accent', 'ruby'],
+  ['data-lr-theme-scope', ''],
+] as const) {
+  it(`refreshes syntax colors when ${attribute} changes across a shadow boundary`, async () => {
+    const scope = await fixture<HTMLElement>(html`<div></div>`);
+    const root = scope.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = ':host { --lr-color-text: black; --lr-color-surface: white; }' +
+      `:host([${attribute}]) { --lr-color-text: white; --lr-color-surface: black; }`;
+    const host = document.createElement('div');
+    root.append(style, host);
+    let dark = resolveIsDarkTheme(host);
+    let changes = 0;
+    const cleanup = watchDarkTheme(host, () => {
+      dark = resolveIsDarkTheme(host);
+      changes++;
+    });
+    try {
+      expect(dark).to.be.false;
+      scope.setAttribute(attribute, value);
+      await aTimeout(0);
+      expect(dark).to.be.true;
+      expect(changes).to.equal(1);
+      scope.removeAttribute(attribute);
+      await aTimeout(0);
+      expect(dark).to.be.false;
+      expect(changes).to.equal(2);
+      cleanup();
+      scope.setAttribute(attribute, value);
+      await aTimeout(0);
+      expect(changes).to.equal(2);
+    } finally {
+      cleanup();
+    }
+  });
+}
+
+it('observes a slotted host through the slot that supplies its inherited palette', async () => {
+  const scope = await fixture<HTMLElement>(html`<div><span></span></div>`);
+  const root = scope.attachShadow({ mode: 'open' });
+  const style = document.createElement('style');
+  style.textContent = 'slot { --lr-color-text: black; --lr-color-surface: white; }' +
+    'slot[data-lr-theme="dark"] { --lr-color-text: white; --lr-color-surface: black; }';
+  const slot = document.createElement('slot');
+  root.append(style, slot);
+  const host = scope.querySelector('span')!;
+  let dark = resolveIsDarkTheme(host);
+  const cleanup = watchDarkTheme(host, () => { dark = resolveIsDarkTheme(host); });
+  try {
+    expect(dark).to.be.false;
+    slot.setAttribute('data-lr-theme', 'dark');
+    await aTimeout(0);
+    expect(dark).to.be.true;
+  } finally {
+    cleanup();
+  }
+});
 
 it("returns an inert reusable cleanup for a disconnected host", () => {
   const host = document.createElement("div");
