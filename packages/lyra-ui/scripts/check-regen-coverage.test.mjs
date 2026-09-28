@@ -10,6 +10,7 @@ import {
   expandScript,
   extractReferencedGeneratorFiles,
   extractRemedyNames,
+  parseSegment,
   splitCommand,
 } from './check-regen-coverage.mjs';
 
@@ -26,6 +27,21 @@ test('splitCommand splits only on top-level &&, trimming each segment', () => {
   ]);
 });
 
+test('parseSegment preserves explicit node test-runner mode', () => {
+  assert.deepEqual(parseSegment('node --test scripts/check-widget.test.mjs'), {
+    type: 'node-script',
+    isTest: true,
+    file: 'check-widget.test.mjs',
+    args: '',
+  });
+  assert.deepEqual(parseSegment('node scripts/generate-widget.mjs --check'), {
+    type: 'node-script',
+    isTest: false,
+    file: 'generate-widget.mjs',
+    args: '--check',
+  });
+});
+
 test('expandScript follows a nested pnpm-run alias to the node script it ultimately invokes', () => {
   const scripts = {
     entry: 'pnpm run middle',
@@ -34,7 +50,18 @@ test('expandScript follows a nested pnpm-run alias to the node script it ultimat
   };
   const { files, scriptNames } = expandScript('entry', scripts);
   assert.deepEqual([...files.keys()], ['generate-widget.mjs']);
+  assert.deepEqual([...expandScript('entry', scripts).writeFiles.keys()], ['generate-widget.mjs']);
   assert.ok(scriptNames.has('middle') && scriptNames.has('generate-widget'));
+});
+
+test('expanded test files stay visible for source scanning but are not write invocations', () => {
+  const scripts = {
+    entry: 'node --test scripts/check-widget.test.mjs && pnpm run writer',
+    writer: 'node scripts/generate-widget.mjs',
+  };
+  const expanded = expandScript('entry', scripts);
+  assert.deepEqual([...expanded.files.keys()], ['check-widget.test.mjs', 'generate-widget.mjs']);
+  assert.deepEqual([...expanded.writeFiles.keys()], ['generate-widget.mjs']);
 });
 
 test('extractRemedyNames reads a backtick pnpm-run remedy and a pnpm --filter remedy alike', () => {
@@ -70,6 +97,47 @@ test('a generator reachable only through a nested pnpm-run alias passes', () => 
   const result = computeCoverage({ scripts, readScriptSource, exemptions: {} });
   assert.equal(result.ok, true);
   assert.deepEqual(result.violations, []);
+});
+
+test('a build remedy scans chained test sources but requires only its real nested generator', () => {
+  const scripts = {
+    'contract-policy': 'node --test scripts/check-widget.test.mjs && node --test scripts/check-build-artifacts.test.mjs',
+    build: 'node --test scripts/check-build-artifacts.test.mjs && pnpm run inner-build',
+    'inner-build': 'node scripts/generate-widget.mjs',
+    regen: 'pnpm run unrelated',
+    unrelated: 'node scripts/generate-other.mjs',
+  };
+  const readScriptSource = sourceReaderFor({
+    'check-widget.test.mjs': 'if (stale) throw new Error("output is stale; run `pnpm run build`.");',
+    'check-build-artifacts.test.mjs': "import './generate-asset-manifest.mjs';",
+    'generate-widget.mjs': '// the actual write step',
+    'generate-asset-manifest.mjs': '// separately referenced generator',
+    'generate-other.mjs': '// unrelated',
+  });
+  const result = computeCoverage({ scripts, readScriptSource, exemptions: {} });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.violations.map(({ file }) => file), [
+    'generate-widget.mjs',
+    'generate-asset-manifest.mjs',
+  ]);
+  assert.ok(result.violations.every(({ file }) => !file.endsWith('.test.mjs')));
+});
+
+test('a test-runner invocation cannot satisfy required generator write reachability', () => {
+  const scripts = {
+    'contract-policy': 'node scripts/check-widget.mjs',
+    'check-widget.mjs': 'if (stale) throw new Error("run `pnpm run widget`.");',
+    widget: 'node scripts/generate-widget.mjs',
+    regen: 'node --test scripts/generate-widget.mjs',
+  };
+  const readScriptSource = sourceReaderFor({
+    'check-widget.mjs': 'if (stale) throw new Error("run `pnpm run widget`.");',
+    'generate-widget.mjs': '// generator',
+  });
+  const result = computeCoverage({ scripts, readScriptSource, exemptions: {} });
+  assert.equal(result.ok, false);
+  assert.equal(result.violations.length, 1);
+  assert.equal(result.violations[0].file, 'generate-widget.mjs');
 });
 
 test('a generator a gate requires, but that regen never reaches, fails', () => {
@@ -268,6 +336,30 @@ test('a root script missing a required generator entirely fails, naming the file
   assert.equal(result.violations.length, 1);
   assert.equal(result.violations[0].file, 'generate-widget.mjs');
   assert.equal(result.violations[0].script, 'scripts/upgrade.sh');
+});
+
+test('a root test-runner invocation cannot satisfy required generator write reachability', () => {
+  const scripts = {
+    'contract-policy': 'pnpm run check:widget',
+    'check:widget': 'node scripts/check-widget.mjs',
+    widget: 'node scripts/generate-widget.mjs',
+    regen: 'pnpm run widget',
+  };
+  const readScriptSource = sourceReaderFor({
+    'check-widget.mjs': 'if (stale) throw new Error("run `pnpm run widget`.");',
+    'generate-widget.mjs': '// generator',
+  });
+  const result = computeRootScriptCoverage({
+    scripts,
+    readScriptSource,
+    exemptions: {},
+    rootScripts: {
+      'scripts/regen.sh': 'pnpm --filter @scope/pkg exec node --test scripts/generate-widget.mjs\n',
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.violations.length, 1);
+  assert.equal(result.violations[0].script, 'scripts/regen.sh');
 });
 
 test('an exempted generator never fails root-script coverage, even absent from every root script', () => {

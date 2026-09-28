@@ -43,7 +43,7 @@ const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const scriptsDir = path.join(packageDir, 'scripts');
 
 const PNPM_RUN_RE = /^pnpm run ([\w:-]+)$/;
-const NODE_SCRIPT_RE = /^node(?:\s+--test)?\s+scripts\/([\w.-]+\.mjs)\b(.*)$/;
+const NODE_SCRIPT_RE = /^node(?:\s+(--test))?\s+scripts\/([\w.-]+\.mjs)\b(.*)$/;
 const REMEDY_RE = /`pnpm(?: --filter [^\s`]+)? (?:run )?([A-Za-z][\w:-]*)`/g;
 const REFERENCE_RE = /(?:from\s+['"]\.\/|['"](?:\.\/)?(?:scripts\/)?)((?:generate|build)-[\w-]+\.mjs)['"]/g;
 
@@ -54,30 +54,40 @@ export function splitCommand(command) {
 }
 
 /** One `&&`-segment, classified as a same-package script alias, a direct `node scripts/*.mjs`
- * invocation (file + its trailing arguments, verbatim), or something this checker does not model
- * (a raw `tsc`, an `mkdir`, ...). */
+ * invocation (file + trailing arguments, verbatim, with explicit test-runner mode preserved), or
+ * something this checker does not model (a raw `tsc`, an `mkdir`, ...). */
 export function parseSegment(segment) {
   const pnpmRun = segment.match(PNPM_RUN_RE);
   if (pnpmRun) return { type: 'pnpm-run', name: pnpmRun[1] };
   const nodeScript = segment.match(NODE_SCRIPT_RE);
-  if (nodeScript) return { type: 'node-script', file: nodeScript[1], args: nodeScript[2].trim() };
+  if (nodeScript) {
+    return {
+      type: 'node-script',
+      isTest: nodeScript[1] === '--test',
+      file: nodeScript[2],
+      args: nodeScript[3].trim(),
+    };
+  }
   return { type: 'other', raw: segment };
 }
 
 /**
  * Recursively expands `pnpm run <name>` references starting at `entry`, collecting every
  * `scripts/<file>.mjs` invocation reached along the way (with the exact argument string each
- * reached call site used). This is the one function both "does regen reach it" and "does a
- * `pnpm run <name>` remedy resolve to a file" are built from, so a nested alias
+ * reached call site used). `files` retains test-runner invocations for gate source scanning;
+ * `writeFiles` excludes explicit `node --test` calls for generator discovery and reachability.
+ * This is the one function both "does regen reach it" and "does a `pnpm run <name>` remedy
+ * resolve to a file" are built from, so a nested alias
  * (`regen` -> `registrations` -> `tag-aliases` -> `generate-tag-aliases.mjs`) is not a special case.
  *
  * @param {string} entry
  * @param {Record<string, string>} scripts
- * @returns {{ scriptNames: Set<string>, files: Map<string, Set<string>> }}
+ * @returns {{ scriptNames: Set<string>, files: Map<string, Set<string>>, writeFiles: Map<string, Set<string>> }}
  */
 export function expandScript(entry, scripts) {
   const scriptNames = new Set();
   const files = new Map();
+  const writeFiles = new Map();
   const queue = [entry];
   while (queue.length > 0) {
     const name = queue.shift();
@@ -92,16 +102,21 @@ export function expandScript(entry, scripts) {
       } else if (parsed.type === 'node-script') {
         if (!files.has(parsed.file)) files.set(parsed.file, new Set());
         files.get(parsed.file).add(parsed.args);
+        if (!parsed.isTest) {
+          if (!writeFiles.has(parsed.file)) writeFiles.set(parsed.file, new Set());
+          writeFiles.get(parsed.file).add(parsed.args);
+        }
       }
     }
   }
-  return { scriptNames, files };
+  return { scriptNames, files, writeFiles };
 }
 
 /**
- * Every `scripts/<file>.mjs` invocation across ALL `package.json` scripts, regardless of
+ * Every non-test `scripts/<file>.mjs` invocation across ALL `package.json` scripts, regardless of
  * reachability from anywhere -- keyed by file, then by the exact argument string, to whichever
- * script name(s) use it. A file with more than one distinct argument string is a self-`--check`/
+ * script name(s) use it. Explicit `node --test` invocations are excluded because they do not write
+ * generated artifacts. A file with more than one distinct argument string is a self-`--check`/
  * write pair; that is how mechanism 1 finds `generate-registration-graph.mjs` alone (regen) vs.
  * `--check` (the gate) without either script naming the other.
  *
@@ -113,7 +128,7 @@ export function collectFileInvocations(scripts) {
   for (const [name, command] of Object.entries(scripts)) {
     for (const segment of splitCommand(command)) {
       const parsed = parseSegment(segment);
-      if (parsed.type !== 'node-script') continue;
+      if (parsed.type !== 'node-script' || parsed.isTest) continue;
       if (!invocations.has(parsed.file)) invocations.set(parsed.file, new Map());
       const byArgs = invocations.get(parsed.file);
       if (!byArgs.has(parsed.args)) byArgs.set(parsed.args, new Set());
@@ -174,7 +189,7 @@ export function computeRequiredGenerators({ scripts, readScriptSource, contractP
 
     for (const name of extractRemedyNames(source)) {
       if (isGateName(name) || !scripts[name]) continue;
-      for (const targetFile of expandScript(name, scripts).files.keys()) {
+      for (const targetFile of expandScript(name, scripts).writeFiles.keys()) {
         if (targetFile === file) continue;
         if (readScriptSource(targetFile) == null) continue; // not this package's scripts/ (e.g. a repo-root tool)
         addRequired(targetFile, `${file} names \`pnpm run ${name}\` as its remedy`);
@@ -213,7 +228,7 @@ export function computeCoverage({
   const violations = [];
   for (const [file, reasons] of required) {
     if (exemptions[file]) continue;
-    if (regenReach.files.has(file)) continue;
+    if (regenReach.writeFiles.has(file)) continue;
     violations.push({ file, reasons: [...reasons] });
   }
 
@@ -238,7 +253,7 @@ function scriptNamesReachingFile(file, scripts, targetArgs) {
   const names = new Set();
   for (const name of Object.keys(scripts)) {
     if (isGateName(name)) continue;
-    const reached = expandScript(name, scripts).files.get(file);
+    const reached = expandScript(name, scripts).writeFiles.get(file);
     if (!reached) continue;
     for (const args of targetArgs) {
       if (reached.has(args)) {
@@ -258,6 +273,14 @@ function scriptNamesReachingFile(file, scripts, targetArgs) {
 function wholeTokenPattern(token) {
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   return new RegExp(`(?<![\\w.:-])${escaped}(?![\\w.:-])`, 'u');
+}
+
+/** A root regeneration shell entry only reaches a filename token outside explicit `node --test`
+ * commands. Keep the existing token-based check for its supported script aliases while preventing
+ * a test invocation from satisfying the write-coverage contract by naming the generator file. */
+function containsWriteToken(source, token) {
+  const withoutTestCommands = source.replace(/\bnode\s+--test\b[^\n;|&]*/gu, '');
+  return wholeTokenPattern(token).test(withoutTestCommands);
 }
 
 /**
@@ -294,10 +317,10 @@ export function computeRootScriptCoverage({
   const violations = [];
   for (const [file, reasons] of required) {
     if (exemptions[file]) continue;
-    const targetArgs = regenReach.files.get(file) ?? new Set(['']);
+    const targetArgs = regenReach.writeFiles.get(file) ?? new Set(['']);
     const tokens = [file, ...scriptNamesReachingFile(file, scripts, targetArgs)];
     for (const [script, source] of Object.entries(rootScripts)) {
-      const reached = tokens.some((token) => wholeTokenPattern(token).test(source ?? ''));
+      const reached = tokens.some((token) => containsWriteToken(source ?? '', token));
       if (!reached) violations.push({ file, script, reasons: [...reasons] });
     }
   }

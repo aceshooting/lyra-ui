@@ -716,6 +716,34 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   writes or loosens policy, and an existing tighter canary stays tighter unless separately reviewed.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
+The 22.0.0 bundle review keeps those measurement options unchanged. A direct entry-point bundle
+preserves all exports and inlines relative dynamic imports; `all.js` also re-exports the root API.
+That gate measures 1,271,937 gzip bytes, versus 1,261,698 for published 21.2.0. It differs from the
+side-effect-only, split-chunk consumer measurement in the package-delivery table: unused named
+exports can disappear there, and chunks are compressed separately. Neither number replaces the
+other. Theme runtime and preset growth cover independent style axes, nested ownership and legacy
+adapters; localization growth covers delta catalogs and stable canonical aliases. Aggregate entry
+ceilings include the new agent components and shared glass/preference behavior.
+
+The initial-route shell falls from 53,754 to 50,602 gzip bytes after collection support moves out of
+the common element base. Controls needing that support still load it, so their marginal costs rise
+even when complete routes shrink. The select route changes by +91 bytes and combobox by -134;
+other non-menu/model ceilings stay within the old absolute route allowance, with at most 2% new
+marginal headroom. Model-select's actual +225-byte route increase is explicitly retained with a
+19,859-byte marginal ceiling; a baseline-only ceiling would leave just three bytes of drift room.
+Menu's actual +1,608-byte route increase includes shared glass-surface styling and is separately
+reviewed, with a 15,983-byte marginal ceiling. These are acknowledged feature costs, not savings
+from a changed baseline. Time-input's loose 24 KiB ceiling tightens to 22,496 bytes.
+
+The measured component census grows from 247 to 255 entries. The 95th-percentile boundary changes
+from rag-answer at 111,927 gzip bytes to data-grid at 113,931 bytes; the eight new entries are all
+below that boundary. Data-grid itself grows by 2,058 bytes with shared glass-surface/scroll-layer,
+style-token and smaller grid/lifecycle changes. The reviewed P95 ceiling is 116,209 bytes. Passing
+tighter ceilings remain unchanged, while stale standalone ceilings tighten, including button from
+33 to 30 KiB, gauge to 23,585 bytes, flow-canvas to 51,806 bytes, and the pure shadcn definition to
+2,038 bytes. Updated allowances use no more than 2% headroom; the existing 4% policy maximum,
+entry inventory, exclusion checks and measurement method are unchanged.
+
 `check:border-subtle` (blocking, in `contract-policy` next to `check:hit-area`) fails any literal
 `--lr-color-border-subtle` or `--lr-theme-color-surface-border-subtle` in `src/components/forms/**`
 or `src/internal/form-control.styles.ts`: that tier is decorative and may sit below the 3:1 a

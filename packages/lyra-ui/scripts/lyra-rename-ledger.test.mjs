@@ -113,14 +113,23 @@ test('module reviews derive canonical guidance, cover both cohorts, and retain t
 
 test('module-only profiles remain active and the packaged contract withholds unreleased records for known installed versions', () => {
   const { records, renameLedger } = moduleMigrationFixture();
-  const runtime = createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations: records });
+  const unreleased = records.map((record) => ({ ...record, since: 'unreleased' }));
+  const runtime = createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations: unreleased });
   assert.equal(buildMigrationContract(runtime).renameProfiles.get('lyra-v22').isEmpty, false);
   const known = buildMigrationContract(runtime, { lyraVersion: '23.0.0' }).renameProfiles.get('lyra-v22');
   assert.equal(known.isEmpty, true);
   assert.equal(known.skipped.length, records.length);
-  const released = records.map((record) => ({ ...record, since: '22.0.0' }));
-  const releasedRuntime = createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations: released });
-  assert.equal(buildMigrationContract(releasedRuntime, { lyraVersion: '23.9.0' }).renameProfiles.get('lyra-v22').data.moduleReviews.length, records.length);
+  assert.ok(records.every((record) => record.since === '22.0.0'));
+  const releasedRuntime = createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations: records });
+  const beforeRelease = buildMigrationContract(releasedRuntime, { lyraVersion: '21.2.0' }).renameProfiles.get('lyra-v22');
+  assert.equal(beforeRelease.isEmpty, true);
+  assert.equal(beforeRelease.skipped.length, records.length);
+  for (const lyraVersion of ['22.0.0', '23.0.0', '23.9.0', '24.0.0']) {
+    const released = buildMigrationContract(releasedRuntime, { lyraVersion }).renameProfiles.get('lyra-v22');
+    assert.equal(released.data.moduleReviews.length, records.length, lyraVersion);
+    assert.equal(released.skipped.length, 0, lyraVersion);
+    assert.ok(released.data.moduleReviews.every((record) => record.removalNotBefore === '24.0.0'), lyraVersion);
+  }
   const malformed = structuredClone(runtime);
   delete malformed.lyraRenames.profiles[1].moduleReviews;
   assert.throws(() => buildMigrationContract(malformed), /moduleReviews must be an array/);
@@ -152,7 +161,7 @@ test('root class and duplicate registration reviews preserve canonical class and
   assert.match(result.warnings[0].target, /button\.class\.js/);
   assert.match(result.warnings[2].target, /components\/lr-button\.js/);
   const record = records.find((entry) => entry.kind === 'class' && entry.name === 'LyraButton');
-  assert.equal(record.since, 'unreleased');
+  assert.equal(record.since, '22.0.0');
   assert.equal(record.removalNotBefore, '24.0.0');
 });
 

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { consolidateBuildDeclarations } from './consolidate-build-declarations.mjs';
 import { deriveLocaleDeclarationExports, EMPTY_DECLARATION } from './declaration-entrypoints.mjs';
@@ -110,7 +110,9 @@ import * as privateDist from 'declaration-fixture/dist/internal/side-effect-only
 // @ts-expect-error real locale modules do not export strings
 aggregate.strings;
 `);
-  const compiler = fileURLToPath(new URL('../node_modules/.bin/tsc', import.meta.url));
+  const require = createRequire(import.meta.url);
+  const typescriptPackagePath = require.resolve('typescript/package.json');
+  const compiler = resolve(dirname(typescriptPackagePath), require('typescript/package.json').bin.tsc);
   for (const stage of ['before', 'after']) {
     if (stage === 'before') {
       const baselineExports = { ...exports };
@@ -122,7 +124,7 @@ aggregate.strings;
       consolidateBuildDeclarations(root);
     }
     for (const resolution of ['Bundler', 'NodeNext']) {
-      const result = spawnSync(compiler, ['--noEmit', '--strict', '--skipLibCheck', 'false', '--noUncheckedSideEffectImports', '--moduleResolution', resolution, '--module', resolution === 'NodeNext' ? 'NodeNext' : 'ESNext', '--target', 'ES2022', 'consumer.ts'], { cwd: root, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [compiler, '--noEmit', '--strict', '--skipLibCheck', 'false', '--noUncheckedSideEffectImports', '--moduleResolution', resolution, '--module', resolution === 'NodeNext' ? 'NodeNext' : 'ESNext', '--target', 'ES2022', 'consumer.ts'], { cwd: root, encoding: 'utf8' });
       assert.equal(result.status, 0, `${stage} ${resolution}: ${result.stdout}${result.stderr}`);
     }
   }

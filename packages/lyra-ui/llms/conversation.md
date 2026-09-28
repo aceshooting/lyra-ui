@@ -4635,6 +4635,8 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
   `normalizeShikiLanguage(lang: string): string`
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.
+  Lyra re-exports `ShikiHighlighter` as a peer-neutral type from the package root; it does not add
+  a runtime Shiki dependency.
   `ShikiHighlighter {
     codeToHtml(code: string, options: Record<string, unknown>): string;
     getLoadedLanguages(): string[];

@@ -2519,6 +2519,7 @@ export type {
   LyraChangeReviewEventMap,
 } from './components/agent-tools/change-review/change-review.class.js';
 export type { LyraCodeBlockBaseEventMap } from './components/conversation/code-block/code-block-base.class.js';
+export type { ShikiHighlighter } from './components/conversation/code-block/shiki-types.js';
 export type { LyraLocaleLoader } from './locale-loader.js';
 export type {
   LyraPermissionGrantEventMap,
