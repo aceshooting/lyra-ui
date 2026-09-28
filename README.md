@@ -33,7 +33,8 @@ actually proves for each:
   </a>
 </p>
 
-A pnpm workspace hosting `lyra-ui` and its optional companion packages.
+Free, independent web components for accessible forms, dashboards, charts, and AI chat/agent
+interfaces. Built with Lit; works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 
 **[Browse the live docs site →](https://aceshooting.github.io/lyra-ui/)** — every component with
 a live example, source code, and API reference.
@@ -61,8 +62,9 @@ a live example, source code, and API reference.
 - [Status](#status)
 - [License](#license)
 
-**Lyra UI is a free, independent alternative to Shoelace and Web Awesome.** It is a MIT-licensed,
-framework-agnostic Lit web-component library for production interfaces: accessible form controls,
+**Lyra UI is a free, independent alternative to Shoelace and Web Awesome.** It is an MIT-licensed,
+framework-agnostic web-component library built with Lit, for use with Lit, React, Vue, Angular, Svelte,
+and plain JavaScript. It covers production interfaces: accessible form controls,
 navigation, overlays, dashboards, data visualization, file workflows, and a complete conversation
 and agent UI toolkit for chat products. It runs on native custom elements, has no runtime dependency
 on Shoelace or Web Awesome, and ships with its own design tokens, localization runtime, RTL support,
@@ -81,7 +83,7 @@ for data-heavy and streaming applications.
 
 | Package | Description | Version | Size |
 |---|---|---|---|
-| [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) |
+| [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent web components for Lit, React, Vue, Angular, Svelte, and plain JavaScript. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) |
 | [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lr-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
 
 See each package's own README for full install/usage details.
@@ -147,6 +149,7 @@ For version-by-version changes and older upgrades, use the
 | Principle | Description |
 |---|---|
 | 🆓 Free & Open Source | MIT-licensed and free — nothing hidden inside |
+| Framework Agnostic | Works with Lit, React, Vue, Angular, Svelte, and plain JavaScript — no framework wrappers required |
 | 🪶 Lightweight & Tree-Shakeable | Import only what you use — no dead weight |
 | ⚡ Performance-First | Native custom elements, no virtual DOM, minimal deps |
 | 🤖 AI & Agentic-AI Ready | Machine-readable docs and manifests AI agents use correctly |

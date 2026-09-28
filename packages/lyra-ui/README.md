@@ -24,8 +24,9 @@
   </a>
 </p>
 
-**Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
-library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
+**Lyra UI — the free, independent web-component alternative.** An MIT-licensed, framework-agnostic
+library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
+Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
 [Web Awesome](https://webawesome.com/), with 296 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
