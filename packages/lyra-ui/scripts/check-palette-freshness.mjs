@@ -1,6 +1,6 @@
 // Freshness gate for every generated colour artifact. The base semantic palette is generated end
-// to end; theme.css, the opt-in specialist sheet, and Chart's JS fallback carry generated marker
-// blocks inside otherwise hand-authored files. Nothing re-ran or diffed all of them, so a hand edit
+// to end; specialist fallbacks and Chart's JS fallback/options carry generated marker blocks.
+// theme.css belongs to the style model and is checked without rewriting it. A hand edit
 // to a generated block could survive indefinitely -- and, because the generators enforce contrast
 // and CVD-separation floors, that is a silent accessibility regression.
 // Deliberately a content round-trip rather than `git diff --exit-code`: comparing against the
@@ -8,10 +8,11 @@
 // because of unrelated uncommitted work in the same files. The originals are restored on failure,
 // so the check never mutates the tree it is auditing.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
+import { readStyleModel, renderTheme } from './style-axes-model.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -26,6 +27,7 @@ export const PALETTE_ARTIFACTS = Object.freeze([
   'src/theme.css',
   'src/internal/specialist-tokens.styles.ts',
   'src/components/charts/chart/chart-colors.ts',
+  'src/theme/options/charts.ts',
 ]);
 
 export function checkPaletteFreshness(dir = packageDir) {
@@ -34,17 +36,19 @@ export function checkPaletteFreshness(dir = packageDir) {
     for (const generator of PALETTE_GENERATORS) {
       execFileSync(process.execPath, [join(dir, generator)], { cwd: dir, stdio: 'pipe' });
     }
+    const expectedTheme = Buffer.from(renderTheme(readStyleModel(dir)));
+    return PALETTE_ARTIFACTS.filter((relativePath, index) => {
+      const actual = readFileSync(join(dir, relativePath));
+      return !actual.equals(before[index]) || (relativePath === 'src/theme.css' && !actual.equals(expectedTheme));
+    });
   } catch (error) {
-    PALETTE_ARTIFACTS.forEach((relativePath, index) => writeFileSync(join(dir, relativePath), before[index]));
     throw new Error(`${error.stderr?.toString().trim() || error.message}`);
+  } finally {
+    PALETTE_ARTIFACTS.forEach((relativePath, index) => {
+      const file = join(dir, relativePath);
+      if (!existsSync(file) || !readFileSync(file).equals(before[index])) writeFileSync(file, before[index]);
+    });
   }
-  const stale = PALETTE_ARTIFACTS.filter(
-    (relativePath, index) => !readFileSync(join(dir, relativePath)).equals(before[index]),
-  );
-  if (stale.length > 0) {
-    PALETTE_ARTIFACTS.forEach((relativePath, index) => writeFileSync(join(dir, relativePath), before[index]));
-  }
-  return stale;
 }
 
 if (isMainModule(import.meta.url)) {
@@ -59,7 +63,7 @@ if (isMainModule(import.meta.url)) {
   if (stale?.length) {
     console.error(
       `generated palette artifacts are stale (hand-edited?):\n${stale.map((path) => `  ${path}`).join('\n')}\n` +
-        `Regenerate and commit them:\n${PALETTE_GENERATORS.map((generator) => `  node ${generator}`).join('\n')}`,
+        `Regenerate and commit them:\n${PALETTE_GENERATORS.map((generator) => `  node ${generator}`).join('\n')}\n  pnpm run style-axes`,
     );
     process.exitCode = 1;
   } else if (stale) {

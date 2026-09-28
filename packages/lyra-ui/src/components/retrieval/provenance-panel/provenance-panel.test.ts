@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './provenance-panel.js';
@@ -22,6 +23,12 @@ const provenance: LyraProvenance = {
   chunks: [{ id: 'ch1', text: 'chunk text', score: 0.8, sourceId: 's1' }],
 };
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'provenancePanelLabel',
+  'provenanceEmpty',
+  'provenanceEntities',
+]);
 it('renders the provenanceEmpty state when provenance is null (the default)', async () => {
   const el = (await fixture(
     html`<lr-provenance-panel></lr-provenance-panel>`

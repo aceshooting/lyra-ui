@@ -22,12 +22,14 @@ import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
+import { concreteThemeCss } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const sourceDir = join(packageDir, 'src');
 const themesDir = join(sourceDir, 'themes');
 
 const LAYER_ORDER = '@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;';
+const AXIS_LAYERS = ['look', 'density', 'surface', 'accent', 'mode'].map((name) => `lr-theme-preset.${name}`);
 const LIGHT_SELECTORS = [':root', '.lr-light', "[data-lr-theme='light']", '.light'];
 const DARK_SELECTORS = ['.lr-dark', "[data-lr-theme='dark']", '.dark'];
 // The marker comments that fence, inside each mode block, the inputs a preset repeats from theme.css
@@ -145,8 +147,9 @@ test('every shipped Lyra stylesheet declares the identical layer order, includin
 // `@layer lr-base;@layer lr-theme{...}@layer lr-theme-preset,lr-utilities,lr-overrides;`). That is
 // only safe while each file still NAMES the five layers in the same first-appearance order, which
 // is what actually fixes the cascade when that file happens to load first. Run the real build step
-// over copies and check exactly that, so a minifier change cannot silently reorder a shipped file.
-test('the published (minified) copies still name the five layers in the same first-appearance order', async () => {
+// over copies and check exactly that, including the generated theme's five ordered sublayers,
+// so a minifier change cannot silently reorder a shipped file.
+test('the published copies preserve the five top-level layers and declared style-axis sublayer order', async () => {
   const assets = [
     join(sourceDir, 'theme.css'),
     join(sourceDir, 'styles', 'native.css'),
@@ -172,7 +175,9 @@ test('the published (minified) copies still name the five layers in the same fir
           if (!seen.includes(layer)) seen.push(layer);
         }
       }
-      if (seen.join(',') !== expected.join(',')) {
+      const hasAxisLayers = file === join(sourceDir, 'theme.css');
+      const expectedLayers = hasAxisLayers ? [...expected, ...AXIS_LAYERS] : expected;
+      if (seen.join(',') !== expectedLayers.join(',')) {
         mismatches.push(`${file.slice(packageDir.length + 1)}: ${seen.join(', ')}`);
       }
     }
@@ -327,19 +332,15 @@ const declarationMap = (text) =>
       .map((match) => [match[1], match[2].trim().replace(/\s+/g, ' ')]),
   );
 
-/**
- * theme.css's light rule and dark rule inside `@layer lr-theme`, as name -> value maps. The dark rule
- * is the one naming `[data-lr-theme='dark']` WITHOUT `:root`: theme.css's consumer-scope focus-ring
- * rule names every mode selector at once and sets no --lr-theme-* input.
- */
+/** Concrete per-mode inputs projected from the generated resolver's slots, or legacy mode rules. */
 function themeModeRules(text = readFileSync(join(sourceDir, 'theme.css'), 'utf8')) {
-  const layer = parsePreset(text).layers.find(({ name }) => name === 'lr-theme');
+  const concrete = concreteThemeCss(text);
+  const projected = concrete === text ? text : `@layer lr-theme { ${concrete} }`;
+  const layer = parsePreset(projected).layers.find(({ name }) => name === 'lr-theme');
   assert.ok(layer, 'theme.css: no @layer lr-theme block');
-  const light = layer.rules.find(
-    ({ selectors }) => selectors.includes("[data-lr-theme='light']") && !selectors.includes('.lr-dark'),
-  );
+  const light = layer.rules.find(({ selectors }) => selectors.includes(':root'));
   const dark = layer.rules.find(({ selectors }) => selectors.includes("[data-lr-theme='dark']") && !selectors.includes(':root'));
-  assert.ok(light && dark, 'theme.css: the light or the dark mode rule was not found');
+  assert.ok(light && dark, 'theme.css: the concrete light or dark inputs were not found');
   return { light: customProperties(light), dark: customProperties(dark) };
 }
 
@@ -459,14 +460,22 @@ test('the repeated-section check reports a stale value, a missing input, a doubl
   assert.deepEqual(repeatedSectionFindings(stale, themeText), [
     `dark: --lr-theme-color-chart-1 is #123456 but theme.css's dark rule says ${darkValue}`,
   ]);
+  const changedTheme = themeText.replace(
+    `--_lr-ld-color-chart-1: ${darkValue};`,
+    '--_lr-ld-color-chart-1: #654321;',
+  );
+  assert.notEqual(changedTheme, themeText, 'fixture setup: the generated dark chart-1 slot was not found');
+  assert.deepEqual(repeatedSectionFindings(text, changedTheme), [
+    `dark: --lr-theme-color-chart-1 is ${darkValue} but theme.css's dark rule says #654321`,
+  ]);
   const missing = text.replace(/\n\s*--lr-theme-graph-cat-8: [^;]+;/g, '');
   assert.deepEqual(repeatedSectionFindings(missing, themeText), [
     'light: --lr-theme-graph-cat-8 is set per mode by theme.css but neither restyled nor repeated',
     'dark: --lr-theme-graph-cat-8 is set per mode by theme.css but neither restyled nor repeated',
   ]);
   const doubled = text.replace(
-    `/* ${REPEATED_END} */\n  }\n\n  .lr-dark`,
-    `  --lr-theme-color-focus: ${theme.light.get('--lr-theme-color-focus')};\n    /* ${REPEATED_END} */\n  }\n\n  .lr-dark`,
+    `/* ${REPEATED_END} */`,
+    `  --lr-theme-color-focus: ${theme.light.get('--lr-theme-color-focus')};\n    /* ${REPEATED_END} */`,
   );
   assert.notEqual(doubled, text, 'fixture setup: the light end marker was not found');
   assert.deepEqual(repeatedSectionFindings(doubled, themeText), ['light: --lr-theme-color-focus is both restyled and repeated']);

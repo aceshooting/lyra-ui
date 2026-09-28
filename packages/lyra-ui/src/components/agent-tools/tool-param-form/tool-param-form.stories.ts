@@ -368,3 +368,15 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+/** Flat form elicitation with validation and titled multiple choices. */
+export const Elicitation: Story = {
+  render: () => html`<lr-tool-param-form .schema=${{
+    type: 'object', properties: {
+      email: { type: 'string', title: 'Contact email', format: 'email' },
+      seats: { type: 'integer', title: 'Seats', minimum: 1, maximum: 10, default: 2 },
+      channels: { type: 'array', title: 'Notification channels', minItems: 1, maxItems: 2,
+        items: { anyOf: [{ const: 'email', title: 'Email' }, { const: 'sms', title: 'Text message' }] }, default: ['email'] },
+    }, required: ['email', 'channels'],
+  }}></lr-tool-param-form>`,
+};

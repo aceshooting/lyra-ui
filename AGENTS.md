@@ -74,8 +74,8 @@ in `solarleb_cygnus/AGENTS.md`.
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@12.6.0`.
-The published package supports Node ≥ 20; contributor generation, measured-quality, release, and
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 22, `pnpm@12.6.0`.
+The published package supports Node ≥ 22; contributor generation, measured-quality, release, and
 primary CI work use the exact Node `22.23.2` recorded in [`.nvmrc`](.nvmrc). Run `nvm use` before
 those commands rather than relying on an arbitrary Node 22 patch.
 
@@ -87,7 +87,9 @@ packages/lyra-ui/                 @aceshooting/lyra-ui, the library
   src/lyra.ts | src/all.ts        pure curated root barrel | generated registration side effects
   llms.txt                        consumer entry index
   llms/<family>.md                AUTHORED, one per src/components/<family>/; edit these
-  llms/{shared,00-*}.md           AUTHORED cross-cutting reference + intro prose
+  llms/shared/*.md                AUTHORED focused cross-cutting guides; build-llms assembles
+                                  the compatibility route at llms/shared.md
+  llms/00-*                       AUTHORED generated-reference intro prose
   llms-full.txt, llms/{index,tokens,peers,migration}.md, llms/components/<tag>.md
                                   GENERATED; never edit, CI diffs them
 packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)

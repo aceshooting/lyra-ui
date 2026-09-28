@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./filter-bar.js";
 import "../../forms/checkbox/checkbox.js";
@@ -32,6 +33,9 @@ const basicFilters: LyraFilterBarFilterDefinition[] = [
   { filterId: "created", label: "Created", type: "date" },
   { filterId: "range", label: "Active period", type: "date-range" },
 ];
+
+expectLocaleFallback('de', ['chooseDate', 'filterBarActiveFilters', 'filterBarReset', 'nextMonth', 'noMatches', 'openCalendar', 'previousMonth', 'removeWithContext', 'selectValueMissing']);
+expectLocaleFallback('fr', ['filterBarActiveFilters', 'filterBarReset', 'removeWithContext']);
 
 it("uses filterId as the public filter-definition identity", async () => {
   const filters = [

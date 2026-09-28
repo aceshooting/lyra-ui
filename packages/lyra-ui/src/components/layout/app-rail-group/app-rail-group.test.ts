@@ -34,19 +34,24 @@ describe('<lr-app-rail-group>', () => {
     expect(heading.id.length > 0).to.equal(true);
   });
 
-  it('clamps headingLevel into the 1-6 range a heading can actually carry', async () => {
+  it('uses the shared heading vocabulary and supports a semantic opt-out', async () => {
     const el = (await fixture<LyraAppRailGroup>(
       html`<lr-app-rail-group heading="Pinned" heading-level="9"></lr-app-rail-group>`
     )) as LyraAppRailGroup;
     await el.updateComplete;
     const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
-    expect(heading.getAttribute('aria-level')).to.equal('6');
+    expect(heading.getAttribute('aria-level')).to.equal('3');
 
-    el.headingLevel = Number.NaN;
+    el.headingLevel = 'none';
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement).getAttribute('aria-level')
-    ).to.equal('3');
+    ).to.equal(null);
+    expect(heading.hasAttribute('role')).to.equal(false);
+    el.headingLevel = '2';
+    await el.updateComplete;
+    expect(heading.getAttribute('aria-level')).to.equal('2');
+    expect(heading.getAttribute('role')).to.equal('heading');
   });
 
   it('lets the heading slot replace the heading property', async () => {

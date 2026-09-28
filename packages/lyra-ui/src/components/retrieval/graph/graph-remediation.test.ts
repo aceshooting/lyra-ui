@@ -195,11 +195,11 @@ describe('graph rendered interaction contracts', () => {
       { type: 'lr-node-leave', detail: { nodeId: 'a' } },
       {
         type: 'lr-edge-enter',
-        detail: { sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' },
+        detail: { sourceNodeId: 'a', targetNodeId: 'b', edgeId: 'ab' },
       },
       {
         type: 'lr-edge-leave',
-        detail: { sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' },
+        detail: { sourceNodeId: 'a', targetNodeId: 'b', edgeId: 'ab' },
       },
       { type: 'lr-node-enter', detail: { nodeId: 'b' } },
       { type: 'lr-node-leave', detail: { nodeId: 'b' } },

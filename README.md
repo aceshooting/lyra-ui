@@ -44,7 +44,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 296 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 304 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -164,7 +164,7 @@ For version-by-version changes and older upgrades, use the
 
 ## Components
 
-296 custom elements across eleven component families. Every tag has a live, interactive example on the
+304 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -189,7 +189,7 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-Every one of the 296 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 304 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`, and an
@@ -257,12 +257,12 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 
 ## Browser & Node support
 
-- **Node** ≥ 20 to build/test this repo and to run the supported SSR imports (`engines.node`);
+- **Node** ≥ 22 to build/test this repo and to run the supported SSR imports (`engines.node`);
   browser-only capabilities start after hydration.
 - **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
   Firefox, Safari). Every push runs the complete suite against Chromium plus a platform-contract
-  suite (a curated fast subset) across Chromium, Chrome, Edge, Firefox, and Safari (WebKit). Node
-  20 exercises Firefox and Safari; Node 22 exercises all five browsers. The two engines that only
+  suite (a curated fast subset) across Chromium, Chrome, Edge, Firefox, and Safari (WebKit) on
+  Node 22. Supported browsers start at Chrome/Edge 120, Firefox 125, and Safari 17. The two engines that only
   get the fast subset per-push (Firefox, Safari/WebKit) get the
   *complete* suite weekly and before every release via
   [`full-engine.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml).

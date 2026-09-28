@@ -31,18 +31,43 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
-  'chart', 'chartCategory', 'chartData', 'chartPointLabel', 'chartSummary', 'chartSummaryEmpty',
-  'chartSummarySeparator', 'chartSummaryWithData', 'chartTrendIncreasing', 'chartTypeBar',
+  'chart',
+  'chartCategory',
+  'chartData',
+  'chartPointLabel',
+  'chartSummary',
+  'chartSummaryEmpty',
+  'chartSummarySeparator',
+  'chartSummaryWithData',
+  'chartTrendIncreasing',
+  'chartTypeBar',
   'loading',
 ]);
 expectLocaleFallback('ar', [
-  'chart', 'chartCategory', 'chartData', 'chartSummary', 'chartSummarySeparator',
-  'chartSummaryWithData', 'chartTrendIncreasing', 'chartTypeBar', 'chartValueLabel',
-  'liteChartMarkSummary', 'loading',
+  'chart',
+  'chartCategory',
+  'chartData',
+  'chartSummary',
+  'chartSummarySeparator',
+  'chartSummaryWithData',
+  'chartTrendIncreasing',
+  'chartTypeBar',
+  'chartValueLabel',
+  'liteChartMarkSummary',
+  'loading',
 ]);
 expectLocaleFallback('ar-EG', [
-  'chart', 'chartCategory', 'chartData', 'chartPointLabel', 'chartSummary', 'chartSummaryEmpty',
-  'chartSummarySeparator', 'chartSummaryWithData', 'chartTrendFlat', 'chartTypeBar', 'loading',
+  'chart',
+  'chartCategory',
+  'chartData',
+  'chartPointLabel',
+  'chartSummary',
+  'chartSummaryEmpty',
+  'chartSummarySeparator',
+  'chartSummaryWithData',
+  'chartTrendFlat',
+  'chartTypeBar',
+  'loading',
 ]);
 
 // Unsupported-attribute regression tests below deliberately author these; see the helper.
@@ -1277,7 +1302,7 @@ it('exposes a cancellable controlled legend proposal before committing an observ
     expect(el.hiddenDatasets).to.equal(undefined);
     event.preventDefault();
   };
-  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change-request', veto);
   el.addEventListener('lr-legend-visibility-change', (event) =>
     committed.push((event as CustomEvent).detail),
   );
@@ -1291,7 +1316,7 @@ it('exposes a cancellable controlled legend proposal before committing an observ
     expect(chart.isDatasetVisible(0)).to.be.true;
     expect(updateCalls).to.equal(0);
 
-    el.removeEventListener('lr-before-legend-visibility-change', veto);
+    el.removeEventListener('lr-legend-visibility-change-request', veto);
     button.click();
     await el.updateComplete;
     expect(committed).to.deep.equal([{ datasetIndex: 0, visible: false, hiddenDatasets: [0] }]);
@@ -1318,7 +1343,7 @@ it('detaches and freezes both legend visibility event snapshots', () => {
   };
   type LegendEmitter = {
     emit(
-      name: 'lr-before-legend-visibility-change' | 'lr-legend-visibility-change',
+      name: 'lr-legend-visibility-change-request' | 'lr-legend-visibility-change',
       detail: LegendDetail,
       options?: { readonly cancelable?: boolean },
     ): CustomEvent<LegendDetail>;
@@ -1328,7 +1353,7 @@ it('detaches and freezes both legend visibility event snapshots', () => {
   const emitter = el as unknown as LegendEmitter;
   const hiddenDatasets = [1];
   const detail = { datasetIndex: 1, visible: false, hiddenDatasets };
-  const proposed = emitter.emit('lr-before-legend-visibility-change', detail, {
+  const proposed = emitter.emit('lr-legend-visibility-change-request', detail, {
     cancelable: true,
   });
   const committed = emitter.emit('lr-legend-visibility-change', detail);
@@ -1361,7 +1386,7 @@ it('keeps a controlled hidden dataset hidden when its show proposal is canceled'
     proposed.push((event as CustomEvent).detail);
     event.preventDefault();
   };
-  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change-request', veto);
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   try {
@@ -1374,11 +1399,11 @@ it('keeps a controlled hidden dataset hidden when its show proposal is canceled'
     expect(chart.isDatasetVisible(0)).to.be.false;
     expect(button.getAttribute('aria-pressed')).to.equal('false');
   } finally {
-    el.removeEventListener('lr-before-legend-visibility-change', veto);
+    el.removeEventListener('lr-legend-visibility-change-request', veto);
   }
 });
 
-it('fires the canonical lr-legend-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+it('fires one canonical legend-visibility request and no removed before-alias', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
@@ -1386,25 +1411,21 @@ it('fires the canonical lr-legend-visibility-change-request alongside the deprec
   await waitUntil(() => (el as any).chart != null);
   const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
   const requests: CustomEvent[] = [];
-  const deprecatedAliases: CustomEvent[] = [];
+  let removedAliasEvents = 0;
   let commits = 0;
   el.addEventListener('lr-legend-visibility-change-request', (event) =>
     requests.push(event as CustomEvent),
   );
-  el.addEventListener('lr-before-legend-visibility-change', (event) =>
-    deprecatedAliases.push(event as CustomEvent),
-  );
+  el.addEventListener('lr-before-legend-visibility-change', () => removedAliasEvents++);
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   button.click();
   await el.updateComplete;
 
   expect(requests.length).to.equal(1);
-  expect(deprecatedAliases.length).to.equal(1);
+  expect(removedAliasEvents).to.equal(0);
   expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
-  expect(deprecatedAliases[0]?.detail).to.deep.equal(requests[0]?.detail);
   expect(requests[0]?.cancelable).to.equal(true);
-  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
   expect(commits).to.equal(1);
 });
 
@@ -1426,22 +1447,27 @@ it('vetoes the legend toggle when only the canonical -request name is canceled',
   expect(el.hiddenDatasets).to.equal(undefined);
 });
 
-it('vetoes the legend toggle when only the deprecated lr-before-legend-visibility-change alias is canceled', async () => {
+it('does not dispatch the removed legend veto alias or let its listener veto', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let removedAliasEvents = 0;
   let commits = 0;
-  el.addEventListener('lr-before-legend-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-before-legend-visibility-change', (event) => {
+    removedAliasEvents++;
+    event.preventDefault();
+  });
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   button.click();
   await el.updateComplete;
 
-  expect(commits).to.equal(0);
-  expect(el.hiddenDatasets).to.equal(undefined);
+  expect(removedAliasEvents).to.equal(0);
+  expect(commits).to.equal(1);
+  expect(el.hiddenDatasets).to.deep.equal([0]);
 });
 
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
@@ -2566,6 +2592,28 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
     expect((el as any).buildConfig().options.animation).to.equal(false);
   } finally {
     window.matchMedia = originalMatchMedia;
+  }
+});
+
+it('updates an existing chart when its inherited motion preference changes', async () => {
+  const original = window.matchMedia;
+  window.matchMedia = query => mediaQueryList(query, false);
+  try {
+    const scope = await fixture<HTMLElement>(html`<section><lr-chart></lr-chart></section>`);
+    const chart = scope.querySelector<LyraChart>('lr-chart')!;
+    chart.type = 'line';
+    chart.labels = ['A', 'B'];
+    chart.datasets = [{ label: 'x', data: [1, 2] }];
+    await chart.updateComplete;
+    await waitUntil(() => (chart as any).chart != null);
+    scope.setAttribute('data-lr-motion', 'reduce');
+    await waitUntil(() => (chart as any).chart.options.animation === false);
+    expect((chart as any).buildConfig().options.animation).to.equal(false);
+    chart.setAttribute('data-lr-motion', 'system');
+    await waitUntil(() => (chart as any).chart.options.animation !== false);
+    expect((chart as any).buildConfig().options.animation).to.equal(undefined);
+  } finally {
+    window.matchMedia = original;
   }
 });
 

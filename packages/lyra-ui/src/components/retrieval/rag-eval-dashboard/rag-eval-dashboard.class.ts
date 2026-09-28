@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -112,6 +113,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     ragEvalDashboardSlices: LYRA_DEFAULT_ragEvalDashboardSlices,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'metrics',
@@ -367,7 +369,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                   .height=${this.chartHeight}
                   .labels=${renderedRuns.map((run) => run.label)}
                   .datasets=${[{ label: active.label, data: values }]}
-                  .accessibleLabel=${active.label}
+                  aria-label=${active.label}
                 ></lr-lite-chart>
               </div>
             `

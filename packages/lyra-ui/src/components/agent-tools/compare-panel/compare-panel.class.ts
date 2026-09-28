@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -14,7 +16,9 @@ import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_
 export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
 export interface LyraComparePanelEventMap {
-  'lr-vote': CustomEvent<{ choice: CompareVote; itemId: string }>;
+  /** @deprecated Use `lr-vote-request`. */
+  'lr-vote': LyraComparePanelEventMap['lr-vote-request'];
+  'lr-vote-request': CustomEvent<{ choice: CompareVote; itemId: string }>;
 }
 
 /**
@@ -30,7 +34,8 @@ export interface LyraComparePanelEventMap {
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
- * @event lr-vote - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
+ * @event lr-vote - Deprecated cancelable compatibility alias of `lr-vote-request`.
+ * @event lr-vote-request - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes. Stacked panes size to
@@ -71,6 +76,17 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     compareVoteTie: LYRA_DEFAULT_compareVoteTie,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private emitVoteRequest(detail: LyraComparePanelEventMap['lr-vote-request']['detail']): CustomEvent {
+    const request = this.emit('lr-vote-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-vote', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-vote', 'lr-vote-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['allowedVotes']);
 
@@ -130,7 +146,9 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   get vote(): CompareVote | null {
     return this._vote;
   }
+  private voteWriteVersion = 0;
   set vote(next: CompareVote | null) {
+    this.voteWriteVersion++;
     this.voteAssignedInCommit = true;
     const old = this._vote;
     this._vote = next ?? null;
@@ -209,28 +227,37 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.suppressSync = false;
   }
 
+  private voteDispatching = false;
   private castVote(choice: CompareVote): void {
-    if (this.disabled) return;
-    const itemId = this.itemId;
-    const labelAText = this.labelA || this.localize('compareResponseA');
-    const labelBText = this.labelB || this.localize('compareResponseB');
-    const label =
-      choice === 'a'
-        ? labelAText
-        : choice === 'b'
-          ? labelBText
-          : choice === 'tie'
-            ? this.localize('compareVoteTie')
-            : this.localize('compareVoteBothBad');
-    const event = this.emit('lr-vote', { choice, itemId }, { cancelable: true });
-    if (event.defaultPrevented) return;
-    // A listener may re-entrantly advance itemId synchronously inside emit() above -- itemId's
-    // own setter already resets `vote` to null for the new pair, and this write must not clobber
-    // that reset by re-stamping `choice` onto the pair the user never actually saw vote on. The
-    // announcement still fires unconditionally: `label`/`itemId` were captured before the
-    // listener ran, so it correctly reports the vote against the *original* pair.
-    if (this.itemId === itemId) this.vote = choice;
-    this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
+    if (this.voteDispatching) return;
+    this.voteDispatching = true;
+    try {
+      if (this.disabled) return;
+      const itemId = this.itemId;
+      const voteVersion = this.voteWriteVersion;
+      const labelAText = this.labelA || this.localize('compareResponseA');
+      const labelBText = this.labelB || this.localize('compareResponseB');
+      const label =
+        choice === 'a'
+          ? labelAText
+          : choice === 'b'
+            ? labelBText
+            : choice === 'tie'
+              ? this.localize('compareVoteTie')
+              : this.localize('compareVoteBothBad');
+      const event = this.emitVoteRequest({ choice, itemId });
+      if (event.defaultPrevented || this.disabled) return;
+      if (this.itemId === itemId && this.voteWriteVersion !== voteVersion) return;
+      // A listener may re-entrantly advance itemId synchronously inside emit() above -- itemId's
+      // own setter already resets `vote` to null for the new pair, and this write must not clobber
+      // that reset by re-stamping `choice` onto the pair the user never actually saw vote on. The
+      // announcement still fires unconditionally: `label`/`itemId` were captured before the
+      // listener ran, so it correctly reports the vote against the *original* pair.
+      if (this.itemId === itemId) this.vote = choice;
+      this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
+    } finally {
+      this.voteDispatching = false;
+    }
   }
 
   private voteButton(choice: CompareVote, label: string): TemplateResult | typeof nothing {

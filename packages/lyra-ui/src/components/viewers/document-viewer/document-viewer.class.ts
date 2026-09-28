@@ -1,10 +1,11 @@
+import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { LyraElement, snapshotPublicCollection } from '../../../internal/lyra-element.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import { documentRendererRegistrySource } from './registry-ownership.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
-import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
+import type { DialogCloseReason, LyraDialogCloseDetail } from '../../overlays/dialog/dialog.class.js';
 import {
   adaptDocumentRenderer,
   createDocumentRendererRegistry,
@@ -35,8 +36,13 @@ import { LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLa
 
 export type DocumentViewerCloseReason = DialogCloseReason;
 
+/** The accepted dismissal reason. */
+export interface LyraDocumentViewerCloseDetail {
+  reason: DocumentViewerCloseReason;
+}
+
 export interface LyraDocumentViewerEventMap {
-  'lr-close': CustomEvent<DocumentViewerCloseReason>;
+  'lr-close': CustomEvent<LyraDocumentViewerCloseDetail>;
   'lr-download': CustomEvent<{ src: string; filename: string }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -57,8 +63,7 @@ export interface LyraDocumentViewerEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-document-viewer
- * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
- *   dialog close reason. A registered renderer's own descendant dialog keeps its independent
+ * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is `{ reason: DocumentViewerCloseReason }`. A registered renderer's own descendant dialog keeps its independent
  *   `lr-close` path (guarded by `event.target !== event.currentTarget`) and does not close this
  *   viewer. The name itself is not dialog-scoped in this library: if this viewer is also nested
  *   inside a consumer's own `<lr-dialog>`, that dialog observes this event too. See
@@ -100,6 +105,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     loadingDocument: LYRA_DEFAULT_loadingDocument,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'highlights',
@@ -423,7 +429,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     event.stopPropagation();
   };
 
-  private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
+  private onDialogClose = (event: CustomEvent<LyraDialogCloseDetail>): void => {
     // Registered renderers may compose their own dialogs. Only translate the close emitted by
     // this viewer's direct shell; descendant dialog events keep their ordinary composed path.
     if (event.target !== event.currentTarget) return;
@@ -474,6 +480,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         @lr-after-show=${this.containShellEvent}
         @lr-initial-focus=${this.containShellEvent}
         @lr-request-close=${this.containShellEvent}
+        @lr-close-request=${this.containShellEvent}
         @lr-hide=${this.containShellEvent}
         @lr-after-hide=${this.containShellEvent}
         @lr-close=${this.onDialogClose}

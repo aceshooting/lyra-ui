@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -146,6 +147,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     subagentPanelRetryRun: LYRA_DEFAULT_subagentPanelRetryRun,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
 

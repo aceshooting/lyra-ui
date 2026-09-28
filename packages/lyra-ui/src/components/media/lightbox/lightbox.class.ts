@@ -4,6 +4,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { invertAlias } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
@@ -87,11 +88,19 @@ export interface LyraLightboxHideDetail {
   source: Element;
 }
 
+/** The affordance that requested lightbox dismissal. */
+export interface LyraLightboxCloseDetail {
+  reason: LyraLightboxCloseReason;
+}
+
 export interface LyraLightboxEventMap {
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<LyraLightboxHideDetail>;
   'lr-after-hide': CustomEvent<null>;
+  'lr-close-request': CustomEvent<LyraLightboxCloseDetail>;
+  'lr-close': CustomEvent<LyraLightboxCloseDetail>;
+  /** @deprecated Use lr-close-request for vetoes and lr-close for accepted dismissal. */
   'lr-lightbox-close': CustomEvent<LyraLightboxCloseReason>;
   'lr-index-change': CustomEvent<{ index: number }>;
   /** Not emitted by `LyraLightbox` itself -- the embedded `<lr-pan-zoom>` already
@@ -155,7 +164,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *
  * Lifecycle: `show()` emits cancelable `lr-show` before committing `open=true`, followed by
  * `lr-after-show` after the open panel renders. `hide()`/`close()` and post-render writes to
- * `open=false` emit cancelable `lr-hide`, then cancelable `lr-lightbox-close`, followed by
+ * `open=false` emit cancelable `lr-hide`, then cancelable `lr-close-request` and the compatibility `lr-lightbox-close`, followed by
+ * `lr-close` with `{ reason }` after the state commits, and
  * `lr-after-hide` after the closed state renders. A veto leaves the property and reflected
  * attribute synchronized. Initial `open` markup is state rather than a transition and emits no
  * lifecycle events.
@@ -170,7 +180,10 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @customElement lr-lightbox
  * @slot actions - Optional extra toolbar buttons (e.g. download/share/delete), rendered in
  *   `part="toolbar"` between the counter and the close button.
- * @event lr-lightbox-close - `detail: LyraLightboxCloseReason`. Cancelable -- a listener
+ * @event lr-close-request - Cancelable proposal before dismissal; detail is `{ reason }`.
+ * @event lr-close - Non-cancelable accepted dismissal with `{ reason }` detail, including unmount.
+ * @event lr-lightbox-close - Deprecated: use `lr-close-request` for vetoes and `lr-close` for
+ *   accepted dismissal. The compatibility event retains its string detail and veto behavior. `detail: LyraLightboxCloseReason`. Cancelable -- a listener
  *   calling `preventDefault()` stops the lightbox from closing, for every dismissal path
  *   (Escape, backdrop, the built-in close button, or a consumer's own `close()` call). Fired
  *   whenever the lightbox is dismissed via Escape, a backdrop click, the built-in close button,
@@ -436,7 +449,16 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       this.syncOpenAttribute();
       return;
     }
+    const proposal = this.emit('lr-close-request', { reason }, { cancelable: true });
+    if (proposal.defaultPrevented || this.openRequestWasSuperseded(false)) {
+      this.finishOpenRequest();
+      this.syncOpenAttribute();
+      return;
+    }
     const event = this.emit('lr-lightbox-close', reason, { cancelable: true });
+    if (event.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-lightbox-close', 'lr-close-request');
+    }
     if (event.defaultPrevented || this.openRequestWasSuperseded(false)) {
       this.finishOpenRequest();
       this.syncOpenAttribute();
@@ -445,6 +467,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.finishOpenRequest();
     this.applyOpenState(false);
     const generation = ++this.transitionGeneration;
+    this.emit('lr-close', { reason });
     await this.updateComplete;
     if (generation === this.transitionGeneration && !this._open) this.emit('lr-after-hide', null);
   }
@@ -622,6 +645,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           this.emit('lr-hide', { source: this });
           this.applyOpenState(false);
           this.emit('lr-lightbox-close', 'unmount');
+          this.emit('lr-close', { reason: 'unmount' });
           this.emit('lr-after-hide', null);
         }
       });

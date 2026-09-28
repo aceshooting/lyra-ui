@@ -6,8 +6,10 @@
 - **Class** `LyraKnowledgeGraphExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated event** `lr-link-click` since `unreleased`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecated event** `lr-node-click` since `unreleased`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
 - **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
 - **Deprecated property** `searchQuery` / `search-query` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
@@ -125,12 +127,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
-- Bubbling straight through from composed children, unmodified: `lr-node-click`
-  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-activate`
+- Bubbling straight through from composed children, unmodified: `lr-node-activate`
+  (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
   Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
   equal detail; removed in 23.0.0).
+- `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
+  `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.

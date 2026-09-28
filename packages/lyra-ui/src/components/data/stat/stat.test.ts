@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './stat.js';
@@ -6,6 +7,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+
+expectLocaleFallback('de-DE', ['statTrendAnnouncement', 'statTrendGood', 'statTrendIncreased']);
 
 it('renders label, value, and unit', async () => {
   const el = (await fixture(html`<lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>`)) as LyraStat;

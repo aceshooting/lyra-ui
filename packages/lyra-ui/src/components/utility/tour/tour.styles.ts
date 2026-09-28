@@ -195,7 +195,7 @@ export const styles = css`
   }
   @media (prefers-reduced-motion: no-preference) {
     [part="popover"] {
-      animation: lr-tour-popover-in var(--lr-transition-base) both;
+      animation: var(--_lr-motion-animation, lr-tour-popover-in var(--lr-transition-base) both);
     }
   }
   @media (prefers-reduced-motion: reduce) {

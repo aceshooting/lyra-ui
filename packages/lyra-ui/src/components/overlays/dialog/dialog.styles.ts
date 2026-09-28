@@ -140,6 +140,7 @@ export const styles = css`
        painted with it reads as a scrim with floating text and no panel. In light mode it still
        resolves to the page surface. Anchored popups now share that default, so one family retints
        every floating surface. */
+    --_lr-overlay-surface: var(--lr-color-surface-container-highest);
     ${overlaySurface}
     /* Top step of the elevation scale: a centered dialog floats free on all four edges over a
        scrim. A tier of its own rather than the anchored one, so raising popups never raises

@@ -1,6 +1,6 @@
-// Regenerates `<lr-terminal>`'s ANSI/SGR palette in `src/theme.css` AND the mirrored opt-in
-// fallbacks in `src/internal/specialist-tokens.styles.ts`, for BOTH modes, between the
-// `terminal ramp` markers.
+// Regenerates `<lr-terminal>`'s ANSI/SGR opt-in fallbacks in
+// `src/internal/specialist-tokens.styles.ts`, for BOTH modes, between the
+// `terminal ramp` markers. Canonical theme values are validated; style-axes owns theme.css.
 // Two token sets are generated, because SGR gives the sixteen names two different jobs:
 //   --lr-terminal-color-<name>   foreground (CSI 30-37 / 90-97), drawn ON the terminal panel
 //   --lr-terminal-bg-<name>      background (CSI 40-47 / 100-107), drawn UNDER the terminal's text
@@ -32,11 +32,11 @@
 // Run: node scripts/generate-terminal-palette.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { assertCanonicalPalette, canonicalPaletteColor, readCanonicalPalette } from './palette-canonical.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const themePath = join(packageDir, 'src', 'theme.css');
 const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5;
@@ -175,20 +175,12 @@ function replaceBlock(text, label, mode, block, file) {
   return text.replace(pattern, `$1${block}$2`);
 }
 
-function readPerMode(themeText, token) {
-  const lines = themeText.split('\n');
-  const darkStart = lines.findIndex((line) => /^\s*\.lr-dark\s*,?\s*$/.test(line));
-  const grab = (slice) => slice.join('\n').match(new RegExp(`${token}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
-  return { light: grab(lines.slice(0, darkStart)), dark: grab(lines.slice(darkStart)) };
-}
-
-const themeText = readFileSync(themePath, 'utf8');
-const raised = readPerMode(themeText, '--lr-theme-color-surface-raised');
-const text = readPerMode(themeText, '--lr-theme-color-text-normal');
-if (!raised.light || !raised.dark) throw new Error('could not read --lr-theme-color-surface-raised for both modes');
-if (!text.light || !text.dark) throw new Error('could not read --lr-theme-color-text-normal for both modes');
-
-let themeOut = themeText;
+const canonical = readCanonicalPalette(packageDir);
+const raised = Object.fromEntries(['light', 'dark'].map(mode =>
+  [mode, canonicalPaletteColor(canonical, '--lr-theme-color-surface-raised', mode)]));
+const text = Object.fromEntries(['light', 'dark'].map(mode =>
+  [mode, canonicalPaletteColor(canonical, '--lr-theme-color-text-normal', mode)]));
+const solved = {};
 let specialistTokensOut = readFileSync(specialistTokensPath, 'utf8');
 
 for (const mode of ['light', 'dark']) {
@@ -205,16 +197,10 @@ for (const mode of ['light', 'dark']) {
     solve(name, hue, chroma * 0.5, rank, defaultText),
   ]);
 
-  themeOut = replaceBlock(
-    themeOut,
-    'terminal ramp',
-    mode,
-    [
-      ...fg.map(([name, hex]) => `    --lr-theme-terminal-color-${name}: ${hex};`),
-      ...bg.map(([name, hex]) => `    --lr-theme-terminal-bg-${name}: ${hex};`),
-    ].join('\n'),
-    'theme.css',
-  );
+  solved[mode] = Object.fromEntries([
+    ...fg.map(([name, hex]) => [`--lr-theme-terminal-color-${name}`, hex]),
+    ...bg.map(([name, hex]) => [`--lr-theme-terminal-bg-${name}`, hex]),
+  ]);
 
   specialistTokensOut = replaceBlock(
     specialistTokensOut,
@@ -248,6 +234,6 @@ for (const mode of ['light', 'dark']) {
   );
 }
 
-writeFileSync(themePath, themeOut, 'utf8');
+assertCanonicalPalette(canonical, solved);
 writeFileSync(specialistTokensPath, specialistTokensOut, 'utf8');
 

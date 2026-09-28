@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-tool-select-dialog.js to register this component. */
 export * from './tool-select-dialog.class.js';
 import { LyraToolSelectDialog } from './tool-select-dialog.class.js';
 import { defineElement } from '../../../internal/prefix.js';

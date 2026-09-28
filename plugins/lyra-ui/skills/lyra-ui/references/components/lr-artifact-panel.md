@@ -6,7 +6,7 @@
 - **Class** `LyraArtifactPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/artifact-panel/artifact-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -42,9 +42,9 @@ download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` o
 the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
 sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL still renders the
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
-`lr-download` with the sanitized `src` and leaves the actual download to the host.
+non-cancelable `lr-download` with the sanitized `src`; the host owns the actual download.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
-`lr-download` event detail.
+`lr-download-request` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
@@ -59,7 +59,7 @@ since `null` is already a documented steady state meaning "the latest version"),
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
-`lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
+non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`

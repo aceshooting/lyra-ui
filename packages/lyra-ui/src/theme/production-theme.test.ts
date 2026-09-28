@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { palette } from '../internal/tokens/palette.styles.js';
@@ -40,6 +41,8 @@ const SEMANTIC_ROLES = [
       `--lr-color-brand-${role}-${emphasis}`,
     ])),
 ] as const;
+
+expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
 
 describe('production theme rendering', () => {
   it('routes every representative neutral/brand emphasis through theme.css in light and dark mode', async () => {

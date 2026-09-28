@@ -6,7 +6,7 @@
 - **Class** `LyraAvatarGroup`, also available unregistered from `@aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated event** `lr-overflow-click` since `21.1.0`; use event `addEventListener('lr-overflow-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Optional peers** none
 - **Themeable via** 3 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -25,7 +25,7 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
-- `size: LyraSize = 'medium'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
+- `size: LyraSize = 'm'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
 - `shape: LyraAvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`.
 - `variant: LyraVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
 'danger'`.

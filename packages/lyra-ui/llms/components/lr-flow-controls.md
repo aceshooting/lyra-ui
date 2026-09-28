@@ -6,7 +6,7 @@
 - **Class** `LyraFlowControls`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-controls/flow-controls.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated property** `hideLock` / `hide-lock` since `21.1.0`; use property `without-lock`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below

@@ -295,7 +295,7 @@ reentrant mutation aborts the proposal. A forced close when a responsive collaps
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
-fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`); `lr-toggle-request` (cancelable proposal before interactive overlay state changes, with `expanded` and compatibility `open`; direct writes and forced responsive closes do not emit it)
 
 **Slots:** default (each direct child element is one panel; set a unique `panel-id` on every child
 when `storage-key` is used).
@@ -959,22 +959,15 @@ use `lr-toggle-group`.
 
 **Slots:** default action controls.
 
-**CSS parts:** `base` (the `role="group"` flex wrapper; wraps, and goes full-width below a 20rem
-container inline-size).
+**CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
 
-**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` _and_ declares
-`container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
-fire at all). Inline-size containment means the box's own content can no longer contribute to its
-width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
-`inline-flex`/`flex` parent, anywhere with no definite width — the group uses its
-`contain-intrinsic-inline-size` fallback of `var(--lr-size-12rem)` instead of growing to fit the
-slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
-or a grid track) whenever it isn't already in a layout that supplies one. Under tighter allocation,
-`min-inline-size: var(--lr-icon-button-size)` remains the hard 2.5rem lower bound rather than the
-unallocated fallback.
+**Sizing.** The group derives its width from its content and wraps within a constrained
+allocation. A definite host width does not stretch the row automatically. Opt into a filled row
+with `lr-button-group::part(base) { inline-size: 100%; }`; this also preserves the former narrow
+allocation fill behavior. `min-inline-size: var(--lr-icon-button-size)` remains the lower bound.
 
 ---
 
@@ -2546,7 +2539,7 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle`, or
+**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle-request`, or
 flips the full/icon-only preference. It is a no-op while disconnected. While pinned, it records
 only the preference; releasing `forceMode` applies it.
 
@@ -2561,15 +2554,10 @@ persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferre
 restored-on-mount case fires once, from the first `updated()` after that mount's render and
 attribute reflection have both landed, rather than synchronously during the mount itself; it is
 not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
-was persisted), `lr-toggle`
-(`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`, where `expanded` is the
-proposed overlay state and the deprecated `open` key, removed in 23.0.0, carries the same value; the
-mobile overlay is opening or closing — via
-the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
-breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
-directly. Cancelable for every trigger except the forced mode-change close, which always applies —
-vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
-`preventDefault()` to keep the overlay as it is for the other triggers),
+was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`;
+cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
+the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
+direct property writes remain silent. The `open` detail key remains a compatibility alias.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
@@ -3054,9 +3042,9 @@ never disagree with what is rendered inside it.
 **Properties:**
 
 - `heading: string = ''` — the section title. The `heading` slot replaces it when populated.
-- `headingLevel: number = 3` (attribute `heading-level`) — the `aria-level` the heading landmark
-  reports. Clamped to 1-6 and rounded; a non-finite value falls back to `3`. Settable because a rail
-  sits at a different depth in every page that embeds it.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — `'1'`–`'6'` set the heading
+  landmark's level; `'none'` keeps the title visible without heading semantics. Invalid values
+  fall back to `'3'`. JavaScript callers use strings, matching the other heading controls.
 - `collapsible: boolean = false` (reflected) — opts in the built-in collapse control. The heading's
   own text becomes the button carrying `aria-expanded` and `aria-controls`, which is the accordion
   pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
@@ -3140,20 +3128,16 @@ First-party invention (no `wa-*`/`sl-*` counterpart).
   is `'overlay'`.
 
 **Methods:** `close(reason: LyraResponsivePanelCloseReason = 'api'): void` — requests a close by
-emitting `lr-close` with `reason` before changing `open`. A listener can call `preventDefault()` to
+emitting `lr-close-request` with `{ reason }` before changing `open`. A listener can call `preventDefault()` to
 keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
 returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay
 triggers call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button,
 a docked panel's own toggle) should call it directly with its own reason string.
 
-**Events:** `lr-close` (`detail: LyraResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
-cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
-backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
-the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
-property write does **not** fire it, only going through `close()` counts as a dismissal). This name
-is not dialog-scoped: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
-`lr-close` listener also observes this event — see `<lr-dialog>`'s `lr-close` section (in
-`overlays.md`) for the full list of emitters and the target-filtering guard. `lr-mode-change`
+**Events:** cancelable `lr-close-request` (`detail: { reason: LyraResponsivePanelCloseReason }`),
+followed by non-cancelable `lr-close` with the same detail after `open` becomes false. `close()`
+and overlay controls use this lifecycle; direct `open` writes remain state assignments. Filter
+by event target when the panel contains other components that emit `lr-close`. `lr-mode-change`
 (`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
 the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).
@@ -3354,7 +3338,9 @@ Row chrome is controlled through the menu-item properties listed below.
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
 (default `var(--lr-size-10rem)`). They move together — the floor wins over the ceiling, so capping
-alone cannot take a menu below 10rem. Neither is declared on `:host`, so an ancestor theme wrapper's
+alone cannot take a menu below 10rem. The viewport and available container or positioned width also
+bound the floor, so narrow allocations and enlarged text cannot force the surface outside them.
+Neither is declared on `:host`, so an ancestor theme wrapper's
 value reaches the menu. The ceiling takes a length or a percentage; `100%` and `none` both uncap it
 to the container, and any other value outside `<length-percentage>` is treated as `none` rather than
 dropping the cap's safety terms. Those terms — the shared `--lr-popover-viewport-clamp` and the
@@ -4100,13 +4086,12 @@ no-op if already open),
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-show`, `lr-close` (both `detail: null`, cancelable — fired before the
-mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
+**Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
+with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable
+`lr-close` with that same reason object after closing; `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
-gains or loses focus. `lr-open` is a deprecated alias for `lr-show` (same `detail: null`,
-cancelability, and timing, fired at the same call site; either event's `preventDefault()` vetoes
-the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
+gains or loses focus. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
 never fired at all. `lr-close` is not dialog-scoped: nesting this palette inside a consumer's own
@@ -5416,9 +5401,10 @@ import "@aceshooting/lyra-ui/components/layout/page/page.js";
 
 - **Multi-split:** `LyraMultiSplitToggleDetail` is `{ expanded: boolean, open: boolean }` (the
   deprecated `open` key carries the same value). Escape or a backdrop click
-  proposes a floating-panel state cancelably before `open` changes; `preventDefault()` or a
+  emits cancelable `lr-toggle-request` before `open` changes; `preventDefault()` or a
   synchronous reentrant write aborts the proposal. Leaving floating mode closes the panel, emits
-  the collapse change, and then emits noncancelable `lr-toggle`; direct writes and no-ops stay
+  the collapse change, and then emits noncancelable `lr-toggle`; accepted interactive changes also
+  emit `lr-toggle` after committing; direct writes and no-ops stay
   silent. Divider numeric ARIA values remain percentages and their `aria-valuetext` is localized.
 - **Resizers:** `lr-split-panel` retains numeric percent ranges with localized current-percent
   `aria-valuetext`; `lr-app-rail` and `lr-dock-panel` expose CSS-pixel ranges with localized current

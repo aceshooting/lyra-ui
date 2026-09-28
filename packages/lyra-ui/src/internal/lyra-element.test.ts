@@ -1,3 +1,5 @@
+import { collectionSupport } from './collection-snapshot.js';
+import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import { LitElement, css, nothing, type PropertyValues } from "lit";
 import { property } from "lit/decorators.js";
@@ -16,6 +18,7 @@ import type { LyraTaskList } from '../components/agent-tools/task-list/task-list
 import type { LyraHighlightLayer } from '../components/viewers/highlight-layer/highlight-layer.class.js';
 
 class Demo extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = [
     "lr-snapshot",
     "lr-map-snapshot",
@@ -68,6 +71,7 @@ interface DemoCollectionEntry {
 }
 
 class DemoOwnedCollection extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = ["items"];
 
   @property({ attribute: false })
@@ -76,6 +80,7 @@ class DemoOwnedCollection extends LyraElement {
 customElements.define(tag("demo-owned-collection"), DemoOwnedCollection);
 
 class DemoOwnedRecord extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = ['value'];
 
   @property({ attribute: false })
@@ -84,6 +89,7 @@ class DemoOwnedRecord extends LyraElement {
 customElements.define(tag('demo-owned-record'), DemoOwnedRecord);
 
 class DemoIdentityCollection extends DemoOwnedCollection {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = [
     "items",
     "registry",
@@ -129,6 +135,10 @@ class DemoLocale extends LyraElement {
   }
 }
 customElements.define(tag("demo-locale"), DemoLocale);
+
+expectLocaleFallback('x-memo', ['cancel']);
+expectLocaleFallback('tr', ['cancel']);
+expectLocaleFallback('lt', ['cancel']);
 
 class DemoHydration extends LyraElement {
   renderCalls = 0;
@@ -1972,6 +1982,7 @@ it("fails closed and retries when owner observation capability accessors are hos
 
 it("canonicalizes a synthetic message locale while exposing a safe effective locale", async () => {
   const locale = `x_synthetic_${Date.now().toString(36)}`;
+  expectLocaleFallback(locale, ['cancel']);
   const el = await fixture<DemoLocale>(
     html`<lr-demo-locale locale=${locale}></lr-demo-locale>`
   );
@@ -2163,6 +2174,7 @@ it('strings setter snapshots the assigned overrides and schedules a re-render', 
 
 it('requests an update on reconnect when the locale catalog changed while disconnected', async () => {
   const locale = `x-catalog-${Date.now().toString(36)}`;
+  expectLocaleFallback(locale, ['cancel']);
   const el = await fixture<DemoLocale>(
     html`<lr-demo-locale locale=${locale}></lr-demo-locale>`
   );
@@ -2443,6 +2455,7 @@ it('keeps an accessor-backed enrolled collection clone-owned and frozen', () => 
 
 it('installs the ownership boundary on subclasses defined after the base class finalized', async () => {
   class LateOwned extends LyraElement {
+    protected static override collectionSupport = collectionSupport;
     protected static override readonly ownedCollectionProperties = Object.freeze([
       'rows',
     ]);
@@ -2492,6 +2505,7 @@ it('owns a collection assigned before the element was upgraded', async () => {
   expect(el.rows, 'no accessor exists before upgrade').to.equal(rows);
 
   class DemoPreUpgrade extends LyraElement {
+    protected static override collectionSupport = collectionSupport;
     protected static override readonly ownedCollectionProperties = Object.freeze([
       'rows',
     ]);
@@ -2518,6 +2532,7 @@ it('installs no boundary for enrollments that never had one', async () => {
     // `identityCollectionProperties` only refines an owned property; on its own it enrolls
     // nothing. `absent` is not a reactive property at all, and `manual` opts out of Lit's
     // accessor generation, so both keep the hand-written behavior they declare.
+    protected static override collectionSupport = collectionSupport;
     protected static override readonly ownedCollectionProperties = Object.freeze([
       'absent',
       'manual',
@@ -2568,6 +2583,7 @@ it('installs no boundary for enrollments that never had one', async () => {
 
 it('applies each class its own policy when a subclass is registered before its base', async () => {
   class EarlyBase extends LyraElement {
+    protected static override collectionSupport = collectionSupport;
     protected static override readonly ownedCollectionProperties = Object.freeze([
       'rows',
     ]);
@@ -2647,4 +2663,14 @@ describe('dev-mode unknown-attribute warning wiring', () => {
 
     expect(calls).to.have.length(0);
   });
+});
+
+it('cannot bypass event snapshots by shadowing the public constructor property', async () => {
+  const el = await fixture<Demo>('<lr-demo-base></lr-demo-base>');
+  Object.defineProperty(el, 'constructor', { value: class Fake {} });
+  const source = { rows: [{ value: 'original' }] };
+  const event = (el as unknown as { emit(name: string, detail: unknown): CustomEvent }).emit('lr-snapshot', source);
+  source.rows[0]!.value = 'changed';
+  expect(event.detail.rows[0].value).to.equal('original');
+  expect(Object.isFrozen(event.detail.rows)).to.equal(true);
 });

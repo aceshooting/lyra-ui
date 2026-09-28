@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-dataset-viewer.js to register this component. */
 export * from './dataset-viewer.class.js';
 import { html } from 'lit';
 import { LyraDatasetViewer } from './dataset-viewer.class.js';

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
@@ -25,6 +26,21 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
       dispatchEvent: () => true,
     }) satisfies MediaQueryList);
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'spanWaterfall',
+  'durationMilliseconds',
+  'spanKindTool',
+  'statusSuccess',
+  'accessibleLabelSeparator',
+]);
+expectLocaleFallback('de-DE', [
+  'spanWaterfall',
+  'durationSeconds',
+  'spanKindTool',
+  'statusSuccess',
+  'accessibleLabelSeparator',
+]);
 describe('lr-span-waterfall', () => {
   it('renders one row per span in start order, regardless of hierarchy', async () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;

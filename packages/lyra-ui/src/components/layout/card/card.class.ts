@@ -124,9 +124,9 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop [--border-color=var(--lr-color-border-subtle)] - Shoelace-compatible border color.
  *   Unset, an `actionable` or linked (`href`) card's outer edge falls back to `--lr-color-border`
  *   instead: that edge is then the whole-card control's only visible boundary.
- * @cssprop [--border-radius=var(--lr-radius)] - Shoelace-compatible corner radius.
+ * @cssprop [--border-radius=var(--lr-radius-container)] - Shoelace-compatible corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Shoelace-compatible border width.
- * @cssprop [--lr-card-outlined-bg=var(--lr-color-surface)] - Background of the DEFAULT
+ * @cssprop [--lr-card-outlined-bg=var(--lr-color-surface-container-low)] - Background of the DEFAULT
  *   (`outlined`) appearance, and of `accent`, which adds a stripe without restating a surface.
  *   The filled tiers below already had their own hook; this one closes the gap for the tier most
  *   cards actually render, so retinting one themed card no longer needs a `::part(base)` rule or

@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -89,7 +91,7 @@ export interface EvalCitationSelectDetail {
   citation: Citation;
 }
 
-/** `detail` for `lr-example-tool-approval-decide` -- the nested per-example `<lr-tool-timeline>`'s
+/** `detail` for `lr-example-tool-approval-decide-request` -- the nested per-example `<lr-tool-timeline>`'s
  *  own `lr-tool-approval-decide` detail (`ToolTimelineApprovalDetail`), correlated with the
  *  example it came from. */
 export interface EvalToolApprovalDetail extends ToolTimelineApprovalDetail {
@@ -110,10 +112,12 @@ export interface EvalClaimSelectDetail {
 }
 
 export interface LyraEvalRunEventMap {
+  /** @deprecated Use `lr-example-tool-approval-decide-request`. */
+  'lr-example-tool-approval-decide': LyraEvalRunEventMap['lr-example-tool-approval-decide-request'];
   'lr-example-toggle': CustomEvent<EvalExampleToggleDetail>;
   'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
   'lr-example-claim-select': CustomEvent<LyraEventDetailSnapshot<EvalClaimSelectDetail>>;
-  'lr-example-tool-approval-decide': CustomEvent<EvalToolApprovalDetail>;
+  'lr-example-tool-approval-decide-request': CustomEvent<EvalToolApprovalDetail>;
   'lr-example-tool-activate': CustomEvent<EvalToolActivateDetail>;
   'lr-example-tool-render-error': CustomEvent<EvalToolRenderErrorDetail>;
 }
@@ -154,7 +158,8 @@ const MAX_RENDERED_EXAMPLES = 500;
  *   expanded }`.
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
  *   was activated. `detail: { exampleId, citation }`.
- * @event lr-example-tool-approval-decide - A pending tool call in a nested `<lr-tool-timeline>`
+ * @event lr-example-tool-approval-decide - Deprecated cancelable compatibility alias of `lr-example-tool-approval-decide-request`.
+ * @event lr-example-tool-approval-decide-request - A pending tool call in a nested `<lr-tool-timeline>`
  *   was approved or denied. `detail: { exampleId, invocationId, approved, args? }`. Cancelable:
  *   preventing this correlated event vetoes the nested decision and preserves its pending dialog.
  * @event lr-example-claim-select - A grounded claim was activated. `detail: { exampleId, claim }`.
@@ -229,6 +234,17 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     statusSuccess: LYRA_DEFAULT_statusSuccess,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private emitExampleToolApprovalDecideRequest(detail: LyraEvalRunEventMap['lr-example-tool-approval-decide-request']['detail']): CustomEvent {
+    const request = this.emit('lr-example-tool-approval-decide-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-example-tool-approval-decide', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-example-tool-approval-decide', 'lr-example-tool-approval-decide-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['examples']);
 
@@ -401,14 +417,17 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     this.emit('lr-example-claim-select', { exampleId, claim: event.detail.claim });
   }
 
-  private onToolApprovalDecide(exampleId: string, event: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>): void {
-    event.stopPropagation();
-    const correlatedEvent = this.emit(
-      'lr-example-tool-approval-decide',
-      { exampleId, ...event.detail },
-      { cancelable: true },
-    );
-    if (correlatedEvent.defaultPrevented) event.preventDefault();
+  private decisionDispatching = false;
+  private onToolApprovalDecide(exampleId: string, event: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide-request']['detail']>): void {
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      event.stopPropagation();
+      const correlatedEvent = this.emitExampleToolApprovalDecideRequest({ exampleId, ...event.detail });
+      if (correlatedEvent.defaultPrevented) event.preventDefault();
+    } finally {
+      this.decisionDispatching = false;
+    }
   }
 
   private onToolActivate(exampleId: string, event: CustomEvent<ToolTimelineActivateDetail>): void {
@@ -480,7 +499,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
         <lr-tool-timeline
           part="tool-trace"
           .entries=${toolTrace}
-          @lr-tool-approval-decide=${(e: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide']['detail']>) =>
+          @lr-tool-approval-decide=${(event: Event) => event.stopPropagation()}
+          @lr-tool-approval-decide-request=${(e: CustomEvent<LyraToolTimelineEventMap['lr-tool-approval-decide-request']['detail']>) =>
             this.onToolApprovalDecide(example.id, e)}
           @lr-tool-activate=${(e: CustomEvent<ToolTimelineActivateDetail>) => this.onToolActivate(example.id, e)}
           @lr-tool-render-error=${(e: CustomEvent<ToolTimelineRenderErrorDetail>) =>

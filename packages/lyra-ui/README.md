@@ -28,7 +28,7 @@
 library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 296 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 304 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -47,7 +47,7 @@ and no runtime dependency on either project.
 | Toggle controls | [Toggle](./llms/components/lr-toggle.md) and [toggle group](./llms/components/lr-toggle-group.md) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
 | Markdown and streaming | [Markdown](./llms/components/lr-markdown.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
 | Tool results | [Tool-call blocks](./llms/components/lr-tool-call-block.md) provide expandable summaries and result presentation with controlled disclosure state. |
-| Languages | 32 optional translation catalogs plus built-in English. New in v21: `cs`, `da`, `de-CH`, `fi`, `hi`, `hr`, `hu`, `id`, `kk`, `ko`, `nb`, `nl`, `nn`, `pl`, `pt-PT`, `sl`, `sv`, `tr`, `uk`, and `zh-TW`, joining `ar`, `de`, `es`, `fa`, `fr`, `he`, `it`, `ja`, `pt-BR`, `ro`, `ru`, and `zh-CN`. Import a [whole catalog](./llms/shared.md#ready-made-catalogs-aceshootinglyra-uitranslationslocalejs) (`@aceshooting/lyra-ui/translations/<locale>.js`) or only the [family slices](./llms/shared.md#smaller-catalogs-aceshootinglyra-uitranslationslocalefamilyjs) the application renders. |
+| Languages | 66 optional complete message catalogs plus built-in English. The [`locales.json` manifest](./locales.json) lists canonical tags, authored source spellings, import paths and structural coverage. Import a [whole catalog](./llms/shared.md#ready-made-catalogs-aceshootinglyra-uitranslationslocalejs) (`@aceshooting/lyra-ui/translations/<locale>.js`) or only the [family slices](./llms/shared.md#smaller-catalogs-aceshootinglyra-uitranslationslocalefamilyjs) the application renders. |
 | Typography | [Typography utilities](./llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
 
 Choose the original Lyra look by loading `theme.css`. To select shadcn through the runtime:
@@ -169,7 +169,7 @@ import "@aceshooting/lyra-ui/all.js";
 > registration entry, a family entry, or `@aceshooting/lyra-ui/all.js` for bulk registration.
 > An unregistered tag remains inert even when the import and build succeed.
 
-`all.js` registers 280 tags — every component **except** the 16 inventory-designated
+`all.js` registers 288 tags — every component **except** the 16 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
 `<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
 `<lr-geojson-viewer>` with its deprecated `<lr-geojson-view>` alias (see Install above). Those always require their own explicit subpath import,
@@ -291,14 +291,16 @@ assistants, split so a lookup costs a few hundred tokens instead of the whole ca
 | Which component to use, and its import path                                                          | [`llms/index.md`](./llms/index.md)                                       |
 | One component's full API                                                                             | `llms/components/<tag>.md` — path derived from the tag, no search needed |
 | Library-wide behavior (imports, events, forms, theming, i18n, TypeScript, frameworks, SSR, AI types) | [`llms/shared.md`](./llms/shared.md)                                     |
+| One shared-guide topic (imports, forms, styles, localization, frameworks, AI, or testing)        | `llms/shared/<topic>.md` — linked from [`llms.txt`](./llms.txt)           |
 | Design tokens                                                                                        | [`llms/tokens.md`](./llms/tokens.md)                                     |
 | Which optional peer a component needs                                                                | [`llms/peers.md`](./llms/peers.md)                                       |
 | `wa-*`/`sl-*` migration classifications and safe codemod rules                                       | [`llms/migration.md`](./llms/migration.md)                               |
-| Everything, concatenated (large)                                                                     | [`llms-full.txt`](./llms-full.txt)                                       |
+| Everything, concatenated (large; repository archive)                                                 | [repository reference archive](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms-full.txt) |
 
-[`llms.txt`](./llms.txt) is the short entry index over all of the above. Family files, this shared
-guide, and the introductory sources are authored; `pnpm run llms` combines them with the generated
-index, per-component pages, tokens, peers, and migration reference. CI freshness-checks the derived
+[`llms.txt`](./llms.txt) is the short entry index over all of the above. Family files, the focused
+shared-topic files, and the introductory sources are authored; `llms/shared.md` is their generated
+combined compatibility route. `pnpm run llms` combines them with the generated index,
+per-component pages, tokens, peers, and migration reference. CI freshness-checks the derived
 artifacts against `custom-elements.json` and the authored sources.
 
 **Claude Code users:** this repo is also a plugin marketplace — installing the `lyra-ui` plugin gives
@@ -614,7 +616,7 @@ remains available for the complete M+1 line and cannot be removed before M+2. Se
 
 ## SSR & Declarative Shadow DOM
 
-Every Lyra entry point is server-safe under Node 20+ — the package root, `all.js`, the family
+Every Lyra entry point is server-safe under Node 22+ — the package root, `all.js`, the family
 barrels, and every granular registration module alike. The `@aceshooting/lyra-ui/ssr-loader.js`
 entry installs Lit's hydration hook before registering Lyra (it still pulls the whole `all.js`
 closure independently of the package root) and exports the machine-readable
@@ -781,7 +783,7 @@ covers every published component, and is regenerated by `pnpm run registration-g
 
 ## Components
 
-The catalog below lists all 296 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 304 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -812,7 +814,7 @@ API details.
 | `<lr-spinner>`                               | `wa-spinner` / `sl-spinner`                                                     | Localized indeterminate busy indicator with reduced-motion support                                                                                                                                                                                                  |
 | `<lr-progress-bar>` + `<lr-progress-ring>`   | `wa-progress-bar` / `wa-progress-ring` / `sl-progress-bar` / `sl-progress-ring` | Determinate or indeterminate progress indicators                                                                                                                                                                                                                    |
 | `<lr-flag>`                                  | — (extra)                                                                       | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags`                                                                                                                                                                         |
-| `<lr-locale-picker>`                         | — (extra)                                                                       | Closed-list locale switcher over the library's own locale registry (`getRegisteredLyraLocales()`) or an explicit `locales` catalog; selecting a row calls `setLyraLocale()` unless `lr-change` is cancelled                                                         |
+| `<lr-locale-picker>`                         | — (extra)                                                                       | Closed-list locale switcher over the library's own locale registry (`getRegisteredLyraLocales()`) or an explicit `locales` catalog; selecting a row calls `setLyraLocale()` unless `lr-change-request` is cancelled                                                         |
 
 **Additional media and interaction primitives**
 
@@ -986,7 +988,7 @@ API details.
 
 Web Awesome has no chat/agent UI component family at all, so every component in this table is
 original to lyra-ui (`— (extra)`) — there's nothing to migrate from. See
-[`llms-full.txt`](./llms-full.txt) for the full API (properties, events, parts, tokens) behind
+[repository reference archive](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms-full.txt) for the full API (properties, events, parts, tokens) behind
 each one-liner below.
 
 | Component                                                                              | Mirrors                                                                                 | Notes                                                                                                                                                                                                                                                                                                             |
@@ -1026,8 +1028,16 @@ each one-liner below.
 | `<lr-tool-result-view>` + `registerToolRenderer()`                                     | — (extra)                                                                               | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>`                                                                                                                                                                             |
 | `<lr-tool-result-dialog>`                                                              | — (extra)                                                                               | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tab-group>` of Input/Preview/JSON/Raw)                                                                                                                                                              |
 | `<lr-tool-approval-dialog>`                                                            | — (extra)                                                                               | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving                                                                                                                                                                                     |
-| `<lr-confirm-bar>`                                                                     | — (extra)                                                                               | Inline, non-modal approve/deny block for one proposed action — the in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that shouldn't hijack focus; same `lr-approve`/`lr-deny` event shapes and localization keys as the dialog                                                                     |
+| `<lr-confirm-bar>`                                                                     | — (extra)                                                                               | Inline, non-modal approve/deny block for one proposed action — the in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that shouldn't hijack focus; same `lr-approve-request`/`lr-deny-request` event shapes and localization keys as the dialog                                                                     |
 | `<lr-tool-param-form>`                                                                 | — (extra)                                                                               | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing                                                                                                                                                                                  |
+| `<lr-change-review>` | — (extra) | Experimental multi-file diff review with controlled per-hunk keep/discard decisions. |
+| `<lr-agent-question>` | — (extra) | Experimental structured questions with flat MCP form elicitation and explicit response events. |
+| `<lr-permission-rules>` | — (extra) | Experimental controlled permission rules with visible host-defined scopes. |
+| `<lr-permission-grant>` | — (extra) | Experimental allow-once, session and deny decisions for host-owned permission requests. |
+| `<lr-connector-manager>` | — (extra) | Experimental connection-state presentation and actions for MCP servers and connectors. |
+| `<lr-background-runs>` | — (extra) | Experimental background-run status, open and cancellation requests. |
+| `<lr-research-progress>` | — (extra) | Experimental ordered research steps with completion and source counts. |
+| `<lr-budget-meter>` | — (extra) | Experimental finite budget usage, unavailable limits and over-budget presentation. |
 | `<lr-tool-select-dialog>`                                                              | — (extra)                                                                               | Category-grouped, filterable, searchable dialog for picking which agent tools are enabled in a conversation                                                                                                                                                                                                       |
 | `<lr-command-palette>`                                                                 | — (extra)                                                                               | Searchable command menu with groups, keyboard navigation, async-friendly registration, and `mod+k` opening                                                                                                                                                                                                        |
 | `<lr-widget-renderer>`                                                                 | — (extra)                                                                               | Renders an agent-streamed declarative JSON widget tree through an immutable allowlisted `type -> lyra tag` registry created with `createWidgetTypeRegistry()`; mapped nodes are real elements with props assigned as JS properties (never `innerHTML`), reused by key across a re-resolve                              |

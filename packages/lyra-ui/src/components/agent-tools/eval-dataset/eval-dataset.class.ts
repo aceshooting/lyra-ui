@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -68,7 +69,7 @@ export interface LyraEvalDatasetEventMap {
  * the common "browse by any of these tags" idiom rather than requiring every tag to match),
  * `<lr-file-input>` for the import affordance, and `<lr-export-button>` for the export affordance
  * -- its own built-in client-side CSV/JSON download is deliberately suppressed
- * (`event.preventDefault()` on its `lr-export`) since `<lr-export-button>`'s flat `rows`/`columns`
+ * (`event.preventDefault()` on its `lr-export-request`) since `<lr-export-button>`'s flat `rows`/`columns`
  * CSV/JSON builder can't preserve an `EvalExample`'s own `tags`/`metadata` shape faithfully, and
  * producing the actual exported file/API-call either way is the host's job per this component's
  * own controlled contract; this keeps `lr-export-request` the single source of truth for every
@@ -149,6 +150,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['examples', 'exportFormats']);
 
@@ -340,7 +342,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.emit('lr-import-request', { files: [...e.detail.files] });
   };
 
-  private onExportButtonExport = (e: LyraExportButtonEventMap['lr-export']): void => {
+  private onExportButtonExport = (e: LyraExportButtonEventMap['lr-export-request']): void => {
     // Suppress the internal <lr-export-button>'s own built-in client-side blob download -- see
     // the class doc for why every configured format is redirected through lr-export-request
     // instead, rather than letting csv/json download locally while other formats silently do
@@ -428,7 +430,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @lr-export-error=${this.stopOwnedEvent}
           @lr-show=${this.stopOwnedEvent}
           @lr-hide=${this.stopOwnedEvent}
-          @lr-export=${this.onExportButtonExport}
+          @lr-export-request=${this.onExportButtonExport}
+          @lr-export=${this.stopOwnedEvent}
         ></lr-export-button>
       </div>
     `;

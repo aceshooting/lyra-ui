@@ -216,12 +216,12 @@ export const styles = css`
         --lr-swatch-picker-selected-color,
         var(--_lr-swatch-picker-selected-color)
       );
-    animation: lr-swatch-picker-shine
+    animation: var(--_lr-motion-animation, lr-swatch-picker-shine
       var(
         --lr-swatch-picker-shine-duration,
         var(--_lr-swatch-picker-shine-duration)
       )
-      infinite;
+      infinite);
   }
   @keyframes lr-swatch-picker-shine {
     0%,
@@ -261,12 +261,12 @@ export const styles = css`
           var(--_lr-swatch-picker-selected-color)
         )
     );
-    animation: lr-swatch-picker-shine-icon
+    animation: var(--_lr-motion-animation, lr-swatch-picker-shine-icon
       var(
         --lr-swatch-picker-shine-duration,
         var(--_lr-swatch-picker-shine-duration)
       )
-      infinite;
+      infinite);
   }
   @keyframes lr-swatch-picker-shine-icon {
     0%,

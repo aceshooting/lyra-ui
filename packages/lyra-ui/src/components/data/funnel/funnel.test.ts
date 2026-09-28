@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import type { LyraFunnel, LyraFunnelStage } from './funnel.class.js';
@@ -22,6 +23,8 @@ function parts(el: LyraFunnel, name: string): HTMLElement[] {
 function text(node: Element | null | undefined): string {
   return (node?.textContent ?? '').replace(/[\u00a0\u202f]/g, ' ').trim();
 }
+
+expectLocaleFallback('de-DE', ['chart', 'comparePanel', 'statTrendDecreased']);
 
 describe('<lr-funnel>', () => {
   it('renders one stage per entry with both the absolute value and the share of the FIRST stage, and stays accessible', async () => {

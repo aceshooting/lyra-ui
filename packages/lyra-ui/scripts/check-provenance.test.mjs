@@ -77,6 +77,21 @@ test('detects realistic personal paths while allowing portable and explicit exam
   }
 });
 
+test('preserves structured commit entries in major release archives without exempting prose', () => {
+  assert.deepEqual(labels('docs/changelog/v21.md', '- 4ddf1fbd: Fixed breakpoint handling.'), []);
+  for (const file of ['docs/changelog/v21.md', 'docs/changelog/notes.md', 'examples/changelog/v21.md']) {
+    assert.deepEqual(labels(file, 'The regression introduced by 4ddf1fbd required a fallback.'), [
+      'explanatory commit provenance',
+    ]);
+  }
+  assert.deepEqual(labels('docs/changelog/notes.md', '- 4ddf1fbd: Fixed breakpoint handling.'), [
+    'explanatory commit provenance',
+  ]);
+  assert.deepEqual(labels('docs/changelog/v21.md', '- 4ddf1fbd: Removed docs/superpowers/plans/widget.md.'), [
+    'local-only tooling reference',
+  ]);
+});
+
 test('permits ordinary product vocabulary, release review prose, and decorative section marks', () => {
   const source = [
     'Run a human review pass before release.',

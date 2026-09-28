@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -182,7 +183,7 @@ export interface LyraTreeItemEventMap {
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row,
  *   and the base its hover/press mixes from.
- * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row.
+ * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row in every state; unset pointer states use on-quiet text.
  * @cssprop [--lr-tree-checkbox-checked-border-color=var(--lr-color-brand)] - Checked control border, and
  *   the border under the pointer.
  * @cssprop [--lr-tree-checkbox-checked-bg=var(--lr-color-brand)] - Checked control background.
@@ -214,6 +215,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
@@ -829,7 +831,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   }
 
   private motionDuration(expanded: boolean, owner: Window): number {
-    if (prefersReducedMotion(owner)) return 0;
+    if (prefersReducedMotion(this)) return 0;
     const property = expanded ? '--show-duration' : '--hide-duration';
     const ownStyle = owner.getComputedStyle(this);
     const raw = ownStyle.getPropertyValue(property).trim() || ownStyle.getPropertyValue('--lr-duration-base').trim();

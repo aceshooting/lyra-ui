@@ -1,5 +1,6 @@
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import type { PropertyValues } from 'lit';
 import './locale-picker.js';
 import '../../../translations/fa.js';
@@ -19,6 +20,24 @@ import {
 // The compatibility tests below deliberately use the deprecated show-flags alias, which keeps
 // working until its removal.
 expectDeprecatedUsage('lr-locale-picker', 'property', 'showFlags');
+
+// These selection/formatting fixtures intentionally omit a translated catalog. Declare only
+// their expected English fallbacks; warnings for any other key or locale stay visible.
+before(() => {
+  expectLocaleFallback('fr', [
+  'localePickerLabel',
+  'loading',
+  'localePickerRequired',
+]);
+  expectLocaleFallback('de', ['localePickerLabel', 'loading']);
+  expectLocaleFallback('it', [
+  'localePickerLabel',
+  'loading',
+  'localePickerRequired',
+]);
+  expectLocaleFallback('qaa-QA', ['loading']);
+  expectLocaleFallback('x-lp-before-connect', ['loading']);
+});
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 setFlagUrlResolver(async () => TEST_FLAG_SRC);
@@ -102,7 +121,7 @@ for (const direction of ['ltr', 'rtl'] as const) {
 
 it('keeps compact keyboard commits, form values, locale preview and flag opt-out coherent', async () => {
   const form = await fixture<HTMLFormElement>(html`<form><lr-locale-picker trigger-display="flag" name="language"
-    value="en" .locales=${['en', 'fr']} @lr-change=${(event: Event) => event.preventDefault()}></lr-locale-picker></form>`);
+    value="en" .locales=${['en', 'fr']}></lr-locale-picker></form>`);
   const el = form.querySelector('lr-locale-picker')!;
   el.focus();
   await sendKeys({ press: 'ArrowDown' });
@@ -585,20 +604,36 @@ it('reports the picked locale writing direction in lr-change detail', async () =
   setLyraLocale('en');
 });
 
-// preventDefault() updates value but leaves the active locale untouched.
-it('event.preventDefault() on lr-change updates value but leaves the active locale untouched', async () => {
+it('vetoes locale selection before changing value, popup, or global locale', async () => {
   setLyraLocale('en');
-  const el = (await fixture(
-    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
-  )) as LyraLocalePicker;
-  el.addEventListener('lr-change', (e) => e.preventDefault());
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`);
+  let requests = 0;
+  let notifications = 0;
+  el.addEventListener('lr-change-request', (event) => { requests++; event.preventDefault(); });
+  el.addEventListener('lr-change', () => notifications++);
   el.open = true;
   await el.updateComplete;
-
-  setTimeout(() => requiredItem(rows(el), 0, 'French locale').click());
-  await oneEvent(el, 'lr-change');
-  expect(el.value).to.equal('fr');
+  requiredItem(rows(el), 0, 'French locale').click();
+  expect(requests).to.equal(1);
+  expect(notifications).to.equal(0);
+  expect(el.value).to.equal('');
+  expect(el.open).to.equal(true);
   expect(getLyraLocale()).to.equal('en');
+});
+
+it('notifies after commit without allowing a notification to veto the locale', async () => {
+  setLyraLocale('en');
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`);
+  let observations: unknown;
+  el.addEventListener('lr-change', (event) => {
+    event.preventDefault();
+    observations = [event.cancelable, el.value, el.open, getLyraLocale()];
+  });
+  el.open = true;
+  await el.updateComplete;
+  requiredItem(rows(el), 0, 'French locale').click();
+  expect(observations).to.deep.equal([false, 'fr', false, 'fr']);
+  setLyraLocale('en');
 });
 
 // An unset value previews effectiveLocale, but required stays invalid until a real commit.
@@ -1967,4 +2002,25 @@ describe('trigger/option hover-active paint transition', () => {
     );
     expect(getComputedStyle(restingOption).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
+});
+
+it('preserves synchronous host value writes and blocks recursive locale requests', async () => {
+  setLyraLocale('en');
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`);
+  el.open = true;
+  await el.updateComplete;
+  const row = requiredItem(rows(el), 0, 'French locale');
+  let requests = 0;
+  let notifications = 0;
+  el.addEventListener('lr-change-request', () => {
+    requests++;
+    el.value = 'de';
+    if (requests === 1) row.dispatchEvent(new MouseEvent('click'));
+  });
+  el.addEventListener('lr-change', () => notifications++);
+  row.click();
+  expect(requests).to.equal(1);
+  expect(notifications).to.equal(0);
+  expect(el.value).to.equal('de');
+  expect(getLyraLocale()).to.equal('en');
 });

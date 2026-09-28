@@ -17,7 +17,7 @@ export const styles = css`
     border-radius: 50%;
   }
   [part~='indicator'][data-effect='pulse'] {
-    animation: lr-skeleton-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-skeleton-pulse var(--lr-transition-ambient) infinite);
   }
   [part~='indicator'][data-effect='sheen'] {
     background-image: linear-gradient(
@@ -27,7 +27,7 @@ export const styles = css`
       var(--lr-skeleton-color, var(--color, var(--lr-color-neutral-fill-normal))) 100%
     );
     background-size: 200% 100%;
-    animation: lr-skeleton-sheen var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-skeleton-sheen var(--lr-transition-ambient) infinite);
   }
   /* background-position percentages are physical, so the sheen always travels left-to-right; play
      the same keyframes backwards under RTL to sweep in the reading direction. animation-direction

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-combobox.js to register this component. */
 export * from './combobox.class.js';
 import { LyraCombobox } from './combobox.class.js';
 import { defineElement } from '../../../internal/prefix.js';

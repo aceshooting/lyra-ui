@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
@@ -350,3 +351,5 @@ describe('focusMoveButton()', () => {
     expect(el.focusMoveButton('down')).to.equal(false);
   });
 });
+
+expectDeprecatedUsage('lr-reorder-item', 'property', 'accessibleLabel');

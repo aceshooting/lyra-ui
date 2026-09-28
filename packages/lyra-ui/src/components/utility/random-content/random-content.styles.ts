@@ -67,10 +67,10 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    animation-duration: var(
+    animation-duration: var(--_lr-motion-duration, var(
       --animation-duration,
       var(--lr-animation-duration, var(--lr-random-content-animation-duration, 300ms))
-    );
+    ));
     animation-timing-function: var(
       --animation-easing,
       var(--lr-animation-easing, var(--lr-random-content-animation-easing, ease))
@@ -95,19 +95,19 @@ export const styles = css`
     display: none !important;
   }
   :host(:where([animation='fade'])) ::slotted(:not([hidden])) {
-    animation-name: lr-random-content-fade-in;
+    animation-name: var(--_lr-motion-animation, lr-random-content-fade-in);
   }
   :host(:where([animation='fade-up'])) ::slotted(:not([hidden])) {
-    animation-name: lr-random-content-fade-in-up;
+    animation-name: var(--_lr-motion-animation, lr-random-content-fade-in-up);
   }
   :host(:where([animation='fade-down'])) ::slotted(:not([hidden])) {
-    animation-name: lr-random-content-fade-in-down;
+    animation-name: var(--_lr-motion-animation, lr-random-content-fade-in-down);
   }
   :host(:where([animation='fade-left'])) ::slotted(:not([hidden])) {
-    animation-name: lr-random-content-fade-in-left;
+    animation-name: var(--_lr-motion-animation, lr-random-content-fade-in-left);
   }
   :host(:where([animation='fade-right'])) ::slotted(:not([hidden])) {
-    animation-name: lr-random-content-fade-in-right;
+    animation-name: var(--_lr-motion-animation, lr-random-content-fade-in-right);
   }
   @keyframes lr-random-content-fade-in {
     from {

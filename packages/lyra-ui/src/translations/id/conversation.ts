@@ -5,6 +5,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  streamInterrupted: 'Streaming terputus',
+  streamResume: 'Lanjutkan',
   chatViewportLabel: 'Percakapan',
   newMessageCount: '{count} pesan baru',
   newMessagesCount: '{count} pesan baru',

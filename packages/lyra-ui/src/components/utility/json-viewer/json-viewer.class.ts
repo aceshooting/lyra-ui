@@ -1052,7 +1052,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     await this.updateComplete;
     const el = this.renderRoot.querySelector('[data-active]');
     el?.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
       block: 'nearest',
     });
   }

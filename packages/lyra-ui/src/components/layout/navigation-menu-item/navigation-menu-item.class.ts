@@ -40,7 +40,7 @@ export interface LyraNavigationMenuToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
   /** Whether the item's panel is now open. */
-  expanded?: boolean;
+  expanded: boolean;
   source: LyraDetailsToggleSource;
 }
 
@@ -139,7 +139,7 @@ function parseTimeList(value: string): number[] {
  * @cssprop [--lr-navigation-menu-hide-duration=var(--lr-duration-fast)] - Panel closing duration.
  * @cssprop [--lr-navigation-menu-switch-duration=var(--lr-duration-base)] - Duration of the panel
  *   resize and content slide when one open panel replaces another.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill
  *   of the floating panel.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour of the floating panel.
@@ -668,7 +668,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
       },
     );
     const view = this.ownerDocument.defaultView;
-    if (!view || prefersReducedMotion(view)) return;
+    if (!view || prefersReducedMotion(this)) return;
     const to = panel.getBoundingClientRect();
     if (Math.abs(to.width - morph.from.width) < 1 && Math.abs(to.height - morph.from.height) < 1) {
       return;

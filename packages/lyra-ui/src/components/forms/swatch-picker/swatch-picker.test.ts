@@ -881,16 +881,12 @@ describe("lr-swatch-picker", () => {
     );
   });
 
-  it("defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set", () => {
+  it("uses a no-op default shine and pulses brightness via a dedicated keyframe when enabled", async () => {
     const css = normalizedStyles();
-    expect(css).to.include("--_lr-swatch-picker-shine-duration: 0s;");
     // Aliased onto the shared theme/gemstones.ts export's own custom property (falling back to
     // the identical literal default), not a second hand-copied literal -- see styles.ts.
     expect(css).to.include(
       "--_lr-swatch-picker-gemstone-shine-duration: var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient));"
-    );
-    expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
     );
     expect(css).to.match(
       /@keyframes lr-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/
@@ -901,11 +897,22 @@ describe("lr-swatch-picker", () => {
     // imported, shared gemstoneSelectedGlyphStyles rule instead (see the dedicated describe block
     // below and src/theme/gemstones.test.ts's cross-file parity test).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]:not\(\[data-lr-gemstone-selected\]\)\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
-    );
-    expect(css).to.match(
       /@keyframes lr-swatch-picker-shine-icon\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*drop-shadow\([^}]*brightness\(1\.4\)/
     );
+
+    // Check the actual default and override behavior through the browser cascade. The source
+    // includes a reduced-motion override variable, so asserting one exact declaration string
+    // would couple this behavior test to an implementation detail.
+    const el = (await fixture(html`
+      <lr-swatch-picker .items=${options()} value="green"></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const fill = swatches(el)[1]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    expect(getComputedStyle(fill).animationName).to.equal('lr-swatch-picker-shine');
+    expect(getComputedStyle(fill).animationDuration).to.equal('0s');
+    el.style.setProperty('--lr-swatch-picker-shine-duration', '1.6s');
+    await el.updateComplete;
+    expect(getComputedStyle(fill).animationName).to.equal('lr-swatch-picker-shine');
+    expect(getComputedStyle(fill).animationDuration).to.equal('1.6s');
   });
 
   it("actually applies the lr-swatch-picker-shine animation to the checked swatch's rendered fill", async () => {

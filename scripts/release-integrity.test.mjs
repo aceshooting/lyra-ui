@@ -599,22 +599,12 @@ function assertLocalPackedConsumerRouting(source) {
     1,
     'platform toolchain validation must contain exactly one exact-Node invocation',
   );
+  assert.match(toolchainFunction, /local manifest="package\.json"/u);
+  assert.doesNotMatch(toolchainFunction, /ci-pnpm10|NODE20|PNPM20/u);
   assert.match(
     toolchainFunction,
-    /local manifest="package\.json"\n  \[\[ "\$node_version" == "20" \]\] && manifest="\.github\/ci-pnpm10\.json"/u,
-    'Node 20 must retain its separate package-manager authority',
-  );
-  const nodeBranch = /  if \[\[ "\$node_version" == "22" \]\]; then\n    "\$node_bin" scripts\/check-node-version\.mjs \|\| return\n  else\n([\s\S]*?)\n  fi\n\n  local expected_pnpm/u.exec(
-    toolchainFunction,
-  );
-  assert.ok(
-    nodeBranch,
-    'only the Node 22 branch may invoke the exact-patch checker',
-  );
-  assert.match(
-    nodeBranch[1],
-    /actual_node_major="\$\("\$node_bin" -p 'process\.versions\.node\.split\("\."\)\[0\]'\)"[\s\S]*?if \[\[ "\$actual_node_major" != "\$node_version" \]\]; then[\s\S]*?return 1/u,
-    'Node 20 must stay live behind its major-version validation instead of the Node 22 exact check',
+    /if \[\[ "\$node_version" != "22" \]\]; then[\s\S]*?return 1/u,
+    'unsupported contributor Node majors must fail before execution',
   );
 
   const functionStart = source.indexOf('\nrun_platform_matrix_leg()');
@@ -628,13 +618,8 @@ function assertLocalPackedConsumerRouting(source) {
   ];
   assert.deepEqual(
     packedCalls.map((match) => match[1]),
-    ['check:packed-consumer:contracts'],
-    'the platform matrix must contain only the contracts-only packed call',
-  );
-  assert.match(
-    platformFunction,
-    /if \[\[ "\$node_version" == "20" && "\$browser" == "firefox" && "\$shard_index" == "1" && "\$shard_total" == "1" \]\]; then[\s\S]*?run_with_toolchain "\$node_bin" "\$pnpm_bin" build \|\| return[\s\S]*?run_with_toolchain "\$node_bin" "\$pnpm_bin" check:packed-consumer:contracts \|\| return[\s\S]*?\n  fi/u,
-    'only Node 20 / Firefox / shard 1-of-1 may run packed-consumer contracts after build',
+    [],
+    'the primary supported-Node job owns packed coverage; browser legs must not duplicate it',
   );
   assert.doesNotMatch(platformFunction, /check-peer-compatibility/u);
 
@@ -832,7 +817,7 @@ test('requires exhaustive fail-closed lint shards behind the stable lint gate', 
   assert.match(shardJob, /max-parallel: 3/u);
   assert.match(shardJob, /shard: \[1, 2, 3\]/u);
   assert.match(shardJob, /fetch-depth: 0/u);
-  assert.match(shardJob, /node-version: 22/u);
+  assert.match(shardJob, /node-version-file: \.nvmrc/u);
   assert.match(shardJob, /pnpm install --frozen-lockfile/u);
   assert.match(
     shardJob,
@@ -930,11 +915,8 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     rootPackage.scripts['check:packed-consumer'],
     /node scripts\/check-packed-consumer\.mjs/u
   );
-  assert.match(
-    workflow,
-    /Run packed consumer at the supported Node floor[\s\S]*?pnpm build && pnpm check:packed-consumer:contracts/u,
-    'Node 20 must retain every packed contract while avoiding a duplicate monolithic ATTW sweep'
-  );
+  assert.doesNotMatch(workflow, /node-version: 20|ci-pnpm10/u);
+
 });
 
 test('local CI aggregates both workspace public-API authorities and fails if either disappears', () => {
@@ -967,13 +949,13 @@ test('local CI aggregates both workspace public-API authorities and fails if eit
   );
 });
 
-test('local CI reserves contracts-only packed coverage for Node 20 Firefox 1-of-1', () => {
+test('local CI keeps packed coverage in the primary supported-Node lane', () => {
   assertLocalPackedConsumerRouting(
     readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8'),
   );
 });
 
-test('local CI resolves exact Node 22 authority ahead of wrong shims and newer installs while Node 20 stays newest-major', () => {
+test('local CI resolves exact Node 22 authority ahead of wrong shims and newer installs and ignores unsupported majors', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-ci-node-resolver-'));
   try {
     const pathDirectory = path.join(root, 'bin');
@@ -984,14 +966,10 @@ test('local CI resolves exact Node 22 authority ahead of wrong shims and newer i
     const wrongShim = path.join(pathDirectory, 'node22');
     const exactNvm = path.join(nvmDirectory, 'versions/node/v22.23.2/bin/node');
     const newerNvm = path.join(nvmDirectory, 'versions/node/v22.24.0/bin/node');
-    const olderNode20 = path.join(nvmDirectory, 'versions/node/v20.18.3/bin/node');
-    const newerNode20 = path.join(nvmDirectory, 'versions/node/v20.19.6/bin/node');
     writeFakeNode(activeExact, '22.23.2');
     writeFakeNode(wrongShim, '22.23.1');
     writeFakeNode(exactNvm, '22.23.2');
     writeFakeNode(newerNvm, '22.24.0');
-    writeFakeNode(olderNode20, '20.18.3');
-    writeFakeNode(newerNode20, '20.19.6');
 
     assert.equal(
       resolveNodeFromCiFixture({ root, major: 22, pathDirectory, nvmDirectory }),
@@ -1013,19 +991,10 @@ test('local CI resolves exact Node 22 authority ahead of wrong shims and newer i
     );
     assert.equal(
       resolveNodeFromCiFixture({ root, major: 20, pathDirectory, nvmDirectory }),
-      newerNode20,
-      'the compatibility lane must retain newest-installed-patch selection for Node 20',
+      '',
+      'unsupported Node majors must not select an executable',
     );
-    writeFileSync(
-      path.join(pathDirectory, 'sort'),
-      '#!/bin/sh\nif [ "${1:-}" = "-V" ]; then exit 64; fi\nexec /usr/bin/sort "$@"\n',
-    );
-    chmodSync(path.join(pathDirectory, 'sort'), 0o755);
-    assert.equal(
-      resolveNodeFromCiFixture({ root, major: 20, pathDirectory, nvmDirectory }),
-      newerNode20,
-      'the NVM fallback must select semver portably when stock sort has no -V option',
-    );
+
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -1094,18 +1063,15 @@ test('local CI resolves only regular external executables and always returns an 
   }
 });
 
-test('local CI structure rejects Node-20-breaking toolchain guards and dead or platform-only public-API gates', () => {
+test('local CI structure rejects missing exact toolchain checks and dead public-API gates', () => {
   const source = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
-  const exactCheck = '    "$node_bin" scripts/check-node-version.mjs || return';
-  const unconditionalExactCheck = source
-    .replace(exactCheck, '    :')
-    .replace(
-      '  if [[ "$node_version" == "22" ]]; then',
-      `  "$node_bin" scripts/check-node-version.mjs || return\n  if [[ "$node_version" == "22" ]]; then`,
-    );
-  const deadNode20Manifest = source.replace(
-    '[[ "$node_version" == "20" ]] && manifest=".github/ci-pnpm10.json"',
-    '[[ "$node_version" == "19" ]] && manifest=".github/ci-pnpm10.json"',
+  const missingExactCheck = source.replace(
+    '  "$node_bin" scripts/check-node-version.mjs || return',
+    '  :',
+  );
+  const acceptedUnsupportedMajor = source.replace(
+    'if [[ "$node_version" != "22" ]]; then',
+    'if [[ "$node_version" == "invalid" ]]; then',
   );
   const publicApiCommands =
     'pnpm --filter @aceshooting/lyra-ui check:public-api\n' +
@@ -1124,8 +1090,8 @@ test('local CI structure rejects Node-20-breaking toolchain guards and dead or p
     );
 
   for (const [label, mutation] of [
-    ['unconditional exact-Node check', unconditionalExactCheck],
-    ['dead Node 20 manifest branch', deadNode20Manifest],
+    ['missing exact-Node check', missingExactCheck],
+    ['unsupported major accepted', acceptedUnsupportedMajor],
     ['platform-only public API', platformOnlyPublicApi],
     ['dead-function public API', deadPublicApi],
   ]) {
@@ -2101,7 +2067,7 @@ test('release workflow qualifies the exact main commit before tagging, releasing
 
   // Pack: credential-free, pinned toolchain, the same pack command the publish rebuild compares.
   assert.match(pack, /persist-credentials: false/);
-  assert.match(pack, /node-version: 22\.23\.2/);
+  assert.match(pack, /node-version-file: \.nvmrc/);
   assert.match(pack, /pnpm install --frozen-lockfile/);
   assert.match(pack, /pnpm --filter "\$name" --fail-if-no-match pack --pack-destination/);
   assert.match(pack, /check:component-quality:built/);
@@ -2237,7 +2203,7 @@ test('package lifecycle and root custom-elements metadata are clean-checkout saf
     'the root customElements target must be a populated custom-elements manifest'
   );
   assert.equal(lyraPackage.scripts.pretest, 'pnpm run build');
-  assert.match(lyraPackage.scripts.prepack, /^pnpm run package-metadata &&/);
+  assert.match(lyraPackage.scripts.prepack, /^pnpm run archive-changelog && pnpm run package-metadata &&/);
 });
 
 test('editor data is generated only after its manifest and parity inventory inputs are fresh', () => {
@@ -2271,6 +2237,24 @@ test('editor data is generated only after its manifest and parity inventory inpu
   assert.ok(
     prepackManifestIndex >= 0 && prepackEditorDataIndex > prepackManifestIndex,
     'prepack must refresh editor data only after regenerating its manifest input'
+  );
+});
+
+test('upgrade measures component quality after packaging and the final source build', () => {
+  const upgradeScript = readFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), 'utf8');
+  const lastSourceWriter = upgradeScript.indexOf('run scoped-definitions');
+  const finalBuild = upgradeScript.lastIndexOf('pnpm build');
+  const quality = upgradeScript.indexOf('generate-component-quality.mjs --write --measure-gzip');
+  const packageScript = upgradeScript.indexOf('./package.sh');
+
+  assert.ok(lastSourceWriter >= 0, 'upgrade must regenerate source-backed registrations');
+  assert.ok(packageScript > lastSourceWriter, 'upgrade must package after its source generators');
+  assert.ok(finalBuild > packageScript, 'upgrade must rebuild after package.sh finishes its generators');
+  assert.ok(quality > finalBuild, 'component quality must measure the final built output');
+  assert.equal(
+    (upgradeScript.match(/generate-component-quality\.mjs --write --measure-gzip/gu) ?? []).length,
+    1,
+    'upgrade must write measured component quality only once, after the final build',
   );
 });
 
@@ -2504,7 +2488,7 @@ test('upgrade selects only an installed Node whose reported patch matches .nvmrc
   }
 });
 
-test('hosted peer qualification stays primary-only and quality jobs alone read the exact Node file', () => {
+test('primary CI and release qualification use the exact Node file while compatibility matrix remains explicit', () => {
   const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const qualityStart = workflow.indexOf('\n  build_and_coverage_quality:');
   const ssrStart = workflow.indexOf('\n  build_and_coverage_ssr:', qualityStart + 1);
@@ -2520,10 +2504,11 @@ test('hosted peer qualification stays primary-only and quality jobs alone read t
   const platformJob = workflow.slice(platformStart);
   assert.match(qualityJob, /node-version-file: \.nvmrc/u);
   assert.doesNotMatch(qualityJob, /node-version: 22/u);
-  assert.equal(
-    (workflow.match(/node-version-file: \.nvmrc/gu) ?? []).length,
-    1,
-    'only the component-quality job may select the exact Node patch from .nvmrc',
+  assert.match(workflow.slice(0, workflow.indexOf('  platform-contracts:')), /node-version-file: \.nvmrc/u);
+  assert.doesNotMatch(
+    workflow.slice(0, workflow.indexOf('  platform-contracts:')),
+    /node-version: 22(?:\.\d+)?/u,
+    'primary CI jobs must not float on an arbitrary Node 22 patch',
   );
   assert.equal(
     (contractJob.match(/node scripts\/check-peer-compatibility\.mjs/gu) ?? []).length,
@@ -2532,7 +2517,7 @@ test('hosted peer qualification stays primary-only and quality jobs alone read t
   );
   assert.match(
     contractJob,
-    /node-version: 22\.23\.2/u,
+    /node-version-file: \.nvmrc/u,
     'the exact peer-profile checker must run under the checked-in Node patch, not a drifting Node 22 latest',
   );
   const chromiumProvisionIndex = contractJob.indexOf(
@@ -2544,12 +2529,13 @@ test('hosted peer qualification stays primary-only and quality jobs alone read t
     'the primary peer-profile runner must provision Chromium before it launches packed consumers',
   );
   assert.doesNotMatch(platformJob, /check-peer-compatibility/u);
-  assert.match(platformJob, /matrix\.node-version == 20/u);
+  assert.doesNotMatch(platformJob, /node-version: 20|ci-pnpm10/u);
 
   const publishWorkflow = readFileSync(
     path.join(repoRoot, '.github/workflows/publish.yml'),
     'utf8',
   );
+  assert.match(publishWorkflow, /node-version-file: \.nvmrc/u);
   const protectedStart = publishWorkflow.indexOf('\n  publish:');
   assert.ok(protectedStart >= 0, 'publish workflow must retain its protected signer job');
   const protectedSigner = publishWorkflow.slice(protectedStart);
@@ -2563,9 +2549,25 @@ test('hosted peer qualification stays primary-only and quality jobs alone read t
   );
   assert.match(
     verificationWorkflow,
-    /node-version: 22\.23\.2/u,
+    /node-version-file: \.nvmrc/u,
     'the byte-compared tagged-source rebuild must use the exact checked-in Node patch',
   );
+  for (const workflowName of ['test-all-browsers.yml', 'full-engine.yml', 'release.yml']) {
+    const workflowSource = readFileSync(
+      path.join(repoRoot, '.github/workflows', workflowName),
+      'utf8',
+    );
+    assert.match(
+      workflowSource,
+      /node-version-file: \.nvmrc/u,
+      `${workflowName} must use the repository's exact Node patch`,
+    );
+    assert.doesNotMatch(
+      workflowSource,
+      /node-version: 22(?:\.\d+)?/u,
+      `${workflowName} must not float on an arbitrary Node 22 patch`,
+    );
+  }
   assert.doesNotMatch(
     verificationWorkflow,
     /node-version: 22\s*$/mu,
@@ -2809,6 +2811,16 @@ test('the authored provider-neutral AI import example compiles against the shipp
     const sourcePath = path.join(tempDir, 'example.ts');
     const configPath = path.join(tempDir, 'tsconfig.json');
     writeFileSync(sourcePath, `${snippet}\n`, 'utf8');
+    // This consumer intentionally lives outside src, so the package's rootDir/outDir
+    // backmapping cannot apply. Resolve its private default-condition imports to the same
+    // source counterparts without requiring dist or substituting declaration stubs.
+    const packageDir = path.join(repoRoot, 'packages/lyra-ui');
+    const packageImports = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8')).imports;
+    const sourceImportPaths = Object.fromEntries(Object.entries(packageImports).map(([name, conditions]) => {
+      assert.match(conditions.default, /^\.\/dist\/.+\.js$/u, `${name} must name a compiled source module`);
+      const sourceTarget = conditions.default.replace(/^\.\/dist\//u, 'src/').replace(/\.js$/u, '.ts');
+      return [name, [path.relative(tempDir, path.join(packageDir, sourceTarget))]];
+    }));
     writeFileSync(
       configPath,
       JSON.stringify(
@@ -2826,6 +2838,7 @@ test('the authored provider-neutral AI import example compiles against the shipp
             experimentalDecorators: true,
             useDefineForClassFields: false,
             paths: {
+              ...sourceImportPaths,
               '@aceshooting/lyra-ui/ai': [
                 path.relative(
                   tempDir,
@@ -2892,10 +2905,10 @@ test('local platform legs execute pnpm shebangs and nested calls with the select
   assert.match(runWithToolchain, /npm_config_scripts_prepend_node_path=false/u);
   assert.match(runWithToolchain, /--config\.script-shell=/u);
 
-  // Both matrix majors use the same launcher contract. These are executable
+  // This executable fixture exercises the selected contributor runtime.
   // fixtures, not source-only assertions: an intentionally wrong PATH `node`
   // must be bypassed for the first pnpm shebang and its nested pnpm call.
-  for (const label of ['node20', 'node22']) {
+  for (const label of ['node22']) {
     exerciseSelectedToolchain({ label, selectedNode: process.execPath });
   }
 });

@@ -42,7 +42,7 @@ function capMultiSplitResize(event: Event): void {
 
 function logMultiSplitToggle(event: Event): void {
   const toggle = event as CustomEvent<LyraMultiSplitToggleDetail>;
-  console.info('lr-toggle', {
+  console.info(event.type, {
     expanded: toggle.detail.expanded,
     cancelable: toggle.cancelable,
   });
@@ -228,7 +228,7 @@ export const FloatingDrawerDismissal: Story = {
     docs: {
       description: {
         story:
-          'Escape and the backdrop propose a cancelable `lr-toggle` before closing this floating drawer. Moving the effective collapse state away from floating instead forces a noncancelable close after its collapse-change event.',
+          'Escape and the backdrop propose a cancelable `lr-toggle-request` before closing this floating drawer. Moving the effective collapse state away from floating instead forces a noncancelable close after its collapse-change event.',
       },
     },
   },
@@ -238,6 +238,7 @@ export const FloatingDrawerDismissal: Story = {
       collapse-state="floating"
       .open=${true}
       style="height: 12rem; border: 1px solid var(--lr-color-border)"
+      @lr-toggle-request=${logMultiSplitToggle}
       @lr-toggle=${logMultiSplitToggle}
     >
       <div style="padding: 0.5rem; background: var(--lr-color-brand-quiet)">

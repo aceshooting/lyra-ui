@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-trace-tree.js to register this component. */
 export * from './trace-tree.class.js';
 export * from './span.js';
 import { LyraTraceTree } from './trace-tree.class.js';

@@ -6,10 +6,11 @@
 - **Class** `LyraCallout`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/callout/callout.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated css-property** `--lr-callout-background` since `21.1.0`; use css-property `--lr-callout-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
 - **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -52,8 +53,9 @@ Every reflected closed set normalizes identically from markup and untyped JavaSc
 unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
 while an unsupported `appearance` becomes the omitted state.
 
-**Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
-unless a listener calls `preventDefault()`. This name is not dialog-scoped — see `<lr-dialog>`'s
+**Events:** cancelable `lr-close-request` with `{ reason: 'close-button' }`; preventing default
+keeps the callout open. Otherwise it sets `open = false` and emits non-cancelable `lr-close`
+with the same reason object. This name is not dialog-scoped — see `<lr-dialog>`'s
 own `lr-close` section above for the full list of emitters and the target-filtering guard, which
 matters whenever a callout is nested inside a dialog.
 When accepted close or a direct `open = false` write removes the focused close action, focus moves

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
 import type { LyraInputType } from '../../forms/input/input.class.js';
@@ -1091,6 +1092,7 @@ export class LyraFilterBar<
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, srOnly, styles];
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
   ]);
@@ -2054,7 +2056,7 @@ export class LyraFilterBar<
       class="checkbox-menu"
       ?data-label-auto=${this.labelAutoAttribute(def)}
     >
-      <lr-dropdown
+      <lr-dropdown without-arrow
         exportparts=${CHECKBOX_MENU_EXPORT_PARTS}
         data-filter-id=${def.filterId}
         aria-label=${def.label}

@@ -3,6 +3,8 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { changelogArchiveUrl } from '../packages/lyra-ui/scripts/archive-changelog.mjs';
+import { SHARED_TOPICS } from '../packages/lyra-ui/scripts/shared-topics.mjs';
 import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 export const FAMILY_SUMMARY_LINK_SUFFIX =
@@ -10,7 +12,7 @@ export const FAMILY_SUMMARY_LINK_SUFFIX =
 
 const SHARED_PACKAGE_RELEASE_PARAGRAPH = [
   '`since` records when a tag first appeared, not later changes. Before upgrading, read the',
-  'package\'s [CHANGELOG.md](../CHANGELOG.md) (every release, including minor and patch).',
+  'package\'s [CHANGELOG.md](../CHANGELOG.md) (current major, including minor and patch).',
   'Family-wide breaking-change summaries open each authored `llms/<family>.md`, and each generated',
   '`llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only',
   '`wa-*`/`sl-*` renames, not Lyra release history.',
@@ -18,18 +20,16 @@ const SHARED_PACKAGE_RELEASE_PARAGRAPH = [
 
 const SHARED_STANDALONE_RELEASE_PARAGRAPH = [
   '`since` records when a tag first appeared, not later changes. Before upgrading, read the bundled',
-  '[CHANGELOG.md](../CHANGELOG.md): it holds the newest three major versions; older history is in the',
+  '[CHANGELOG.md](../CHANGELOG.md): it holds the current major; older history is linked from the',
   'package\'s own CHANGELOG.md and at https://github.com/aceshooting/lyra-ui/releases. Family-wide',
-  'breaking-change summaries are in the installed package\'s `llms-full.txt`, which this standalone',
-  'skill does not bundle. `llms/migration.md` covers only `wa-*`/`sl-*` renames, not Lyra release',
+  'breaking-change summaries are linked from each component reference to the authored family guide.',
+  '`llms/migration.md` covers only `wa-*`/`sl-*` renames, not Lyra release',
   'history.',
 ].join('\n');
 
 /** Appended to the standalone skill's trimmed CHANGELOG.md so older history stays reachable. */
 export const STANDALONE_CHANGELOG_POINTER =
-  'Older releases: the package\'s own CHANGELOG.md (bundled under ' +
-  '`node_modules/@aceshooting/lyra-ui/` once installed) or ' +
-  'https://github.com/aceshooting/lyra-ui/releases.';
+  `Older major versions: [release history archive](${changelogArchiveUrl}).`;
 
 /**
  * Pure trim of a full, newest-first CHANGELOG.md down to its preamble plus the newest `majors`
@@ -38,7 +38,7 @@ export const STANDALONE_CHANGELOG_POINTER =
  * a stray `## Unreleased`) is not itself a major boundary and rides along with whichever major
  * precedes it. Appends STANDALONE_CHANGELOG_POINTER once, after the kept content.
  */
-export function trimStandaloneChangelog(text, majors = 3) {
+export function trimStandaloneChangelog(text, majors = 1) {
   const headings = [...text.matchAll(/^## (\d+)\.\d+\.\d+.*$/gm)];
   if (headings.length === 0) return text;
 
@@ -53,7 +53,7 @@ export function trimStandaloneChangelog(text, majors = 3) {
     }
   }
 
-  const kept = text.slice(0, cutIndex).replace(/\n+$/u, '\n');
+  const kept = text.slice(0, cutIndex).replace(STANDALONE_CHANGELOG_POINTER, '').replace(/\n+$/u, '\n');
   return `${kept}\n${STANDALONE_CHANGELOG_POINTER}\n`;
 }
 
@@ -129,11 +129,80 @@ export function rewriteStandaloneComponentReference(text, label = 'component ref
   return text.replaceAll(FAMILY_SUMMARY_LINK_SUFFIX, '');
 }
 
+function headingAnchors(text) {
+  const anchors = new Set();
+  const used = new Map();
+  for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*#*$/gmu)) {
+    const base = match[1]
+      .replace(/<[^>]*>/gu, '')
+      .replace(/`/gu, '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}_ -]/gu, '')
+      .trim()
+      .replace(/\s/gu, '-');
+    const count = used.get(base) ?? 0;
+    used.set(base, count + 1);
+    anchors.add(`${base}${count ? `-${count}` : ''}`);
+  }
+  return anchors;
+}
+
+/** Fail closed if a focused shared guide's relative route or heading anchor is not packaged. */
+export function validateSharedTopicLinks(sharedTopicsDir) {
+  const problems = [];
+  for (const [topic] of SHARED_TOPICS) {
+    const file = path.join(sharedTopicsDir, `${topic}.md`);
+    if (!existsSync(file)) {
+      problems.push(`${topic}.md is missing from the shared topic reference tree.`);
+      continue;
+    }
+    const source = readFileSync(file, 'utf8');
+    const anchors = headingAnchors(source);
+    for (const target of markdownLinkTargets(source)) {
+      if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/iu.test(target)) continue;
+      let decoded = target;
+      try {
+        decoded = decodeURIComponent(target);
+      } catch {
+        problems.push(`${topic}.md has a malformed link target: ${target}`);
+        continue;
+      }
+      const hashIndex = decoded.indexOf('#');
+      const linkPath = decoded.slice(0, hashIndex < 0 ? undefined : hashIndex).split('?')[0];
+      const anchor = hashIndex < 0 ? '' : decoded.slice(hashIndex + 1).split('?')[0];
+      const destination = path.resolve(path.dirname(file), linkPath || path.basename(file));
+      if (!existsSync(destination)) {
+        problems.push(`${topic}.md links to missing ${path.relative(sharedTopicsDir, destination)}.`);
+        continue;
+      }
+      if (anchor && destination.endsWith('.md')) {
+        const destinationAnchors = headingAnchors(readFileSync(destination, 'utf8'));
+        if (!destinationAnchors.has(anchor)) {
+          problems.push(`${topic}.md links to missing #${anchor} in ${path.relative(sharedTopicsDir, destination)}.`);
+        }
+      } else if (anchor && linkPath.length === 0 && !anchors.has(anchor)) {
+        problems.push(`${topic}.md links to missing local #${anchor}.`);
+      }
+    }
+  }
+  if (problems.length) {
+    throw new Error(`Invalid shared topic reference routes:\n  - ${problems.join('\n  - ')}`);
+  }
+  return true;
+}
+
 function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
   const sharedPath = path.join(referencesDir, 'shared.md');
+  const sharedTopicsDir = path.join(referencesDir, 'shared');
   const componentsDir = path.join(referencesDir, 'components');
-  if (!existsSync(sharedPath) || !existsSync(componentsDir)) {
-    throw new Error(`${referencesDir} must contain shared.md and components/.`);
+  if (!existsSync(sharedPath) || !existsSync(sharedTopicsDir) || !existsSync(componentsDir)) {
+    throw new Error(`${referencesDir} must contain shared.md, shared/, and components/.`);
+  }
+  for (const [topic] of SHARED_TOPICS) {
+    const topicPath = path.join(sharedTopicsDir, `${topic}.md`);
+    if (!existsSync(topicPath)) {
+      throw new Error(`${topicPath} is missing; package all authored shared topic routes.`);
+    }
   }
 
   writeFileSync(
@@ -149,6 +218,8 @@ function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
     );
   }
 
+  validateSharedTopicLinks(sharedTopicsDir);
+
   const componentFiles = readdirSync(componentsDir)
     .filter((file) => file.endsWith('.md'))
     .sort();
@@ -163,9 +234,6 @@ function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
     const rewritten = rewriteStandaloneComponentReference(source, file);
     strippedFamilyLinks += countOccurrences(source, FAMILY_SUMMARY_LINK_SUFFIX);
     writeFileSync(componentPath, rewritten);
-  }
-  if (strippedFamilyLinks === 0) {
-    throw new Error('Standalone component references contained zero family-summary link suffixes.');
   }
 
   const markdownFiles = filesUnder(skillRoot, (file) => file.endsWith('.md'));

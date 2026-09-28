@@ -112,7 +112,7 @@ export const AsyncApprovalVeto: Story = {
       <lr-eval-run
         style="max-width: 40rem;"
         .examples=${pendingExamples}
-        @lr-example-tool-approval-decide=${(event: CustomEvent<EvalToolApprovalDetail>) => {
+        @lr-example-tool-approval-decide-request=${(event: CustomEvent<EvalToolApprovalDetail>) => {
           event.preventDefault();
           const output = (event.currentTarget as HTMLElement).nextElementSibling;
           if (output) output.textContent = `Pending approval for ${event.detail.exampleId}/${event.detail.invocationId}`;

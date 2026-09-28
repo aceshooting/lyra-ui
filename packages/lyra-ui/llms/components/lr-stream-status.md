@@ -6,10 +6,10 @@
 - **Class** `LyraStreamStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +18,7 @@
 
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
-host drives `connectionState` for `idle`/`connecting`/`streaming`, and calls the imperative
+host drives `connectionState` for `idle`/`connecting`/`streaming`/`interrupted`, and calls the imperative
 `recordActivity()` method on every _semantic_ frame received while streaming — a real content
 chunk, never a transport-level keep-alive ping. This component has no payload-inspection logic of
 its own: "ignore heartbeats" is entirely call-site discipline, which is exactly why a connection
@@ -28,9 +28,9 @@ reads as stalled.
 **Properties:**
 
 - `connectionState: StreamConnectionState = 'idle'` (attribute `connection-state`, reflected) —
-  host-owned transport state (`'idle' | 'connecting' | 'streaming'`). Invalid attribute or property
+  host-owned transport state (`'idle' | 'connecting' | 'streaming' | 'interrupted'`). Invalid attribute or property
   writes normalize to `idle`.
-- `phase: LyraStreamPhase` (readonly) — effective state: `connectionState`, or component-owned
+- `phase: StreamStatusPhase` (readonly) — effective state: `connectionState`, or component-owned
   `'stalled'` while an active stream has exceeded its inactivity threshold
 - `stallThresholdMs: number = 10000` (attribute `stall-threshold-ms`) — how long `phase` may stay
   `'streaming'` with no `recordActivity()` call before the component auto-transitions to
@@ -38,6 +38,13 @@ reads as stalled.
   no-op, so the phase will never auto-stall). Changing this value while already `'streaming'`
   re-arms the timer immediately against the new value, rather than waiting for the next
   `recordActivity()` call or phase change.
+
+- `resumable: boolean = false` — shows a built-in resume action only while interrupted.
+- `disabled: boolean = false` — disables that resume action.
+
+An interrupted connection disarms the stall timer. `lr-resume` (`detail: null`, bubbling and
+composed) requests host-managed resume; the component never reconnects or changes state in response
+to the click. The host must update `connectionState` after handling the request.
 
 **Methods:**
 
@@ -48,7 +55,7 @@ reads as stalled.
   - While `phase === 'stalled'`: recovers — the effective phase becomes `'streaming'` again (firing
     `lr-recover` and arming the timer fresh, via the same transition handling a direct host
     transport transition would also go through).
-  - While `phase` is `'idle'` or `'connecting'`: a no-op. Safe to call defensively before formally
+  - While `phase` is `'idle'`, `'connecting'`, or `'interrupted'`: a no-op. Safe to call defensively before formally
     flipping to `'streaming'`; it never throws or starts a timer early.
 - `markStalled(): void` — installs the component-owned stalled override for an active streaming
   connection; no-op in other transport states or when already stalled
@@ -59,14 +66,14 @@ whenever the effective phase transitions out of `'stalled'`, whether via `record
 host transport transition. Neither fires for a same-value
 reassignment, and neither fires for whatever phase the element happens to _mount_ with — only a
 later change counts as a transition.
-
+`lr-resume` (`detail: null`) requests host-managed resume of an interrupted, resumable connection; it does not resume transport itself.
 **Slots:** default (custom copy shown only while the readonly `phase` is `'stalled'`, e.g. "Taking longer than
 usual…" — falls back to a built-in default message when nothing is slotted), `actions` (a
 stop/retry button row; always present in the template regardless of `phase` — its wrapper's
 visibility is driven purely by whether anything is slotted into it, not by `phase`)
 
 **CSS parts:** `base`, `indicator`, `phase` (persistent localized effective-state text), `message`,
-`actions`
+`actions`, `resume` (built-in interrupted resume button)
 
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (idle dot color),
 `--lr-color-brand` (connecting/streaming dot color), `--lr-color-warning` (stalled dot color,

@@ -16,7 +16,7 @@ export const styles = css`
     max-block-size: var(--lr-table-max-height, none);
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-container);
     /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
        scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
        --lr-theme-* input on an ancestor sees no change. */
@@ -155,6 +155,17 @@ export const styles = css`
      [data-has-column-widths], which also means the <colgroup> carries real widths. */
   [part='table'][data-layout='fixed'] {
     table-layout: fixed;
+  }
+  [part='row'],
+  [part='head'] > tr,
+  [part='footer-row'] {
+    /* A table-row height is a minimum: content and cell padding still grow it above the
+       interactive target floor, without imposing a shared baseline on different table sizes. */
+    block-size: max(
+      var(--lr-size-24px),
+      var(--lr-table-row-height, calc(var(--lr-table-row-min-height) * var(--_lr-density-control, 1))),
+      var(--_lr-density-target-min, 0px)
+    );
   }
   [part='header-cell'] {
     position: sticky;

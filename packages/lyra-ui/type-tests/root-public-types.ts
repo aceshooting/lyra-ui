@@ -325,6 +325,7 @@ import type {
   ToolResultFallback,
   SwatchPickerItem,
   StreamConnectionState,
+  StreamStatusPhase,
   TagVariant,
   TableColumnEditTrigger,
   TableEdgeAlign,
@@ -410,8 +411,6 @@ import type { MenuSelectDetail as RemovedMenuSelectDetail } from '../src/lyra.js
 import type { BrowserFrameStatus as RemovedBrowserFrameStatus } from '../src/lyra.js';
 // @ts-expect-error BrowserFramePhase was replaced by the shared LyraStreamPhase.
 import type { BrowserFramePhase as RemovedBrowserFramePhase } from '../src/lyra.js';
-// @ts-expect-error StreamStatusPhase was replaced by the shared LyraStreamPhase.
-import type { StreamStatusPhase as RemovedStreamStatusPhase } from '../src/lyra.js';
 // @ts-expect-error GraphLink was removed in favor of LyraGraphLink.
 import type { GraphLink as RemovedGraphLink } from '../src/lyra.js';
 // @ts-expect-error GraphNode was removed in favor of LyraGraphNode.
@@ -756,7 +755,6 @@ declare const removedV9Aliases: [
   RemovedLyraPaginationSize,
   RemovedBrowserFrameStatus,
   RemovedBrowserFramePhase,
-  RemovedStreamStatusPhase,
   RemovedGraphLink,
   RemovedGraphNode,
   RemovedGraphNodeType,
@@ -1198,6 +1196,7 @@ const rootPublicTypes:
       ToolResultFallback,
       SwatchPickerItem,
       StreamConnectionState,
+      StreamStatusPhase,
       TagVariant,
       TableColumnEditTrigger,
       TableEdgeAlign,

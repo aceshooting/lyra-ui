@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-rag-answer.js to register this component. */
 export * from './rag-answer.class.js';
 import '../../conversation/markdown/markdown.js';
 import '../citation-badge/citation-badge.js';

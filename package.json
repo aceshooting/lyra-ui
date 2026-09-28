@@ -5,7 +5,7 @@
   "description": "Monorepo for @aceshooting/lyra-ui and its optional companion packages.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
@@ -40,7 +40,8 @@
     "release-qualification": "node scripts/generate-release-qualification.mjs --write",
     "release:prepare": "node scripts/release-prepare.mjs",
     "migrate-wa": "pnpm --filter @aceshooting/lyra-ui run migrate-wa",
-    "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa"
+    "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
+    "lint:parallel": "pnpm --filter @aceshooting/lyra-ui run lint:parallel"
   },
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:*",

@@ -1,18 +1,26 @@
+
 export * from './activity-feed/activity-feed.js';
 export * from './agent-eval-dashboard/agent-eval-dashboard.js';
+export * from './agent-question/agent-question.js';
 export * from './agent-run/agent-run.js';
 export * from './agent-trace/agent-trace.js';
 export * from './approval-queue/approval-queue.js';
 export * from './artifact-panel/artifact-panel.js';
+export * from './background-runs/background-runs.js';
 export * from './browser-frame/browser-frame.js';
+export * from './budget-meter/budget-meter.js';
+export * from './change-review/change-review.js';
 export * from './commit-card/commit-card.js';
 export * from './compare-panel/compare-panel.js';
 export * from './confirm-bar/confirm-bar.js';
+export * from './connector-manager/connector-manager.js';
 export * from './context-inspector/context-inspector.js';
 export * from './eval-dataset/eval-dataset.js';
 export * from './eval-result/eval-result.js';
 export * from './evaluation-run/evaluation-run.js';
 export * from './mcp-app/mcp-app.js';
+export * from './permission-grant/permission-grant.js';
+export * from './permission-rules/permission-rules.js';
 export * from './policy-summary/policy-summary.js';
 export * from './prompt-studio/prompt-studio.js';
 export * from './result-card/result-card.js';
@@ -34,4 +42,3 @@ export * from './tool-result-view/tool-result-view.js';
 export * from './tool-select-dialog/tool-select-dialog.js';
 export * from './tool-timeline/tool-timeline.js';
 export * from './trace-tree/trace-tree.js';
-

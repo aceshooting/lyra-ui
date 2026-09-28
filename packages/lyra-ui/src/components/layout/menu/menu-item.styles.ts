@@ -56,8 +56,7 @@ export const styles = css`
     /* Hover/active/checked below only ever repaint background, so background-color is all this
        needs; without it this row's fill snaps while lr-button/lr-icon-button/lr-app-rail-item ease.
        No local reduced-motion override needed -- tokens.styles.ts's shared reduced-motion block
-       already flattens --lr-transition-fast to 0.001ms and applies a blanket transition-duration:
-       0.001ms across the whole shadow tree under prefers-reduced-motion. */
+       already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   /* Unlike lr-option/lr-select/lr-combobox/lr-tree-item, a checked row here previously had no
@@ -117,7 +116,7 @@ export const styles = css`
     background: none;
   }
   :host([variant='danger']) [part='base'] {
-    color: var(--lr-menu-item-danger-color, var(--lr-color-danger));
+    color: var(--lr-menu-item-danger-color, var(--_lr-glass-danger-text, var(--lr-color-danger)));
   }
   :host([variant='danger']:not([disabled]):not([loading])) [part='base']:hover {
     background: var(
@@ -195,7 +194,7 @@ export const styles = css`
     display: inline-flex;
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
-    animation: lr-menu-item-spin var(--lr-transition-ambient) linear infinite;
+    animation: var(--_lr-motion-animation, lr-menu-item-spin var(--lr-transition-ambient) linear infinite);
   }
   @keyframes lr-menu-item-spin {
     to {
@@ -207,7 +206,7 @@ export const styles = css`
      here to keep visually empty. */
   [part='checkmark'] {
     flex: 0 0 auto;
-    color: var(--lr-color-brand);
+    color: var(--_lr-glass-brand-text, var(--lr-color-brand));
   }
   /* Only in the DOM for a submenu parent (see menu-item.ts's render()), so it needs no [hidden]
      bookkeeping either. */

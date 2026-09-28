@@ -148,7 +148,7 @@ describe("lr-knowledge-base-admin", () => {
     const el = (await fixture(
       html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
     )) as LyraKnowledgeBaseAdmin;
-    const details: Array<{ tab: string }> = [];
+    const details: Array<{ activeTab: string }> = [];
     el.addEventListener("lr-tab-change", (event) => details.push(event.detail));
     let tabs = [
       ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
@@ -168,7 +168,7 @@ describe("lr-knowledge-base-admin", () => {
 
     tabs[1]!.click();
     await el.updateComplete;
-    expect(details).to.deep.equal([{ tab: "ingestion" }]);
+    expect(details).to.deep.equal([{ activeTab: "ingestion" }]);
     details.length = 0;
     tabs = [
       ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
@@ -188,7 +188,7 @@ describe("lr-knowledge-base-admin", () => {
 
     el.withoutIngestion = true;
     await el.updateComplete;
-    expect(details).to.deep.equal([{ tab: "sources" }]);
+    expect(details).to.deep.equal([{ activeTab: "sources" }]);
     details.length = 0;
     formerIngestionTab.click();
     await el.updateComplete;
@@ -361,7 +361,7 @@ describe("lr-knowledge-base-admin", () => {
     ingestionTab.focus();
     expect(el.shadowRoot!.activeElement?.id).to.equal(ingestionTab.id);
 
-    const details: Array<{ tab: string }> = [];
+    const details: Array<{ activeTab: string }> = [];
     el.addEventListener("lr-tab-change", (event) => details.push(event.detail));
     el.withoutIngestion = true;
     await el.updateComplete;
@@ -373,7 +373,7 @@ describe("lr-knowledge-base-admin", () => {
       el.shadowRoot!.querySelector<HTMLButtonElement>('[role="tab"]')!;
     expect(el.activeTab).to.equal("sources");
     expect(el.getAttribute("active-tab")).to.equal("sources");
-    expect(details).to.deep.equal([{ tab: "sources" }]);
+    expect(details).to.deep.equal([{ activeTab: "sources" }]);
     expect(el.shadowRoot!.querySelectorAll('[role="tab"]').length).to.equal(1);
     expect(el.shadowRoot!.activeElement?.id).to.equal(survivingTab.id);
   });
@@ -382,7 +382,7 @@ describe("lr-knowledge-base-admin", () => {
     const el = (await fixture(
       html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
     )) as LyraKnowledgeBaseAdmin;
-    const details: Array<{ tab: string }> = [];
+    const details: Array<{ activeTab: string }> = [];
     el.addEventListener("lr-tab-change", (event) => details.push(event.detail));
 
     const runtimeTab = el as unknown as { activeTab: string };
@@ -404,7 +404,7 @@ describe("lr-knowledge-base-admin", () => {
       ["false", -1],
     ]);
     expect(panels.map((panel) => panel.hidden)).to.deep.equal([false, true]);
-    expect(details).to.deep.equal([{ tab: "sources" }]);
+    expect(details).to.deep.equal([{ activeTab: "sources" }]);
   });
 });
 

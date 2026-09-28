@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar-viewer.js';
 import type { LyraCalendarViewer } from './calendar-viewer.js';
@@ -12,6 +13,8 @@ const SPARSE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', text: () => Promise.resolve(body) } as Response; }
 function stubFetch(body: string, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(body, ok))) as typeof window.fetch; return () => { window.fetch = original; }; }
 async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: () => void }> { const restore = stubFetch(body); const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`); await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); return { el, restore }; }
+
+expectLocaleFallback('ja', ['calendarViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeCalendar', 'loadingDocument']);
 
 describe('lr-calendar-viewer', () => {
   it('renders a localized empty state by default', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No calendar to display.'); });

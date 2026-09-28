@@ -58,7 +58,7 @@ export const FeedbackPersistenceById: Story = {
     return html`
       <lr-message-actions
         .controls=${['feedback']}
-        @lr-feedback-submit=${settle}
+        @lr-feedback-submit-request=${settle}
       ></lr-message-actions>
     `;
   },

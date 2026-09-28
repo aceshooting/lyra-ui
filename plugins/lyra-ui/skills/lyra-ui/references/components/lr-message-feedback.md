@@ -6,8 +6,8 @@
 - **Class** `LyraMessageFeedback`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
+- **Deprecated event** `lr-feedback-submit` since `unreleased`; use event `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Optional peers** none
 - **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -59,7 +59,7 @@ no-argument settlement remains available only for the first transaction that has
 invalidated; stale or mismatched settlements return `false`.
 
 **Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
-provisional rating changes or clears. `lr-feedback-submit` — cancelable
+provisional rating changes or clears. `lr-feedback-submit-request` — cancelable
 `detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string; submissionId: string }`, fired for every
 terminal thumbs-only choice/clear and by the detail panel's submit button. The pending transaction
 is installed before dispatch, so even a synchronous listener may finalize/revert it safely. The
@@ -72,7 +72,8 @@ When uncanceled it retains the synchronous close/announce/focus behavior. The op
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
 toolbar actions change availability or order.
-
+The deprecated cancelable compatibility alias `lr-feedback-submit` carries the same frozen detail
+and cancellation behavior as `lr-feedback-submit-request`.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and

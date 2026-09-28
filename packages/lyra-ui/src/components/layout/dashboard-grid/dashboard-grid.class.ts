@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -264,6 +265,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     noData: LYRA_DEFAULT_noData,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-collision',

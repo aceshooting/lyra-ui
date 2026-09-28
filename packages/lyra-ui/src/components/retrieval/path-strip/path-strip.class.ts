@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -79,6 +80,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     pathStripLabel: LYRA_DEFAULT_pathStripLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['path']);
 
@@ -218,7 +220,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       el?.focus();
       if (el) {
         const ownerWindow = el.ownerDocument.defaultView;
-        const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+        const reducedMotion = !ownerWindow || prefersReducedMotion(this);
         el.scrollIntoView({
           behavior: reducedMotion ? 'auto' : 'smooth',
           inline: 'nearest',

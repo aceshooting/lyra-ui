@@ -24,6 +24,19 @@ const coverageFloors = JSON.parse(
  * `export default` once hammer.js has run and populated `window.Hammer`,
  * purely to unblock this test environment.
  */
+// Source tests run before dist exists. Resolve the two diagnostic facades to their source
+// development modules; built/packed imports still exercise package.json's conditional mapping.
+const sourceDiagnosticsPlugin = {
+  name: 'lyra-source-development-diagnostics',
+  transform(context) {
+    if (!context.response.is('js')) return;
+    if (context.path.endsWith('/src/internal/dev-warning.ts'))
+      return context.body.replaceAll('#lyra-dev-warning', './dev-warning.development.js');
+    if (context.path.endsWith('/src/internal/dev-mode-attribute-warning.ts'))
+      return context.body.replaceAll('#lyra-dev-attributes', './dev-mode-attribute-warning.development.js');
+  },
+};
+
 const hammerEsmInteropPlugin = {
   name: 'hammerjs-esm-interop',
   transform(context) {
@@ -323,6 +336,31 @@ if (!launcherConfig) {
 }
 
 const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';
+// Persist violations until the launcher closes the session: Mocha can swallow an async
+// rejection or pass a retry after the one-shot throw has already disarmed itself.
+export function enforceStrictConsole(launcher) {
+  if (!strictConsole) return launcher;
+  const stopSession = launcher.stopSession.bind(launcher);
+  launcher.stopSession = async (sessionId) => {
+    let violation;
+    try {
+      violation = await launcher.getPage(sessionId).evaluate(
+        () => globalThis.__LYRA_WTR_CONSOLE_FAILURE__ ??
+          globalThis.__LYRA_WTR_PENDING_CONSOLE_FAILURES__?.find(({ event }) => !event.defaultPrevented)?.failure,
+      );
+    } catch (error) {
+      // Still close the page when inspection fails, and never turn that failure into a pass.
+      violation = { message: 'Could not inspect strict browser console: ' + error.message };
+    }
+    const result = await stopSession(sessionId);
+    // WTR displays returned errors without marking the session failed; a rejected stop
+    // explicitly marks it failed. Close first so the rejection never leaks a browser page.
+    if (violation) throw Object.assign(new Error(violation.message), violation);
+    return result;
+  };
+  return launcher;
+}
+
 const collectCoverage = process.env.WTR_COVERAGE === '1';
 // Set only by scripts/coverage-shard-runner.mjs, one distinct value per shard sub-run, so each
 // shard's report lands in its own scratch directory instead of overwriting the others. Its
@@ -354,8 +392,26 @@ const testRunnerHtml = (testRunnerImport) => `
       // WTR's own client-side error reporting re-logs a caught exception via console.error; with
       // no guard that hits this same wrapper and throws again, and so on without bound -- observed
       // to run away into a multi-GB-per-minute WebKit memory leak before it OOM-kills the browser.
-      // One violation already fails the test; nothing is gained by keeping later calls armed.
+      // The launcher retains the first violation as a session error even if Mocha passes.
       let strictConsoleTripped = false;
+      const pendingConsoleFailures = globalThis.__LYRA_WTR_PENDING_CONSOLE_FAILURES__ = [];
+      // WTR logs ErrorEvent.error before later listeners can cancel a ResizeObserver notice.
+      // Retain its identity through dispatch; only a file's explicit cancellation can ignore it.
+      let resizeObserverNotice;
+      globalThis.addEventListener('error', (event) => {
+        if (event.error === null && (
+          event.message === 'ResizeObserver loop completed with undelivered notifications.' ||
+          event.message === 'ResizeObserver loop limit exceeded'
+        )) resizeObserverNotice = event;
+        else resizeObserverNotice = undefined;
+      });
+      const failStrictConsole = (method, args) => {
+        const error = new Error('Unexpected browser console.' + method + ': ' + args.map(String).join(' '));
+        globalThis.__LYRA_WTR_CONSOLE_FAILURE__ = {
+          name: error.name, message: error.message, stack: error.stack,
+        };
+        throw error;
+      };
       const originalWarn = console.warn;
       const originalError = console.error;
       console.warn = (...args) => {
@@ -370,13 +426,28 @@ const testRunnerHtml = (testRunnerImport) => `
         if (typeof args[0] === 'string' && args[0].startsWith('[Shiki]')) return;
         if (strictConsoleTripped) return;
         strictConsoleTripped = true;
-        throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));
+        failStrictConsole('warn', args);
       };
       console.error = (...args) => {
         originalError(...args);
         if (strictConsoleTripped) return;
+        const notice = resizeObserverNotice;
+        if (args.length === 1 && args[0] === null && notice && notice.eventPhase !== 0) {
+          const pending = { event: notice, failure: { message: 'Unexpected browser console.error: null' } };
+          pendingConsoleFailures.push(pending);
+          // Browsers can drain microtasks between native listeners. A task observes the
+          // complete dispatch, after the fixture's listener has had its chance to cancel.
+          // Keep it inspectable at teardown even if the session ends before this task runs.
+          setTimeout(() => {
+            pendingConsoleFailures.splice(pendingConsoleFailures.indexOf(pending), 1);
+            if (notice.defaultPrevented || strictConsoleTripped) return;
+            strictConsoleTripped = true;
+            failStrictConsole('error', args);
+          });
+          return;
+        }
         strictConsoleTripped = true;
-        throw new Error('Unexpected browser console.error: ' + args.map(String).join(' '));
+        failStrictConsole('error', args);
       };
       ` : ''}
     </script>
@@ -393,8 +464,8 @@ export default {
   // The dev server serves every imported module without tree shaking. Skip the package's large
   // sideEffects filter here: reparsing its globs on every resolution can stall the root import.
   // Export resolution stays enabled; packed-consumer gates verify tree-shaking metadata.
-  nodeResolve: { ignoreSideEffectsForRoot: true },
-  browsers: [playwrightLauncher(launcherConfig)],
+  nodeResolve: { ignoreSideEffectsForRoot: true, exportConditions: ['development'] },
+  browsers: [enforceStrictConsole(playwrightLauncher(launcherConfig))],
   // The runner otherwise opens half the host's reported CPU count in browser pages.
   // WebKit retains a bounded default; Firefox uses one page per process because
   // native pointer capture crosses browser contexts. Chromium retains WTR's automatic default.
@@ -420,6 +491,7 @@ export default {
   browserStartTimeout: 90000,
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
+    sourceDiagnosticsPlugin,
     hammerEsmInteropPlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,

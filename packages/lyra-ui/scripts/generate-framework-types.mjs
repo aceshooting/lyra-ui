@@ -233,7 +233,7 @@ function collectElements(manifest) {
   return elements;
 }
 
-function imports(elements, frameworkImport) {
+function imports(elements) {
   const symbolsBySpecifier = new Map();
   for (const element of elements) {
     const classSymbols = symbolsBySpecifier.get(element.specifier) ?? new Set();
@@ -256,7 +256,6 @@ function imports(elements, frameworkImport) {
     }
   }
   return [
-    frameworkImport,
     "import type { LyraGlobalEventMap } from './events.js';",
     ...[...symbolsBySpecifier]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -297,24 +296,49 @@ function propertyOverrideType(element, indent) {
 }
 
 function elementType(element, frameworkName) {
-  const typeName = `${element.className}${frameworkName}Props`;
-  const helper =
-    frameworkName === 'React'
-      ? 'LyraReactElementProps'
-      : frameworkName === 'Svelte'
-        ? 'LyraSvelteElementProps'
-        : 'LyraVueCustomElement';
+  const helper = frameworkName === 'React' ? 'LyraReactElementProps'
+    : frameworkName === 'Svelte' ? 'LyraSvelteElementProps' : 'LyraVueCustomElement';
+  return `export type ${element.className}${frameworkName}Props = ${helper}<${quoted(element.tagName)}>;`;
+}
+
+function adapterImports(frameworkImport, cssProperties = true) {
   return [
-    `export type ${typeName} = ${helper}<`,
-    `  ${element.className},`,
-    `${union(element.propertyNames, '  ')},`,
-    `  ${propertyOverrideType(element, '  ')},`,
-    `  ${element.eventMapName ?? '{}'},`,
-    `${union(element.eventNames, '  ')},`,
-    `${union(element.cssNames, '  ')},`,
-    `  ${aliasType(element, '  ')}`,
-    '>;',
+    frameworkImport,
+    `import type { LyraComponentTypeMap, LyraBoundEvent${cssProperties ? ", LyraCSSCustomProperties" : ""} } from './framework-types.js';`,
+    "export type { LyraUnknownAttributeValue, LyraAttributeValue, LyraCSSCustomProperties } from './framework-types.js';",
   ].join('\n');
+}
+
+function renderShared(elements) {
+  const entries = elements.map((element) => [
+    `  ${quoted(element.tagName)}: {`,
+    `    element: ${element.className};`,
+    '    properties: LyraElementProperties<',
+    `      ${element.className},`,
+    `${union(element.propertyNames, '      ')},`,
+    `      ${propertyOverrideType(element, '      ')}`,
+    '    >;',
+    `    events: ${element.eventMapName ?? '{}'};`,
+    `    eventNames: ${union(element.eventNames, '      ')};`,
+    `    cssNames: ${union(element.cssNames, '      ')};`,
+    `    attributeAliases: ${aliasType(element, '    ')};`,
+    '  };',
+  ].join('\n')).join('\n');
+  return `${generatedHeader('framework-neutral')}${imports(elements)}
+
+${sharedEventTypes()}
+
+type LyraElementProperties<
+  ElementType extends HTMLElement,
+  PropertyNames extends keyof ElementType,
+  PropertyOverrides extends object,
+> = Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides>;
+
+/** Shared component metadata used by the opt-in framework declaration adapters. */
+export interface LyraComponentTypeMap {
+${entries}
+}
+`;
 }
 
 function generatedHeader(kind) {
@@ -358,7 +382,7 @@ function sharedEventTypes() {
     '    : LyraFallbackEvent<Name>',
     '  : LyraFallbackEvent<Name>;',
     '',
-    'type LyraBoundEvent<',
+    'export type LyraBoundEvent<',
     '  ElementType extends HTMLElement,',
     '  ElementEvents extends object,',
     '  Name extends string,',
@@ -376,9 +400,7 @@ function renderReact(elements) {
     .map(({ tagName, className }) => `  ${quoted(tagName)}: ${className}ReactProps;`)
     .join('\n');
   return `${generatedHeader('React 19 and JSX')}\
-${imports(elements, "import type * as React from 'react';")}
-
-${sharedEventTypes()}
+${adapterImports("import type * as React from 'react';")}
 
 type LyraReactEventProps<
   ElementType extends HTMLElement,
@@ -395,19 +417,19 @@ type LyraReactEventProps<
 };
 
 type LyraReactElementProps<
-  ElementType extends HTMLElement,
-  PropertyNames extends keyof ElementType,
-  PropertyOverrides extends object,
-  ElementEvents extends object,
-  EventNames extends string,
-  CSSNames extends string,
-  AttributeAliases extends object,
+  Tag extends keyof LyraComponentTypeMap,
+  ElementType extends HTMLElement = LyraComponentTypeMap[Tag]['element'],
+  Properties extends object = LyraComponentTypeMap[Tag]['properties'],
+  ElementEvents extends object = LyraComponentTypeMap[Tag]['events'],
+  EventNames extends string = LyraComponentTypeMap[Tag]['eventNames'],
+  CSSNames extends string = LyraComponentTypeMap[Tag]['cssNames'],
+  AttributeAliases extends object = LyraComponentTypeMap[Tag]['attributeAliases'],
 > = Omit<
   React.HTMLAttributes<ElementType>,
-  PropertyNames | keyof AttributeAliases | keyof LyraReactEventProps<ElementType, ElementEvents, EventNames> | 'style'
+  keyof Properties | keyof AttributeAliases | keyof LyraReactEventProps<ElementType, ElementEvents, EventNames> | 'style'
 > &
   React.RefAttributes<ElementType> &
-  Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
+  Properties &
   AttributeAliases &
   LyraReactEventProps<ElementType, ElementEvents, EventNames> & {
     style?: React.CSSProperties & LyraCSSCustomProperties<CSSNames>;
@@ -439,9 +461,7 @@ function renderVue(elements) {
     .map(({ tagName, className }) => `  ${quoted(tagName)}: ${className}VueProps;`)
     .join('\n');
   return `${generatedHeader('Vue 3')}\
-${imports(elements, "import type { EmitFn, HTMLAttributes, PublicProps } from 'vue';")}
-
-${sharedEventTypes()}
+${adapterImports("import type { EmitFn, HTMLAttributes, PublicProps } from 'vue';")}
 
 type LyraVueEmit<
   ElementType extends HTMLElement,
@@ -452,17 +472,17 @@ type LyraVueEmit<
 }>;
 
 type LyraVueCustomElement<
-  ElementType extends HTMLElement,
-  PropertyNames extends keyof ElementType,
-  PropertyOverrides extends object,
-  ElementEvents extends object,
-  EventNames extends string,
-  CSSNames extends string,
-  AttributeAliases extends object,
+  Tag extends keyof LyraComponentTypeMap,
+  ElementType extends HTMLElement = LyraComponentTypeMap[Tag]['element'],
+  Properties extends object = LyraComponentTypeMap[Tag]['properties'],
+  ElementEvents extends object = LyraComponentTypeMap[Tag]['events'],
+  EventNames extends string = LyraComponentTypeMap[Tag]['eventNames'],
+  CSSNames extends string = LyraComponentTypeMap[Tag]['cssNames'],
+  AttributeAliases extends object = LyraComponentTypeMap[Tag]['attributeAliases'],
 > = new () => ElementType & {
   /** @deprecated Template prop metadata only; this property does not exist at runtime. */
-  $props: Omit<HTMLAttributes, PropertyNames | keyof AttributeAliases | 'style'> &
-    Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
+  $props: Omit<HTMLAttributes, keyof Properties | keyof AttributeAliases | 'style'> &
+    Properties &
     AttributeAliases &
     PublicProps & {
       style?: HTMLAttributes['style'] | LyraCSSCustomProperties<CSSNames>;
@@ -489,12 +509,10 @@ function renderSvelte(elements) {
     .map(({ tagName, className }) => `  ${quoted(tagName)}: ${className}SvelteProps;`)
     .join('\n');
   const tagEntries = elements
-    .map(({ tagName, className }) => `  ${quoted(tagName)}: ${className};`)
+    .map(({ tagName }) => `  ${quoted(tagName)}: LyraComponentTypeMap[${quoted(tagName)}]['element'];`)
     .join('\n');
   return `${generatedHeader('Svelte 5')}\
-${imports(elements, "import type { HTMLAttributes } from 'svelte/elements';")}
-
-${sharedEventTypes()}
+${adapterImports("import type { HTMLAttributes } from 'svelte/elements';", false)}
 
 type LyraSvelteEventProps<
   ElementType extends HTMLElement,
@@ -515,18 +533,18 @@ type LyraSvelteStyleProps<CSSNames extends string> = {
 };
 
 type LyraSvelteElementProps<
-  ElementType extends HTMLElement,
-  PropertyNames extends keyof ElementType,
-  PropertyOverrides extends object,
-  ElementEvents extends object,
-  EventNames extends string,
-  CSSNames extends string,
-  AttributeAliases extends object,
+  Tag extends keyof LyraComponentTypeMap,
+  ElementType extends HTMLElement = LyraComponentTypeMap[Tag]['element'],
+  Properties extends object = LyraComponentTypeMap[Tag]['properties'],
+  ElementEvents extends object = LyraComponentTypeMap[Tag]['events'],
+  EventNames extends string = LyraComponentTypeMap[Tag]['eventNames'],
+  CSSNames extends string = LyraComponentTypeMap[Tag]['cssNames'],
+  AttributeAliases extends object = LyraComponentTypeMap[Tag]['attributeAliases'],
 > = Omit<
   HTMLAttributes<ElementType>,
-  PropertyNames | keyof AttributeAliases | keyof LyraSvelteEventProps<ElementType, ElementEvents, EventNames>
+  keyof Properties | keyof AttributeAliases | keyof LyraSvelteEventProps<ElementType, ElementEvents, EventNames>
 > &
-  Partial<Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides> & PropertyOverrides> &
+  Properties &
   AttributeAliases &
   LyraSvelteEventProps<ElementType, ElementEvents, EventNames> &
   LyraSvelteStyleProps<CSSNames>;
@@ -557,6 +575,7 @@ export function generateFrameworkTypes(manifest) {
     throw new Error('Custom Elements Manifest contains no custom-element declarations');
   }
   return new Map([
+    ['src/framework-types.ts', renderShared(elements)],
     ['src/custom-elements-jsx.ts', renderReact(elements)],
     ['src/svelte.ts', renderSvelte(elements)],
     ['src/vue.ts', renderVue(elements)],

@@ -1,3 +1,4 @@
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -383,8 +384,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private animationTarget?: Element;
   private hasStarted = false;
   private visibilityObserver?: IntersectionObserver;
-  private motionQuery?: MediaQueryList;
-  private motionQueryListener?: () => void;
+  private stopMotionWatch?: () => void;
   private lastTextDirection?: 'ltr' | 'rtl';
 
   // WAAPI timing values are not timer durations. Signed finite delay/endDelay values are valid,
@@ -472,29 +472,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
   private bindMotionPreference(): void {
     this.unbindMotionPreference();
-    const owner = this.ownerDocument.defaultView;
-    const query = owner?.matchMedia?.('(prefers-reduced-motion: reduce)');
-    if (!owner || !query) return;
-    const listener = (): void => {
-      if (
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner ||
-        this.motionQuery !== query
-      )
-        return;
-      this.createAnimation();
-    };
-    this.motionQuery = query;
-    this.motionQueryListener = listener;
-    query.addEventListener('change', listener);
+    this.stopMotionWatch = observeReducedMotion(this, () => {
+      if (this.isConnected) this.createAnimation();
+    });
   }
 
   private unbindMotionPreference(): void {
-    if (this.motionQuery && this.motionQueryListener) {
-      this.motionQuery.removeEventListener('change', this.motionQueryListener);
-    }
-    this.motionQuery = undefined;
-    this.motionQueryListener = undefined;
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -693,7 +678,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     }
     const reduced =
       !this.ignoreReducedMotion &&
-      prefersReducedMotion(this.ownerDocument.defaultView);
+      prefersReducedMotion(this);
     const timingPreset = this.safeTimingPreset;
     const { duration, easing } =
       timingPreset === 'custom'

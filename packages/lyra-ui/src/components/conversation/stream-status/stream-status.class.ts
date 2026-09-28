@@ -9,13 +9,16 @@ import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type StreamConnectionState = Exclude<LyraStreamPhase, 'stalled'>;
+export type StreamConnectionState = Exclude<LyraStreamPhase, 'stalled'> | 'interrupted';
+
+/** Effective stream status, including detected stalls and host-declared interruptions. */
+export type StreamStatusPhase = LyraStreamPhase | 'interrupted';
 
 const STREAM_CONNECTION_STATE = literalSetConverter<StreamConnectionState>(
-  ['idle', 'connecting', 'streaming'],
+  ['idle', 'connecting', 'streaming', 'interrupted'],
   'idle'
 );
 
@@ -31,13 +34,14 @@ function isRealMessageNode(n: Node): boolean {
 export interface LyraStreamStatusEventMap {
   'lr-stall': CustomEvent<null>;
   'lr-recover': CustomEvent<null>;
+  'lr-resume': CustomEvent<null>;
 }
 /**
  * `<lr-stream-status>` — a compact status indicator for a single streaming
  * connection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware
  * stall detection.
  *
- * The host owns `connectionState` for `idle`/`connecting`/`streaming`, and
+ * The host owns `connectionState` for `idle`/`connecting`/`streaming`/`interrupted`, and
  * calls `recordActivity()` on every *semantic* frame received while
  * streaming — a real content chunk, never a transport-level keep-alive ping.
  * This component has no payload-inspection logic of its own: "ignore
@@ -97,9 +101,14 @@ export interface LyraStreamStatusEventMap {
  * than a hard failure keeps the tone proportionate. A host that wants to
  * escalate after N stalls can listen for `lr-stall` and show its own danger-styled error state.
  *
+ * An interrupted connection stops stall detection. With `resumable`, an explicit resume button
+ * emits `lr-resume`; the host owns reconnection and the next connection state.
+ *
  * @customElement lr-stream-status
  * @slot - Custom copy shown only while `phase === 'stalled'` (e.g. "Taking longer than usual…"). A sensible built-in default is used when nothing is slotted.
  * @slot actions - A stop/retry button row. Always present in the template regardless of phase; visibility is driven by whether anything is slotted.
+ * @event lr-resume - Requests host-managed resume of an interrupted, resumable connection. `detail: null`.
+ * @csspart resume - The interrupted connection's resume button.
  * @event lr-stall - Fired whenever the effective phase transitions into `stalled`.
  * @event lr-recover - Fired whenever the effective phase transitions out of `stalled`.
  * @csspart base - The root layout container.
@@ -110,10 +119,10 @@ export interface LyraStreamStatusEventMap {
  * @cssprop [--lr-stream-status-dot-color=var(--lr-color-text-quiet)] - `indicator` dot color.
  *   Its private default changes with reflected `connection-state` and the component-owned
  *   `data-stalled` state: `var(--lr-color-brand)` for
- *   `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or
+ *   `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`/`interrupted`. Set it on the element or
  *   any ancestor; an element value wins.
  * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its private default
- *   changes with those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ *   changes with those same host states: `0.6` for `connecting`, `1` for `streaming`, `stalled`, and `interrupted`.
  *   Set it on the element or any ancestor; an element value wins.
  * @cssprop [--lr-stream-status-stalled-bg=var(--lr-color-warning-quiet)] - `base` row background
  *   while `data-stalled` is present.
@@ -134,7 +143,9 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
     realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
     statusRunning: LYRA_DEFAULT_statusRunning,
+    streamInterrupted: LYRA_DEFAULT_streamInterrupted,
     streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
+    streamResume: LYRA_DEFAULT_streamResume,
     streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
     streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,
     streamStalled: LYRA_DEFAULT_streamStalled,
@@ -167,7 +178,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   /** Readonly effective status, including the component-owned stalled override. */
-  get phase(): LyraStreamPhase {
+  get phase(): StreamStatusPhase {
     return this._stalled && this.connectionState === 'streaming'
       ? 'stalled'
       : this.connectionState;
@@ -177,6 +188,12 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
    *  before this component declares it stalled. */
   @property({ type: Number, attribute: 'stall-threshold-ms' })
   stallThresholdMs = 10000;
+
+  /** Offers a resume request only while interrupted. Does not reconnect a transport. */
+  @property({ type: Boolean }) resumable = false;
+
+  /** Disables the built-in resume request. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   @state() private _stalled = false;
 
@@ -196,8 +213,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  private lastRenderedPhase?: LyraStreamPhase;
-  private phaseAtDisconnect?: LyraStreamPhase;
+  private lastRenderedPhase?: StreamStatusPhase;
+  private phaseAtDisconnect?: StreamStatusPhase;
 
   constructor() {
     super();
@@ -276,7 +293,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
    * - While `phase === 'stalled'`: recovers — `phase` becomes `'streaming'`
    *   again, `lr-recover` fires, and the stall timer is armed fresh (same
    *   as the bullet above), all via the same effective transition handler.
-   * - While `phase` is `'idle'` or `'connecting'`: a no-op. A host may call
+   * - While `phase` is `'idle'`, `'connecting'`, or `'interrupted'`: a no-op. A host may call
    *   this defensively before formally flipping to `'streaming'`; it must
    *   never throw or start a timer early.
    */
@@ -297,8 +314,8 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   private onPhaseChanged(
-    previous: LyraStreamPhase | undefined,
-    current: LyraStreamPhase
+    previous: StreamStatusPhase | undefined,
+    current: StreamStatusPhase
   ): void {
     if (previous === undefined || previous === current) return;
 
@@ -405,8 +422,21 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
         return this.localize('statusRunning');
       case 'stalled':
         return this.localize('streamStallAnnounce');
+      case 'interrupted':
+        return this.localize('streamInterrupted');
       default:
         return this.localize('audioVisualizerIdle');
+    }
+  }
+
+  private resumeDispatching = false;
+  private requestResume(): void {
+    if (this.resumeDispatching || this.disabled || !this.resumable || this.phase !== 'interrupted') return;
+    this.resumeDispatching = true;
+    try {
+      this.emit('lr-resume', null);
+    } finally {
+      this.resumeDispatching = false;
     }
   }
 
@@ -422,6 +452,10 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
                 ? nothing
                 : this.localize('streamStalled')}
             </div>`
+          : nothing}
+        ${this.phase === 'interrupted' && this.resumable
+          ? html`<button part="resume" type="button" ?disabled=${this.disabled}
+              @click=${this.requestResume}>${this.localize('streamResume')}</button>`
           : nothing}
         <div part="actions" ?hidden=${!this.hasActionsSlot}>
           <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>

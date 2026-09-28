@@ -1,3 +1,5 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './approval-queue.js';
@@ -7,6 +9,12 @@ import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../te
 
 const requests: ToolApprovalRequest[] = [{ id: 'call-1', toolName: 'web_search', args: { query: 'Lyra UI' } }];
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'approvalQueueLabel',
+  'approvalQueueOpen',
+  'approvalQueuePending',
+]);
 describe('lr-approval-queue', () => {
   it('renders the request queue and opens the reusable approval dialog', async () => {
     const el = (await fixture(html`<lr-approval-queue .strings=${{ approvalQueueLabel: 'Approvals' }} .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
@@ -123,7 +131,7 @@ describe('lr-approval-queue', () => {
     await dialog.updateComplete;
     expect(dialog.shadowRoot!.querySelector('[part="args-editor"]')).to.exist;
 
-    dialog.addEventListener('lr-deny', (event) => event.preventDefault(), { once: true });
+    dialog.addEventListener('lr-deny-request', (event) => event.preventDefault(), { once: true });
     (dialog.shadowRoot!.querySelector('[part="deny-button"]') as HTMLElement).click();
     await dialog.updateComplete;
     expect(dialog.pending).to.equal('deny');
@@ -144,8 +152,8 @@ describe('lr-approval-queue', () => {
     `)) as LyraApprovalQueue;
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
 
-    const approved = oneEvent(el, 'lr-approval-decision');
-    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+    const approved = oneEvent(el, 'lr-approval-decision-request');
+    dialog.dispatchEvent(new CustomEvent('lr-approve-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -157,8 +165,8 @@ describe('lr-approval-queue', () => {
       args: { query: 'confirmed' },
     });
 
-    const denied = oneEvent(el, 'lr-approval-decision');
-    dialog.dispatchEvent(new CustomEvent('lr-deny', {
+    const denied = oneEvent(el, 'lr-approval-decision-request');
+    dialog.dispatchEvent(new CustomEvent('lr-deny-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -174,9 +182,9 @@ describe('lr-approval-queue', () => {
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `)) as LyraApprovalQueue;
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
-    el.addEventListener('lr-approval-decision', (event) => event.preventDefault());
+    el.addEventListener('lr-approval-decision-request', (event) => event.preventDefault());
 
-    const approve = new CustomEvent('lr-approve', {
+    const approve = new CustomEvent('lr-approve-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -185,7 +193,7 @@ describe('lr-approval-queue', () => {
     dialog.dispatchEvent(approve);
     expect(approve.defaultPrevented).to.be.true;
 
-    const deny = new CustomEvent('lr-deny', {
+    const deny = new CustomEvent('lr-deny-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -203,10 +211,10 @@ describe('lr-approval-queue', () => {
     el.addEventListener('lr-approval-close', (event) => {
       closes.push((event as CustomEvent<{ invocationId: string; reason: string }>).detail);
     });
-    el.addEventListener('lr-approval-decision', () => {
+    el.addEventListener('lr-approval-decision-request', () => {
       el.requests = [];
     });
-    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+    dialog.dispatchEvent(new CustomEvent('lr-approve-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -215,7 +223,7 @@ describe('lr-approval-queue', () => {
     dialog.dispatchEvent(new CustomEvent('lr-close', {
       bubbles: true,
       composed: true,
-      detail: 'approve',
+      detail: { reason: 'approve' },
     }));
     await el.updateComplete;
     expect(closes).to.deep.equal([{ invocationId: 'call-1', reason: 'approve' }]);
@@ -231,13 +239,13 @@ describe('lr-approval-queue', () => {
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `);
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
-    el.addEventListener('lr-approval-decision', () => {
+    el.addEventListener('lr-approval-decision-request', () => {
       el.requests = [replacement];
       el.selectedInvocationId = replacement.id;
       el.open = true;
     });
 
-    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+    dialog.dispatchEvent(new CustomEvent('lr-approve-request', {
       bubbles: true,
       composed: true,
       cancelable: true,
@@ -246,7 +254,7 @@ describe('lr-approval-queue', () => {
     dialog.dispatchEvent(new CustomEvent('lr-close', {
       bubbles: true,
       composed: true,
-      detail: 'approve',
+      detail: { reason: 'approve' },
     }));
     await el.updateComplete;
 
@@ -328,7 +336,7 @@ describe('lr-approval-queue', () => {
     dialog.dispatchEvent(new CustomEvent('lr-close', {
       bubbles: true,
       composed: true,
-      detail: 'api',
+      detail: { reason: 'api' },
     }));
     await el.updateComplete;
 
@@ -658,3 +666,30 @@ it('renders no limit notice when requests stays within the render ceiling', asyn
   const el = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
 });
+
+expectDeprecatedUsage('lr-approval-queue', 'event', 'lr-approval-decision');
+
+it('retains the deprecated lr-approval-decision veto alias', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    el.addEventListener('lr-approval-decision', (event) => event.preventDefault());
+
+    const approve = new CustomEvent('lr-approve-request', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { args: requests[0]!.args },
+    });
+    dialog.dispatchEvent(approve);
+    expect(approve.defaultPrevented).to.be.true;
+
+    const deny = new CustomEvent('lr-deny-request', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    dialog.dispatchEvent(deny);
+    expect(deny.defaultPrevented).to.be.true;
+  });

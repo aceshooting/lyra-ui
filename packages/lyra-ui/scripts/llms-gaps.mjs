@@ -442,7 +442,31 @@ export function collectGaps(
       let block = '';
       let locatorFailure = '';
       let tag = owner.locator?.name ?? contract.exportName;
-      if (owner.locator?.kind === 'utility') {
+      if (owner.locator?.kind === 'indexed-interface') {
+        const locator = owner.locator;
+        const blocks = utilityContractBlocks(text, locator.name);
+        const name = escapePattern(contract.exportName);
+        const specifier = escapePattern(locator.specifier);
+        const entry = `${name}Entry<Tag extends keyof ${name}> = ${name}\\[Tag\\]`;
+        const required = [
+          `${name} = import\\(['"]${specifier}['"]\\)\\.${name}`,
+          entry,
+          ...(contract.indexedFields ?? []).map((field) =>
+            `${name}\\[Tag\\]\\[['"]${escapePattern(field)}['"]\\]`,
+          ),
+        ];
+        const validSource = contract.kind === 'interface' && contract.indexedFields?.length > 0 &&
+          contract.indexedSpecifiers?.includes(locator.specifier) &&
+          locator.declaration === contract.exportName &&
+          JSON.stringify(contract.indexedFields) === JSON.stringify(locator.fields?.slice().sort());
+        if (blocks.length !== 1 || !validSource || required.some((pattern) =>
+          !new RegExp('(?<!`)`' + pattern + '`(?!`)').test(blocks[0] ?? ''),
+        )) {
+          locatorFailure = `missing or invalid indexed interface contract for ${contract.exportName}`;
+        } else {
+          [block] = blocks;
+        }
+      } else if (owner.locator?.kind === 'utility') {
         const utilityBlocks = utilityContractBlocks(text, owner.locator.name);
         if (utilityBlocks.length !== 1) {
           locatorFailure =
@@ -501,7 +525,9 @@ export function collectGaps(
       } else {
         locatorFailure = `missing contract locator for ${contract.exportName}`;
       }
-      const missing = contract.names.filter((name) => !mentionsName(block, name));
+      const missing = owner.locator?.kind === 'indexed-interface'
+        ? [] // The validated import/keyof/indexed expressions cover the complete live map.
+        : contract.names.filter((name) => !mentionsName(block, name));
       if (missing.length > 0 || locatorFailure) {
         gaps.push({
           family: owner.family ?? 'shared',

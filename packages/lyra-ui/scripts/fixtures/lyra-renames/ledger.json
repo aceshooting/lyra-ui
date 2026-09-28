@@ -133,7 +133,20 @@
           ],
           "summary": "An icon in the default slot is deprecated; move it to the start slot."
         }
-      ]
+      ],
+      "moduleReviews": []
+    },
+    {
+      "origin": "lyra-v22",
+      "fromMajor": 22,
+      "toMajor": 23,
+      "aliasRemovalMajor": 24,
+      "renames": [],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [],
+      "slotContent": [],
+      "moduleReviews": []
     }
   ]
 }

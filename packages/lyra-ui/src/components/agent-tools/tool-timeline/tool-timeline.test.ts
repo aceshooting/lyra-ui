@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-timeline.js';
 import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
@@ -9,8 +10,16 @@ import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../te
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
-  'accessibleLabelSeparator', 'approve', 'deny', 'edit', 'envListValueHidden', 'jsonObject',
-  'statusSuccess', 'toolApprovalGenericTool', 'toolApprovalHeading', 'toolTimelineDetailsFor',
+  'accessibleLabelSeparator',
+  'approve',
+  'deny',
+  'edit',
+  'envListValueHidden',
+  'jsonObject',
+  'statusSuccess',
+  'toolApprovalGenericTool',
+  'toolApprovalHeading',
+  'toolTimelineDetailsFor',
 ]);
 
 function entriesEl(el: LyraToolTimeline): HTMLElement[] {
@@ -105,7 +114,7 @@ it('exposes a vetoed approval at the timeline boundary and lets a host revert it
   editor.value = editedArgs;
   editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   await approvalDialog.updateComplete;
-  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault(), { once: true });
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
   await el.updateComplete;
   await approvalDialog.updateComplete;
@@ -121,7 +130,7 @@ it('exposes a vetoed approval at the timeline boundary and lets a host revert it
   expect(approvalDialog.pendingAction).to.equal(null);
   expect(editor.value).to.equal(editedArgs);
 
-  const retry = oneEvent(el, 'lr-tool-approval-decide');
+  const retry = oneEvent(el, 'lr-tool-approval-decide-request');
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
   const event = (await retry) as CustomEvent<ToolTimelineApprovalDetail>;
   expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' } });
@@ -137,7 +146,7 @@ it('lets a host finalize a vetoed denial through the timeline boundary', async (
   );
   await el.updateComplete;
   const approvalDialog = dialog(el);
-  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault(), { once: true });
   approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
   await el.updateComplete;
   await approvalDialog.updateComplete;
@@ -165,7 +174,7 @@ it('a host that approves synchronously through entries (instead of finalizePendi
   // reassigning the public `entries` data rather than calling finalizePendingApproval(), must win --
   // the built-in "awaiting the host" pending bookkeeping must never land on an already-resolved entry.
   el.addEventListener(
-    'lr-tool-approval-decide',
+    'lr-tool-approval-decide-request',
     (event) => {
       event.preventDefault();
       el.entries = [{ ...entry, approved: true }];
@@ -197,7 +206,7 @@ it('a host that denies synchronously through entries (instead of finalizePending
   const approvalDialog = dialog(el);
 
   el.addEventListener(
-    'lr-tool-approval-decide',
+    'lr-tool-approval-decide-request',
     (event) => {
       event.preventDefault();
       el.entries = [{ ...entry, approved: false }];
@@ -534,13 +543,13 @@ it('opens the shared approval dialog for a pending-approval entry when its chip 
   expect(dialog(el).args).to.deep.equal({ path: '/tmp/x' });
 });
 
-it('emits lr-tool-approval-decide with approved:true and the dialog args on approve, then closes the dialog', async () => {
+it('emits lr-tool-approval-decide-request with approved:true and the dialog args on approve, then closes the dialog', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ id: 'call-approve', args: { path: '/tmp/x' }, needsApproval: true })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lr-tool-approval-decide');
+  const listener = oneEvent(el, 'lr-tool-approval-decide-request');
   dialog(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
   const event = (await listener) as CustomEvent<ToolTimelineApprovalDetail>;
   expect(event.detail).to.deep.equal({ invocationId: 'call-approve', approved: true, args: { path: '/tmp/x' } });
@@ -548,29 +557,29 @@ it('emits lr-tool-approval-decide with approved:true and the dialog args on appr
   expect(dialog(el).open).to.be.false;
 });
 
-it('emits lr-tool-approval-decide with approved:false (no args) on deny', async () => {
+it('emits lr-tool-approval-decide-request with approved:false (no args) on deny', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ id: 'call-deny', needsApproval: true })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
   chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lr-tool-approval-decide');
+  const listener = oneEvent(el, 'lr-tool-approval-decide-request');
   dialog(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   const event = (await listener) as CustomEvent<ToolTimelineApprovalDetail>;
   expect(event.detail).to.deep.equal({ invocationId: 'call-deny', approved: false });
 });
 
-it('lr-tool-approval-decide reports cancelable:true, and only a prevented listener keeps the dialog open', async () => {
+it('lr-tool-approval-decide-request reports cancelable:true, and only a prevented listener keeps the dialog open', async () => {
   const approveEntries: ToolTimelineEntry[] = [makeEntry({ id: 'call-approve', needsApproval: true })];
   const approveEl = (await fixture(
     html`<lr-tool-timeline .entries=${approveEntries}></lr-tool-timeline>`,
   )) as LyraToolTimeline;
   chipIn(entriesEl(approveEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await approveEl.updateComplete;
-  const approvePromise = oneEvent(approveEl, 'lr-tool-approval-decide');
+  const approvePromise = oneEvent(approveEl, 'lr-tool-approval-decide-request');
   dialog(approveEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
   const approveEvent = await approvePromise;
-  expect(approveEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(approveEvent.cancelable, 'lr-tool-approval-decide-request must be cancelable').to.equal(true);
   expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
   await approveEl.updateComplete;
   expect(dialog(approveEl).open, 'not-prevented path closes the dialog').to.be.false;
@@ -582,11 +591,11 @@ it('lr-tool-approval-decide reports cancelable:true, and only a prevented listen
   )) as LyraToolTimeline;
   chipIn(entriesEl(preventedApproveEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await preventedApproveEl.updateComplete;
-  const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-tool-approval-decide');
-  preventedApproveEl.addEventListener('lr-tool-approval-decide', (e) => e.preventDefault(), { once: true });
+  const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-tool-approval-decide-request');
+  preventedApproveEl.addEventListener('lr-tool-approval-decide-request', (e) => e.preventDefault(), { once: true });
   dialog(preventedApproveEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
   const preventedApproveEvent = await preventedApprovePromise;
-  expect(preventedApproveEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(preventedApproveEvent.cancelable, 'lr-tool-approval-decide-request must be cancelable').to.equal(true);
   expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
   await preventedApproveEl.updateComplete;
   expect(dialog(preventedApproveEl).open, 'prevented path keeps the dialog open').to.be.true;
@@ -596,10 +605,10 @@ it('lr-tool-approval-decide reports cancelable:true, and only a prevented listen
   const denyEl = (await fixture(html`<lr-tool-timeline .entries=${denyEntries}></lr-tool-timeline>`)) as LyraToolTimeline;
   chipIn(entriesEl(denyEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await denyEl.updateComplete;
-  const denyPromise = oneEvent(denyEl, 'lr-tool-approval-decide');
+  const denyPromise = oneEvent(denyEl, 'lr-tool-approval-decide-request');
   dialog(denyEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   const denyEvent = await denyPromise;
-  expect(denyEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(denyEvent.cancelable, 'lr-tool-approval-decide-request must be cancelable').to.equal(true);
   expect(denyEvent.defaultPrevented).to.equal(false);
   await denyEl.updateComplete;
   expect(dialog(denyEl).open).to.be.false;
@@ -610,11 +619,11 @@ it('lr-tool-approval-decide reports cancelable:true, and only a prevented listen
   )) as LyraToolTimeline;
   chipIn(entriesEl(preventedDenyEl)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   await preventedDenyEl.updateComplete;
-  const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-tool-approval-decide');
-  preventedDenyEl.addEventListener('lr-tool-approval-decide', (e) => e.preventDefault(), { once: true });
+  const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-tool-approval-decide-request');
+  preventedDenyEl.addEventListener('lr-tool-approval-decide-request', (e) => e.preventDefault(), { once: true });
   dialog(preventedDenyEl).shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   const preventedDenyEvent = await preventedDenyPromise;
-  expect(preventedDenyEvent.cancelable, 'lr-tool-approval-decide must be cancelable').to.equal(true);
+  expect(preventedDenyEvent.cancelable, 'lr-tool-approval-decide-request must be cancelable').to.equal(true);
   expect(preventedDenyEvent.defaultPrevented).to.equal(true);
   await preventedDenyEl.updateComplete;
   expect(dialog(preventedDenyEl).open).to.be.true;
@@ -628,7 +637,7 @@ it('dismissing the dialog via escape/backdrop closes it without emitting a decis
   await el.updateComplete;
 
   let fired = false;
-  el.addEventListener('lr-tool-approval-decide', () => (fired = true));
+  el.addEventListener('lr-tool-approval-decide-request', () => (fired = true));
   dialog(el).close('escape');
   await el.updateComplete;
   expect(dialog(el).open).to.be.false;
@@ -834,7 +843,7 @@ it('clears a held approval and closes the review dialog if its entry disappears 
   await el.updateComplete;
   expect(dialog(el).open).to.be.true;
 
-  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault(), { once: true });
   dialog(el).shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
   await el.updateComplete;
   expect(el.pendingApproval).to.equal('approve');
@@ -1192,4 +1201,45 @@ it('redacts a top-level error before rendering expanded details', async () => {
   const row = await openEntry(el);
 
   expect(row.querySelector('[part="entry-error"]')!.textContent).to.equal('Value hidden');
+});
+
+expectDeprecatedUsage('lr-tool-timeline', 'event', 'lr-tool-approval-decide');
+
+it('retains the deprecated lr-tool-approval-decide veto alias', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined, args: { path: '/workspace/draft.md' } });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const approvalDialog = dialog(el);
+  approvalDialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+  await approvalDialog.updateComplete;
+  const editor = approvalDialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
+  const editedArgs = '{\n  "path": "/workspace/retry.md"\n}';
+  editor.value = editedArgs;
+  editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await approvalDialog.updateComplete;
+  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal('approve');
+  expect(approvalDialog.open).to.be.true;
+  expect(approvalDialog.pendingAction).to.equal('approve');
+
+  el.revertPendingApproval();
+  await el.updateComplete;
+  await approvalDialog.updateComplete;
+  expect(el.pendingApproval).to.equal(null);
+  expect(approvalDialog.open).to.be.true;
+  expect(approvalDialog.pendingAction).to.equal(null);
+  expect(editor.value).to.equal(editedArgs);
+
+  const retry = oneEvent(el, 'lr-tool-approval-decide');
+  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  const event = (await retry) as CustomEvent<ToolTimelineApprovalDetail>;
+  expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' } });
+  await el.updateComplete;
+  expect(approvalDialog.open).to.be.false;
 });

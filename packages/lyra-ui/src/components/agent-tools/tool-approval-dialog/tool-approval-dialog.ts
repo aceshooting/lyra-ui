@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-tool-approval-dialog.js to register this component. */
 export * from './tool-approval-dialog.class.js';
 import { LyraToolApprovalDialog } from './tool-approval-dialog.class.js';
 import { defineElement } from '../../../internal/prefix.js';

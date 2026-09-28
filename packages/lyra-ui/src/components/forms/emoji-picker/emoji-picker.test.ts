@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup, EmojiPickerItem } from './emoji-picker.js';
@@ -81,6 +82,8 @@ afterEach(() => {
   for (const el of created) el.remove();
   created.length = 0;
 });
+
+expectLocaleFallback('tr', ['clear', 'emojiPickerGridLabel', 'emojiPickerSearchLabel', 'emojiPickerSearchPlaceholder']);
 
 it('contains a throwing shadow-root activeElement getter while replacing groups', async () => {
   const el = await connectEmojiPicker();

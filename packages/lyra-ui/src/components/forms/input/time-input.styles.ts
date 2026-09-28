@@ -270,7 +270,7 @@ export const styles = css`
     transform: translateY(0);
     visibility: visible;
     transition-property: opacity, transform, visibility;
-    transition-duration: var(--show-duration, var(--lr-duration-fast));
+    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-fast)));
     transition-timing-function: var(--lr-easing-standard);
   }
   [part='popup'][data-hidden] {
@@ -278,7 +278,7 @@ export const styles = css`
     transform: translateY(var(--lr-size-neg-0-25rem));
     visibility: hidden;
     pointer-events: none;
-    transition-duration: var(--hide-duration, var(--lr-duration-fast));
+    transition-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-duration-fast)));
   }
   [part='columns'] {
     display: flex;
@@ -420,7 +420,7 @@ export const styles = css`
   @media (prefers-reduced-motion: reduce) {
     [part='popup'],
     [part='expand-icon'] {
-      transition-duration: var(--lr-duration-fast);
+      transition-duration: var(--_lr-motion-duration, var(--lr-duration-fast));
     }
   }
 `;

@@ -1228,16 +1228,22 @@ export function collectSourcePolicyFindings({
 // Ratchets: keyboard-test-coverage / strings-test-coverage
 // ---------------------------------------------------------------------------
 
-function colocatedTestSource(classFile) {
+export function colocatedTestSource(classFile) {
   const directory = path.dirname(classFile);
-  const preferred = path.join(directory, `${path.basename(classFile, '.class.ts')}.test.ts`);
-  const testFiles = fs.existsSync(preferred)
-    ? [preferred]
-    : fs
-        .readdirSync(directory)
-        .filter((name) => name.endsWith('.test.ts'))
-        .map((name) => path.join(directory, name));
-  return testFiles.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
+  const names = fs.readdirSync(directory);
+  const componentName = path.basename(classFile, '.class.ts');
+  const classNames = names.filter((name) => name.endsWith('.class.ts'))
+    .map((name) => name.slice(0, -'.class.ts'.length))
+    .sort((left, right) => right.length - left.length);
+  const allTests = names.filter((name) => name.endsWith('.test.ts')).sort();
+  // A behavior split keeps its component's prefix. Prefer the longest class name so a menu
+  // cannot borrow menu-item's tests merely because both classes share one directory.
+  const ownTests = allTests.filter((name) => classNames.find((candidate) =>
+    name === `${candidate}.test.ts` || name.startsWith(`${candidate}-`) ||
+    name.startsWith(`${candidate}.`)) === componentName);
+  // Shared abstract classes may have no named suite; their public adopters remain the evidence.
+  const testFiles = ownTests.length ? ownTests : allTests;
+  return testFiles.map((name) => fs.readFileSync(path.join(directory, name), 'utf8')).join('\n');
 }
 
 function collectRatchetOffenders(componentFiles, strippedByFile) {

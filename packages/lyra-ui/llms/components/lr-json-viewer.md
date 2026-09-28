@@ -6,7 +6,7 @@
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecated property** `collapsedDepth` / `collapsed-depth` since `21.1.0`; use property `expand-depth`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Deprecated property** `search` / `search` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none

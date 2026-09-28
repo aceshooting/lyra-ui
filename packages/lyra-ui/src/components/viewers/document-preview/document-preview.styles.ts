@@ -290,12 +290,12 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lr-border-width-thick) solid var(--lr-color-border);
     border-block-start-color: var(--lr-color-brand);
-    animation: lr-document-preview-spin
+    animation: var(--_lr-motion-animation, lr-document-preview-spin
       var(
         --lr-document-preview-spin-duration,
         var(--_lr-document-preview-spin-duration)
       )
-      infinite;
+      infinite);
   }
   /* Determinate progress reuses the ring shape but holds a fixed rotation
      instead of spinning; conic-gradient renders the actual fill, so the ring

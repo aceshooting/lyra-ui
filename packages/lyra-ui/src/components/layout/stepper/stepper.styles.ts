@@ -325,8 +325,8 @@ export const styles = css`
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-border);
-    color: var(--lr-color-text);
+    background: var(--lr-color-neutral-fill-normal);
+    color: var(--lr-color-neutral-on-normal);
     font-size: var(--lr-font-size-xs);
     flex: 0 0 auto;
   }

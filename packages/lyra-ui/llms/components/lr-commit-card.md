@@ -6,7 +6,7 @@
 - **Class** `LyraCommitCard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/commit-card/commit-card.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated css-property** `--lr-commit-card-background` since `21.1.0`; use css-property `--lr-commit-card-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -51,8 +51,7 @@ exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { collapsed: boolean
-}`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
 'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.

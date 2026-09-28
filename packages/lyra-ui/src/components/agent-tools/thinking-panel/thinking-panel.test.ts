@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
@@ -20,6 +21,12 @@ async function twoFrames(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', [
+  'durationSeconds',
+  'thoughtFor',
+  'thinkingPanelLabel',
+]);
 it('defaults to a localized Thinking label, expanded=false, mode="live", follow=true, no duration', async () => {
   const el = (await fixture(html`<lr-thinking-panel></lr-thinking-panel>`)) as LyraThinkingPanel;
   expect(el.label).to.be.undefined;
@@ -31,6 +38,20 @@ it('defaults to a localized Thinking label, expanded=false, mode="live", follow=
   expect(el.follow).to.be.true;
   expect(el.hasAttribute('follow')).to.be.false;
   expect(el.durationMs).to.be.undefined;
+});
+
+it('accepts a literal false follow state without emitting a user transition', async () => {
+  const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel follow="false"></lr-thinking-panel>`);
+  expect(el.follow).to.be.false;
+  let transitions = 0;
+  el.addEventListener('lr-follow-change', () => transitions++);
+  el.setAttribute('follow', '');
+  await el.updateComplete;
+  expect(el.follow).to.be.true;
+  el.setAttribute('follow', 'false');
+  await el.updateComplete;
+  expect(el.follow).to.be.false;
+  expect(transitions).to.equal(0);
 });
 
 it('renders the label text in [part="label"]', async () => {

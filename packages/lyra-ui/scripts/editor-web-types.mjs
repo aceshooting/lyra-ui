@@ -20,18 +20,7 @@
 // assert the projection is complete relative to `custom-elements.json` -- a new element, or a new
 // member on an existing element, cannot ship without reaching an editor.
 
-/**
- * Prose for a structured `deprecation` record (component metadata's shape, also attached to
- * deprecated attributes and members). Shared with the `vscode-html-data.json` emitter, which shows
- * the same sentence in attribute documentation.
- */
-export function deprecationDescription(deprecation) {
-  if (!deprecation) return undefined;
-  const replacement = deprecation.replacement?.usage ?? deprecation.replacement?.name;
-  return `Deprecated since \`${deprecation.since}\`. Use ${deprecation.replacement?.kind ?? 'API'} ` +
-    `\`${replacement}\`. Removal is not permitted before \`${deprecation.removalNotBefore}\`. ` +
-    deprecation.rationale;
-}
+import { editorDescription, isCurrentEditorEntry } from './editor-descriptions.mjs';
 
 /**
  * A manifest member reaches `js/properties` when it is a public instance field. `static` members
@@ -41,16 +30,14 @@ export function deprecationDescription(deprecation) {
  * in the manifest and the family reference.
  */
 export function isEditorProperty(member) {
-  return member?.kind === 'field' &&
+  return member?.kind === 'field' && isCurrentEditorEntry(member) &&
     member.static !== true &&
     (member.privacy === undefined || member.privacy === 'public');
 }
 
-function propertyDescription(member) {
+function propertyDescription(member, tagName) {
   const sections = [];
-  if (member.description) sections.push(member.description);
-  const deprecation = deprecationDescription(member.deprecation);
-  if (deprecation) sections.push(deprecation);
+  sections.push(editorDescription(member.description, tagName));
   const meta = [];
   if (member.attribute) meta.push(`Attribute: \`${member.attribute}\``);
   if (member.reflects) meta.push('Reflected to its attribute.');
@@ -61,7 +48,7 @@ function propertyDescription(member) {
 /** web-types `js/properties` entries for one element, in manifest order. */
 export function elementProperties(declaration) {
   return (declaration.members ?? []).filter(isEditorProperty).map((member) => {
-    const description = propertyDescription(member);
+    const description = propertyDescription(member, declaration.tagName);
     const deprecated = typeof member.deprecated === 'string'
       ? member.deprecated
       : member.deprecated === true || member.deprecation
@@ -84,9 +71,9 @@ export function elementProperties(declaration) {
  * handler parameter should be typed as.
  */
 export function elementEvents(declaration) {
-  return (declaration.events ?? []).map((event) => ({
+  return (declaration.events ?? []).filter(isCurrentEditorEntry).map((event) => ({
     name: event.name,
-    ...(event.description ? { description: event.description } : {}),
+    description: editorDescription(event.description, declaration.tagName),
     ...(event.type?.text ? { type: event.type.text } : {}),
   }));
 }
@@ -97,9 +84,9 @@ export function elementEvents(declaration) {
  * than an invented `default` alias no shadow root would match.
  */
 export function elementSlots(declaration) {
-  return (declaration.slots ?? []).map((slot) => ({
+  return (declaration.slots ?? []).filter(isCurrentEditorEntry).map((slot) => ({
     name: slot.name ?? '',
-    ...(slot.description ? { description: slot.description } : {}),
+    description: editorDescription(slot.description, declaration.tagName),
   }));
 }
 

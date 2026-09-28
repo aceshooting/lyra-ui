@@ -262,13 +262,13 @@ export const styles = css`
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition-property: opacity, transform, visibility;
-    transition-duration: var(--hide-duration, var(--lr-transition-fast));
+    transition-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-transition-fast)));
   }
   :host([open]) [part="popup"][data-positioned] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
-    transition-duration: var(--show-duration, var(--lr-transition-fast));
+    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-transition-fast)));
   }
   @media (prefers-reduced-motion: reduce) {
     [part="popup"] {

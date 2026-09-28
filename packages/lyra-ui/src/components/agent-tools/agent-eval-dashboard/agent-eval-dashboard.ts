@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-agent-eval-dashboard.js to register this component. */
 export * from './agent-eval-dashboard.class.js';
 import '../../charts/chart/lite-chart.js';
 import '../../data/stat/stat.js';

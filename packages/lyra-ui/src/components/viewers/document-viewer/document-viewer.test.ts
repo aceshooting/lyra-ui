@@ -557,14 +557,14 @@ describe("dialog wiring", () => {
     const dialog = el.shadowRoot!.querySelector("lr-dialog")!;
     const eventPromise = oneEvent(el, "lr-close");
     dialog.dispatchEvent(
-      new CustomEvent<DialogCloseReason>("lr-close", {
-        detail: "escape",
+      new CustomEvent<{ reason: DialogCloseReason }>("lr-close", {
+        detail: { reason: "escape" },
         bubbles: true,
         composed: true,
       })
     );
     const event = await eventPromise;
-    expect(event.detail).to.equal("escape");
+    expect(event.detail).to.deep.equal({ reason: "escape" });
     expect(el.open).to.be.false;
   });
 
@@ -583,7 +583,7 @@ describe("dialog wiring", () => {
     wrapper.addEventListener("lr-close", () => wrapperClose++);
     dialog.dispatchEvent(
       new CustomEvent("lr-close", {
-        detail: "escape",
+        detail: { reason: "escape" },
         bubbles: true,
         composed: true,
       })
@@ -619,8 +619,8 @@ describe("dialog wiring", () => {
     wrapper.addEventListener("lr-close", () => closes++);
 
     rendererDialog.dispatchEvent(
-      new CustomEvent<DialogCloseReason>("lr-close", {
-        detail: "close-button",
+      new CustomEvent<{ reason: DialogCloseReason }>("lr-close", {
+        detail: { reason: "close-button" },
         bubbles: true,
         composed: true,
       })
@@ -1287,9 +1287,9 @@ describe('shell dialog lifecycle containment', () => {
     const onShellEvent = (event: Event): void => {
       shellEvents.push(event);
     };
-    const closes: CustomEvent<DialogCloseReason>[] = [];
+    const closes: CustomEvent<{ reason: DialogCloseReason }>[] = [];
     const onClose = (event: Event): void => {
-      closes.push(event as CustomEvent<DialogCloseReason>);
+      closes.push(event as CustomEvent<{ reason: DialogCloseReason }>);
     };
     for (const name of SHELL_EVENTS) dialog.addEventListener(name, onShellEvent);
     el.addEventListener('lr-close', onClose);
@@ -1319,7 +1319,7 @@ describe('shell dialog lifecycle containment', () => {
       shellEvents.filter((event) => event.defaultPrevented).map((event) => event.type),
       'containment never cancels a shell proposal'
     ).to.deep.equal([]);
-    expect(closes.map((event) => event.detail)).to.deep.equal(['escape']);
+    expect(closes.map((event) => event.detail)).to.deep.equal([{ reason: 'escape' }]);
     expect(closes.map((event) => event.cancelable)).to.deep.equal([false]);
     expect(el.open).to.equal(false);
     expect(dialog.open).to.equal(false);

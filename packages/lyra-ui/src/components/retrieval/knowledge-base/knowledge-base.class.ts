@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -86,11 +88,9 @@ export interface LyraKnowledgeBaseEventMap {
   /** A row's "Delete source" action was activated. No built-in confirmation, matching
    *  `lr-thread-list`'s identical `lr-thread-delete` contract. */
   'lr-source-delete': CustomEvent<{ sourceId: string }>;
-  /** The nested table's built-in `[part='retry-button']` was activated, only rendered while
-   *  `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
-   *  set instead. Mirrors `<lr-table>`'s own `lr-retry` contract exactly (decision 40) -- this
-   *  component owns the property and re-proposes its own event rather than letting the nested
-   *  table's internal state drift out of sync with it. */
+  /** Cancelable retry proposal. The default action clears the parent and nested table error. */
+  'lr-retry-request': CustomEvent<null>;
+  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
   'lr-retry': CustomEvent<null>;
 }
 
@@ -216,7 +216,7 @@ function normalizeTimestamp(
  * Precedence matches `<lr-table>`'s: `error` beats the empty state, so a failed load never falls
  * through to "no sources" copy that would hide the retry affordance. This component forwards
  * `error`/`errorHeading`/`errorDescription` to the nested table but owns the retry commit itself
- * (it intercepts the table's own `lr-retry`, re-proposes its own cancelable one, and only then
+ * (it intercepts the table's own `lr-retry-request`, re-proposes its own cancelable one, and only then
  * clears `error`) so the outer property never drifts out of sync with the table's internal state.
  *
  * @customElement lr-knowledge-base
@@ -224,9 +224,10 @@ function normalizeTimestamp(
  * @event lr-source-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
  * @event lr-source-pause - A row's "Pause sync" action was activated. `detail: { sourceId }`.
  * @event lr-source-delete - A row's "Delete source" action was activated. `detail: { sourceId }`.
- * @event lr-retry - The nested table's built-in `[part='retry-button']` was activated, only
- *   rendered while `error` is set. Cancelable: the default action clears `error`;
- *   `preventDefault()` leaves it set instead.
+ * @event lr-retry-request - Cancelable retry proposal, `detail: null`. Emitted before the
+ *   compatibility alias; either veto keeps both the parent and nested table in the error state.
+ * @event lr-retry - Deprecated cancelable veto alias of `lr-retry-request`, `detail: null`;
+ *   removal not before 24.0.0. Only vetoing this alias emits a deprecation warning.
  * @slot error - Replaces the nested table's built-in failed-load state, including its retry
  *   button, while `error` is set.
  * @csspart base - The root.
@@ -302,6 +303,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'sources',
@@ -386,22 +388,43 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     );
   }
 
-  /** The nested table's `lr-retry` intercepted at the boundary: this component owns `error`, so it
-   *  stops the table's own event from leaking out unmediated, re-proposes its own cancelable
-   *  `lr-retry`, and only then decides whether to clear `error` -- and whether to also veto the
-   *  nested table's own default clear, so the two never drift out of sync. Mirrors
-   *  `<lr-document-library>`'s identical `onTableSortRequest` intercept-and-re-propose shape. */
+  private retryRequestActive = false;
+
+  /** Translate the nested table's canonical retry request into this component's own request
+   *  and compatibility alias. Either veto keeps both error states set. The child's legacy alias
+   *  is contained separately without invoking its deprecated veto contract. */
   private onTableRetry = (event: CustomEvent<null>): void => {
     event.stopPropagation();
-    const request = requestThenCommit<null, CustomEvent>({
-      requestDetail: null,
-      emitRequest: (detail, init: { cancelable: true }) =>
-        this.emit('lr-retry', detail, init),
-      commit: () => {
-        this.error = false;
-      },
-    });
-    if (request.defaultPrevented) event.preventDefault();
+    if (this.retryRequestActive) {
+      event.preventDefault();
+      return;
+    }
+    this.retryRequestActive = true;
+    try {
+      const request = requestThenCommit<null, CustomEvent>({
+        requestDetail: null,
+        emitRequest: (detail, init: { cancelable: true }) => {
+          const request = this.emit('lr-retry-request', detail, init);
+          const legacy = this.emit('lr-retry', detail, init);
+          if (legacy.defaultPrevented) {
+            warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+            request.preventDefault();
+          }
+          return request;
+        },
+        commit: () => {
+          this.error = false;
+        },
+      });
+      if (request.defaultPrevented) event.preventDefault();
+    } finally {
+      this.retryRequestActive = false;
+    }
+  };
+
+  /** Contain the nested table's deprecated compatibility event without using its veto contract. */
+  private stopTableRetryAlias = (event: Event): void => {
+    event.stopPropagation();
   };
 
   private get normalizedSources(): KnowledgeSource[] {
@@ -538,7 +561,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       name: this.sourceName(source),
     });
     return html`
-      <lr-dropdown part="actions-menu" placement="bottom-end">
+      <lr-dropdown without-arrow part="actions-menu" placement="bottom-end">
         <button
           slot="trigger"
           type="button"
@@ -673,7 +696,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .columns=${this.tableColumns()}
           .rows=${sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
-          .accessibleLabel=${tableLabel}
+          aria-label=${tableLabel}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
           empty-description=${this.localize(
             'knowledgeBaseEmptyDescription',
@@ -684,7 +707,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           error-description=${this.errorDescription}
           @lr-row-activate=${(e: Event) => e.stopPropagation()}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
-          @lr-retry=${this.onTableRetry}
+          @lr-retry-request=${this.onTableRetry}
+          @lr-retry=${this.stopTableRetryAlias}
         >${this.hasErrorSlot
           ? html`<div slot="error"><slot name="error"></slot></div>`
           : nothing}</lr-table>

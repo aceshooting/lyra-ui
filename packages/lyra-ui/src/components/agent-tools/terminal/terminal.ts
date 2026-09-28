@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-terminal.js to register this component. */
 export * from './terminal.class.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { LyraTerminal } from './terminal.class.js';

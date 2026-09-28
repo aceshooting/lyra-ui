@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js to register this component. */
 export * from './spreadsheet-viewer.class.js';
 export * from './spreadsheet-loader.js';
 import { html } from 'lit';

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-image-viewer.js to register this component. */
 export * from './image-viewer.class.js';
 import { html } from 'lit';
 import { LyraImageViewer } from './image-viewer.class.js';

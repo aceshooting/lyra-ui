@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -98,6 +99,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     realtimeSessionUnmute: LYRA_DEFAULT_realtimeSessionUnmute,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 

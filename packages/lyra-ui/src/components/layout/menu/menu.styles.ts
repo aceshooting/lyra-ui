@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
@@ -16,6 +17,7 @@ export const styles = css`
      is invalid at computed-value time for that name alone and computes to its 100% initial value,
      which is precisely the "uncap to the container" the consumer meant. */
   :host {
+    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -27,7 +29,11 @@ export const styles = css`
        are overflow safety, not a style choice, so no value of the hook can make a menu wider than
        its container or the viewport. Take 100% or none to uncap to the container. */
     --_lr-menu-max-inline-size: var(--lr-menu-max-inline-size, var(--lr-size-20rem));
-    min-inline-size: var(--lr-menu-min-inline-size, var(--lr-size-10rem));
+    min-inline-size: min(
+      var(--lr-menu-min-inline-size, var(--lr-size-10rem)),
+      var(--lr-popover-viewport-clamp),
+      100%
+    );
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
       var(--_lr-menu-max-inline-size),
@@ -61,7 +67,11 @@ export const styles = css`
        the host's copy -- that name is registered with inherits: false precisely so the fallback is
        a deterministic 100% here rather than whatever an ancestor menu happened to carry. */
     --_lr-menu-max-inline-size: var(--lr-menu-max-inline-size, var(--lr-size-20rem));
-    min-inline-size: var(--lr-menu-min-inline-size, var(--lr-size-10rem));
+    min-inline-size: min(
+      var(--lr-menu-min-inline-size, var(--lr-size-10rem)),
+      var(--lr-popover-viewport-clamp),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
       var(--_lr-menu-max-inline-size),
@@ -145,4 +155,6 @@ export const styles = css`
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     margin: var(--lr-space-xs) var(--lr-space-xs);
   }
+
+  ${glassSurface(':host(:not([data-contained]):not([data-submenu])), .submenu-surface', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`)}
 `;

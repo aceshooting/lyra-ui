@@ -53,7 +53,7 @@ export const AlreadyDecided: Story = {
   render: () => html`<lr-confirm-bar tool-name="run_shell" decision="approved"></lr-confirm-bar>`,
 };
 
-/** `lr-approve`/`lr-deny` are cancelable: a listener that calls `preventDefault()` and keeps its
+/** `lr-approve-request`/`lr-deny-request` are cancelable: a listener that calls `preventDefault()` and keeps its
  *  own async work in flight sets `pendingAction` to show a `loading` button and a `disabled` sibling,
  *  instead of the bar resolving synchronously. */
 export const AsyncPending: Story = {
@@ -62,7 +62,7 @@ export const AsyncPending: Story = {
     <lr-confirm-bar
       tool-name="send_email"
       .args=${{ to: 'ops@example.com' }}
-      @lr-approve=${(e: CustomEvent) => {
+      @lr-approve-request=${(e: CustomEvent) => {
         e.preventDefault();
         const bar = (e.currentTarget as HTMLElement).closest('lr-confirm-bar') as HTMLElement & {
           pendingAction: string | null;
@@ -151,7 +151,7 @@ export const Narrow320px: Story = {
   `,
 };
 
-/** The declarative async path: `lr-approve`/`lr-deny`'s detail carries `waitUntil(promise)`,
+/** The declarative async path: `lr-approve-request`/`lr-deny-request`'s detail carries `waitUntil(promise)`,
  *  ExtendableEvent-style. Calling it holds the bar pending for the promise's lifetime and the
  *  settlement finalizes the decision — no `preventDefault()`, no cast of `currentTarget`, no manual
  *  `pendingAction` bookkeeping. Deny here rejects, so the bar bounces back for a retry. */
@@ -161,10 +161,10 @@ export const WaitUntil: Story = {
     <lr-confirm-bar
       tool-name="send_email"
       .args=${{ to: 'ops@example.com' }}
-      @lr-approve=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+      @lr-approve-request=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
         e.detail.waitUntil(new Promise((resolve) => setTimeout(resolve, 1500)));
       }}
-      @lr-deny=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+      @lr-deny-request=${(e: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
         e.detail.waitUntil(
           new Promise((_, reject) => setTimeout(() => reject(new Error('Mailbox locked')), 1500)),
         );

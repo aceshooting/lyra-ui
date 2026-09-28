@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./pagination.js";
 import type { LyraPagination } from "./pagination.js";
@@ -44,6 +45,8 @@ async function compactPagination(
 ): Promise<LyraPagination> {
   return pagination(template);
 }
+
+expectLocaleFallback('ar-EG', ['next', 'paginationLabel', 'previous']);
 
 it("exposes totalPages as the sole derived total plus a localized item-range summary", async () => {
   const el = await pagination();

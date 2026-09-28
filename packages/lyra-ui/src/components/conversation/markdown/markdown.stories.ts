@@ -175,15 +175,15 @@ export const InternalLinks: Story = {
       <lr-markdown
         internal-link-prefix="/docs/"
         .content=${'See [the setup guide](/docs/setup) or visit [our site](https://example.com).'}
-        @lr-link-click=${(e: CustomEvent<{ href: string }>) => {
+        @lr-link-activate=${(e: CustomEvent<{ href: string }>) => {
           const out = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
-          out.textContent = `lr-link-click: ${JSON.stringify(e.detail)}`;
+          out.textContent = `lr-link-activate: ${JSON.stringify(e.detail)}`;
         }}
       ></lr-markdown>
       <p style="margin:0; color:var(--lr-color-text-quiet); font-size:0.8125rem;">
         Click "the setup guide" — its href matches
         <code>internal-link-prefix</code>, so the click is intercepted and reported via
-        <code>lr-link-click</code> instead of navigating. "our site" is external and opens normally.
+        <code>lr-link-activate</code> instead of navigating. "our site" is external and opens normally.
       </p>
     </div>
   `,

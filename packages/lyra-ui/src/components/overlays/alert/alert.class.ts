@@ -642,13 +642,13 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   private nextFrame(): Promise<void> {
     const view = this.ownerDocument.defaultView;
-    if (!view || prefersReducedMotion(view)) return Promise.resolve();
+    if (!view || prefersReducedMotion(this)) return Promise.resolve();
     return new Promise((resolve) => view.requestAnimationFrame(() => resolve()));
   }
 
   private async waitForMotion(base: HTMLElement | null): Promise<void> {
     const view = this.ownerDocument.defaultView;
-    if (!base || !view || prefersReducedMotion(view)) return;
+    if (!base || !view || prefersReducedMotion(this)) return;
     void view.getComputedStyle(base).opacity;
     const animations = base.getAnimations({ subtree: true });
     await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
@@ -701,9 +701,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   private startCountdown(duration: number): void {
-    const view = this.ownerDocument.defaultView;
     if (
-      prefersReducedMotion(view) ||
+      prefersReducedMotion(this) ||
       (this.countdown !== 'ltr' && this.countdown !== 'rtl')
     ) {
       return;

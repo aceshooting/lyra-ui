@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-select-dialog.js';
 import type {
@@ -13,6 +14,24 @@ import {
   sendMouse,
 } from '../../../../test/wtr-mouse.js';
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'selectTools',
+  'searchToolsPlaceholder',
+  'toolSelectSummary',
+  'useDefaultTools',
+  'toolCount',
+  'otherCategory',
+]);
+expectLocaleFallback('tr', [
+  'selectTools',
+  'searchToolsPlaceholder',
+  'toolSelectSummary',
+  'useDefaultTools',
+  'otherCategory',
+  'toolCount',
+  'clear',
+]);
 it('provides rendered hover feedback for the native search input', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`
     <lr-tool-select-dialog open style="--lr-color-brand: rgb(1, 2, 3)"></lr-tool-select-dialog>
@@ -700,7 +719,7 @@ describe('selection', () => {
     expect(el.selectedToolIds).to.deep.equal(['run_python']);
   });
 
-  it('proposes a checkbox change before committing and never flips its checkbox when lr-change is canceled', async () => {
+  it('proposes a checkbox change before committing and never flips its checkbox when lr-change-request is canceled', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
@@ -709,7 +728,7 @@ describe('selection', () => {
     let selectedAtProposal: string[] | undefined;
     let useDefaultsAtProposal: boolean | undefined;
     let cancelable = false;
-    el.addEventListener('lr-change', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       const change = event as CustomEvent<ToolSelectionChangeDetail>;
       proposal = change.detail;
       selectedAtProposal = [...el.selectedToolIds];
@@ -812,7 +831,7 @@ describe('useDefaults', () => {
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
   });
 
-  it('proposes a defaults change before committing and never flips its switch when lr-change is canceled', async () => {
+  it('proposes a defaults change before committing and never flips its switch when lr-change-request is canceled', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
@@ -822,7 +841,7 @@ describe('useDefaults', () => {
     let selectedAtProposal: string[] | undefined;
     let useDefaultsAtProposal: boolean | undefined;
     let cancelable = false;
-    el.addEventListener('lr-change', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       const change = event as CustomEvent<ToolSelectionChangeDetail>;
       proposal = change.detail;
       selectedAtProposal = [...el.selectedToolIds];
@@ -890,7 +909,7 @@ describe('dismissal', () => {
     expect(el.open).to.be.true;
     const closed = oneEvent(el, 'lr-close');
     el.hide();
-    expect((await closed).detail).to.equal('api');
+    expect((await closed).detail).to.deep.equal({ reason: 'api' });
     expect(el.open).to.be.false;
   });
 
@@ -899,7 +918,7 @@ describe('dismissal', () => {
       <lr-tool-select-dialog open></lr-tool-select-dialog>
     `);
     const reasons: string[] = [];
-    el.addEventListener('lr-close', (event) => reasons.push(event.detail));
+    el.addEventListener('lr-close', (event) => reasons.push(event.detail.reason));
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
     await el.updateComplete;
 
@@ -917,7 +936,7 @@ describe('dismissal', () => {
     const { detail } = await listener;
 
     expect(el.open).to.be.false;
-    expect(detail).to.equal('backdrop');
+    expect(detail).to.deep.equal({ reason: 'backdrop' });
   });
 
   it('closes on Escape and emits lr-close with reason "escape"', async () => {
@@ -929,7 +948,7 @@ describe('dismissal', () => {
     const { detail } = await listener;
 
     expect(el.open).to.be.false;
-    expect(detail).to.equal('escape');
+    expect(detail).to.deep.equal({ reason: 'escape' });
   });
 
   it('does not respond to Escape while closed', async () => {
@@ -970,7 +989,7 @@ describe('dismissal', () => {
 
     expect(el.open).to.be.false;
     expect(count).to.equal(1);
-    expect(detail).to.equal('done');
+    expect(detail).to.deep.equal({ reason: 'done' });
   });
 });
 
@@ -1703,13 +1722,13 @@ function recordCheckedWrites(control: LyraCheckbox | LyraSwitch): {
 }
 
 describe('vetoed toggles never flip the composed control', () => {
-  it('leaves a tool checkbox untouched when the host cancels the proposed lr-change', async () => {
+  it('leaves a tool checkbox untouched when the host cancels the proposed lr-change-request', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const checkbox = checkboxFor(el, 'web_search');
     const spy = recordCheckedWrites(checkbox);
-    el.addEventListener('lr-change', (event) => event.preventDefault());
+    el.addEventListener('lr-change-request', (event) => event.preventDefault());
 
     try {
       clickCheckbox(checkbox);
@@ -1727,13 +1746,13 @@ describe('vetoed toggles never flip the composed control', () => {
     }
   });
 
-  it('leaves the defaults switch untouched when the host cancels the proposed lr-change', async () => {
+  it('leaves the defaults switch untouched when the host cancels the proposed lr-change-request', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
     const spy = recordCheckedWrites(toggle);
-    el.addEventListener('lr-change', (event) => event.preventDefault());
+    el.addEventListener('lr-change-request', (event) => event.preventDefault());
 
     try {
       (toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
@@ -1771,4 +1790,47 @@ describe('vetoed toggles never flip the composed control', () => {
 
     expect(leaked).to.deep.equal([]);
   });
+});
+
+
+it('orders the tool selection request before a noncancelable accepted notification', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
+  `);
+  const seen: string[] = [];
+  el.addEventListener('lr-change-request', (event) => {
+    seen.push('request');
+    expect(event.cancelable).to.equal(true);
+    expect(el.selectedToolIds).to.deep.equal([]);
+    const detail = (event as CustomEvent<ToolSelectionChangeDetail>).detail;
+    expect(Object.isFrozen(detail.selectedToolIds)).to.equal(true);
+    expect(detail.selectedToolIds).to.deep.equal(['web_search']);
+  });
+  el.addEventListener('lr-change', (event) => {
+    seen.push('change');
+    expect(event.cancelable).to.equal(false);
+    expect(el.selectedToolIds).to.deep.equal(['web_search']);
+    event.preventDefault();
+    expect(event.defaultPrevented).to.equal(false);
+  });
+  clickCheckbox(checkboxFor(el, 'web_search'));
+  expect(seen).to.deep.equal(['request', 'change']);
+});
+
+it('preserves host tool state written during a request and refuses recursive toggles', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
+  `);
+  let requests = 0;
+  let changes = 0;
+  el.addEventListener('lr-change-request', () => {
+    requests++;
+    if (requests === 1) clickCheckbox(checkboxFor(el, 'run_python'));
+    el.selectedToolIds = ['host-tool'];
+  });
+  el.addEventListener('lr-change', () => changes++);
+  clickCheckbox(checkboxFor(el, 'web_search'));
+  expect(requests).to.equal(1);
+  expect(changes).to.equal(0);
+  expect(el.selectedToolIds).to.deep.equal(['host-tool']);
 });

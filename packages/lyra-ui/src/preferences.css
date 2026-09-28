@@ -1,0 +1,58 @@
+/* Optional accessibility preferences; independent of mode, look, surface, density, and accent.
+   Adopt this sheet in each author-owned shadow root that contains preference attributes. */
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+
+@layer lr-theme-preset {
+  :where([data-lr-contrast='system']) {
+    --_lr-preference-quiet-color: initial;
+    --_lr-preference-control-color: initial;
+    --_lr-preference-focus-min: initial;
+    --_lr-preference-glass-opacity: initial;
+    --_lr-preference-glass-filter: initial;
+  }
+
+  :where([data-lr-contrast='more']) {
+    --_lr-preference-quiet-color: currentColor;
+    --_lr-preference-control-color: currentColor;
+    --_lr-preference-focus-min: 3px;
+    --_lr-preference-glass-opacity: 1;
+    --_lr-preference-glass-filter: none;
+  }
+
+  :where([data-lr-motion='system']) {
+    --_lr-motion-duration: initial;
+    --_lr-motion-easing: initial;
+    --_lr-motion-transition: initial;
+    --_lr-motion-animation: initial;
+    --_lr-motion-scroll: initial;
+  }
+
+  :where([data-lr-motion='reduce']) {
+    --_lr-motion-duration: 0.001ms;
+    --_lr-motion-easing: linear;
+    --_lr-motion-transition: 0.001ms linear;
+    --_lr-motion-animation: none;
+    --_lr-motion-scroll: auto;
+  }
+
+  /* A system scope may reset a parent choice, but never the OS preference itself. */
+  @media (prefers-contrast: more) {
+    :root, :host, :where([data-lr-contrast='system'], [data-lr-contrast='more']) {
+      --_lr-preference-quiet-color: currentColor;
+      --_lr-preference-control-color: currentColor;
+      --_lr-preference-focus-min: 3px;
+      --_lr-preference-glass-opacity: 1;
+      --_lr-preference-glass-filter: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root, :host, :where([data-lr-motion='system'], [data-lr-motion='reduce']) {
+      --_lr-motion-duration: 0.001ms;
+      --_lr-motion-easing: linear;
+      --_lr-motion-transition: 0.001ms linear;
+      --_lr-motion-animation: none;
+      --_lr-motion-scroll: auto;
+    }
+  }
+}

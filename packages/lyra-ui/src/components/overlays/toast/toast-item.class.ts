@@ -719,7 +719,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       '[part="toast-item"]'
     );
     const view = this.ownerDocument.defaultView;
-    if (!surface || !view || prefersReducedMotion(view))
+    if (!surface || !view || prefersReducedMotion(this))
       return Promise.resolve();
 
     const computed = view.getComputedStyle(surface);

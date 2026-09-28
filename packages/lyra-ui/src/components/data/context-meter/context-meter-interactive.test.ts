@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
@@ -33,7 +34,7 @@ function pressedStates(nodes: Element[]): (string | null)[] {
 }
 function activations(el: LyraContextMeter): LyraContextMeterSegmentActivateDetail[] {
   const seen: LyraContextMeterSegmentActivateDetail[] = [];
-  el.addEventListener('lr-segment-activate', (event) => {
+  el.addEventListener('lr-segment-activate-request', (event) => {
     seen.push((event as CustomEvent<LyraContextMeterSegmentActivateDetail>).detail);
   });
   return seen;
@@ -51,6 +52,8 @@ async function meter(
   await el.updateComplete;
   return el;
 }
+
+expectLocaleFallback('de-DE', ['contextMeterSegmentLabel', 'contextMeterUsedOfTotal']);
 
 describe('lr-context-meter legendDisplay', () => {
   it('renders labels only by default, exactly as before the property existed', async () => {
@@ -203,7 +206,7 @@ describe('lr-context-meter interactive mode', () => {
     const el = await meter({ interactive: true });
     const seen = activations(el);
     let cancelable = false;
-    el.addEventListener('lr-segment-activate', (event) => {
+    el.addEventListener('lr-segment-activate-request', (event) => {
       cancelable = event.cancelable;
     });
     segments(el)[1]!.click();
@@ -235,7 +238,7 @@ describe('lr-context-meter interactive mode', () => {
 
   it('leaves the selection alone when a listener vetoes the activation', async () => {
     const el = await meter({ interactive: true });
-    el.addEventListener('lr-segment-activate', (event) => event.preventDefault());
+    el.addEventListener('lr-segment-activate-request', (event) => event.preventDefault());
     segments(el)[2]!.click();
     await el.updateComplete;
     expect([...el.selectedIndices], 'a vetoed activation commits nothing').to.deep.equal([]);

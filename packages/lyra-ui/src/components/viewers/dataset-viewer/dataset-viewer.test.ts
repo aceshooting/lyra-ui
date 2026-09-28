@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   aTimeout,
   expect,
@@ -152,6 +153,9 @@ async function assertScrollFrameFollowsAdoption(
     frame.remove();
   }
 }
+
+expectLocaleFallback('ar', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'noData']);
+expectLocaleFallback('tr', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument']);
 
 describe('lr-dataset-viewer', () => {
   it('keeps loaded cells and later updates working when a highlight omits its anchor', async () => {

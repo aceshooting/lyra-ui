@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "node": "22.23.2",
+    "icu": "78.2",
+    "cldr": "48.0",
+    "unicode": "17.0"
+  },
+  "source": "Captured from cardinal Intl.PluralRules(locale).resolvedOptions().pluralCategories on the pinned Node, ICU, CLDR, and Unicode versions.",
+  "locales": {
+    "am": [
+      "one",
+      "other"
+    ],
+    "ar": [
+      "few",
+      "many",
+      "one",
+      "other",
+      "two",
+      "zero"
+    ],
+    "ar-XB": [
+      "few",
+      "many",
+      "one",
+      "other",
+      "two",
+      "zero"
+    ],
+    "bho": [
+      "one",
+      "other"
+    ],
+    "bn": [
+      "one",
+      "other"
+    ],
+    "cs": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
+    "da": [
+      "one",
+      "other"
+    ],
+    "de": [
+      "one",
+      "other"
+    ],
+    "de-CH": [
+      "one",
+      "other"
+    ],
+    "el": [
+      "one",
+      "other"
+    ],
+    "en": [
+      "one",
+      "other"
+    ],
+    "en-XA": [
+      "one",
+      "other"
+    ],
+    "es": [
+      "many",
+      "one",
+      "other"
+    ],
+    "fa": [
+      "one",
+      "other"
+    ],
+    "fa-AF": [
+      "one",
+      "other"
+    ],
+    "fi": [
+      "one",
+      "other"
+    ],
+    "fil": [
+      "one",
+      "other"
+    ],
+    "fr": [
+      "many",
+      "one",
+      "other"
+    ],
+    "gu": [
+      "one",
+      "other"
+    ],
+    "ha": [
+      "one",
+      "other"
+    ],
+    "he": [
+      "one",
+      "other",
+      "two"
+    ],
+    "hi": [
+      "one",
+      "other"
+    ],
+    "hr": [
+      "few",
+      "one",
+      "other"
+    ],
+    "hu": [
+      "one",
+      "other"
+    ],
+    "id": [
+      "other"
+    ],
+    "ig": [
+      "other"
+    ],
+    "it": [
+      "many",
+      "one",
+      "other"
+    ],
+    "ja": [
+      "other"
+    ],
+    "jv": [
+      "other"
+    ],
+    "kk": [
+      "one",
+      "other"
+    ],
+    "kn": [
+      "one",
+      "other"
+    ],
+    "ko": [
+      "other"
+    ],
+    "lah": [
+      "one",
+      "other"
+    ],
+    "ln": [
+      "one",
+      "other"
+    ],
+    "ml": [
+      "one",
+      "other"
+    ],
+    "mr": [
+      "one",
+      "other"
+    ],
+    "ms": [
+      "other"
+    ],
+    "my": [
+      "other"
+    ],
+    "nb": [
+      "one",
+      "other"
+    ],
+    "ne": [
+      "one",
+      "other"
+    ],
+    "nl": [
+      "one",
+      "other"
+    ],
+    "nn": [
+      "one",
+      "other"
+    ],
+    "om": [
+      "one",
+      "other"
+    ],
+    "or": [
+      "one",
+      "other"
+    ],
+    "pa": [
+      "one",
+      "other"
+    ],
+    "pcm": [
+      "one",
+      "other"
+    ],
+    "pl": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
+    "ps": [
+      "one",
+      "other"
+    ],
+    "pt-BR": [
+      "many",
+      "one",
+      "other"
+    ],
+    "pt-PT": [
+      "many",
+      "one",
+      "other"
+    ],
+    "ro": [
+      "few",
+      "one",
+      "other"
+    ],
+    "ru": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
+    "sd": [
+      "one",
+      "other"
+    ],
+    "sl": [
+      "few",
+      "one",
+      "other",
+      "two"
+    ],
+    "su": [
+      "other"
+    ],
+    "sv": [
+      "one",
+      "other"
+    ],
+    "sw": [
+      "one",
+      "other"
+    ],
+    "ta": [
+      "one",
+      "other"
+    ],
+    "te": [
+      "one",
+      "other"
+    ],
+    "th": [
+      "other"
+    ],
+    "tr": [
+      "one",
+      "other"
+    ],
+    "uk": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
+    "ur": [
+      "one",
+      "other"
+    ],
+    "uz": [
+      "one",
+      "other"
+    ],
+    "vi": [
+      "other"
+    ],
+    "yo": [
+      "other"
+    ],
+    "zh-CN": [
+      "other"
+    ],
+    "zh-TW": [
+      "other"
+    ],
+    "zu": [
+      "one",
+      "other"
+    ]
+  },
+  "runtimeFallbacks": {
+    "lah": {
+      "resolvedLocale": "en-US",
+      "reason": "ICU 78.2 does not support lah (the canonical form of pnb). Preserve the existing runtime fallback category set; this is not Lahnda grammatical certification."
+    }
+  }
+}

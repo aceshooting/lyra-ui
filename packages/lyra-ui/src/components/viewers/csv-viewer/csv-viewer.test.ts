@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   aTimeout,
   expect,
@@ -150,6 +151,9 @@ async function assertScrollFrameFollowsAdoption(
     frame.remove();
   }
 }
+
+expectLocaleFallback('ar', ['noData']);
+expectLocaleFallback('tr', ['csvViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'loadingDocument']);
 
 describe('lr-csv-viewer', () => {
   it('renders an empty localized state by default', async () => {

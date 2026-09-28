@@ -60,7 +60,7 @@ export type ResultCardAppearance = LyraFrame;
  *   `--lr-result-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-result-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the `[part="header"]` divider.
- * @cssprop [--lr-result-card-radius=var(--lr-radius)] - Corner radius of the outer card.
+ * @cssprop [--lr-result-card-radius=var(--lr-radius-container)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0

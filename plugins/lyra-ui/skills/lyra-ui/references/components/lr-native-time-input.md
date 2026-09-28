@@ -6,7 +6,7 @@
 - **Class** `LyraNativeTimeInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/native-time-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated property** `noSpinButtons` / `no-spin-buttons` since `21.1.0`; use property `without-spin-buttons`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 18 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below

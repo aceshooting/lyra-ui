@@ -6,7 +6,7 @@
 - **Class** `LyraPromptQueue`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

@@ -80,7 +80,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
 
   /** Visual size, on the shared six-step ladder. `'large'`/`'l'` matches `--lr-icon-button-size`
    *  (4rem); `'medium'`/`'m'` (the default) is the mirrored 3rem diameter. */
-  @property({ reflect: true, useDefault: true }) size: LyraSize = 'medium';
+  @property({ reflect: true, useDefault: true }) size: LyraSize = 'm';
 
   /** `'circle'` (the default), `'rounded'` (the shared medium corner radius), or `'square'` (no
    *  corner radius at all). */
@@ -170,7 +170,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
       this.size !== 'medium' &&
       this.size !== 'large'
     )
-      this.size = 'medium';
+      this.size = 'm';
     if (
       changed.has('shape') &&
       this.shape !== 'circle' &&

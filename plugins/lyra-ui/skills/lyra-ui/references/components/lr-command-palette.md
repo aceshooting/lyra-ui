@@ -6,8 +6,8 @@
 - **Class** `LyraCommandPalette`, also available unregistered from `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated event** `lr-open` since `19.0.1`; use event `addEventListener('lr-show', handler)`; removal not before `21.0.0` — lr-open collided in name with an unrelated "item activated" lr-open fired by lr-document-library/lr-source-card, and broke the lr-show/lr-hide overlay-lifecycle vocabulary its architectural sibling lr-lightbox already follows. lr-show fires identically (same null detail, cancelability, and timing) at the same call site, and lr-open is kept as a deprecated alias through the 20.x line.
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -67,13 +67,12 @@ no-op if already open),
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-show`, `lr-close` (both `detail: null`, cancelable — fired before the
-mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
+**Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
+with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable
+`lr-close` with that same reason object after closing; `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
-gains or loses focus. `lr-open` is a deprecated alias for `lr-show` (same `detail: null`,
-cancelability, and timing, fired at the same call site; either event's `preventDefault()` vetoes
-the open) kept for the 20.x line and removed no earlier than 21.0.0. The `focus`/`blur` bridge is
+gains or loses focus. The `focus`/`blur` bridge is
 new in 10.0.0: native `focus`/`blur` neither
 bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
 never fired at all. `lr-close` is not dialog-scoped: nesting this palette inside a consumer's own

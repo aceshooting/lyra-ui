@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-agent-run.js to register this component. */
 export * from './agent-run.class.js';
 import '../../conversation/generation-metrics/generation-metrics.js';
 import '../../conversation/usage-badge/usage-badge.js';

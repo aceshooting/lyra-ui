@@ -2178,11 +2178,13 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
 
     let highlightFired = false;
     el.addEventListener("lr-highlight-activate", () => (highlightFired = true));
-    const listener = oneEvent(el, "lr-link-click");
+    const listener = oneEvent(el, "lr-link-activate");
+    const legacy = oneEvent(el, 'lr-link-click');
     withNavigationBlocked(() =>
       (el.shadowRoot!.querySelector("a") as HTMLElement).click()
     );
     const { detail } = await listener;
+    expect((await legacy).detail).to.deep.equal(detail);
     expect(detail).to.deep.equal({ href: "/docs/world" });
     expect(highlightFired).to.be.false;
   });
@@ -2209,7 +2211,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       order.push("highlight");
       details.push((event as CustomEvent).detail);
     });
-    el.addEventListener("lr-link-click", (event) => {
+    el.addEventListener("lr-link-activate", (event) => {
       order.push("link");
       details.push((event as CustomEvent).detail);
     });
@@ -2305,7 +2307,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     el.addEventListener("lr-highlight-activate", (event) =>
       events.push((event as CustomEvent).detail)
     );
-    el.addEventListener("lr-link-click", (event) =>
+    el.addEventListener("lr-link-activate", (event) =>
       events.push((event as CustomEvent).detail)
     );
 
@@ -2336,13 +2338,13 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     const a = el.shadowRoot!.querySelector("a")!;
 
     let fired = false;
-    el.addEventListener("lr-link-click", () => (fired = true));
+    el.addEventListener("lr-link-activate", () => (fired = true));
     withNavigationBlocked(() => a.click());
     await el.updateComplete;
     expect(fired).to.be.false;
   });
 
-  it("does not fire lr-link-click for an ordinary external link even when internal-link-prefix is set", async () => {
+  it("does not fire lr-link-activate for an ordinary external link even when internal-link-prefix is set", async () => {
     const el = (await fixture(
       html`<lr-markdown-core
         internal-link-prefix="/docs/"
@@ -2353,7 +2355,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     const a = el.shadowRoot!.querySelector("a")!;
 
     let fired = false;
-    el.addEventListener("lr-link-click", () => (fired = true));
+    el.addEventListener("lr-link-activate", () => (fired = true));
     withNavigationBlocked(() => a.click());
     await el.updateComplete;
     expect(fired).to.be.false;
@@ -2371,7 +2373,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     );
 
     let fired = false;
-    el.addEventListener("lr-link-click", () => (fired = true));
+    el.addEventListener("lr-link-activate", () => (fired = true));
     const paragraph = el.shadowRoot!.querySelector(
       '[part="paragraph"]'
     ) as HTMLElement;

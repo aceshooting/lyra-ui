@@ -6,7 +6,7 @@
 - **Class** `LyraCopyButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecated part** `base__control` since `21.1.0`; use part `::part(base-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
 - **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -38,9 +38,9 @@ buttons.
 - `copyLabel?: string` (attribute `copy-label`) — built-in button accessible name and resting
   tooltip text; omission uses localized `copy`, while an explicit empty string suppresses it.
 - `successLabel?: string` (attribute `success-label`) — confirmation name/tooltip text; omission
-  uses localized `copied`, while an explicit empty string suppresses it.
+  uses localized `copied`, while an explicit empty string suppresses it and keeps the tooltip closed.
 - `errorLabel?: string` (attribute `error-label`) — failure name/tooltip text; omission uses
-  localized `copyFailed`, while an explicit empty string suppresses it.
+  localized `copyFailed`, while an explicit empty string suppresses it and keeps the tooltip closed.
 - `tooltip: 'full' | 'copy' | 'none' = 'full'` (reflected) — `full` shows the resting tooltip on
   hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it) and feedback after activation, `copy` shows feedback only, and `none` disables it.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` (attribute

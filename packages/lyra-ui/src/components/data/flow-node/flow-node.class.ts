@@ -13,6 +13,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
@@ -217,6 +218,16 @@ export class LyraFlowNode extends LyraElement {
     this.renderRoot?.querySelector<HTMLSlotElement>('slot[name="toolbar"]')
   );
   private browserStateSeeded = false;
+  private stopMotionWatch?: () => void;
+
+  private syncMotionWatch(): void {
+    if (this.isConnected && this.status === 'running') {
+      this.stopMotionWatch ??= observeReducedMotion(this, () => this.requestUpdate());
+    } else {
+      this.stopMotionWatch?.();
+      this.stopMotionWatch = undefined;
+    }
+  }
 
   private sampleSlotPresence(): void {
     // `hasHeaderSlot`/`hasIconSlot`/`hasToolbarSlot` always read the light-DOM `slot` attribute
@@ -253,7 +264,7 @@ export class LyraFlowNode extends LyraElement {
 
   private shouldPulseRing(): boolean {
     const ownerWindow = this.ownerDocument?.defaultView;
-    return this.status === 'running' && !!ownerWindow && !prefersReducedMotion(ownerWindow);
+    return this.status === 'running' && !!ownerWindow && !prefersReducedMotion(this);
   }
 
   private sampleBrowserState(): void {
@@ -264,6 +275,7 @@ export class LyraFlowNode extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncMotionWatch();
     if (this.hasUpdated) {
       // A reconnect may follow detached light-DOM mutation or adoption into an owner whose motion
       // preference differs, without any reactive property changing to schedule willUpdate().
@@ -277,10 +289,17 @@ export class LyraFlowNode extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.syncMotionWatch();
     // On a browser-only mount connectedCallback() seeds synchronously, so resample here to include
     // same-task property/child writes made after connection but before the first render. A
     // hydrating mount leaves this false until its server-equivalent first update has completed.
     if (this.hasUpdated || this.browserStateSeeded) this.sampleBrowserState();
+  }
+
+  override disconnectedCallback(): void {
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
+    super.disconnectedCallback();
   }
 
   private onSlotChange = (): void => {

@@ -16,7 +16,8 @@
 //   node scripts/generate-palette.mjs
 // and commit the result. `scripts/check-contrast.mjs` then asserts the guarantees the grid claims.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { assertCanonicalPalette, readCanonicalPalette } from './palette-canonical.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -277,10 +278,8 @@ ${buildGrid(ramps, 'dark')
 \`;
 `;
 
-mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, output, 'utf8');
 
-// --- the same grid, again, in theme.css ---------------------------------------------------------
+// --- validate the canonical theme projection ---------------------------------------------------
 // `theme.css` is optional. A consumer who never loads it must still get these exact colours, which
 // is why the component stylesheet above carries the whole grid as its own fallbacks. But a consumer
 // who DOES load it must not get different ones -- `tokens.test.ts` asserts that equality directly,
@@ -289,7 +288,6 @@ writeFileSync(outputPath, output, 'utf8');
 // `:host-context()`, so the shadow-scoped rule cannot see an ancestor class; these declarations are
 // ordinary custom properties on a document element, and custom properties inherit through the
 // shadow boundary in every engine.
-const themePath = join(packageDir, 'src', 'theme.css');
 const themeGrid = (mode) =>
   buildGrid(ramps, mode, { resolve: (variant, step) => ramps[variant].find((e) => e.step === step).hex })
     .split('\n')
@@ -303,24 +301,17 @@ const themeGrid = (mode) =>
     )
     .join('\n');
 
-// The blocks appear light-then-dark, in that order. Replace them in one global pass keyed on
-// occurrence: replacing them one at a time would re-match the block just filled and overwrite the
-// light grid with the dark one.
-const MODES = ['light', 'dark'];
-let seen = 0;
-const themeText = readFileSync(themePath, 'utf8').replace(
-  / *\/\* semantic grid: generated -- see scripts\/generate-palette\.mjs \*\/\n[\s\S]*? *\/\* semantic grid: end \*\//g,
-  (match) => {
-    const mode = MODES[seen++];
-    if (!mode) throw new Error('more semantic-grid marker pairs in theme.css than modes to fill them');
-    return match.replace(
-      /(generate-palette\.mjs \*\/\n)[\s\S]*?( *\/\* semantic grid: end)/,
-      `$1${themeGrid(mode)}\n$2`,
-    );
-  },
-);
-if (seen !== MODES.length) throw new Error(`expected ${MODES.length} semantic-grid marker pairs in theme.css, found ${seen}`);
-writeFileSync(themePath, themeText, 'utf8');
+// style-axes alone owns theme.css. Validate the solver against its canonical inputs instead of
+// rewriting a second generator's artifact. Any intentional palette change must update both the
+// canonical values and the solver definition, keeping design tools and component fallbacks equal.
+assertCanonicalPalette(readCanonicalPalette(packageDir), Object.fromEntries(
+  ['light', 'dark'].map(mode => [mode, Object.fromEntries(
+    [...themeGrid(mode).matchAll(/(--lr-theme-[a-z0-9-]+): (#[0-9a-f]{6});/g)]
+      .map(([, name, value]) => [name, value]),
+  )]),
+));
+mkdirSync(dirname(outputPath), { recursive: true });
+writeFileSync(outputPath, output, 'utf8');
 
 const slots = Object.keys(VARIANTS).length * 9;
 console.log(

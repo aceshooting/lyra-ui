@@ -239,6 +239,23 @@ try {
 
   await generateRegistrationGraph(fixtureRoot);
   assert.equal(readFileSync(before.path, 'utf8'), rendered, 'regeneration must be idempotent');
+
+  const canonicalOnlyPackage = structuredClone(packageJson);
+  delete canonicalOnlyPackage.exports[badge.distModule];
+  writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(canonicalOnlyPackage));
+  const canonicalOnly = await deriveRegistrationGraph(inventory, { packageDir: fixtureRoot });
+  const canonicalBadge = canonicalOnly.entries.find((entry) => entry.tag === badge.tag);
+  assert.equal(canonicalBadge.distModule, badge.entry, 'a canonical-only registration exposes its stable alias');
+  assert.deepEqual(canonicalBadge.registers, badge.registers);
+  assert.deepEqual(canonicalBadge.localeKeys, badge.localeKeys);
+
+  delete canonicalOnlyPackage.exports[badge.entry];
+  writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(canonicalOnlyPackage));
+  await assert.rejects(
+    deriveRegistrationGraph(inventory, { packageDir: fixtureRoot }),
+    /lr-badge\.js: not a published package\.json#exports entry/,
+    'a missing canonical registration must still fail closed',
+  );
 } finally {
   rmSync(fixtureRoot, { recursive: true, force: true });
 }

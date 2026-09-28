@@ -6,7 +6,9 @@
 - **Class** `LyraConfirmBar`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Deprecated event** `lr-approve` since `unreleased`; use event `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated event** `lr-deny` since `unreleased`; use event `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated property** `pending` / `pending` since `21.1.0`; use property `pending-action`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
@@ -19,7 +21,7 @@
 
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. Same `lr-approve`/`lr-deny` event shapes as the dialog, and the same
+focus. Same `lr-approve-request`/`lr-deny-request` event shapes as the dialog, and the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
@@ -41,7 +43,7 @@ is not a document heading by default; `1`–`6` also expose it to heading naviga
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically and
-emits no `lr-approve`/`lr-deny` of its own; `lr-decision-settled` still fires, because the status
+emits no `lr-approve-request`/`lr-deny-request` of its own; `lr-decision-settled` still fires, because the status
 really did render). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
@@ -62,7 +64,7 @@ container that already draws a border doesn't double it, and wins over the dense
 both are set. Before 9.0.0 the density knob alone did both jobs; a bar that relied on that now needs
 `size="s" frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
 `pendingAction: ApprovalAction | null = null` (attribute `pending-action`, reflected) — which action
-is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on
+is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
 `.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
 state. Deprecated alias: `pending` (use `pending-action`; removed in 23.0.0).
@@ -107,10 +109,13 @@ deliberately *not* affected: while a decision is awaiting resolution, focus stil
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
 
-**Events:** `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
-`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny` (`detail: { waitUntil }`, the
+**Events:** `lr-approve-request` and `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
+`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` and `lr-deny` (`detail: { waitUntil }`, the
 same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
+`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
+follows its request with the same detail, including `waitUntil`; either spelling can veto.
+Subscribe to one spelling per action to avoid handling the same proposal twice.
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
 listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,
@@ -123,8 +128,8 @@ then writing `pendingAction` and later `decision` by hand — still works unchan
 resolves the decision itself synchronously, by writing `decision` or `pendingAction` during the dispatch,
 wins outright over both: the bar applies no bookkeeping of its own, `waitUntil()`'s included.
 
-`waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve`/
-`lr-deny` names without it, so a listener bound to the shared name rather than to one component
+`waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve-request`/
+`lr-deny-request` names without it, so a listener bound to the shared name rather than to one component
 must narrow on `event.target` — see that component's Events section.
 
 `lr-decision-settled` fires after the decided `[part="status"]` has rendered and its live-region
@@ -135,9 +140,11 @@ promise chain and Lit's update queue interleave. A `decision` present in the ini
 announces and settles nothing — it never transitioned.
 
 **16.0.0 — breaking detail change.** `lr-deny`'s detail changed from `null` to `{ waitUntil }` and
-`lr-approve`'s from `{ args }` to `{ args, waitUntil }`. A listener that compared the whole detail
+`lr-approve`'s from `{ args }` to `{ args, waitUntil }`. The canonical request events use those same
+detail shapes. A listener that compared the whole detail
 object (`detail === null`, or a deep-equality check against `{ args }`) must read the fields it uses
 instead.
+
 
 **CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
 details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
@@ -186,7 +193,7 @@ repainting everything else that reads them.
   `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
-- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+- An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while
   its own async work is in flight — see `pendingAction` above. If that same listener resolves the
   decision itself synchronously (setting `.decision` or `.pendingAction` directly before returning),
   that wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the listener
@@ -206,16 +213,16 @@ repainting everything else that reads them.
 <script type="module">
   const bar = document.querySelector("lr-confirm-bar");
   bar.args = args;
-  bar.addEventListener("lr-approve", (e) => run(e.detail.args));
-  bar.addEventListener("lr-deny", () => cancel());
+  bar.addEventListener("lr-approve-request", (e) => run(e.detail.args));
+  bar.addEventListener("lr-deny-request", () => cancel());
 </script>
 ```
 
-An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
+An `lr-approve-request`/`lr-deny-request` listener that needs to await its own async work before finalizing calls
 `preventDefault()` and sets `.decision` (or clears `.pendingAction`) once it resolves:
 
 ```ts
-bar.addEventListener("lr-approve", (e) => {
+bar.addEventListener("lr-approve-request", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
     .then(() => {
@@ -236,7 +243,7 @@ found nothing yet:
 
 ```ts
 bar.returnFocusTo = () => document.querySelector('[data-action="delete"]');
-bar.addEventListener("lr-approve", (e) => {
+bar.addEventListener("lr-approve-request", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
     .then(() => {

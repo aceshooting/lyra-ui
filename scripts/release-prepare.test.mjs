@@ -31,12 +31,21 @@ test('release preparation runs every per-package generator in dependency order',
     cursor = indexAfter(lines, `pnpm --filter @aceshooting/lyra-ui --if-present run ${script}`, cursor);
   }
   assert.deepEqual(PACKAGE_GENERATORS, [
+    'archive-changelog',
     'package-metadata',
     'manifest',
     'component-metadata',
     'manifest',
     'component-inventory',
+    'registrations',
+    'autoloader-manifest',
+    'registration-graph',
+    'scoped-definitions',
+    'events',
+    'testing-event-registry',
     'default-string-slices',
+    'translation-slices',
+    'locale-manifest',
     'framework-types',
     'design-tokens',
     'generate-editor-data',
@@ -75,7 +84,7 @@ test('a companion-only release leaves the lyra-ui plugin untouched', () => {
 test('release preparation never lints, tests, packs, commits, tags, or pushes', () => {
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-ui', '@aceshooting/lyra-flags']));
   for (const line of lines) {
-    assert.doesNotMatch(line, /\brun (lint|test|check:)|\bpack\b|publish/u, line);
+    assert.doesNotMatch(line, /\brun (?:lint(?:\b|:)|test(?:\b|:)|check:)|\bpack\b|publish/u, line);
   }
   const executable = source.replace(/^\s*(\/\/|\*|\/\*\*).*$/gmu, '');
   assert.doesNotMatch(executable, /\['(commit|tag|push|add)'/u);

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, render } from 'lit';
 import type { TableColumn } from './table.class.js';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
+import '../../../density.css';
 
 interface DemoRow {
   id: string;
@@ -35,7 +36,7 @@ const meta: Meta = {
 };
 
 export const PersistentSortIndicators: StoryObj = {
-  render: () => html`<lr-table accessible-label="Sortable results" sort-indicators="all"
+  render: () => html`<lr-table aria-label="Sortable results" sort-indicators="all"
     .columns=${columns} .rows=${rows}></lr-table>`,
 };
 export default meta;
@@ -43,6 +44,19 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows}></lr-table>`,
+};
+
+export const RowMinimumAndDensity: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; --lr-theme-table-row-height: 3rem">
+      ${(['compact', 'comfortable', 'touch'] as const).map(density => html`
+        <section data-lr-density=${density}>
+          <h3>${density}</h3>
+          <lr-table aria-label=${`${density} rows`} .columns=${columns} .rows=${rows}></lr-table>
+        </section>
+      `)}
+    </div>
+  `,
 };
 
 /** The opt-in theme-level scrollbar hooks retheme the base scrollport, plus every other internal
@@ -82,7 +96,7 @@ export const ResizableColumns: Story = {
         { ...columns[1]!, resizable: true },
       ]}
       .rows=${rows}
-      @lr-column-resize=${(event: CustomEvent) => console.log(event.detail)}
+      @lr-column-resize-request=${(event: CustomEvent) => console.log(event.detail)}
     ></lr-table>
   `,
 };
@@ -126,7 +140,7 @@ export const ErrorState: Story = {
     docs: {
       description: {
         story:
-          '`error` replaces `<tbody>`’s row content with a built-in failed-load state while keeping the header, filter, and pagination chrome mounted around it — unlike the no-rows empty states, which replace that chrome too. `loading` beats `error` beats every empty branch. The built-in retry button emits a cancelable `lr-retry`; the default action clears `error`, and `preventDefault()` leaves it set for a consumer that owns its own retry timing.',
+          '`error` replaces `<tbody>`’s row content with a built-in failed-load state while keeping the header, filter, and pagination chrome mounted around it — unlike the no-rows empty states, which replace that chrome too. `loading` beats `error` beats every empty branch. The built-in retry button emits a cancelable `lr-retry-request`; the default action clears `error`, and `preventDefault()` leaves it set for a consumer that owns its own retry timing.',
       },
     },
   },
@@ -137,7 +151,7 @@ export const ErrorState: Story = {
       error-description="Check your connection and try again."
       .columns=${columns}
       .rows=${rows}
-      @lr-retry=${(event: CustomEvent) => console.log('retry requested', event)}
+      @lr-retry-request=${(event: CustomEvent) => console.log('retry requested', event)}
     ></lr-table>`,
 };
 
@@ -235,7 +249,7 @@ export const ResponsiveScroll: Story = {
     <div style="inline-size: min(100%, 60rem)">
       <lr-table
         scroll-mode="auto"
-        accessible-label="Accounts"
+        aria-label="Accounts"
         .columns=${responsiveScrollColumns}
         .rows=${rows}
       ></lr-table>
@@ -310,7 +324,7 @@ export const SortTransaction: Story = {
     return html`
       <div style="display:grid;gap:var(--lr-space-s)">
         <lr-table
-          accessible-label="Transactional sorting"
+          aria-label="Transactional sorting"
           .columns=${columns}
           .rows=${rows}
           @lr-sort-request=${report}
@@ -374,7 +388,7 @@ export const ControlledCollectionFocus: Story = {
         </button>
       </div>
       <lr-table
-        accessible-label="Controlled collection focus"
+        aria-label="Controlled collection focus"
         .columns=${columns}
         .rows=${rows}
         .rowKey=${(row: DemoRow) => row.id}
@@ -700,7 +714,7 @@ export const NarrowPriorityActions: Story = {
     narrowStoryFrames(
       (direction) => html`
         <lr-table
-          accessible-label=${direction === 'rtl' ? 'موارد النشر' : 'Bereitstellungsressourcen'}
+          aria-label=${direction === 'rtl' ? 'موارد النشر' : 'Bereitstellungsressourcen'}
           .columns=${narrowPriorityActionColumns}
           .rows=${[
             {
@@ -790,7 +804,7 @@ export const SelfManagedExpansion: Story = {
   },
   render: () =>
     html`<lr-table
-      accessible-label="Self-managed expansion"
+      aria-label="Self-managed expansion"
       expansion-mode="multiple"
       .columns=${detailColumns}
       .rows=${detailRows}
@@ -802,7 +816,7 @@ export const SelfManagedExpansion: Story = {
 export const SingleExpansion: Story = {
   render: () =>
     html`<lr-table
-      accessible-label="One panel at a time"
+      aria-label="One panel at a time"
       expansion-mode="single"
       .columns=${detailColumns}
       .rows=${detailRows}

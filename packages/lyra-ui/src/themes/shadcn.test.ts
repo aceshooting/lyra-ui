@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../test/wtr-mouse.js';
@@ -138,22 +139,22 @@ async function inputBorderColor(): Promise<string> {
 }
 
 /**
- * Every input theme.css's dark rule declares, read from the parsed sheet rather than restated here,
- * so the list follows theme.css. (The consumer-scope focus-ring rule also names .lr-dark, but it sits
- * on :root as well and declares no --lr-theme-* input.)
+ * Public inputs resolved at mode scopes. The mode selector may share a rule with :root;
+ * separate dark-switch rules only declare private slots. Collect across every matching rule
+ * so neither selector grouping nor a private-only switch can empty the rendered comparison.
  */
-function themeDarkInputs(sheet: CSSStyleSheet): string[] {
+function themeModeInputs(sheet: CSSStyleSheet): string[] {
+  const inputs = new Set<string>();
   for (const rule of Array.from(sheet.cssRules)) {
     if (!(rule instanceof CSSLayerBlockRule) || rule.name !== 'lr-theme') continue;
     for (const inner of Array.from(rule.cssRules)) {
-      if (!(inner instanceof CSSStyleRule)) continue;
-      if (!inner.selectorText.includes('.lr-dark') || inner.selectorText.includes(':root')) continue;
-      return Array.from({ length: inner.style.length }, (_, index) => inner.style.item(index)).filter((name) =>
-        name.startsWith('--lr-theme-'),
-      );
+      if (!(inner instanceof CSSStyleRule) || !inner.selectorText.includes('.lr-dark')) continue;
+      for (const name of Array.from(inner.style)) {
+        if (name.startsWith('--lr-theme-')) inputs.add(name);
+      }
     }
   }
-  return [];
+  return [...inputs];
 }
 
 // The marker comments that fence, in each mode block of the preset, the inputs it repeats verbatim
@@ -209,6 +210,8 @@ afterEach(() => {
   for (const node of addedNodes.splice(0)) node.remove();
   document.documentElement.classList.remove('dark', 'light', 'lr-dark', 'lr-light');
 });
+
+expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
 
 describe('shadcn look preset', () => {
   it('beats the base theme whichever stylesheet loads first', async () => {
@@ -301,7 +304,7 @@ describe('shadcn look preset', () => {
   // chart/terminal ramps to theme.css would paint theme.css's light danger tint under the dark danger
   // text, and light chart series on a near-black page.
   it('gives a bare .dark, and a .light region in a dark page, the whole of that mode', async () => {
-    const inputs = themeDarkInputs(await loadSheet('../theme.css'));
+    const inputs = themeModeInputs(await loadSheet('../theme.css'));
     const restyled = await restyledInputs();
     // Non-vacuous: the markers split the preset where the spec's value table ends.
     expect([...restyled]).to.include.members([

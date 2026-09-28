@@ -158,3 +158,23 @@ assert.deepEqual(
 }
 
 console.log('manifest compaction and inheritance expansion tests passed.');
+
+
+const deprecatedRecord = {
+  kind: 'property', name: 'legacy', since: '21.0.0', removalNotBefore: '23.0.0',
+  replacement: { kind: 'property', name: 'current' }, rationale: 'Use the canonical name.',
+};
+const deprecatedFixture = { modules: [{ path: 'fixture.ts', declarations: [{
+  name: 'Fixture', deprecations: [deprecatedRecord],
+  members: [{ kind: 'field', name: 'legacy', deprecated: true, type: { text: 'string' }, deprecation: deprecatedRecord }],
+  attributes: [{ name: 'legacy', deprecated: true, fieldName: 'legacy', deprecation: deprecatedRecord }],
+}]}] };
+const compactDeprecated = compactManifest(deprecatedFixture);
+const compactDeclaration = compactDeprecated.modules[0].declarations[0];
+assert.deepEqual(compactDeclaration.deprecations, [deprecatedRecord]);
+assert.equal(compactDeclaration.members[0].deprecation, undefined);
+assert.equal(compactDeclaration.members[0].deprecationRef, 'property:legacy');
+assert.deepEqual(expandManifestInheritance(compactDeprecated), deprecatedFixture);
+assert.deepEqual(compactManifest(compactDeprecated), compactDeprecated);
+compactDeclaration.members[0].deprecationRef = 'property:missing';
+assert.throws(() => expandManifestInheritance(compactDeprecated), /dangling deprecation reference/);

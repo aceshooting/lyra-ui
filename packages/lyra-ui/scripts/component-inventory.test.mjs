@@ -7948,11 +7948,10 @@ test('inventory validation fails closed on fictional, dangling, default, polarit
     source: 'synthetic-test',
     unreviewedSections: ['methods'],
   };
-  inventory.localMigrations[0].origin = 'lyra-v6';
-  inventory.localMigrations[1].defaults.find(
-    (rule) => rule.member === 'without-arrow'
-  ).value = false;
-  inventory.localMigrations[2].unexpected = true;
+  inventory.localMigrations = [{
+    origin: 'lyra-v6', tag: 'lr-tooltip', unexpected: true,
+    defaults: [{ memberKind: 'attribute', member: 'without-arrow', action: 'insert-if-absent', value: false }],
+  }];
 
   const findings = validateInventory(inventory, {
     upstreamTags,
@@ -8008,10 +8007,11 @@ test('local migration profiles reject duplicate, dangling, and non-insertion con
   const inventory = structuredClone(
     readJson('scripts', 'fixtures', 'component-inventory.json')
   );
-  inventory.localMigrations.push(structuredClone(inventory.localMigrations[0]));
-  inventory.localMigrations[1].tag = 'lr-missing';
-  inventory.localMigrations[2].defaults[0].action = 'replace-value';
-  inventory.localMigrations[2].defaults[1].memberKind = 'property';
+  const invalidProfile = {
+    origin: 'lyra-v7', tag: 'lr-missing',
+    defaults: [{ memberKind: 'property', member: 'distance', action: 'replace-value', value: 6 }],
+  };
+  inventory.localMigrations = [invalidProfile, structuredClone(invalidProfile)];
   const findings = validateLocalMigrations(inventory);
   assert.ok(
     findings.some((finding) => finding.includes('duplicate local migration'))
@@ -8137,4 +8137,58 @@ test('pinned-manifest drift validation compares normalized public data, not raw 
     }),
     ['wa-example: pinned public surface drifted']
   );
+});
+
+
+test('inventory generator facade preserves responsibility module identities', async () => {
+  const facade = await import('./generate-component-inventory.mjs');
+  const responsibilities = [
+    ['source-analysis', ['runtimeModuleSpecifiers', 'optionalPeersForComponent', 'rootRegistrationMetadata', 'rootRegistrationPredecessorTag', 'retainedComponentQualityMetadata', 'sourceForwardsRemoteIconCapability']],
+    ['upstream-definitions', ['reviewedWebAwesomeChart', 'reviewedWebAwesomeSparkline', 'reviewedWebAwesomeCombobox', 'reviewedWebAwesomeFileInput', 'reviewedWebAwesomeDateInput', 'reviewedWebAwesomeDatePicker', 'reviewedWebAwesomeDataGrid', 'reviewedWebAwesomeVideo', 'reviewedWebAwesomeVideoPlaylist']],
+    ['accessibility', ['accessibilityProfileCatalog', 'assertAccessibilityProfilesReferenced', 'reviewedAccessibilityMetadata']],
+    ['migration-mappings', ['reviewedMigrationDecision', 'reviewedMethodEdgeParity', 'migrationParityMetadata']],
+    ['mapping-normalizations', ['reviewedMappingNormalizations']],
+  ];
+  assert.deepEqual(Object.keys(facade).sort(), [
+    'expandLyraInventoryManifest', 'generateInventory',
+    ...responsibilities.flatMap(([, names]) => names),
+  ].sort(), 'the generator facade keeps its exact export surface');
+  for (const [module, names] of responsibilities) {
+    const implementation = await import(`./component-inventory/${module}.mjs`);
+    for (const name of names) {
+      assert.equal(typeof implementation[name], 'function', `${name} remains callable`);
+      assert.equal(facade[name], implementation[name], `${name} keeps its facade identity`);
+    }
+  }
+});
+
+test('Shoelace card radius normalization pins the optional container-radius default', () => {
+  const upstream = normalizeDeclaration({
+    tagName: 'sl-card', cssProperties: [{ name: '--border-radius' }],
+  }, { ecosystem: 'shoelace' });
+  const target = normalizeDeclaration({
+    tagName: 'lr-card', cssProperties: [{ name: '--border-radius', default: 'var(--lr-radius-container)' }],
+  }, { ecosystem: 'lyra' });
+  const normalizations = reviewedMappingNormalizations('sl-card');
+  assert.deepEqual(compareMappedSurfaces(upstream, target, { upstreamPrefix: 'sl-', normalizations }), []);
+  target.cssProperties[0].default = 'var(--unreviewed-radius)';
+  assert.deepEqual(
+    compareMappedSurfaces(upstream, target, { upstreamPrefix: 'sl-', normalizations }).map(({ code }) => code),
+    ['css-default-mismatch'],
+    'the reviewed token alias must not authorize other default changes',
+  );
+});
+
+test('an explicitly current attribute does not inherit its legacy property deprecation', () => {
+  const surface = normalizeDeclaration({
+    tagName: 'lr-sample',
+    members: [{ kind: 'field', name: 'accessibleLabel', attribute: 'aria-label', deprecated: 'Use aria-label.', type: { text: 'string | null' } }],
+    attributes: [
+      { name: 'aria-label', fieldName: 'accessibleLabel', deprecated: false },
+      { name: 'accessible-label', fieldName: 'accessibleLabel' },
+    ],
+  }, { ecosystem: 'lyra' });
+  assert.equal(surface.attributes.find((entry) => entry.name === 'aria-label').deprecated, false);
+  assert.equal(surface.attributes.find((entry) => entry.name === 'accessible-label').deprecated, 'Use aria-label.');
+  assert.equal(surface.properties.find((entry) => entry.name === 'accessibleLabel').deprecated, 'Use aria-label.');
 });

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const TRANSLATION_REVIEW_SCHEMA_VERSION = 1;
+const TRANSLATION_REVIEW_SCHEMA_VERSION = 2;
 const TRANSLATION_REVIEW_SCHEMA_PATH = './translation-reviews.schema.json';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -206,6 +206,11 @@ export function validateTranslationReviews(
       errors.push(`${label}.direction must be "ltr" or "rtl"`);
     }
 
+    const reviewTiers = ['ai-assisted', 'independent-human', 'native-speaker'];
+    if (!reviewTiers.includes(record.reviewTier)) {
+      errors.push(`${label}.reviewTier must be ai-assisted, independent-human, or native-speaker`);
+    }
+
     validateSnapshot(currentSource, record.source, `${label}.source`, errors);
 
     const translatedEntries = catalogs.get(locale);
@@ -248,6 +253,32 @@ export function validateTranslationReviews(
       }
       if (typeof reviewer.evidence !== 'string' || reviewer.evidence.length < 24) {
         errors.push(`${label}.reviewer.evidence must describe the independent review performed`);
+      }
+    }
+
+    if (record.reviewTier === 'independent-human' || record.reviewTier === 'native-speaker') {
+      if (typeof reviewer?.identity !== 'string' || reviewer.identity.trim().length < 2) {
+        errors.push(`${label}.reviewer.identity must attribute a human-tier review to a public name or stable handle`);
+      }
+      if (reviewer?.status !== 'approved') {
+        errors.push(`${label} cannot claim ${record.reviewTier} while its review status is not approved`);
+      }
+      let evidenceReference;
+      try { evidenceReference = new URL(reviewer?.evidenceUrl); } catch { /* Report below. */ }
+      if (!evidenceReference || evidenceReference.protocol !== 'https:' ||
+          evidenceReference.username || evidenceReference.password) {
+        errors.push(`${label}.reviewer.evidenceUrl must reference a public HTTPS review record`);
+      }
+      if (reviewer?.catalogSha256 !== record.catalog?.sha256) {
+        errors.push(`${label}.reviewer.catalogSha256 must match the current catalog snapshot for human review`);
+      }
+    }
+    if (record.reviewTier === 'native-speaker') {
+      if (!validDate(reviewer?.reviewedAt)) {
+        errors.push(`${label}.reviewer.reviewedAt must be a real YYYY-MM-DD date for native-speaker review`);
+      }
+      if (typeof reviewer?.evidence !== 'string' || reviewer.evidence.trim().length < 24) {
+        errors.push(`${label}.reviewer.evidence must identify the native-speaker review evidence`);
       }
     }
 

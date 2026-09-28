@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -25,7 +26,7 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -350,7 +351,6 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
@@ -361,6 +361,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     showMore: LYRA_DEFAULT_showMore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'shortTerm',
@@ -707,11 +708,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         heading=${this.localize(CONFIRM_HEADING_KEY[p.kind])}
         @keydown=${(e: KeyboardEvent) =>
           this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
-        @lr-approve=${(e: CustomEvent) => {
+        @lr-approve=${(event: Event) => event.stopPropagation()}
+        @lr-approve-request=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, true);
         }}
-        @lr-deny=${(e: CustomEvent) => {
+        @lr-deny=${(event: Event) => event.stopPropagation()}
+        @lr-deny-request=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, false);
         }}
@@ -823,11 +826,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
             this.onConfirmKeyDown(e, () =>
               this.resolveForgetAllDecision(forgetPending, false)
             )}
-          @lr-approve=${(e: CustomEvent) => {
+          @lr-approve=${(event: Event) => event.stopPropagation()}
+        @lr-approve-request=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, true);
           }}
-          @lr-deny=${(e: CustomEvent) => {
+          @lr-deny=${(event: Event) => event.stopPropagation()}
+        @lr-deny-request=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, false);
           }}

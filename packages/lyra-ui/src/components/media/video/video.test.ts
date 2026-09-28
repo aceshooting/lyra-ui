@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './video.js';
@@ -132,6 +133,8 @@ function installVisibilityObserver() {
     },
   };
 }
+
+expectLocaleFallback('ar-EG', ['avPlayerPosition', 'play', 'playbackPosition', 'videoEnterFullscreen', 'videoMute', 'videoPlayerLabel', 'videoVolume']);
 
 describe('lr-video public contract', () => {
   it('exposes the documented defaults and always opts into inline playback', async () => {

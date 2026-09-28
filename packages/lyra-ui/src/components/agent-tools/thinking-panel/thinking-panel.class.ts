@@ -13,7 +13,7 @@ import { literalSetConverter, trueDefaultBooleanConverter } from '../../../inter
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -185,7 +185,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     thinking: LYRA_DEFAULT_thinking,

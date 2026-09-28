@@ -248,7 +248,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.segmentButtonAt(index)?.scrollIntoView({
       block: 'nearest',
       inline: 'nearest',
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+      behavior: prefersReducedMotion(this)
         ? 'auto'
         : 'smooth',
     });

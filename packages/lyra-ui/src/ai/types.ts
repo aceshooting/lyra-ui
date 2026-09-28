@@ -159,11 +159,19 @@ export interface DocumentRef {
 export type DocumentLocator = LyraAnchor;
 
 /** Transport progress only. Failures use `ErrorMessagePart` or a domain-specific error field. */
-export type MessagePartState = 'streaming' | 'complete';
+export type MessagePartState = 'streaming' | 'complete' | 'interrupted';
+
+/** Host-owned interruption context. Reasons are already-localized caller data. */
+export interface MessagePartInterruption {
+  resumable: boolean;
+  reason?: string;
+}
 
 export interface MessagePartBase {
   id: string;
   state?: MessagePartState;
+  /** Present when transport interruption leaves this part unfinished. */
+  interruption?: MessagePartInterruption;
   metadata?: Record<string, unknown>;
 }
 

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -212,7 +213,7 @@ export const styles = css`
     animation-fill-mode: forwards;
   }
   :host([data-visible]) [part="progress-ring__indicator"] {
-    animation-name: lr-toast-progress;
+    animation-name: var(--_lr-motion-animation, lr-toast-progress);
   }
   /* no-pressed-state: :hover and :focus-within only mirror the timer's paused state on its
      decorative progress indicator; the close button owns the actual press treatment below. */
@@ -272,4 +273,6 @@ export const styles = css`
       stroke-dashoffset: 1;
     }
   }
+
+  ${glassSurface('[part="toast-item"]', css`var(--lr-color-surface-overlay)`)}
 `;

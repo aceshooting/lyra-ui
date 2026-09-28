@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './path-strip.js';
 import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
@@ -36,6 +37,14 @@ const path: LyraPathElement[] = [
   { kind: 'node', node: { id: 'e2', label: 'Polonium' } },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'pathStripLabel',
+  'scrollerLabel',
+  'scrollPrevious',
+  'scrollNext',
+  'pathNodeStatus',
+]);
 it('defaults to an empty path and an unset label', async () => {
   const el = (await fixture(
     html`<lr-path-strip></lr-path-strip>`

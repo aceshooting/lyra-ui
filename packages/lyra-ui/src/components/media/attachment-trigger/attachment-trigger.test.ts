@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './attachment-trigger.js';
 import '../../layout/menu/menu.js';
@@ -77,7 +78,7 @@ function selectFiles(input: HTMLInputElement, files: File[]): void {
 it('defaults to capabilities=["files"], rendering a single trigger button and no menu', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
   expect(el.capabilities).to.deep.equal(['files']);
-  expect(el.multiple).to.be.true;
+  expect(el.multiple).to.be.false;
   expect(el.disabled).to.be.false;
   const btn = trigger(el);
   expect(btn.getAttribute('aria-label')).to.equal('Attach files');
@@ -386,13 +387,13 @@ it('creates the file array in the current owner-document realm', async () => {
   }
 });
 
-it('forwards multiple to the hidden input, defaulting to true', async () => {
+it('forwards multiple to the hidden input, defaulting to false', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
-  expect(hiddenInput(el)!.multiple).to.be.true;
-
-  el.multiple = false;
-  await el.updateComplete;
   expect(hiddenInput(el)!.multiple).to.be.false;
+
+  el.multiple = true;
+  await el.updateComplete;
+  expect(hiddenInput(el)!.multiple).to.be.true;
 });
 
 it('multiple="false" (plain HTML attribute) also forwards false to the hidden input', async () => {
@@ -922,3 +923,17 @@ describe('aria-describedby forwarding', () => {
     }
   });
 });
+
+it('starts in single-file mode and resets to it after removing explicit multiple', async () => {
+  const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+  expect(el.multiple).to.equal(false);
+  expect(hiddenInput(el)!.multiple).to.equal(false);
+  el.setAttribute('multiple', '');
+  await el.updateComplete;
+  expect(hiddenInput(el)!.multiple).to.equal(true);
+  el.removeAttribute('multiple');
+  await el.updateComplete;
+  expect(hiddenInput(el)!.multiple).to.equal(false);
+});
+
+expectDeprecatedUsage('lr-attachment-trigger', 'property', 'accessibleLabel');

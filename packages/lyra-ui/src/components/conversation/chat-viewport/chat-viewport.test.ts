@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-viewport.js";
 import "../chat-message/chat-message.js";
@@ -68,6 +69,8 @@ function dispatchScrollbarPointerDown(
   );
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', ['chatViewportLabel', 'newMessages']);
 it("defaults to follow=true, bottomThreshold=24, unreadStartIndex=null, and live=off", async () => {
   const el = (await fixture(
     html`<lr-chat-viewport></lr-chat-viewport>`

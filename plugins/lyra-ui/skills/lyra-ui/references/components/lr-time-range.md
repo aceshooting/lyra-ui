@@ -6,7 +6,7 @@
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below

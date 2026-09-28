@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-file-icon.js to register this component. */
 export * from './file-icon.class.js';
 export * from './file-type-metadata.js';
 import { LyraFileIcon } from './file-icon.class.js';

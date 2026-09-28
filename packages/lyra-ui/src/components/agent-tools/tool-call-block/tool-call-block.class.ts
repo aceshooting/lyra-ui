@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -26,7 +27,7 @@ import {
 import { styles } from './tool-call-block.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -153,7 +154,6 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusDenied: LYRA_DEFAULT_statusDenied,
@@ -180,6 +180,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   protected static override deprecatedAliases: LyraDeprecatedAliases = {
     error: 'errorText',
   };
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['redactedFields']);
 

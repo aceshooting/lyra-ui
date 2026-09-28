@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./file-input.js";
 import {
@@ -116,6 +117,8 @@ function dropEntriesWith(el: HTMLElement, entries: readonly unknown[]): void {
   Object.defineProperty(event, "dataTransfer", { value: fakeDataTransfer });
   el.dispatchEvent(event);
 }
+
+expectLocaleFallback('ar-EG', ['fileInputAcceptedMany', 'fileInputDefaultLabel', 'fileInputRejectedMany', 'fileInputRejectedType', 'fileSizeUnitB', 'removeWithContext']);
 
 it("renders the label text by default", async () => {
   const el = (await fixture(
@@ -4618,3 +4621,5 @@ it('draws selected-file rows in the subtle border tier while the dropzone stays 
     'the resting dropzone border left the control-grade --lr-color-border',
   );
 });
+
+expectDeprecatedUsage('lr-file-input', 'property', 'accessibleLabel');

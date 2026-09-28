@@ -722,7 +722,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
     const el = idMatch ?? positionalMatch;
     if (!el) return false;
-    el.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'start' });
+    el.scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'start' });
     return true;
   }
 
@@ -732,7 +732,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
     if (!range) return false;
     const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
-    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'center' });
+    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'center' });
     return true;
   }
 
@@ -1044,7 +1044,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private scrollToActiveSearchMatch(): void {
     const active = this.renderRoot.querySelector('mark[part~="search-match-active"]') as HTMLElement | null;
-    active?.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'center' });
+    active?.scrollIntoView({ behavior: prefersReducedMotion(this) ? 'auto' : 'smooth', block: 'center' });
   }
 
   private clearSearchPaint(): void {

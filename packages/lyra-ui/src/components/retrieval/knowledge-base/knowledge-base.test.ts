@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import {
@@ -80,6 +81,34 @@ function activate(item: LyraMenuItem): void {
     .dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'knowledgeBaseHeading',
+  'knowledgeBaseCreateSource',
+  'knowledgeBaseNameColumn',
+  'knowledgeBaseSyncColumn',
+  'knowledgeBaseHealthColumn',
+  'knowledgeBasePermissionColumn',
+  'knowledgeBaseActionsColumn',
+  'knowledgeBaseEmptyHeading',
+  'knowledgeBaseEmptyDescription',
+  'knowledgeBaseTotalSources',
+  'knowledgeBaseSyncedSources',
+  'knowledgeBaseSyncingSources',
+  'knowledgeBaseNeedsAttention',
+  'trendUnchanged',
+  'tableFilterLabel',
+  'tableFilterPlaceholder',
+  'knowledgeBaseSyncSynced',
+  'knowledgeBaseHealthHealthy',
+  'knowledgeBaseDocumentCount',
+  'knowledgeBasePermissionOwner',
+  'knowledgeBaseRowActionsLabel',
+  'knowledgeBaseSyncAction',
+  'knowledgeBasePauseAction',
+  'knowledgeBaseDeleteAction',
+  'menuLabel',
+]);
 describe('lr-knowledge-base', () => {
   it('defaults to withoutSummary=false, withoutCreate=false, and an empty sources list', async () => {
     const el = (await fixture(
@@ -109,7 +138,7 @@ describe('lr-knowledge-base', () => {
     // The visible heading honors the explicit empty string, but the nested grid must never be
     // left without an accessible name, so its label falls back to the localized default.
     expect(
-      explicitEmpty.shadowRoot!.querySelector<LyraTable>('lr-table')!.accessibleLabel
+      explicitEmpty.shadowRoot!.querySelector<LyraTable>('lr-table')!.getAttribute('aria-label')
     ).to.equal('Knowledge base');
   });
 
@@ -127,8 +156,7 @@ describe('lr-knowledge-base', () => {
     expect(
       el.shadowRoot!.querySelector('[part="heading"]')!.textContent
     ).to.equal('Research library');
-    expect(tableEl(el).getAttribute('aria-label')).to.equal(null);
-    expect(tableEl(el).accessibleLabel).to.equal('Research library');
+    expect(tableEl(el).getAttribute('aria-label')).to.equal('Research library');
   });
 
   it('keeps a host name distinct from the table name and visible heading', async () => {
@@ -141,8 +169,7 @@ describe('lr-knowledge-base', () => {
     const table = tableEl(el);
     await table.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('Team A sources');
-    expect(table.getAttribute('aria-label')).to.equal(null);
-    expect(table.accessibleLabel).to.equal('Research library');
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
     expect(
       el.shadowRoot!.querySelector('[part="heading"]')!.textContent
     ).to.equal('Research library');
@@ -161,29 +188,28 @@ describe('lr-knowledge-base', () => {
     const grid =
       table.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!;
     expect(el.getAttribute('aria-label')).to.equal('Team A sources');
-    expect(table.getAttribute('aria-label')).to.equal(null);
-    expect(table.accessibleLabel).to.equal('Research library');
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
     expect(grid.getAttribute('aria-label')).to.equal('Research library');
 
     el.setAttribute('aria-label', '');
     await el.updateComplete;
     await table.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('');
-    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
     expect(grid.getAttribute('aria-label')).to.equal('Research library');
 
     el.setAttribute('aria-label', 'Revised sources');
     await el.updateComplete;
     await table.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('Revised sources');
-    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
     expect(grid.getAttribute('aria-label')).to.equal('Research library');
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
     await table.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal(null);
-    expect(table.getAttribute('aria-label')).to.equal(null);
+    expect(table.getAttribute('aria-label')).to.equal('Research library');
     expect(grid.getAttribute('aria-label')).to.equal('Research library');
   });
 
@@ -803,7 +829,7 @@ describe('error state', () => {
     );
   });
 
-  it('re-proposes its own cancelable `lr-retry`, clearing `error` only when the default action runs', async () => {
+  it('re-proposes its own cancelable `lr-retry-request`, clearing `error` only when the default action runs', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
@@ -817,7 +843,7 @@ describe('error state', () => {
       received = event as CustomEvent;
       event.preventDefault();
     };
-    el.addEventListener('lr-retry', vetoListener);
+    el.addEventListener('lr-retry-request', vetoListener);
     retryButton.click();
     expect(received?.cancelable).to.equal(true);
     expect(received?.defaultPrevented).to.equal(true);
@@ -826,7 +852,7 @@ describe('error state', () => {
       tableEl(el).error,
       'a vetoed retry must not clear the nested table error either'
     ).to.equal(true);
-    el.removeEventListener('lr-retry', vetoListener);
+    el.removeEventListener('lr-retry-request', vetoListener);
 
     retryButton.click();
     await el.updateComplete;
@@ -984,5 +1010,97 @@ describe('lr-knowledge-base deprecated hide-summary and hide-create aliases', ()
       expect(el.hideSummary).to.equal(false);
       expect(el.hasAttribute('hide-summary')).to.equal(false);
     });
+  });
+});
+
+
+describe('knowledge-base retry request compatibility boundary', () => {
+  for (const veto of ['canonical', 'alias', 'none'] as const) {
+    it(`preserves ${veto} veto semantics without exposing child retry events`, async () => {
+      const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base error></lr-knowledge-base>`);
+      const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+        error: boolean;
+        updateComplete: Promise<unknown>;
+      };
+      await table.updateComplete;
+      const events: string[] = [];
+      const childAliases: Event[] = [];
+      const childRequests: Event[] = [];
+      table.addEventListener('lr-retry-request', event => childRequests.push(event));
+      table.addEventListener('lr-retry', event => childAliases.push(event));
+      for (const type of ['lr-retry-request', 'lr-retry']) {
+        el.addEventListener(type, event => {
+          events.push(event.type);
+          expect(event.composedPath()[0] === el, 'only parent-owned events escape').to.equal(true);
+          expect(event.cancelable).to.equal(true);
+          expect((event as CustomEvent).detail).to.equal(null);
+          expect(el.error, 'dispatch precedes the outer commit').to.equal(true);
+          expect(table.error, 'dispatch precedes the nested commit').to.equal(true);
+          if (type === (veto === 'canonical' ? 'lr-retry-request' : veto === 'alias' ? 'lr-retry' : '')) {
+            event.preventDefault();
+          }
+        });
+      }
+      const warnings = await captureDeprecationWarnings([
+        { tag: 'lr-knowledge-base', kind: 'event', name: 'lr-retry' },
+        { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
+      ], async () => {
+        table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+        await el.updateComplete;
+        await table.updateComplete;
+      });
+      expect(events).to.deep.equal(['lr-retry-request', 'lr-retry']);
+      expect(childRequests).to.have.length(1);
+      expect(childRequests[0]!.defaultPrevented).to.equal(veto !== 'none');
+      expect(childAliases).to.have.length(1);
+      expect(childAliases[0]!.defaultPrevented, 'containment must not veto the child legacy alias').to.equal(false);
+      expect(el.error).to.equal(veto !== 'none');
+      expect(table.error).to.equal(veto !== 'none');
+      expect(warnings.map(warning => warning.key)).to.deep.equal(veto === 'alias'
+        ? ['lyra-deprecated:lr-knowledge-base:event:lr-retry'] : []);
+      if (veto === 'alias') expect(warnings[0]!.message).to.contain('lr-retry-request');
+    });
+  }
+});
+
+
+describe('knowledge-base retry reentry', () => {
+  it('cancels a nested child retry before an outer veto and releases the guard for the next attempt', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base error></lr-knowledge-base>`);
+    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+      error: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    await table.updateComplete;
+    const button = table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!;
+    const events: string[] = [];
+    const childRequests: Event[] = [];
+    table.addEventListener('lr-retry-request', event => childRequests.push(event));
+    el.addEventListener('lr-retry-request', () => events.push('request'));
+    el.addEventListener('lr-retry', () => events.push('alias'));
+    el.addEventListener('lr-retry-request', event => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      event.preventDefault();
+    }, { once: true });
+    const warnings = await captureDeprecationWarnings([
+      { tag: 'lr-knowledge-base', kind: 'event', name: 'lr-retry' },
+      { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
+    ], async () => {
+      button.click();
+      await el.updateComplete;
+      await table.updateComplete;
+      expect(events).to.deep.equal(['request', 'alias']);
+      expect(childRequests).to.have.length(2);
+      expect(childRequests.every(event => event.defaultPrevented)).to.equal(true);
+      expect(el.error).to.equal(true);
+      expect(table.error).to.equal(true);
+      button.click();
+      await el.updateComplete;
+      await table.updateComplete;
+      expect(events).to.deep.equal(['request', 'alias', 'request', 'alias']);
+      expect(el.error).to.equal(false);
+      expect(table.error).to.equal(false);
+    });
+    expect(warnings).to.have.length(0);
   });
 });

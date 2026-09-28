@@ -6,7 +6,7 @@
 - **Class** `LyraTypingIndicator`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/typing-indicator/typing-indicator.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated css-property** `--lr-typing-dot-size` since `21.1.0`; use css-property `--lr-typing-indicator-dot-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-typing-dot-stagger-1` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-1`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-typing-dot-stagger-2` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-2`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.

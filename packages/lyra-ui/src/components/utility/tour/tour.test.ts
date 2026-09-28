@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './tour.js';
@@ -137,6 +138,9 @@ async function waitFor<T>(read: () => T, until: (v: T) => boolean, timeoutMs = 2
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
   }
 }
+
+expectLocaleFallback('ar-EG', ['next', 'previous', 'tourSkip', 'tourStepOf']);
+expectLocaleFallback('fr-test-tour', ['next', 'previous', 'tourSkip']);
 
 describe('lr-tour', () => {
   it('is closed by default and renders no backdrop/spotlight/popover until open', async () => {
@@ -749,7 +753,7 @@ describe('lr-tour', () => {
     const listener = oneEvent(tour, 'lr-tour-end');
     tour.next();
     const event = await listener;
-    expect((event as CustomEvent).detail).to.equal('completed');
+    expect((event as CustomEvent).detail).to.deep.equal({ reason: 'completed' });
     expect(tour.open).to.be.false;
     expect(stepChangeCount).to.equal(0);
   });
@@ -831,7 +835,7 @@ describe('lr-tour', () => {
     const listener = oneEvent(tour, 'lr-tour-end');
     skipButton.click();
     const event = await listener;
-    expect((event as CustomEvent).detail).to.equal('skip');
+    expect((event as CustomEvent).detail).to.deep.equal({ reason: 'skip' });
     expect(tour.open).to.be.false;
 
     const el2 = (await fixture(
@@ -842,7 +846,7 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour2 = el2.querySelector('lr-tour') as LyraTour;
     await tour2.updateComplete;
-    tour2.addEventListener('lr-tour-end', (e) => e.preventDefault());
+    tour2.addEventListener('lr-tour-end-request', (e) => e.preventDefault());
     (tour2.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement).click();
     await tour2.updateComplete;
     expect(tour2.open, 'preventDefault() must keep the tour open').to.be.true;
@@ -861,7 +865,7 @@ describe('lr-tour', () => {
     const listener = oneEvent(tour, 'lr-tour-end');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     const event = await listener;
-    expect((event as CustomEvent).detail).to.equal('escape');
+    expect((event as CustomEvent).detail).to.deep.equal({ reason: 'escape' });
     expect(tour.open).to.be.false;
   });
 
@@ -896,7 +900,7 @@ describe('lr-tour', () => {
         new MouseEvent('click', { bubbles: true }),
       );
       const event = await listener;
-      expect((event as CustomEvent).detail).to.equal('skip');
+      expect((event as CustomEvent).detail).to.deep.equal({ reason: 'skip' });
       expect(tour.open).to.be.false;
     });
   });
@@ -2083,7 +2087,7 @@ describe('lr-tour', () => {
       await Promise.resolve();
 
       expect(count).to.equal(1);
-      expect(detail).to.equal('unmount');
+      expect(detail).to.deep.equal({ reason: 'unmount' });
       expect(cancelable, 'removal has already happened and cannot be vetoed').to.be.false;
       expect(tour.open).to.be.false;
     });
@@ -2559,4 +2563,33 @@ it('does not lock scroll or hijack Escape when opened while detached', async () 
   });
   document.dispatchEvent(escape);
   expect(escape.defaultPrevented, 'Escape must not be swallowed by a detached tour').to.be.false;
+});
+
+it('requests ordinary tour completion with a reason before closing', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-tour .steps=${makeSteps(1)}></lr-tour>${targetButtons(1)}</div>`);
+  const tour = wrapper.querySelector<LyraTour>('lr-tour')!;
+  tour.start();
+  await tour.updateComplete;
+  const order: string[] = [];
+  const veto = (event: CustomEvent<{ reason: string }>) => {
+    order.push('request');
+    expect(tour.open).to.be.true;
+    expect(event.detail).to.deep.equal({ reason: 'api' });
+    event.preventDefault();
+  };
+  tour.addEventListener('lr-tour-end-request', veto);
+  tour.addEventListener('lr-tour-end', (event) => {
+    order.push('commit');
+    expect(event.detail).to.deep.equal({ reason: 'api' });
+    expect(event.cancelable).to.be.false;
+    expect(tour.open).to.be.false;
+  });
+  tour.end('api');
+  await tour.updateComplete;
+  expect(order).to.deep.equal(['request']);
+  expect(tour.open).to.be.true;
+  tour.removeEventListener('lr-tour-end-request', veto);
+  tour.end('api');
+  expect(order).to.deep.equal(['request', 'commit']);
+  expect(tour.open).to.be.false;
 });

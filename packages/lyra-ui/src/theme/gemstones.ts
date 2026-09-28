@@ -55,9 +55,9 @@ export const gemstoneSelectedGlyphStyles: CSSResult = css`
           var(--lr-gemstone-selected-color, var(--lr-color-brand))
       )
       brightness(1);
-    animation: lr-gemstone-selected-shine
+    animation: var(--_lr-motion-animation, lr-gemstone-selected-shine
       var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient))
-      infinite;
+      infinite);
   }
   @keyframes lr-gemstone-selected-shine {
     0%,

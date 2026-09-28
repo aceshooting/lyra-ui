@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-zoomable-frame.js to register this component. */
 import { defineElement } from '../../../internal/prefix.js';
 import { LyraZoomableFrame } from './zoomable-frame.class.js';
 

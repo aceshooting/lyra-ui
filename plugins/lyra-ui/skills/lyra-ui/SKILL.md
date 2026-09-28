@@ -25,10 +25,16 @@ hundred tokens:
 |---|---|
 | Which component to use / its import path | `references/index.md` |
 | One component's full API | `references/components/<tag>.md` — path derived from the tag, no search needed |
-| Library-wide behavior | `references/shared.md` |
+| Library-wide behavior | `references/shared.md` (combined compatibility guide) |
+| Imports, registration, events, forms, styling, localization, frameworks, AI, or utilities | The matching `references/shared/<topic>.md` guide |
 | Design tokens | `references/tokens.md` |
 | What to `npm install` | `references/peers.md` |
 | `wa-*`/`sl-*` renames | `references/migration.md` |
+
+For a narrow library-wide lookup, choose the matching file in `references/shared/`:
+`imports-and-registration.md`, `events-and-types.md`, `forms-and-accessibility.md`,
+`styles-and-tokens.md`, `localization-and-rtl.md`, `frameworks-and-ssr.md`, `ai-and-peers.md`, or
+`testing-and-utilities.md`. `references/shared.md` remains the combined compatibility guide.
 
 Example: `<lr-table>` → `references/components/lr-table.md`. Each component file carries
 its import path, optional peers, properties with types and defaults, events with payloads, slots,

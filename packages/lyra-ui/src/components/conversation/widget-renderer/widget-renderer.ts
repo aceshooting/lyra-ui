@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-widget-renderer.js to register this component. */
 export { LyraWidgetRenderer } from './widget-renderer.class.js';
 export type { LyraWidgetRendererEventMap } from './widget-renderer.class.js';
 export { createWidgetDocument } from './resolve.js';

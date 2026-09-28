@@ -1,4 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { getLyraLocale, setLyraLocale } from '../internal/localization.js';
+import '../translations/fr/forms.js';
+import '../translations/fr/shared.js';
+import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
+import { fixtureCleanup, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import '../components/forms/combobox/combobox.js';
 import '../components/forms/select/select.js';
 import '../components/forms/locale-picker/locale-picker.js';
@@ -23,6 +27,20 @@ import {
   submitConfirmDecision,
   toggleSwitch,
 } from './interaction-drivers.js';
+
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
+before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+after(() => {
+  fixtureCleanup();
+  setFlagUrlResolver(null);
+});
+
+let previousLocale: string;
+beforeEach(() => { previousLocale = getLyraLocale(); });
+afterEach(() => {
+  fixtureCleanup();
+  setLyraLocale(previousLocale);
+});
 
 const comboboxFixture = () => html`
   <lr-combobox>

@@ -5,6 +5,19 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Průběh výzkumu',
+  researchProgressEmpty: 'Nejsou k dispozici žádné výzkumné kroky.',
+  researchProgressLimit: 'Ukazuje prvních {count} výzkumných kroků.',
+  researchProgressStatusPending: 'Čeká na vyřízení',
+  researchProgressStatusRunning: 'Probíhá',
+  researchProgressStatusCompleted: 'Dokončeno',
+  researchProgressStatusFailed: 'Nepodařilo se',
+  researchProgressSources: {
+    few: '{count} zdroje',
+    many: '{count} zdroje',
+    one: '{count} zdroj',
+    other: '{count} zdrojů',
+  },
   graphLegendLabel: 'Legenda grafu',
   entityChipWithType: '{label}, {type}',
   showMore: 'Zobrazit více',

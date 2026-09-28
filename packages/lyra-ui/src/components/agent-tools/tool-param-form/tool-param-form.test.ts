@@ -2275,6 +2275,24 @@ describe('bounded hostile input snapshots', () => {
     expect(el.validity.customError).to.equal(true);
   });
 
+  it('rejects malformed required entries without dropping their constraints', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    let calls = 0;
+    const accessor = ['field'];
+    Object.defineProperty(accessor, '0', { get() { calls++; return 'field'; } });
+    const hostile = new Proxy(['field'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    for (const required of [[123], accessor, hostile, new Array(1)]) {
+      el.schema = { type: 'object', properties: { field: { type: 'string' } }, required: required as string[] };
+      expect(el.validity.customError).to.equal(true);
+    }
+    expect(calls).to.equal(0);
+  });
+
   it('rejects hostile required descriptors and malformed property snapshots without getters', () => {
     const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
     const revokedRequired = Proxy.revocable([] as string[], {});

@@ -6,7 +6,7 @@
 - **Class** `LyraMultiSplit`, also available unregistered from `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -254,7 +254,7 @@ reentrant mutation aborts the proposal. A forced close when a responsive collaps
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
-fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`); `lr-toggle-request` (cancelable proposal before interactive overlay state changes, with `expanded` and compatibility `open`; direct writes and forced responsive closes do not emit it)
 
 **Slots:** default (each direct child element is one panel; set a unique `panel-id` on every child
 when `storage-key` is used).

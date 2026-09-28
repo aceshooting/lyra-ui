@@ -6,7 +6,7 @@ import type { LyraToastItem, LyraToastSize, LyraToastVariant } from './toast-ite
 import { styles } from './toast-item.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function announcementTexts(politeness: 'polite' | 'assertive', ownerDocument = document): string[] {
   const sink = ownerDocument.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -1857,8 +1857,7 @@ it('renders the close-button focus-visible outline from the shared focus-ring to
   `);
   await waitUntil(() => el.hasAttribute('data-visible'));
   const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
-  await sendKeys({ press: 'Tab' });
-  close.focus();
+  await focusByKeyboard(close);
   await waitUntil(() => {
     const computed = getComputedStyle(close);
     return (

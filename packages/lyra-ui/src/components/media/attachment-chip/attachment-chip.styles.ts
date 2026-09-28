@@ -195,7 +195,7 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lr-border-width-medium) solid var(--lr-color-border);
     border-block-start-color: var(--lr-attachment-chip-accent, var(--_lr-attachment-chip-accent));
-    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration, var(--_lr-attachment-chip-spinner-duration)) infinite;
+    animation: var(--_lr-motion-animation, lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration, var(--_lr-attachment-chip-spinner-duration)) infinite);
   }
 
   [part='retry-button'],

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import {
@@ -15,6 +16,10 @@ import {
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './tool-param-form.styles.js';
+import { EMPTY_SCHEMA, MAX_ENUM_OPTIONS, MAX_SCHEMA_FIELDS, snapshotFormValue, snapshotSchema, type SchemaSnapshot } from './tool-param-snapshot.js';
+import { toolParamChoices, toolParamConstraintFailure, validToolParamConstraints } from './tool-param-constraints.js';
+import type { FlatToolParamSchema, ToolParamFormProperty, ToolParamFormValue } from './tool-param-types.js';
+export type { FlatToolParamSchema, ToolParamFormProperty, ToolParamFormPropertyType, ToolParamFormPrimitive, ToolParamFormValue, ToolParamStringFormat, ToolParamEnumOption, ToolParamEnumItems } from './tool-param-types.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
@@ -37,585 +42,10 @@ import {
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamFormat, LYRA_DEFAULT_toolParamInvalidConstraint, LYRA_DEFAULT_toolParamInvalidSelection, LYRA_DEFAULT_toolParamMaxItems, LYRA_DEFAULT_toolParamMaxLength, LYRA_DEFAULT_toolParamMaximum, LYRA_DEFAULT_toolParamMinItems, LYRA_DEFAULT_toolParamMinLength, LYRA_DEFAULT_toolParamMinimum, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** The four leaf property types this flat-schema renderer understands. */
-export type ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean';
-export type ToolParamFormPrimitive = string | number | boolean;
-
-/**
- * One `schema.properties` entry. Deliberately shallow — see the class doc for
- * the full scope limitation this type encodes.
- */
-export interface ToolParamFormProperty {
-  readonly type: ToolParamFormPropertyType;
-  /** A closed set of string choices, rendered as a `<lr-select>`. Only meaningful when `type` is `'string'`. */
-  readonly enum?: readonly string[];
-  /** Helper text rendered under the field. */
-  readonly description?: string;
-  /** Display label. Falls back to the property key itself when omitted. */
-  readonly title?: string;
-  /** Pre-filled value used whenever `value` doesn't already have this key. */
-  readonly default?: unknown;
-  /** Exact primitive value required when the property is present. For a `'string'` (non-enum) or
-   * `'number'`/`'integer'` property, `const` also pre-fills the field (taking priority over
-   * `default` when both are present) and renders its control `readonly` — visible, focusable and
-   * still submitted, but not editable. The `'boolean'`/enum `<lr-select>` fields are unaffected:
-   * `const` there remains pure post-touch validation. */
-  readonly const?: ToolParamFormPrimitive;
-  /** Native editing-assistance hints forwarded when this property renders a text input. */
-  readonly autocomplete?: string;
-  readonly spellcheck?: boolean;
-  readonly autocapitalize?: string;
-  readonly autoCorrect?: string;
-  readonly inputMode?: string;
-  readonly enterKeyHint?: string;
-}
-
-/**
- * The (intentionally flat) JSON Schema subset this component can render:
- * a plain object whose every property is a string, number/integer, boolean,
- * or string enum. See the class doc for what's out of scope.
- */
-export interface FlatToolParamSchema {
-  readonly type: 'object';
-  readonly properties: Readonly<Record<string, ToolParamFormProperty>>;
-  readonly required?: readonly string[];
-}
-
-const MAX_SCHEMA_FIELDS = 100;
-const MAX_ENUM_OPTIONS = 500;
-const MAX_VALUE_ENTRIES = 10_000;
-const MAX_VALUE_NODES = 50_000;
-const MAX_VALUE_INSPECTIONS = MAX_VALUE_NODES * 2;
-const MAX_VALUE_DEPTH = 16;
-const OMIT_VALUE = Symbol('omit-tool-param-value');
-const LIMIT_VALUE = Symbol('limit-tool-param-value');
-const FUNCTION_TO_STRING = Function.prototype.toString;
-const OBJECT_CONSTRUCTOR_SOURCE = FUNCTION_TO_STRING.call(Object);
-
-export type ToolParamFormValue = Readonly<Record<string, unknown>>;
-
-interface SnapshotBudget {
-  remaining: number;
-  /** Source positions stay spent when an invalid branch restores retained-node state. */
-  remainingInspections: number;
-  readonly seen: WeakMap<object, unknown>;
-  readonly seenEntries: object[];
-  invalid: boolean;
-  truncated: boolean;
-}
-
-interface SnapshotCheckpoint {
-  readonly remaining: number;
-  readonly seenEntries: number;
-  readonly truncated: boolean;
-}
-
-function isPlainRecord(value: object): boolean {
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    if (Object.getPrototypeOf(prototype) !== null) return false;
-    const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
-    if (
-      !constructorDescriptor ||
-      !('value' in constructorDescriptor) ||
-      typeof constructorDescriptor.value !== 'function'
-    ) {
-      return false;
-    }
-    const constructor = constructorDescriptor.value;
-    const constructorPrototype = Object.getOwnPropertyDescriptor(constructor, 'prototype');
-    return Boolean(
-      constructorPrototype &&
-      'value' in constructorPrototype &&
-      constructorPrototype.value === prototype &&
-      FUNCTION_TO_STRING.call(constructor) === OBJECT_CONSTRUCTOR_SOURCE,
-    );
-  } catch {
-    return false;
-  }
-}
-
-function checkpointSnapshot(budget: SnapshotBudget): SnapshotCheckpoint {
-  return {
-    remaining: budget.remaining,
-    seenEntries: budget.seenEntries.length,
-    truncated: budget.truncated,
-  };
-}
-
-function restoreSnapshotCheckpoint(budget: SnapshotBudget, checkpoint: SnapshotCheckpoint): void {
-  budget.remaining = checkpoint.remaining;
-  budget.truncated = checkpoint.truncated;
-  while (budget.seenEntries.length > checkpoint.seenEntries) {
-    const source = budget.seenEntries.pop();
-    if (source) budget.seen.delete(source);
-  }
-}
-
-function rememberSnapshot(budget: SnapshotBudget, source: object, output: unknown): void {
-  budget.seen.set(source, output);
-  budget.seenEntries.push(source);
-}
-
-function omitInvalidValue(
-  budget: SnapshotBudget,
-  checkpoint: SnapshotCheckpoint,
-): typeof OMIT_VALUE {
-  restoreSnapshotCheckpoint(budget, checkpoint);
-  budget.invalid = true;
-  return OMIT_VALUE;
-}
-
-function snapshotValueEntry(
-  value: unknown,
-  budget: SnapshotBudget,
-  depth: number,
-): unknown | typeof OMIT_VALUE | typeof LIMIT_VALUE {
-  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
-  const checkpoint = checkpointSnapshot(budget);
-  if (typeof value === 'function') return omitInvalidValue(budget, checkpoint);
-  if (depth > MAX_VALUE_DEPTH || budget.remaining <= 0) {
-    budget.truncated = true;
-    return LIMIT_VALUE;
-  }
-  const existing = budget.seen.get(value);
-  if (existing !== undefined) return existing;
-
-  let isArray = false;
-  try {
-    isArray = Array.isArray(value);
-  } catch {
-    return omitInvalidValue(budget, checkpoint);
-  }
-  if (isArray) {
-    if (budget.remainingInspections <= 0) {
-      budget.truncated = true;
-      return LIMIT_VALUE;
-    }
-    budget.remainingInspections -= 1;
-    const output: unknown[] = [];
-    rememberSnapshot(budget, value, output);
-    let sourceLength = 0;
-    try {
-      const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-      if (
-        descriptor &&
-        'value' in descriptor &&
-        typeof descriptor.value === 'number' &&
-        Number.isSafeInteger(descriptor.value) &&
-        descriptor.value >= 0
-      ) {
-        sourceLength = descriptor.value;
-      } else return omitInvalidValue(budget, checkpoint);
-    } catch {
-      return omitInvalidValue(budget, checkpoint);
-    }
-    if (sourceLength > MAX_VALUE_ENTRIES) budget.truncated = true;
-    const length = Math.min(sourceLength, MAX_VALUE_ENTRIES);
-    let outputLength = length;
-    for (let index = 0; index < length; index += 1) {
-      if (budget.remaining <= 0 || budget.remainingInspections <= 0) {
-        budget.truncated = true;
-        outputLength = index;
-        break;
-      }
-      budget.remainingInspections -= 1;
-      let descriptor: PropertyDescriptor | undefined;
-      try {
-        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-      } catch {
-        budget.invalid = true;
-        continue;
-      }
-      if (!descriptor) continue;
-      if (!('value' in descriptor)) {
-        budget.invalid = true;
-        continue;
-      }
-      const entryCheckpoint = checkpointSnapshot(budget);
-      budget.remaining -= 1;
-      const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
-      if (entry === OMIT_VALUE) {
-        restoreSnapshotCheckpoint(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === LIMIT_VALUE) {
-        outputLength = index;
-        break;
-      }
-      Object.defineProperty(output, String(index), {
-        value: entry,
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
-    }
-    output.length = outputLength;
-    return Object.freeze(output);
-  }
-
-  if (!isPlainRecord(value)) return omitInvalidValue(budget, checkpoint);
-  const output: Record<PropertyKey, unknown> = {};
-  rememberSnapshot(budget, value, output);
-  let retained = 0;
-  try {
-    for (const key in value) {
-      if (
-        retained >= MAX_VALUE_ENTRIES ||
-        budget.remaining <= 0 ||
-        budget.remainingInspections <= 0
-      ) {
-        budget.truncated = true;
-        break;
-      }
-      budget.remainingInspections -= 1;
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (!descriptor || !descriptor.enumerable) continue;
-      if (!('value' in descriptor)) {
-        budget.invalid = true;
-        continue;
-      }
-      const entryCheckpoint = checkpointSnapshot(budget);
-      budget.remaining -= 1;
-      const entry = snapshotValueEntry(descriptor.value, budget, depth + 1);
-      if (entry === OMIT_VALUE) {
-        restoreSnapshotCheckpoint(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === LIMIT_VALUE) break;
-      retained += 1;
-      Object.defineProperty(output, key, {
-        value: entry,
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
-    }
-  } catch {
-    return omitInvalidValue(budget, checkpoint);
-  }
-  return Object.freeze(output);
-}
-
-function snapshotFormValue(value: unknown): {
-  readonly value: ToolParamFormValue;
-  readonly invalid: boolean;
-  readonly truncated: boolean;
-} {
-  if (value == null) return { value: Object.freeze({}), invalid: false, truncated: false };
-  let isArray = false;
-  try {
-    isArray = Array.isArray(value);
-  } catch {
-    return { value: Object.freeze({}), invalid: true, truncated: false };
-  }
-  if (typeof value !== 'object' || isArray || !isPlainRecord(value)) {
-    return { value: Object.freeze({}), invalid: true, truncated: false };
-  }
-  const budget: SnapshotBudget = {
-    remaining: MAX_VALUE_NODES,
-    remainingInspections: MAX_VALUE_INSPECTIONS,
-    seen: new WeakMap(),
-    seenEntries: [],
-    invalid: false,
-    truncated: false,
-  };
-  const snapshot = snapshotValueEntry(value, budget, 0);
-  return {
-    value: snapshot === OMIT_VALUE || snapshot === LIMIT_VALUE ? Object.freeze({}) : snapshot as ToolParamFormValue,
-    invalid: budget.invalid || snapshot === OMIT_VALUE,
-    truncated: budget.truncated || snapshot === LIMIT_VALUE,
-  };
-}
-
-interface SchemaSnapshot {
-  readonly schema: FlatToolParamSchema;
-  readonly shapeError: 'object' | 'properties' | '';
-  readonly exceededLimits: boolean;
-}
-
-const EMPTY_SCHEMA: FlatToolParamSchema = Object.freeze({
-  type: 'object',
-  properties: Object.freeze({}),
-});
-
-function snapshotSchemaStringArray(value: unknown): {
-  readonly value?: readonly string[];
-  readonly isArray: boolean;
-  readonly exceededLimit: boolean;
-} {
-  let isArray = false;
-  try {
-    isArray = Array.isArray(value);
-  } catch {
-    return { isArray: false, exceededLimit: false };
-  }
-  if (!isArray) return { isArray: false, exceededLimit: false };
-
-  let sourceLength = 0;
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    if (
-      descriptor &&
-      'value' in descriptor &&
-      typeof descriptor.value === 'number' &&
-      Number.isSafeInteger(descriptor.value) &&
-      descriptor.value >= 0
-    ) {
-      sourceLength = descriptor.value;
-    }
-  } catch {
-    return { isArray: true, value: Object.freeze([]), exceededLimit: false };
-  }
-
-  const output: string[] = [];
-  for (let index = 0; index < Math.min(sourceLength, MAX_SCHEMA_FIELDS); index += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    } catch {
-      continue;
-    }
-    if (descriptor && 'value' in descriptor && typeof descriptor.value === 'string') {
-      output.push(descriptor.value);
-    }
-  }
-  return {
-    isArray: true,
-    value: Object.freeze(output),
-    exceededLimit: sourceLength > MAX_SCHEMA_FIELDS,
-  };
-}
-
-interface SchemaEnumSnapshot {
-  readonly value?: readonly string[];
-  readonly malformed: boolean;
-  readonly exceededLimit: boolean;
-}
-
-function snapshotSchemaEnum(value: unknown): SchemaEnumSnapshot {
-  let isArray = false;
-  try {
-    isArray = Array.isArray(value);
-  } catch {
-    return { malformed: true, exceededLimit: false };
-  }
-  if (!isArray) return { malformed: true, exceededLimit: false };
-
-  let sourceLength = 0;
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-    if (
-      !descriptor
-      || !('value' in descriptor)
-      || typeof descriptor.value !== 'number'
-      || !Number.isSafeInteger(descriptor.value)
-      || descriptor.value < 0
-    ) {
-      return { malformed: true, exceededLimit: false };
-    }
-    sourceLength = descriptor.value;
-  } catch {
-    return { malformed: true, exceededLimit: false };
-  }
-
-  const output: string[] = [];
-  for (let index = 0; index < Math.min(sourceLength, MAX_ENUM_OPTIONS); index += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    } catch {
-      return { malformed: true, exceededLimit: sourceLength > MAX_ENUM_OPTIONS };
-    }
-    if (!descriptor) continue;
-    if (!('value' in descriptor) || typeof descriptor.value !== 'string') {
-      return { malformed: true, exceededLimit: sourceLength > MAX_ENUM_OPTIONS };
-    }
-    output.push(descriptor.value);
-  }
-  return {
-    value: Object.freeze(output),
-    malformed: false,
-    exceededLimit: sourceLength > MAX_ENUM_OPTIONS,
-  };
-}
-
-function snapshotSchemaProperty(value: object): {
-  readonly value?: ToolParamFormProperty;
-  readonly malformed: boolean;
-  readonly exceededLimit: boolean;
-} {
-  let descriptors: PropertyDescriptorMap;
-  try {
-    descriptors = Object.getOwnPropertyDescriptors(value);
-  } catch {
-    return { malformed: true, exceededLimit: false };
-  }
-
-  const withoutEnum: Record<PropertyKey, unknown> = {};
-  let enumDescriptor: PropertyDescriptor | undefined;
-  for (const key of Reflect.ownKeys(descriptors)) {
-    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
-    if (!descriptor?.enumerable) continue;
-    if (key === 'enum') {
-      enumDescriptor = descriptor;
-      continue;
-    }
-    if (!('value' in descriptor)) return { malformed: true, exceededLimit: false };
-    Object.defineProperty(withoutEnum, key, {
-      value: descriptor.value,
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    });
-  }
-
-  const propertySnapshot = snapshotFormValue(withoutEnum);
-  if (propertySnapshot.invalid || propertySnapshot.truncated) {
-    return { malformed: true, exceededLimit: false };
-  }
-
-  let choices: readonly string[] | undefined;
-  let exceededLimit = false;
-  let hasEnum = false;
-  if (enumDescriptor) {
-    if (!('value' in enumDescriptor)) return { malformed: true, exceededLimit: false };
-    hasEnum = true;
-    if (enumDescriptor.value !== undefined) {
-      const enumSnapshot = snapshotSchemaEnum(enumDescriptor.value);
-      if (enumSnapshot.malformed) {
-        return { malformed: true, exceededLimit: enumSnapshot.exceededLimit };
-      }
-      choices = enumSnapshot.value;
-      exceededLimit = enumSnapshot.exceededLimit;
-    }
-  }
-
-  const output: Record<PropertyKey, unknown> = {};
-  for (const key of Reflect.ownKeys(propertySnapshot.value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(propertySnapshot.value, key);
-    if (!descriptor?.enumerable || !('value' in descriptor)) continue;
-    Object.defineProperty(output, key, {
-      value: descriptor.value,
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    });
-  }
-  if (hasEnum) {
-    Object.defineProperty(output, 'enum', {
-      value: choices,
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    });
-  }
-  return {
-    value: Object.freeze(output) as unknown as ToolParamFormProperty,
-    malformed: false,
-    exceededLimit,
-  };
-}
-
-function snapshotSchema(value: unknown): SchemaSnapshot {
-  if (value == null) return { schema: EMPTY_SCHEMA, shapeError: '', exceededLimits: false };
-  let isArray = false;
-  try {
-    isArray = Array.isArray(value);
-  } catch {
-    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
-  }
-  if (typeof value !== 'object' || isArray) {
-    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
-  }
-  let rootDescriptors: PropertyDescriptorMap;
-  try {
-    rootDescriptors = Object.getOwnPropertyDescriptors(value);
-  } catch {
-    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
-  }
-  const typeDescriptor = rootDescriptors['type'];
-  if (!typeDescriptor || !('value' in typeDescriptor) || typeDescriptor.value !== 'object') {
-    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
-  }
-  const propertiesDescriptor = rootDescriptors['properties'];
-  const propertiesValue = propertiesDescriptor && 'value' in propertiesDescriptor
-    ? propertiesDescriptor.value
-    : undefined;
-  if (
-    propertiesValue === null ||
-    typeof propertiesValue !== 'object' ||
-    !isPlainRecord(propertiesValue)
-  ) {
-    return { schema: EMPTY_SCHEMA, shapeError: 'properties', exceededLimits: false };
-  }
-
-  const properties: Record<string, ToolParamFormProperty> = Object.create(null);
-  let shapeError: SchemaSnapshot['shapeError'] = '';
-  let exceededLimits = false;
-  let seenFields = 0;
-  let propertyDescriptors: PropertyDescriptorMap;
-  try {
-    propertyDescriptors = Object.getOwnPropertyDescriptors(propertiesValue);
-  } catch {
-    return { schema: EMPTY_SCHEMA, shapeError: 'properties', exceededLimits: false };
-  }
-  for (const key of Reflect.ownKeys(propertyDescriptors)) {
-    const descriptor = propertyDescriptors[key as keyof PropertyDescriptorMap];
-    if (typeof key !== 'string' || !descriptor?.enumerable) continue;
-    seenFields += 1;
-    if (seenFields > MAX_SCHEMA_FIELDS) {
-      exceededLimits = true;
-      break;
-    }
-    if (
-      !('value' in descriptor) ||
-      descriptor.value === null ||
-      typeof descriptor.value !== 'object' ||
-      !isPlainRecord(descriptor.value)
-    ) {
-      shapeError = 'properties';
-      continue;
-    }
-    const propertySnapshot = snapshotSchemaProperty(descriptor.value);
-    if (propertySnapshot.malformed || !propertySnapshot.value) {
-      shapeError = 'properties';
-      if (propertySnapshot.exceededLimit) exceededLimits = true;
-      continue;
-    }
-    if (propertySnapshot.exceededLimit) exceededLimits = true;
-    properties[key] = propertySnapshot.value;
-  }
-
-  const requiredDescriptor = rootDescriptors['required'];
-  let required: readonly string[] | undefined;
-  if (requiredDescriptor && 'value' in requiredDescriptor) {
-    const requiredSnapshot = snapshotSchemaStringArray(requiredDescriptor.value);
-    if (requiredSnapshot.isArray) {
-      required = requiredSnapshot.value;
-      if (requiredSnapshot.exceededLimit) exceededLimits = true;
-    } else if (requiredDescriptor.enumerable) {
-      shapeError = 'properties';
-    }
-  } else if (requiredDescriptor?.enumerable) {
-    shapeError = 'properties';
-  }
-
-  return {
-    schema: Object.freeze({
-      type: 'object',
-      properties: Object.freeze(properties),
-      ...(required === undefined ? {} : { required }),
-    }),
-    shapeError,
-    exceededLimits,
-  };
-}
 
 function cloneFormValue(
   value: ToolParamFormValue,
@@ -642,13 +72,15 @@ export interface LyraToolParamFormEventMap {
  *
  * **Scope limitation (intentional, not accidental):** this renderer only
  * understands a *flat* object schema — every `properties` entry must be
- * `'string'`, `'number'`, `'integer'`, `'boolean'`, or a string `enum`;
- * primitive `const` is also enforced. Nested objects, arrays,
- * `oneOf`/`anyOf`/`allOf`, `$ref`, constraints such as `minLength`/`minimum`,
- * and schema-valued `additionalProperties` are not read. A full
+ * `'string'`, `'number'`, `'integer'`, `'boolean'`, or a bounded string-enum array.
+ * It validates Unicode string lengths, email/URI/date/date-time formats, numeric minimum/maximum,
+ * and minItems/maxItems. String `oneOf` and array `items.anyOf` accept only titled string constants;
+ * `enumNames` remains supported for existing schemas. Primitive `const` is enforced.
+ * Nested objects, arbitrary arrays/combinators, `$ref`, patterns and schema-valued
+ * `additionalProperties` are not read. A full
  * JSON-Schema-to-form renderer is
  * out of scope for this component; a property whose `type` isn't one of the
- * four above renders a visible "Unsupported field type" note and marks the
+ * supported shapes renders a visible "Unsupported field type" note and marks the
  * form invalid instead of silently dropping it or throwing.
  * A schema is additionally bounded to 100 fields and 500 enum choices per field. Exceeding either
  * ceiling fails the form closed with a localized form-wide error while the bounded prefix remains
@@ -777,6 +209,15 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     toolParamBooleanFalse: LYRA_DEFAULT_toolParamBooleanFalse,
     toolParamBooleanTrue: LYRA_DEFAULT_toolParamBooleanTrue,
     toolParamBooleanUnset: LYRA_DEFAULT_toolParamBooleanUnset,
+    toolParamFormat: LYRA_DEFAULT_toolParamFormat,
+    toolParamInvalidConstraint: LYRA_DEFAULT_toolParamInvalidConstraint,
+    toolParamInvalidSelection: LYRA_DEFAULT_toolParamInvalidSelection,
+    toolParamMaxItems: LYRA_DEFAULT_toolParamMaxItems,
+    toolParamMaxLength: LYRA_DEFAULT_toolParamMaxLength,
+    toolParamMaximum: LYRA_DEFAULT_toolParamMaximum,
+    toolParamMinItems: LYRA_DEFAULT_toolParamMinItems,
+    toolParamMinLength: LYRA_DEFAULT_toolParamMinLength,
+    toolParamMinimum: LYRA_DEFAULT_toolParamMinimum,
     toolParamMissingProperty: LYRA_DEFAULT_toolParamMissingProperty,
     toolParamSchemaLimit: LYRA_DEFAULT_toolParamSchemaLimit,
     unsupportedFieldType: LYRA_DEFAULT_unsupportedFieldType,
@@ -786,6 +227,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
     'lr-input',
@@ -1156,12 +598,17 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
     for (const [key, prop] of Object.entries(props)) {
       const type = (prop as unknown as { type?: unknown })?.type;
-      if (type !== 'string' && type !== 'number' && type !== 'integer' && type !== 'boolean') {
+      if (type !== 'string' && type !== 'number' && type !== 'integer' && type !== 'boolean' && type !== 'array') {
         addError(key, this.localize('unsupportedFieldType', undefined, { type: String(type) }));
         flags.customError = true;
         continue;
       }
 
+      if (!validToolParamConstraints(prop)) {
+        addError(key, this.localize('toolParamInvalidConstraint'));
+        flags.customError = true;
+        continue;
+      }
       const present = Object.prototype.hasOwnProperty.call(effective, key) && effective[key] !== undefined;
       if (!present) {
         if (required.has(key)) {
@@ -1205,6 +652,21 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
             values: getListFormat(this.effectiveLocale, { style: 'long', type: 'disjunction' }).format(prop.enum),
           }),
         );
+        flags.customError = true;
+        continue;
+      }
+      const constraint = toolParamConstraintFailure(prop, v);
+      if (constraint) {
+        const number = getNumberFormat(this.effectiveLocale);
+        const message = constraint === 'minLength' ? this.localize('toolParamMinLength', undefined, { count: number.format(prop.minLength!) })
+          : constraint === 'maxLength' ? this.localize('toolParamMaxLength', undefined, { count: number.format(prop.maxLength!) })
+          : constraint === 'minimum' ? this.localize('toolParamMinimum', undefined, { value: number.format(prop.minimum!) })
+          : constraint === 'maximum' ? this.localize('toolParamMaximum', undefined, { value: number.format(prop.maximum!) })
+          : constraint === 'minItems' ? this.localize('toolParamMinItems', undefined, { count: number.format(prop.minItems!) })
+          : constraint === 'maxItems' ? this.localize('toolParamMaxItems', undefined, { count: number.format(prop.maxItems!) })
+          : constraint === 'format' ? this.localize('toolParamFormat', undefined, { format: prop.format! })
+          : this.localize('toolParamInvalidSelection');
+        addError(key, message);
         flags.customError = true;
         continue;
       }
@@ -1550,7 +1012,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     errorMessage: string,
     effective: unknown,
   ): TemplateResult {
-    if (prop.type === 'string' && prop.enum && prop.enum.length > 0) {
+    const choices = toolParamChoices(prop);
+    if ((prop.type === 'string' || prop.type === 'array') && choices && choices.length > 0) {
       return html`<lr-select
         id=${fieldId}
         .label=${label}
@@ -1558,7 +1021,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .errorText=${errorMessage}
         .required=${false}
         aria-required=${required ? 'true' : 'false'}
-        .value=${typeof effective === 'string' ? effective : ''}
+        .multiple=${prop.type === 'array'}
+        .value=${prop.type === 'array' ? (Array.isArray(effective) ? effective : []) : (typeof effective === 'string' ? effective : '')}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
         @lr-input=${this.stopNestedControlEvent}
@@ -1571,7 +1035,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         @lr-after-hide=${this.stopNestedControlEvent}
         @lr-option-change=${this.stopNestedControlEvent}
       >
-        ${prop.enum.map((v) => html`<lr-option value=${v}>${v}</lr-option>`)}
+        ${choices.map((choice) => html`<lr-option value=${choice.value}>${choice.label}</lr-option>`)}
       </lr-select>`;
     }
     if (prop.type === 'string') {
@@ -1663,7 +1127,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const errorMessage = hasError ? (this._errors[key] ?? '') : '';
     const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
-    const isComposedSelect = prop.type === 'string' && Boolean(prop.enum?.length);
+    const isComposedSelect = (prop.type === 'string' || prop.type === 'array') && Boolean(toolParamChoices(prop)?.length);
     // number/integer fields compose <lr-number-input>, which renders its own label/hint/error
     // from the props passed in renderControl -- same reasoning as the isComposedSelect branch.
     const isComposedNumber = prop.type === 'number' || prop.type === 'integer';

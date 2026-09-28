@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -83,6 +84,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     neighborRowLabel: LYRA_DEFAULT_neighborRowLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'rows',

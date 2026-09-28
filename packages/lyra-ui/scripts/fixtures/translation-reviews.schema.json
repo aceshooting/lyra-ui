@@ -17,7 +17,7 @@
       "const": "./translation-reviews.schema.json"
     },
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "source": {
       "$ref": "#/$defs/sourceSnapshot"
@@ -25,7 +25,11 @@
     "upstreamLocaleBreadth": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["webAwesome", "shoelace", "normalizedUnion"],
+      "required": [
+        "webAwesome",
+        "shoelace",
+        "normalizedUnion"
+      ],
       "properties": {
         "webAwesome": {
           "$ref": "#/$defs/upstreamPin"
@@ -98,7 +102,10 @@
     "snapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["keyCount", "sha256"],
+      "required": [
+        "keyCount",
+        "sha256"
+      ],
       "properties": {
         "keyCount": {
           "type": "integer",
@@ -113,7 +120,11 @@
     "sourceSnapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "keyCount", "sha256"],
+      "required": [
+        "path",
+        "keyCount",
+        "sha256"
+      ],
       "properties": {
         "path": {
           "const": "src/internal/localization.ts#DEFAULT_STRINGS"
@@ -131,7 +142,11 @@
     "upstreamPin": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["version", "commit", "locales"],
+      "required": [
+        "version",
+        "commit",
+        "locales"
+      ],
       "properties": {
         "version": {
           "type": "string",
@@ -152,6 +167,7 @@
       "required": [
         "locale",
         "direction",
+        "reviewTier",
         "source",
         "catalog",
         "translator",
@@ -164,7 +180,18 @@
           "minLength": 2
         },
         "direction": {
-          "enum": ["ltr", "rtl"]
+          "enum": [
+            "ltr",
+            "rtl"
+          ]
+        },
+        "reviewTier": {
+          "enum": [
+            "ai-assisted",
+            "independent-human",
+            "native-speaker"
+          ],
+          "description": "Evidence tier; status remains a separate release workflow state."
         },
         "source": {
           "$ref": "#/$defs/snapshot"
@@ -175,7 +202,12 @@
         "translator": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status", "role", "completedAt", "evidence"],
+          "required": [
+            "status",
+            "role",
+            "completedAt",
+            "evidence"
+          ],
           "properties": {
             "status": {
               "const": "complete-original"
@@ -196,20 +228,50 @@
         "reviewer": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status", "role", "reviewedAt", "evidence"],
+          "required": [
+            "status",
+            "role",
+            "reviewedAt",
+            "evidence"
+          ],
           "properties": {
             "status": {
-              "enum": ["pending-independent-review", "approved"]
+              "enum": [
+                "pending-independent-review",
+                "approved"
+              ]
             },
             "role": {
               "const": "independent localization reviewer"
             },
+            "identity": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Attributable public name or stable handle; required for human review tiers."
+            },
+            "catalogSha256": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "description": "Exact catalog snapshot reviewed; required for human review tiers."
+            },
             "reviewedAt": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "format": "date"
             },
             "evidence": {
-              "type": ["string", "null"]
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "evidenceUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "description": "Public review record identifying the reviewed locale and current catalog snapshot; submitting an intake issue alone is not approval."
             }
           }
         },
@@ -219,7 +281,10 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["messagePath", "rationale"],
+            "required": [
+              "messagePath",
+              "rationale"
+            ],
             "properties": {
               "messagePath": {
                 "type": "string",
@@ -232,7 +297,73 @@
             }
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reviewTier": {
+                "enum": [
+                  "independent-human",
+                  "native-speaker"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reviewer": {
+                "required": [
+                  "identity",
+                  "catalogSha256",
+                  "evidenceUrl"
+                ],
+                "properties": {
+                  "status": {
+                    "const": "approved"
+                  },
+                  "reviewedAt": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "minLength": 24
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reviewTier": {
+                "const": "native-speaker"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reviewer": {
+                "properties": {
+                  "status": {
+                    "const": "approved"
+                  },
+                  "reviewedAt": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "minLength": 24
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

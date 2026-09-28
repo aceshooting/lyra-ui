@@ -5,6 +5,17 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Tutkimuksen edistyminen',
+  researchProgressEmpty: 'Tutkimusvaiheita ei ole saatavilla.',
+  researchProgressLimit: 'Näytetään ensimmäiset {count} tutkimusvaihetta.',
+  researchProgressStatusPending: 'Odottaa',
+  researchProgressStatusRunning: 'Käynnissä',
+  researchProgressStatusCompleted: 'Valmis',
+  researchProgressStatusFailed: 'Epäonnistui',
+  researchProgressSources: {
+    one: '{count} lähde',
+    other: '{count} lähdettä',
+  },
   graphLegendLabel: 'Graafin selite',
   entityChipWithType: '{label}, {type}',
   showMore: 'Näytä lisää',

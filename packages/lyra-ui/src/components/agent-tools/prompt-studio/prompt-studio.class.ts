@@ -1,7 +1,9 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { live } from 'lit/directives/live.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -53,6 +55,7 @@ export interface PromptStudioMessageReorderDetail {
 export interface LyraPromptStudioEventMap {
   focus: CustomEvent<null>;
   blur: CustomEvent<null>;
+  'lr-change-request': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   /** Cancelable request to reorder messages, fired before the order changes. */
   'lr-message-reorder-request': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
@@ -89,9 +92,10 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-prompt-studio
- * @event lr-change - A cancelable proposal that messages or variables are about to change.
+ * @event lr-change-request - A cancelable proposal that messages or variables are about to change.
  *   Carries their complete next state. Prevent it to keep the current state unchanged, the same
  *   veto point `lr-message-reorder-request` already offers for reordering.
+ * @event lr-change - Noncancelable notification after the complete message/variable state is accepted.
  * @event lr-message-reorder-request - A cancelable request to reorder messages. Carries the
  *   proposed complete message order and the moved message's id and indexes. Prevent it to persist
  *   or reject the proposed order yourself, then assign `messages` when the host is ready to render
@@ -160,11 +164,13 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     promptStudioVersions: LYRA_DEFAULT_promptStudioVersions,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['messages', 'variables', 'versions']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-change-request',
     'lr-change',
     'lr-message-reorder-request',
     'lr-message-reorder',
@@ -269,10 +275,15 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     this.emitNormalizedChange(this.uniqueMessages(messages), variables);
   }
 
+  private changeRequestPending = false;
+
   private emitNormalizedChange(
     messages: readonly PromptStudioMessage[],
     variables = this.variables,
-  ): void {
+  ): boolean {
+    if (this.changeRequestPending || this.disabled) return false;
+    const previousMessages = this.messages;
+    const previousVariables = this.variables;
     // The proposal is a snapshot, mirroring requestMessageMove()'s identical cancelable-veto
     // pattern below: a listener may hold, persist, or alter its own copy without mutating the
     // component's accepted next state behind the veto point.
@@ -280,9 +291,22 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       messages: messages.map((message) => ({ ...message })),
       variables: this.variableItems(variables).map((variable) => ({ ...variable })),
     };
-    if (this.emit('lr-change', proposal, { cancelable: true }).defaultPrevented) return;
-    this.messages = proposal.messages;
-    this.variables = proposal.variables;
+    this.changeRequestPending = true;
+    try {
+      const request = this.emit('lr-change-request', proposal, { cancelable: true });
+      if (request.defaultPrevented || this.disabled || this.messages !== previousMessages || this.variables !== previousVariables) {
+        // Native editing already changed the field before its input/change event. Re-render the
+        // accepted state even when no property assignment otherwise schedules an update.
+        this.requestUpdate();
+        return false;
+      }
+      this.messages = proposal.messages;
+      this.variables = proposal.variables;
+    } finally {
+      this.changeRequestPending = false;
+    }
+    this.emit('lr-change', proposal);
+    return true;
   }
 
   private updateMessage(id: string, patch: Partial<PromptStudioMessage>): void {
@@ -329,6 +353,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private requestMessageMove(messageId: string, fromIndex: number, offset: -1 | 1): void {
+    if (this.changeRequestPending) return;
+    const previousMessages = this.messages;
+    const previousVariables = this.variables;
     const messages = this.uniqueMessages();
     const toIndex = fromIndex + offset;
     if (
@@ -353,14 +380,19 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       fromIndex,
       toIndex,
     });
-    const request = this.emit('lr-message-reorder-request', proposal(), { cancelable: true });
-    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
-    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
-    const deprecatedAlias = this.emit('lr-message-reorder', proposal(), { cancelable: true });
-    if (deprecatedAlias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-message-reorder', 'lr-message-reorder-request');
+    this.changeRequestPending = true;
+    try {
+      const request = this.emit('lr-message-reorder-request', proposal(), { cancelable: true });
+      // The retained alias has its own equal snapshot; either request may veto the move.
+      const deprecatedAlias = this.emit('lr-message-reorder', proposal(), { cancelable: true });
+      if (deprecatedAlias.defaultPrevented) {
+        warnDeprecatedUsage(this, 'event', 'lr-message-reorder', 'lr-message-reorder-request');
+      }
+      if (request.defaultPrevented || deprecatedAlias.defaultPrevented || this.disabled ||
+        this.messages !== previousMessages || this.variables !== previousVariables) return;
+    } finally {
+      this.changeRequestPending = false;
     }
-    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     // A move onto its directional boundary disables the action that initiated it. Keep keyboard
     // focus on the same message by using the other still-enabled move action in that case.
     const part: PromptStudioMessageMovePart =
@@ -371,8 +403,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
           : offset < 0
             ? 'move-message-up'
             : 'move-message-down';
+    if (!this.emitNormalizedChange(nextMessages)) return;
     this.pendingMessageMoveFocus = { messageId, part };
-    this.emitNormalizedChange(nextMessages);
     this.scheduleAfterUpdate(() => this.restoreMessageMoveFocus(), 'prompt-studio-message-reorder-focus');
   }
 
@@ -473,7 +505,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         <select
           part="message-role"
           aria-label=${this.localize('promptStudioMessageRole', undefined, { index: displayIndex, role })}
-          .value=${message.role}
+          .value=${live(message.role)}
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
             this.updateMessage(message.id, { role: (event.target as HTMLSelectElement).value as PromptStudioRole })}
@@ -493,7 +525,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         autocapitalize=${this.autocapitalize || nothing}
         autocorrect=${this.autoCorrect || nothing}
         wrap=${this.wrap}
-        .value=${message.content}
+        .value=${live(message.content)}
         ?disabled=${this.disabled}
         @input=${(event: Event) =>
           this.updateMessage(message.id, { content: (event.target as HTMLTextAreaElement).value })}
@@ -607,7 +639,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                           spellcheck=${this.spellcheck}
                           autocapitalize=${this.autocapitalize || nothing}
                           autocorrect=${this.autoCorrect || nothing}
-                          .value=${variable.name}
+                          .value=${live(variable.name)}
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { name: (event.target as HTMLInputElement).value })}
@@ -619,7 +651,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                           spellcheck=${this.spellcheck}
                           autocapitalize=${this.autocapitalize || nothing}
                           autocorrect=${this.autoCorrect || nothing}
-                          .value=${variable.value}
+                          .value=${live(variable.value)}
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { value: (event.target as HTMLInputElement).value })}

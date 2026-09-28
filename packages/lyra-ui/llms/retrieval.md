@@ -199,18 +199,20 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
 `undefined` when the id is not currently simulated.
 
-**Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
-local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
-linkId? }`; the optional `linkId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
+**Events:** `lr-node-activate` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
+local drawing coordinates), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
+edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
+`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, edgeId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
-(`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
+(`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
-right after its canonical event with an equal detail: `lr-link-enter`/`lr-link-leave` (use
-`lr-edge-enter`/`lr-edge-leave`; removed in 23.0.0) and `lr-community-click` (use
+right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
+`lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
+remain through v23. Older aliases: `lr-link-enter`/`lr-link-leave` (use
+`lr-edge-enter`/`lr-edge-leave` and replace detail.linkId with detail.edgeId; removable from 23.0.0) and `lr-community-click` (use
 `lr-community-activate`; removed in 23.0.0)
 
 **Slots:** none.
@@ -299,8 +301,8 @@ localized `part="error"` alert. Install with
       dash: [6, 3],
     },
   ];
-  g.addEventListener("lr-node-click", (e) => console.log(e.detail.nodeId));
-  g.addEventListener("lr-link-click", (e) =>
+  g.addEventListener("lr-node-activate", (e) => console.log(e.detail.nodeId));
+  g.addEventListener("lr-edge-activate", (e) =>
     console.log(e.detail.linkId, e.detail.sourceNodeId, e.detail.targetNodeId)
   );
 </script>
@@ -364,7 +366,7 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 **Selection & focus:** `selectionMode: 'none' | 'single' | 'multiple' = 'none'` (attribute
 `selection-mode`) gates click/keyboard selection; the component never mutates
 `selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
-only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
+only emits `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`) — the host assigns them back,
 mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
@@ -516,10 +518,7 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
 **Events:** cancelable `lr-visibility-change-request` (`detail: { hiddenTypes }`, a frozen complete
 next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
 `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
-accepted assignment and announcement. `lr-before-visibility-change` is a **deprecated** alias of
-`lr-visibility-change-request`, fired immediately after it from the same gesture with the same
-frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners to
-`lr-visibility-change-request`.
+accepted assignment and announcement.
 
 **Slots:** none.
 
@@ -1894,10 +1893,12 @@ names.
 before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
-`lr-retry` (`detail: null`, cancelable) — the nested table's built-in retry button was activated,
-only rendered while `error` is set; the default action clears `error`, `preventDefault()` leaves it
-set. This component intercepts the nested table's own `lr-retry` and re-proposes its own, so the
-outer `error` property never drifts out of sync with the table's internal state.
+`lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
+retry button is activated. It fires before the deprecated cancelable `lr-retry` alias (also
+`detail: null`); preventing either event keeps both the parent and table in the error state.
+Without a veto, the default action clears `error`. The alias remains supported until removal no
+earlier than 24.0.0 and warns only when vetoed. This component contains both nested table retry
+events and re-proposes its own pair, so hosts receive each parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.
@@ -2044,12 +2045,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
-- Bubbling straight through from composed children, unmodified: `lr-node-click`
-  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-activate`
+- Bubbling straight through from composed children, unmodified: `lr-node-activate`
+  (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
   Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
   equal detail; removed in 23.0.0).
+- `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
+  `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -2625,14 +2628,14 @@ normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.
 
-**Events:** `lr-tab-change` (`{ tab }`, emitted only for a distinct accepted selection),
+**Events:** `lr-tab-change` (`{ activeTab }`, emitted only for a distinct accepted selection),
 `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
 `lr-activate` (`detail: { value: 'sources' | 'ingestion' }`, bubbling, composed, non-cancelable)
 fires on **every** user activation of an available tab — a click, or an Arrow/Home/End key —
 whether or not `activeTab` actually moved. `value` is the activated tab, the same identity
-`lr-tab-change` reports under the key `tab`. It reports that the user picked a tab and gates
+`lr-tab-change` reports under the key `activeTab`. It reports that the user picked a tab and gates
 nothing. Use it for the repeat pick `lr-tab-change` deliberately stays silent for — "refresh that
 queue" is a real intent — which from the keyboard is otherwise unobservable, because Home on an
 already-first active tab (or End on an already-last one) activates a tab and produces no click at
@@ -2799,9 +2802,51 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 
 ## Consumer integration notes
 
+## `lr-research-progress`
+
+`lr-research-progress` presents a read-only ordered list of host-owned research steps and an
+aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional
+`description`, a `status` of `pending`, `running`, `completed`, or `failed`, and an optional
+nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
+component does not search or infer state. Assign a new `.steps` array after host updates. The
+component snapshots collection data, omits blank or duplicate identities after the first valid
+record, and renders at most 100 steps. `label` sets the visible group heading; host `aria-label`
+names the semantic group.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Semantic group containing the progress and step list. |
+| `label` | Visible group heading. |
+| `progress` | Aggregate completion progressbar. |
+| `progress-label` | Localized completion percentage. |
+| `list` | Ordered list of research steps. |
+| `step` | One host-supplied step, keyed by `data-step-id`. |
+| `step-label` | Host-supplied step label. |
+| `step-copy` | Step label and optional description. |
+| `description` | Optional host-supplied step description. |
+| `status` | Localized controlled status. |
+| `sources` | Localized source count for a step. |
+| `empty` | Empty state. |
+| `limit` | Notice that more than 100 valid steps were supplied. |
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-research-progress.js';
+import type { ResearchStep } from '@aceshooting/lyra-ui/components/retrieval/research-progress/research-progress.class.js';
+
+const steps: ResearchStep[] = [
+  { id: 'search', label: 'Search the library', status: 'completed', sources: 8 },
+  { id: 'synthesize', label: 'Synthesize findings', status: 'running' },
+];
+element.steps = steps;
+```
+
+## Consumer integration notes
+
 - **Explorer legend:** observe `lr-hidden-types-change` on
   `lr-knowledge-graph-explorer` for an accepted visibility change. A visibility proposal can be
-  vetoed only from the legend control when an integration renders or owns one separately.
+  vetoed through `lr-visibility-change-request` on the nested legend or on a separately owned legend.
 - **Projected records:** `lr-memory-panel` and `lr-claim-evidence` capture usable display/action
   fields when their collections are assigned. Unsafe or malformed branches are omitted while valid
   siblings remain; selected/action event details retain the original record where that identity is

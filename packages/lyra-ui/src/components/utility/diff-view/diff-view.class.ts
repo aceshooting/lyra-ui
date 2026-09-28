@@ -42,7 +42,7 @@ import {
 import { styles } from './diff-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
@@ -258,7 +258,6 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     remove: LYRA_DEFAULT_remove,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -674,7 +673,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     const target = this.lineElementForOpIndex(index);
     if (!target) return false;
     target.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
       block: 'nearest',
     });
     return true;

@@ -196,12 +196,8 @@ it('resolves the decorative border tier to --lr-color-border until its own input
 
 // --- The media overrides have to survive the OS dark route -----------------------------
 //
-// The `(prefers-color-scheme: dark)` block restates EVERY name (an alias would otherwise inherit
-// the already-substituted light colour), and it does so through the compound
-// `:root:not(.lr-light):not([data-lr-theme='light'])` route. The forced-colors and
-// prefers-reduced-motion blocks come later in the same layer, so they only win if they TIE that
-// route's specificity -- a bare `:root` arm loses to it, and the whole Windows High Contrast and
-// motion-preference surface goes dead for every visitor whose OS is dark with no explicit scope.
+// The OS dark route changes inherited private mode switches. Outputs re-resolve on each style
+// and preference boundary; later forced-colors and reduced-motion rules must still reach them.
 //
 // The runner exposes no colour-scheme emulation seam (`test/wtr-media.ts` reaches only
 // forced-colors and reduced-motion), so the shipped rules are re-adopted with ONLY the
@@ -245,21 +241,6 @@ describe('with the OS dark route live', () => {
       });
     });
     return declared;
-  }
-
-  /** The selector list of the sole rule inside the named media block, as CSSOM normalises it. */
-  function selectorArmsUnder(condition: string): string[] {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(sheetText);
-    const arms: string[] = [];
-    eachRule(sheet, (rule) => {
-      if (mediaOf(rule)?.mediaText.includes(condition) !== true) return;
-      eachRule(rule as CSSMediaRule, (inner) => {
-        const selector = (inner as CSSStyleRule).selectorText as string | undefined;
-        if (selector !== undefined) arms.push(...selector.split(',').map((arm) => squash(arm)));
-      });
-    });
-    return arms;
   }
 
   let lightSurface = '';
@@ -346,12 +327,17 @@ describe('with the OS dark route live', () => {
     expect(wrong.join('\n'), 'forced-colors overrides missing on a pinned scope').to.equal('');
   });
 
-  it('carries the OS dark route selector into both media blocks, so neither can be out-specified', () => {
-    const [darkRoute] = selectorArmsUnder('prefers-color-scheme: dark');
-    expect(darkRoute === undefined).to.be.false;
-    expect(selectorArmsUnder('forced-colors: active')).to.include(darkRoute);
-    expect(selectorArmsUnder('prefers-reduced-motion: reduce')).to.include(darkRoute);
-  });
+  for (const mode of ['forced-colors: active', 'prefers-reduced-motion: reduce']) {
+    it(`applies ${mode} across preference-only boundaries inside the OS dark scope`, async function () {
+      const scope = await fixture<HTMLElement>(html`
+        <section data-lr-contrast="system"><div data-lr-motion="system"></div></section>
+      `);
+      if (!(await (mode === 'forced-colors: active' ? enterForcedColors() : enterReducedMotion()))) this.skip();
+      const expected = overridesUnder(mode);
+      const wrong = [scope, scope.firstElementChild!].flatMap(element => unappliedOverrides(element, expected));
+      expect(wrong.join('\n')).to.equal('');
+    });
+  }
 });
 
 

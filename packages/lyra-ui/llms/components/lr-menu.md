@@ -6,7 +6,7 @@
 - **Class** `LyraMenu`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated slot-content** default-slot content other than `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` since `21.1.0`; use slot `slot="header" (or slot="footer")`; removal not before `23.0.0` — Content other than items, labels and separators renders inside role="menu" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot.
 - **Optional peers** none
 - **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -90,7 +90,9 @@ Row chrome is controlled through the menu-item properties listed below.
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
 (default `var(--lr-size-10rem)`). They move together — the floor wins over the ceiling, so capping
-alone cannot take a menu below 10rem. Neither is declared on `:host`, so an ancestor theme wrapper's
+alone cannot take a menu below 10rem. The viewport and available container or positioned width also
+bound the floor, so narrow allocations and enlarged text cannot force the surface outside them.
+Neither is declared on `:host`, so an ancestor theme wrapper's
 value reaches the menu. The ceiling takes a length or a percentage; `100%` and `none` both uncap it
 to the container, and any other value outside `<length-percentage>` is treated as `none` rather than
 dropping the cap's safety terms. Those terms — the shared `--lr-popover-viewport-clamp` and the

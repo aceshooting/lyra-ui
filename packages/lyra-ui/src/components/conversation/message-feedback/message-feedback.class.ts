@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
@@ -61,8 +63,10 @@ export interface MessageFeedbackSubmitDetail {
 }
 
 export interface LyraMessageFeedbackEventMap {
+  /** @deprecated Use `lr-feedback-submit-request`. */
+  'lr-feedback-submit': LyraMessageFeedbackEventMap['lr-feedback-submit-request'];
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
-  'lr-feedback-submit': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
+  'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
   'lr-toolbar-actions-change': Event;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
@@ -207,7 +211,7 @@ interface PendingMessageFeedbackSubmission {
  * `<lr-message-feedback>` — thumbs up/down for one assistant message, with an optional inline
  * detail step (categorical reason chips + a free-text comment) that opens as a disclosure directly
  * below the thumbs. `rating` is the current presentation state; every terminal persistence request
- * uses the same cancelable `lr-feedback-submit` transaction.
+ * uses the same cancelable `lr-feedback-submit-request` transaction.
  *
  * Activating the pressed thumb while its detail panel is open toggles it off to `null` (mirrors
  * `<lr-rating>`'s re-activate-to-clear contract). If that applicable panel was closed without
@@ -225,7 +229,8 @@ interface PendingMessageFeedbackSubmission {
  * @customElement lr-message-feedback
  * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
  *   provisional rating, including clearing it to `null`.
- * @event lr-feedback-submit - Frozen `detail: { rating, reasonIds, comment, submissionId }`, fired
+ * @event lr-feedback-submit - Deprecated cancelable compatibility alias of `lr-feedback-submit-request`.
+ * @event lr-feedback-submit-request - Frozen `detail: { rating, reasonIds, comment, submissionId }`, fired
  *   immediately for a thumbs-only terminal choice or by the detail panel's submit button.
  *   `submissionId` is a nonblank, never-reused transaction identity. Cancelable:
  *   `preventDefault()` holds the panel in its reflected `pending` state until the host calls
@@ -281,11 +286,23 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  private emitFeedbackSubmitRequest(detail: LyraMessageFeedbackEventMap['lr-feedback-submit-request']['detail']): CustomEvent {
+    const request = this.emit('lr-feedback-submit-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-feedback-submit', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-feedback-submit', 'lr-feedback-submit-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
+
   protected static override readonly ownedCollectionProperties = Object.freeze(['detail']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-feedback-submit',
+    'lr-feedback-submit-request',
   ]);
 
   /** Current provisional or persisted rating. Host-writable for controlled restoration. */
@@ -302,7 +319,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   /** Read-only display of a recorded rating -- both thumbs become inert. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** A canceled `lr-feedback-submit` is awaiting host persistence. While true, every feedback control is
+  /** A canceled `lr-feedback-submit-request` is awaiting host persistence. While true, every feedback control is
    *  disabled and the open panel is busy. Resolve through `finalizePendingSubmit()` or
    *  `revertPendingSubmit()`; the component sets this state automatically. */
   @property({ type: Boolean, reflect: true }) pending = false;
@@ -766,42 +783,45 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     return this.settlePendingSubmission('revert', submissionId);
   }
 
+  private submissionRequestDispatching = false;
   private requestSubmission(
     detail: Omit<MessageFeedbackSubmitDetail, 'submissionId'>,
     previousRating: MessageFeedbackValue,
     panelWasOpen: boolean,
   ): void {
-    this.focusGeneration += 1;
-    const sequence = ++this.submissionSequence;
-    this.submissionCount += 1;
-    const transaction: PendingMessageFeedbackSubmission = {
-      submissionId: nextId('message-feedback-submission'),
-      sequence,
-      lifecycleGeneration: this.lifecycleGeneration,
-      rating: this.rating,
-      detail: this.detail,
-      detailFor: this.detailFor,
-      previousRating,
-      panelWasOpen,
-    };
-    // Install before dispatch: a listener can synchronously select the first matching outcome.
-    this.pendingSubmission = transaction;
-    this.setPending(true);
-    this.dispatchingSubmission = transaction;
-    const event = this.emit(
-      'lr-feedback-submit',
-      { ...detail, submissionId: transaction.submissionId },
-      { cancelable: true },
-    );
-    if (this.dispatchingSubmission === transaction) {
-      this.dispatchingSubmission = undefined;
+    if (this.submissionRequestDispatching) return;
+    this.submissionRequestDispatching = true;
+    try {
+      this.focusGeneration += 1;
+      const sequence = ++this.submissionSequence;
+      this.submissionCount += 1;
+      const transaction: PendingMessageFeedbackSubmission = {
+        submissionId: nextId('message-feedback-submission'),
+        sequence,
+        lifecycleGeneration: this.lifecycleGeneration,
+        rating: this.rating,
+        detail: this.detail,
+        detailFor: this.detailFor,
+        previousRating,
+        panelWasOpen,
+      };
+      // Install before dispatch: a listener can synchronously select the first matching outcome.
+      this.pendingSubmission = transaction;
+      this.setPending(true);
+      this.dispatchingSubmission = transaction;
+      const event = this.emitFeedbackSubmitRequest({ ...detail, submissionId: transaction.submissionId });
+      if (this.dispatchingSubmission === transaction) {
+        this.dispatchingSubmission = undefined;
+      }
+      if (!this.isCurrentPendingSubmission(transaction)) return;
+      if (transaction.settlement) {
+        this.commitSettlement(transaction, transaction.settlement);
+        return;
+      }
+      if (!event.defaultPrevented) this.commitSettlement(transaction, 'finalize');
+    } finally {
+      this.submissionRequestDispatching = false;
     }
-    if (!this.isCurrentPendingSubmission(transaction)) return;
-    if (transaction.settlement) {
-      this.commitSettlement(transaction, transaction.settlement);
-      return;
-    }
-    if (!event.defaultPrevented) this.commitSettlement(transaction, 'finalize');
   }
 
   private onSubmit = (): void => {

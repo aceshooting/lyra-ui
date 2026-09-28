@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { render } from '@lit-labs/ssr';
 import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
 import { html } from 'lit';
+import { assertAgenticSsrFixtures } from './ssr-agentic-fixtures.mjs';
 import {
   enumeratePublicSsrStateCases,
   loadSsrFixtureContext,
@@ -114,6 +115,7 @@ assertIsolatedNodeImport(
 // Keep a named, document-less server-render regression ahead of the aggregate traversal so a
 // recurrence points to the exact component instead of aborting anonymously partway through it.
 const animatedImageContext = await loadSsrFixtureContext();
+await assertAgenticSsrFixtures(animatedImageContext.elementRenderers);
 const animatedImageHtml = await renderSsrProbe(
   'lr-animated-image',
   animatedImageContext.elementRenderers

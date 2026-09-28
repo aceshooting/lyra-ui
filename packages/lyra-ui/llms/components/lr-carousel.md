@@ -6,8 +6,9 @@
 - **Class** `LyraCarousel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/carousel/carousel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
 - **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -1,15 +1,8 @@
-import { type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { nextId } from '../../../internal/a11y.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
-import type {
-  LyraClipboardWriteFailure,
-  LyraClipboardWriteSuccess,
-} from '../../../internal/clipboard.js';
 import {
   loadShikiHighlighter,
   loadShikiLanguage,
@@ -17,54 +10,25 @@ import {
   normalizeShikiLanguage,
   shikiHasLoadedLanguage,
   type ShikiHighlighter,
-  type ShikiHighlighterCore,
   type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
-import {
-  CodeBlockHeaderActionsController,
-  CodeBlockInteractionController,
-  applyCodeBlockAriaBusy,
-  clampCodeBlockFocusedLine,
-  codeBlockActiveHighlightLineSet,
-  codeBlockLineHasFocus,
-  codeBlockLineCount,
-  codeBlockLineHighlightSet,
-  codeBlockPreSuppliedGrammar,
-  codeBlockShowsSkeleton,
-  renderCodeBlockPlainCode,
-  renderCodeBlockShell,
-  restoreCodeBlockLineFocus,
-  scrollCodeBlockToAnchor,
-  tokenizeCodeBlock,
-} from './code-block-shared.js';
 import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
+import { LyraCodeBlockBase, type LyraCodeBlockBaseEventMap } from './code-block-base.class.js';
+import { codeBlockPreSuppliedGrammar, codeBlockShowsSkeleton } from './code-block-shared.js';
 export type { LyraCodeBlockToggleDetail } from './code-block-shared.js';
 import type {
   LyraAnchor,
   LyraHighlight,
-  TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export interface LyraCodeBlockEventMap {
-  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<null>;
-  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-toggle-request': CustomEvent<{ collapsed: boolean; expanded?: boolean }>;
-  'lr-toggle': CustomEvent<{ collapsed: boolean; expanded?: boolean }>;
-  'lr-line-activate': CustomEvent<{ line: number }>;
-  'lr-text-select': CustomEvent<{
-    readonly text: string;
-    readonly anchor: LyraAnchor;
-    readonly rects: readonly TextSelectRect[];
-  }>;
-}
+export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
 /**
  * `<lr-code-block>` — fenced code display with optional lazy syntax
  * highlighting and a copy button. No highlighting grammar ships in this
@@ -213,12 +177,11 @@ export interface LyraCodeBlockEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
+export class LyraCodeBlock extends LyraCodeBlockBase {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
     collapseCode: LYRA_DEFAULT_collapseCode,
@@ -230,6 +193,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     expandCode: LYRA_DEFAULT_expandCode,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-text-select',
@@ -241,32 +205,32 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   };
 
   /** The raw source text. Removing the attribute renders an empty code block. */
-  @property() code = '';
+  @property() override code = '';
 
   /** A shiki-recognized language id or alias (e.g. `"javascript"`,
    *  `"python"`, `"json"`). When unset, or when shiki doesn't recognize it,
    *  the code renders as plain unhighlighted text regardless of whether
    *  shiki itself is available. */
-  @property() language = '';
+  @property() override language = '';
 
   /** Shown in the header above the code, when set. */
-  @property() filename = '';
+  @property() override filename = '';
 
   /** Accessible-name override for the internal focusable code region. Maps
    *  to the host's `aria-label` attribute and wins over `filename` and
    *  `language`-derived defaults. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) override accessibleLabel: string | null = null;
 
   /** Whether the code region can be collapsed via a header toggle. */
-  @property({ type: Boolean, reflect: true }) collapsible = false;
+  @property({ type: Boolean, reflect: true }) override collapsible = false;
 
   /** Whether the code region is currently hidden. Only has a visible effect
    *  while `collapsible` is also true. */
-  @property({ type: Boolean, reflect: true }) collapsed = false;
+  @property({ type: Boolean, reflect: true }) override collapsed = false;
 
   /** Hides the copy-to-clipboard button in the header. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true })
-  withoutCopyButton = false;
+  override withoutCopyButton = false;
 
   /**
    * Deprecated inverted alias of `without-copy-button` (`withoutCopyButton`): `copyable="false"`
@@ -288,31 +252,25 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  string to the control's accessible name, for a dense header that already carries a filename,
    *  a language chip and slotted `header-actions`. */
   @property({ attribute: 'copy-appearance', reflect: true })
-  copyAppearance: LyraCodeBlockCopyAppearance = 'text';
-
-  /** Whether a light-DOM child is assigned to `header-actions`. Set from `headerActions`
-   *  (`CodeBlockHeaderActionsController` in code-block-shared.ts), which closes the loop for a
-   *  child appended after first render, which no `slotchange` could ever report for a header
-   *  that isn't there. */
-  @state() private hasHeaderActions = false;
+  override copyAppearance: LyraCodeBlockCopyAppearance = 'text';
 
   /** A CSS length (e.g. `"20rem"`); once set, the code scrolls internally
    *  past this height instead of growing the page. */
-  @property({ attribute: 'max-height' }) maxHeight = '';
+  @property({ attribute: 'max-height' }) override maxHeight = '';
 
   /** Whether to display one-based line numbers beside the code. Highlighted gutters
    *  follow live locale and line-label string changes. */
   @property({ type: Boolean, attribute: 'line-numbers', reflect: true })
-  lineNumbers = false;
+  override lineNumbers = false;
 
   /** Comma-separated 1-based inclusive line ranges (e.g. `"3-5,7"`) to visually emphasize.
    *  Removing the attribute clears these ranges. Declarative sugar over `highlights` — merges with, and renders identically to, any
    *  `line-range` entries in `highlights`. */
-  @property({ attribute: 'highlight-lines' }) highlightLines = '';
+  @property({ attribute: 'highlight-lines' }) override highlightLines = '';
 
   /** Makes the (`line-numbers`-gated) gutter a roving group of activation buttons. */
   @property({ type: Boolean, attribute: 'activatable-lines' })
-  activatableLines = false;
+  override activatableLines = false;
 
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
@@ -320,23 +278,20 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  non-discriminated anchor, is ignored (`snapshotLyraHighlights`).
    * @default [] */
   @property({ attribute: false })
-  get highlights(): readonly LyraHighlight[] { return this._highlights; }
-  set highlights(value: readonly LyraHighlight[]) {
+  override get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  override set highlights(value: readonly LyraHighlight[]) {
     const previous = this._highlights;
     this._highlights = snapshotLyraHighlights(value);
     this.requestUpdate('highlights', previous);
   }
 
   /** The `highlights` entry, if any, currently treated as active (`data-active` on its lines). */
-  @property({ attribute: 'active-highlight-id' }) activeHighlightId:
+  @property({ attribute: 'active-highlight-id' }) override activeHighlightId:
     | string
     | null = null;
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
   readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
-
-  @state() private focusedLine = 1;
-  private restoreFocusedLineAfterUpdate = false;
 
   /** A map of language id to an already-imported shiki grammar module's
    *  default export (e.g. `{ bash: bashGrammar }` where `bashGrammar` came
@@ -356,82 +311,12 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     string,
     ShikiLanguageInput
   >>;
-
-  // `null` covers every reason the plain-text fallback is showing: shiki
-  // isn't installed, `language` is unset, or `language` isn't shiki-
-  // recognized -- `render()` doesn't need to (and can't usefully) tell these
-  // apart, same rationale as <lr-markdown>'s identically-shaped field.
-  @state() private highlightedHtml: string | null = null;
-
-  // Becomes true once the shared shiki-loading promise has settled, whether
-  // or not it actually resolved to a highlighter -- gates the skeleton (see
-  // the class doc's second paragraph), not the highlighting itself.
-  @state() private shikiReady = false;
-
-  @state() private justCopied = false;
-
-  @state() private copyFailed = false;
-
-  @state() private isDarkTheme = false;
-
   private highlighter?: ShikiHighlighter | null;
-
-  // Every interaction behavior this component and <lr-code-block-core> implement identically --
-  // the gutter's roving tabindex and keyboard contract, the [part="body"] handlers, selection
-  // anchoring, copy + its confirmation timer, the collapse toggle, and the theme watcher. Shared
-  // so a fix to any of it lands once instead of needing to be applied to both class files.
-  private readonly interactions = new CodeBlockInteractionController({
-    host: this,
-    setFocusedLine: (line) => {
-      this.focusedLine = line;
-    },
-    setJustCopied: (value) => {
-      this.justCopied = value;
-    },
-    setCopyFailed: (value) => {
-      this.copyFailed = value;
-    },
-    setDarkTheme: (value) => {
-      this.isDarkTheme = value;
-    },
-    emitLineActivate: (line) => this.emit('lr-line-activate', { line }),
-    emitCopy: (outcome) => this.emit('lr-copy', outcome),
-    emitError: () => this.emit('lr-error', null),
-    emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
-    requestToggle: (collapsed) =>
-      !this.emit('lr-toggle-request', { expanded: !collapsed, collapsed }, { cancelable: true })
-        .defaultPrevented,
-    emitToggle: (collapsed) => this.emit('lr-toggle', { expanded: !collapsed, collapsed }),
-    emitTextSelect: (selection) => this.emit('lr-text-select', selection),
-  });
-
-  // Shared with <lr-code-block-core> via code-block-shared.ts so a fix to the header-actions
-  // slot-detection logic lands once instead of needing to be applied to both class files.
-  private readonly headerActions = new CodeBlockHeaderActionsController({
-    host: this,
-    setHasHeaderActions: (value) => {
-      this.hasHeaderActions = value;
-    },
-  });
-
-  // Guards the async per-language load in syncHighlight() against a
-  // `code`/`language` change that arrives before a previous load resolves --
-  // only the result matching the *current* token is ever applied.
-  private highlightToken = 0;
 
   private defaultHighlighterLoading = false;
 
-  private readonly bodyId = nextId('code-block-body');
-
-  constructor() {
-    super();
-    new ThemeWatcher(this, () => this.refreshTheme());
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    this.refreshTheme();
-    this.headerActions.observe();
     this.ensureDefaultHighlighter();
     if (this.preSuppliedGrammar() || this.highlighter) this.syncHighlight();
   }
@@ -459,59 +344,28 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     });
   }
 
-  override disconnectedCallback(): void {
-    this.highlightToken++;
-    super.disconnectedCallback();
-    this.headerActions.disconnect();
-    this.interactions.disconnect();
-    this.highlightedHtml = null;
-  }
-
-  override adoptedCallback(): void {
-    super.adoptedCallback();
-    // A node can move between owner documents while already disconnected; always retire an
-    // old-realm confirmation timer even when no further disconnect callback will run.
-    this.interactions.disconnect();
-  }
-
   // The `languages` entry for the *current* `language`, if any -- shared by
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this render is taking the fine-grained `languages` path or
   // the default `loadShikiHighlighter()` one.
-  private preSuppliedGrammar(): ShikiLanguageInput | undefined {
+  protected override preSuppliedGrammar(): ShikiLanguageInput | undefined {
     return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
-  private lineHighlightSet(): Set<number> {
-    return codeBlockLineHighlightSet(
-      this.highlightLines ?? '',
-      this.highlights,
-      this.lineCount()
-    );
-  }
-
-  private activeHighlightLineSet(): Set<number> {
-    return codeBlockActiveHighlightLineSet(
-      this.highlights,
-      this.activeHighlightId,
-      this.lineCount()
-    );
-  }
-
-  private lineCount(): number {
-    return codeBlockLineCount(this.code ?? '');
+  protected override showsSkeleton(): boolean {
+    return codeBlockShowsSkeleton(this.shikiReady, this.language, !this.preSuppliedGrammar());
   }
 
   /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
    *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
    *  `line-range`, the id isn't found, or the start line is out of bounds. */
-  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    return scrollCodeBlockToAnchor(this, target);
+  override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    return super.scrollToAnchor(target);
   }
 
   /** Recomputes Shiki palette selection after an imperative CSSOM theme change. */
-  refreshTheme(): void {
-    this.interactions.refreshTheme();
+  override refreshTheme(): void {
+    super.refreshTheme();
   }
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
@@ -519,56 +373,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lr-markdown>'s `willUpdate` takes).
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
-    // willUpdate() layered under this class must still run.
-    // Derived here, not in updated(): assigning the @state after an update has completed schedules
-    // a whole second render pass (and trips Lit's dev-mode "scheduled an update after an update
-    // completed" warning) the first time a consumer slots header actions.
-    this.headerActions.sync();
-    this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
-    if (changed.has('code')) {
-      this.focusedLine = clampCodeBlockFocusedLine(
-        this.focusedLine,
-        this.lineCount()
-      );
-    }
-    if (!this.interactions.needsHighlightResync(
-      changed,
-      this.effectiveLocale,
-      this.localize('codeBlockLineLabel'),
-    )) return;
-    // The default path still waits on `shikiReady` (the shared
-    // `loadShikiHighlighter()` singleton), same as always. A `language`
-    // covered by `languages` doesn't need that singleton at all, so it can
-    // sync as soon as the relevant property actually changes, instead of
-    // waiting on an unrelated (and, for a `languages`-only consumer,
-    // possibly never-needed) full-bundle load to finish first.
-    if (this.shikiReady || this.preSuppliedGrammar()) {
-      this.syncHighlight();
-    }
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
-    // updated() layered under this class must still run.
-    applyCodeBlockAriaBusy(this, this.showsSkeleton());
-    if (this.restoreFocusedLineAfterUpdate) {
-      restoreCodeBlockLineFocus(this, this.focusedLine);
-      this.restoreFocusedLineAfterUpdate = false;
-    }
-  }
-
-  /** Whether this render shows the loading skeleton instead of the code. */
-  private showsSkeleton(): boolean {
-    return codeBlockShowsSkeleton(
-      this.shikiReady,
-      this.language,
-      !this.preSuppliedGrammar()
-    );
-  }
-
-  private syncHighlight(): void {
+  protected override syncHighlight(): void {
     // Bumped unconditionally -- on *every* call, not just the async branch
     // below -- so that a call landing on the synchronous already-loaded
     // branch still invalidates any earlier in-flight load from a previous
@@ -621,83 +426,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     });
   }
 
-  private tokenize(
-    hl: ShikiHighlighter | ShikiHighlighterCore,
-    lang: string
-  ): string | null {
-    return tokenizeCodeBlock(hl, {
-      code: this.code ?? '',
-      lang,
-      lineNumbers: this.lineNumbers,
-      activatableLines: this.activatableLines,
-      focusedLine: this.focusedLine,
-      highlightedLines: this.lineHighlightSet(),
-      activeLines: this.activeHighlightLineSet(),
-      lineLabel: (line) =>
-        this.localize('codeBlockLineLabel', undefined, {
-          line: getNumberFormat(this.effectiveLocale).format(line),
-        }),
-      lineNumberText: (line) =>
-        getNumberFormat(this.effectiveLocale).format(line),
-    });
-  }
 
-  // Delegates to the shared renderCodeBlockPlainCode() in code-block-shared.ts -- previously a
-  // byte-for-byte-duplicated private method also defined on <lr-code-block-core>, moved out to
-  // stop that pair's plain-text-fallback rendering from silently drifting apart. See that
-  // function's own doc for the rendering behavior.
-  private renderPlainCode(): TemplateResult {
-    return renderCodeBlockPlainCode({
-      code: this.code ?? '',
-      lineNumbers: this.lineNumbers,
-      activatableLines: this.activatableLines,
-      focusedLine: this.focusedLine,
-      highlightedLines: this.lineHighlightSet(),
-      activeLines: this.activeHighlightLineSet(),
-      localize: this.localize.bind(this),
-      lineLabel: (line) =>
-        this.localize('codeBlockLineLabel', undefined, {
-          line: getNumberFormat(this.effectiveLocale).format(line),
-        }),
-      lineNumberText: (line) =>
-        getNumberFormat(this.effectiveLocale).format(line),
-      onLineActivate: (line) => this.interactions.onLineActivate(line),
-      onLineKeyDown: (e, line) => this.interactions.onLineKeyDown(e, line),
-    });
-  }
-
-  // The header row and the whole body/skeleton/`<pre>` shell come from
-  // renderCodeBlockShell() in code-block-shared.ts -- see that function's own
-  // doc for the `[part="body"]` tabindex/role rationale. Both were previously
-  // duplicated verbatim on <lr-code-block-core>.
-  override render(): TemplateResult {
-    return renderCodeBlockShell({
-      filename: this.filename,
-      language: this.language,
-      copyable: !this.withoutCopyButton,
-      copyAppearance: this.copyAppearance,
-      hasHeaderActions: this.hasHeaderActions,
-      collapsible: this.collapsible,
-      collapsed: this.collapsed,
-      justCopied: this.justCopied,
-      copyFailed: this.copyFailed,
-      bodyId: this.bodyId,
-      accessibleLabel: this.accessibleLabel,
-      maxHeight: this.maxHeight,
-      isDarkTheme: this.isDarkTheme,
-      showSkeleton: this.showsSkeleton(),
-      highlightedHtml: this.highlightedHtml,
-      lineNumbers: this.lineNumbers,
-      localize: this.localize.bind(this),
-      renderPlainCode: () => this.renderPlainCode(),
-      onToggle: this.interactions.toggleCollapsed,
-      onCopy: this.interactions.copy,
-      onBodyMouseUp: this.interactions.onBodyMouseUp,
-      onBodyClick: this.interactions.onBodyClick,
-      onBodyKeyDown: this.interactions.onBodyKeyDown,
-      onBodyFocusIn: this.interactions.onBodyFocusIn,
-    });
-  }
 }
 
 declare global {

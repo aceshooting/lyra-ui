@@ -33,7 +33,7 @@ export type LyraResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
 export type LyraResponsivePanelShape = 'fullscreen' | 'bottom-sheet' | 'start' | 'end';
 
-/** Reason the panel was closed, forwarded as the `lr-close` event detail --
+/** Reason the panel was closed, forwarded as `lr-close` detail.reason --
  *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
  *  `'backdrop'` are emitted by the overlay presentation's own built-in
  *  dismiss triggers (they can't occur while inline, since there's no
@@ -49,8 +49,14 @@ export interface LyraResponsivePanelModeChangeDetail {
   mode: LyraResponsivePanelEffectiveMode;
 }
 
+/** The accepted dismissal reason. */
+export interface LyraResponsivePanelCloseDetail {
+  reason: LyraResponsivePanelCloseReason;
+}
+
 export interface LyraResponsivePanelEventMap {
-  'lr-close': CustomEvent<LyraResponsivePanelCloseReason>;
+  'lr-close-request': CustomEvent<LyraResponsivePanelCloseDetail>;
+  'lr-close': CustomEvent<LyraResponsivePanelCloseDetail>;
   'lr-mode-change': CustomEvent<LyraResponsivePanelModeChangeDetail>;
 }
 
@@ -123,17 +129,12 @@ export function resolveResponsivePanelEffectiveMode(
  * @slot - The panel body.
  * @slot header - Optional header content, rendered above the body.
  * @slot footer - Optional footer content (e.g. action buttons), rendered below the body.
- * @event lr-close - `detail: LyraResponsivePanelCloseReason`. Cancelable pre-close veto, fired by
- *   the overlay presentation's built-in dismiss triggers (Escape, backdrop click) and by any
- *   `close()` call, in either presentation. Calling `preventDefault()` keeps the panel open and
- *   leaves any active overlay chrome/focus trap intact. A plain `open = false` property write
- *   does not fire it (matching lr-dialog's own precedent: only going through `close()` counts as
- *   a dismissal), and this is deliberately the same event/semantics in both presentations,
- *   rather than only being meaningful for the overlay case, so a consumer only has to wire up one
- *   listener regardless of which presentation is currently active. The name is not dialog-scoped
- *   in this library: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
- *   `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
- *   full list of emitters and the `event.target !== event.currentTarget` guard.
+ * @event lr-close-request - Cancelable proposal before dismissal; detail is `{ reason }`.
+ *   Fires for `close()` and overlay dismiss triggers in both presentations. Preventing default
+ *   keeps the panel open. A plain `open = false` assignment remains a state write.
+ * @event lr-close - Non-cancelable notification after closing; detail is `{ reason }`.
+ *   Descendant notifications bubble too; check `event.target === event.currentTarget` when
+ *   handling only this panel's dismissal.
  * @event lr-mode-change - `detail: LyraResponsivePanelModeChangeDetail`. Fired whenever the
  *   *effective* mode (not the `mode` prop's literal value, which may be `'auto'`) changes between
  *   `'inline'` and `'overlay'` -- crossing the breakpoint while `mode="auto"`, or the host
@@ -559,10 +560,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   /**
-   * Close the panel. `reason` is forwarded as the `lr-close` detail --
+   * Close the panel. `reason` is forwarded as `lr-close` detail.reason --
    * built-in overlay triggers pass `'escape'`/`'backdrop'`; a consumer's own
    * close affordance (e.g. a footer button, or a docked panel's own toggle)
-   * should call this directly with its own reason string. `lr-close` is a
+   * should call this directly with its own reason string. `lr-close-request` is a
    * cancelable, pre-mutation veto point: a listener calling
    * `preventDefault()` leaves the panel and any active overlay chrome open.
    * It fires in both presentations (see the class doc's `lr-close` note) but
@@ -572,10 +573,11 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    */
   close(reason: LyraResponsivePanelCloseReason = 'api'): void {
     if (!this.open) return;
-    if (this.emit('lr-close', reason, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-close-request', { reason }, { cancelable: true }).defaultPrevented) {
       return;
     }
     this.open = false;
+    this.emit('lr-close', { reason });
   }
 
   private onBackdropClick = (): void => {

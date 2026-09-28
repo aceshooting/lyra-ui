@@ -103,7 +103,7 @@ export const styles = css`
   :host(:where([animation])) svg {
     animation-delay: var(--animation-delay, 0s);
     animation-direction: var(--animation-direction, normal);
-    animation-duration: var(--animation-duration, var(--lr-duration-icon));
+    animation-duration: var(--_lr-motion-duration, var(--animation-duration, var(--lr-duration-icon)));
     animation-iteration-count: var(--animation-iteration-count, infinite);
     animation-timing-function: var(
       --animation-timing,
@@ -113,31 +113,31 @@ export const styles = css`
   }
 
   :host(:where([animation="beat"])) svg {
-    animation-name: lr-icon-beat;
+    animation-name: var(--_lr-motion-animation, lr-icon-beat);
   }
 
   :host(:where([animation="fade"])) svg {
-    animation-name: lr-icon-fade;
+    animation-name: var(--_lr-motion-animation, lr-icon-fade);
   }
 
   :host(:where([animation="beat-fade"])) svg {
-    animation-name: lr-icon-beat-fade;
+    animation-name: var(--_lr-motion-animation, lr-icon-beat-fade);
   }
 
   :host(:where([animation="bounce"])) svg {
-    animation-name: lr-icon-bounce;
+    animation-name: var(--_lr-motion-animation, lr-icon-bounce);
   }
 
   :host(:where([animation="flip"])) svg {
-    animation-name: lr-icon-flip;
+    animation-name: var(--_lr-motion-animation, lr-icon-flip);
   }
 
   :host(:where([animation="flip-360"])) svg {
-    animation-name: lr-icon-flip-360;
+    animation-name: var(--_lr-motion-animation, lr-icon-flip-360);
   }
 
   :host(:where([animation="shake"])) svg {
-    animation-name: lr-icon-shake;
+    animation-name: var(--_lr-motion-animation, lr-icon-shake);
   }
 
   :host(:where([animation="spin"])),
@@ -153,7 +153,7 @@ export const styles = css`
   :host(:where([animation="spin-snap"])) svg,
   :host(:where([animation="spin-snap-4"])) svg,
   :host(:where([animation="spin-snap-8"])) svg {
-    animation-name: lr-icon-spin;
+    animation-name: var(--_lr-motion-animation, lr-icon-spin);
   }
 
   :host(:where([animation="spin-reverse"])) svg {
@@ -173,27 +173,27 @@ export const styles = css`
   }
 
   :host(:where([animation="spin-pulse"])) svg {
-    animation-name: lr-icon-spin-pulse;
+    animation-name: var(--_lr-motion-animation, lr-icon-spin-pulse);
   }
 
   :host(:where([animation="buzz"])) svg {
-    animation-name: lr-icon-buzz;
+    animation-name: var(--_lr-motion-animation, lr-icon-buzz);
   }
 
   :host(:where([animation="wag"])) svg {
-    animation-name: lr-icon-wag;
+    animation-name: var(--_lr-motion-animation, lr-icon-wag);
   }
 
   :host(:where([animation="float"])) svg {
-    animation-name: lr-icon-float;
+    animation-name: var(--_lr-motion-animation, lr-icon-float);
   }
 
   :host(:where([animation="swing"])) svg {
-    animation-name: lr-icon-swing;
+    animation-name: var(--_lr-motion-animation, lr-icon-swing);
   }
 
   :host(:where([animation="jello"])) svg {
-    animation-name: lr-icon-jello;
+    animation-name: var(--_lr-motion-animation, lr-icon-jello);
   }
 
   @keyframes lr-icon-beat {

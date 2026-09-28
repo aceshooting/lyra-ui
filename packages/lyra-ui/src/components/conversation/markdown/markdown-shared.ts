@@ -1240,7 +1240,7 @@ export function applyMarkdownAriaBusy(host: Element, busy: boolean): void {
 
 function markdownScrollBehavior(root: Element): ScrollBehavior {
   const view = root.ownerDocument.defaultView;
-  return !view || prefersReducedMotion(view) ? 'auto' : 'smooth';
+  return !view || prefersReducedMotion(root) ? 'auto' : 'smooth';
 }
 
 /**

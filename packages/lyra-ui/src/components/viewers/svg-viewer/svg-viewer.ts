@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-svg-viewer.js to register this component. */
 export * from './svg-viewer.class.js';
 import { html } from 'lit';
 import { LyraSvgViewer } from './svg-viewer.class.js';

@@ -13,7 +13,6 @@
 
 import assert from 'node:assert/strict';
 import {
-  adoptsSharedTransition,
   hasStateQualifier,
   hoverContract,
   hoverCoverage,
@@ -434,17 +433,6 @@ test('a repaint outside the token is told to name the property, not handed a no-
   assert.deepEqual([...paintedFamilies('box-shadow: var(--lr-shadow-m);')], ['box-shadow']);
 });
 
-test('PASSES: adopting the shared interactive-transition sheet covers the whole shadow tree', () => {
-  const classSource = [
-    "import { interactiveTransition } from '../../../internal/interactive-transition.styles.js';",
-    'static styles = [LyraElement.styles, interactiveTransition, styles];',
-    TOGGLE_TEMPLATE,
-  ].join('\n');
-  const result = hoverContract(REPAINTS, [classSource]);
-  assert.deepEqual(messages(result), []);
-  assert.equal(result.repaintedPointerParts, 1);
-});
-
 test('PASSES: a no-transition-needed marker above the rule records the omission', () => {
   const marked = REPAINTS.replace(
     "  [part='toggle'] {",
@@ -502,18 +490,6 @@ test('transition coverage reads the subject compound, and a bare [part] presence
     0,
     'and neither does one whose value animates nothing',
   );
-});
-
-test('the shared sheet has to be imported AND used, not merely mentioned', () => {
-  const importLine = "import { interactiveTransition } from '../../../internal/interactive-transition.styles.js';";
-  assert.equal(adoptsSharedTransition([importLine, 'static styles = [LyraElement.styles, interactiveTransition, styles];'].join('\n')), true);
-  assert.equal(adoptsSharedTransition([importLine, 'export const styles = css`${interactiveTransition}`;'].join('\n')), true);
-  assert.equal(
-    adoptsSharedTransition('/* interactive-transition.styles is deliberately not adopted here. */'),
-    false,
-    'a prose mention of the module path is not adoption -- it used to exempt the whole stylesheet',
-  );
-  assert.equal(adoptsSharedTransition(importLine), false, 'an unused import is not adoption either');
 });
 
 test('a no-transition-needed reason may be the multi-line paragraph these stylesheets favour', () => {

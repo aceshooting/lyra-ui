@@ -2,7 +2,8 @@
 
 // Emits a translation catalog SKELETON for one locale: every `DEFAULT_STRINGS` key, in
 // `DEFAULT_STRINGS` order, with the English text as the starting value, and every count-bearing
-// message expanded to exactly the CLDR plural categories that locale actually has.
+// message expanded to the reviewed pinned category requirements for that locale. The pin also
+// records the explicit existing-runtime fallback for ICU-unsupported Lahnda.
 // The point is that the three things a human translator cannot be trusted to get right by hand are
 // made structural instead. `scripts/check-translations.mjs` fails a catalog that is missing a key,
 // invents one, reorders them, drops a plural category, or renames a `{placeholder}` -- and every
@@ -36,6 +37,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
 import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -313,7 +315,12 @@ if (alreadyExists && !args.includes('--force')) {
 // Preserved meta beats derived meta: the catalog that is already on disk is the authority on its
 // own direction and endonym, and a reshape may not overwrite a hand-corrected one.
 const meta = readExistingMeta(tag) ?? deriveMeta(tag);
-const categories = new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
+const pluralPin = JSON.parse(
+  readFileSync(join(packageRoot, 'scripts/fixtures/cldr-plural-categories.json'), 'utf8'),
+);
+const pinErrors = validatePluralCategoryPin(pluralPin);
+if (pinErrors.length > 0) throw new Error(pinErrors.join('\n'));
+const categories = pinnedPluralCategories(pluralPin, tag);
 
 const { keyToFamilies, familyToKeys } = await computeFamilyKeyIndex({ packageDir: packageRoot });
 const sliceNames = [...familyToKeys.keys()].sort();
@@ -340,4 +347,3 @@ console.log(
     `${entries.length} keys, plural categories [${categories.join(', ')}]` +
     (meta ? `, meta ${meta}` : ''),
 );
-

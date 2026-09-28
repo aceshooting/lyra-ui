@@ -50,7 +50,7 @@ export const styles = css`
      it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-container);
     overflow: auto;
   }
 

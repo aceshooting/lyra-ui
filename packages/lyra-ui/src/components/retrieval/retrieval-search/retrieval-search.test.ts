@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './retrieval-search.js';
@@ -125,6 +126,20 @@ function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
   });
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'retrievalSearchLabel',
+  'search',
+  'retrievalModeVector',
+  'retrievalModeKeyword',
+  'retrievalModeHybrid',
+  'retrievalModeLabel',
+  'fieldRequired',
+  'retrievalFiltersLabel',
+  'valueInvalid',
+  'retrievalFilterChipLabel',
+  'removeWithContext',
+]);
 it('defaults to an empty query, hybrid mode, no filters/scope, not loading, no error, not empty', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { html, nothing, type TemplateResult } from 'lit';
@@ -11,7 +12,7 @@ import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_popover, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -110,7 +111,6 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     agentTraceFilterLabel: LYRA_DEFAULT_agentTraceFilterLabel,
     handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
     handoffToAgent: LYRA_DEFAULT_handoffToAgent,
-    popover: LYRA_DEFAULT_popover,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
@@ -121,6 +121,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     tokensOut: LYRA_DEFAULT_tokensOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
   /** Span sources can carry opaque provider metadata; the shared normalizer copies only its closed
@@ -222,9 +223,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     this.emit('lr-span-visibility-change', { hiddenKinds: [...this.hiddenKinds] });
   };
 
-  /** Keeps the composed legend's cancelable proposal within this wrapper under both its canonical
-   * `lr-visibility-change-request` name and its deprecated `lr-before-visibility-change` alias,
-   * without changing its default-prevented state. The child still owns the proposal, commit, and
+  /** Keeps the composed legend's canonical cancelable proposal within this wrapper without
+   * changing its default-prevented state. The child still owns the proposal, commit, and
    * announcement. */
   private onVisibilityChangeProposal = (event: Event): void => {
     event.stopPropagation();
@@ -254,7 +254,6 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         .types=${types}
         .hiddenTypes=${this.hiddenKinds}
         @lr-visibility-change-request=${this.onVisibilityChangeProposal}
-        @lr-before-visibility-change=${this.onVisibilityChangeProposal}
         @lr-visibility-change=${this.onVisibilityChange}
       ></lr-graph-legend>
     `;

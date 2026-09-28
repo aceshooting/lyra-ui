@@ -1695,6 +1695,118 @@ test('the report grouping prints every gap it counts, including cross-cutting fa
   );
 });
 
+function withIndexedContractFixture(fn) {
+  const fields = ['attributeAliases', 'cssNames', 'element', 'eventNames', 'events', 'properties'];
+  const member = (name) => `'${name}': { element: HTMLElement; properties: { label?: string }; events: {}; eventNames: never; cssNames: never; attributeAliases: { 'aria-label'?: string } };`;
+  const source = `export interface ComponentMap { ${member('lr-one')} ${member('lr-two')} }`;
+  withSourceContractFixture({
+    'package.json': JSON.stringify({ name: '@fixture/ui', exports: { './framework-types': { default: './dist/framework-types.js' } } }),
+    'src/framework-types.ts': source,
+  }, (fixtureDir) => {
+    const modules = { componentModules: [], utilityModules: ['src/framework-types.ts'] };
+    const census = sourceContractCensus(fixtureDir, modules);
+    const owner = { ...baselineOwner(census[0]), locator: {
+      kind: 'indexed-interface', name: 'framework-contracts', declaration: 'ComponentMap',
+      specifier: '@fixture/ui/framework-types', fields,
+    } };
+    const baseline = { schemaVersion: 1, documented: [owner], legacy: [] };
+    const document = [
+      '- **`framework-contracts`** — Concrete published map.',
+      "`ComponentMap = import('@fixture/ui/framework-types').ComponentMap`",
+      '`ComponentMapEntry<Tag extends keyof ComponentMap> = ComponentMap[Tag]`',
+      ...fields.map((field) => `\`ComponentMap[Tag]['${field}']\``),
+    ].join('\n');
+    const gaps = (text = document, current = census, enrolled = baseline) => collectGaps([], { modules: [] }, {
+      census: current, baseline: enrolled, documents: { 'llms/shared.md': text },
+    });
+    fn({ fields, source, fixtureDir, modules, census, owner, baseline, document, gaps });
+  });
+}
+
+test('indexed interfaces document the exact imported map, key space and every entry field', () => {
+  withIndexedContractFixture(({ census, fields, gaps }) => {
+    assert.deepEqual(census[0].indexedFields, fields);
+    assert.deepEqual(census[0].indexedSpecifiers, ['@fixture/ui/framework-types']);
+    assert.deepEqual(gaps(), []);
+  });
+});
+
+test('indexed interface docs reject wrong import/export, missing key space and missing fields', () => {
+  withIndexedContractFixture(({ document, fields, gaps }) => {
+    const invalid = [
+      document.replace('@fixture/ui/framework-types', '@fixture/ui/private'),
+      document.replace("').ComponentMap", "').OtherMap"),
+      document.replace('keyof ComponentMap', 'string'),
+      document.replace('= ComponentMap[Tag]', '= unknown'),
+      document.replace('ComponentMapEntry', 'OtherEntry'),
+      ...fields.map((field) => document.replace(`\`ComponentMap[Tag]['${field}']\``, '')),
+    ];
+    for (const text of invalid) assert.ok(gaps(text).some(({ names }) => names.some((name) => name.includes('invalid indexed'))));
+    assert.ok(gaps(document + '\n' + document).some(({ names }) => names.some((name) => name.includes('invalid indexed'))));
+  });
+});
+
+test('indexed enrollment cannot omit fields, relabel exports or claim an unpublished route', () => {
+  withIndexedContractFixture(({ owner, baseline, gaps }) => {
+    for (const patch of [
+      { fields: owner.locator.fields.slice(1) }, { fields: [...owner.locator.fields, 'future'] },
+      { fields: [...owner.locator.fields, 'element'] }, { declaration: 'OtherMap' },
+      { specifier: '@fixture/ui/private' },
+    ]) {
+      const changed = { ...baseline, documented: [{ ...owner, locator: { ...owner.locator, ...patch } }] };
+      assert.ok(gaps(undefined, undefined, changed).length > 0);
+    }
+  });
+});
+
+test('indexed maps keep nested signatures, tag keys and package exports under drift checks', () => {
+  withIndexedContractFixture(({ source, fixtureDir, modules, baseline, gaps }) => {
+    for (const changed of [
+      source.replace('label?: string', 'label?: number'),
+      source.replace('lr-two', 'lr-three'),
+      source.replace("'aria-label'", "'accessible-label'"),
+    ]) {
+      writeFileSync(path.join(fixtureDir, 'src/framework-types.ts'), changed);
+      const census = sourceContractCensus(fixtureDir, modules);
+      assert.ok(validateSourceContractBaseline(census, baseline).some((finding) => finding.includes('signature changed')));
+      assert.ok(gaps(undefined, census).length > 0);
+    }
+    writeFileSync(path.join(fixtureDir, 'src/framework-types.ts'), source);
+    writeFileSync(path.join(fixtureDir, 'package.json'), JSON.stringify({ name: '@fixture/ui', exports: {} }));
+    assert.ok(gaps(undefined, sourceContractCensus(fixtureDir, modules)).length > 0);
+  });
+});
+
+test('indexed documentation rejects heterogeneous, generic, optional, inherited and scalar entry shapes', () => {
+  withIndexedContractFixture(({ source, fixtureDir, modules, owner, baseline, gaps }) => {
+    for (const changed of [
+      source.replace('element: HTMLElement', 'future: string; element: HTMLElement'),
+      source.replace("'lr-one':", "'lr-one'?:"),
+      source.replace('interface ComponentMap {', 'interface ComponentMap<T> {'),
+      source.replace('element: HTMLElement', 'element?: HTMLElement'),
+      source.replace('export interface ComponentMap {', 'interface Base {}\nexport interface ComponentMap extends Base {'),
+      'export interface ComponentMap { label: string; }',
+    ]) {
+      writeFileSync(path.join(fixtureDir, 'src/framework-types.ts'), changed);
+      const census = sourceContractCensus(fixtureDir, modules);
+      assert.equal(census[0].indexedFields, undefined);
+      // Even reviewing the new fingerprint cannot make an invalid shape eligible.
+      const enrolled = { ...baseline, documented: [{ ...owner, fingerprint: census[0].fingerprint }] };
+      assert.ok(gaps(undefined, census, enrolled).some(({ names }) => names.some((name) => name.includes('indexed'))));
+    }
+  });
+});
+
+test('ordinary interface locators still require all literal map keys and nested names', () => {
+  withIndexedContractFixture(({ census, owner, baseline, gaps }) => {
+    const enrolled = { ...baseline, documented: [{ ...owner, locator: {
+      kind: 'utility', name: 'framework-contracts', declaration: 'ComponentMap',
+    } }] };
+    const missing = gaps('- **`framework-contracts`**\n`ComponentMap { element: HTMLElement; }`', census, enrolled);
+    assert.ok(missing.some(({ names }) => names.includes('lr-one') && names.includes('aria-label')));
+  });
+});
+
 if (failures > 0) {
   console.error(`${failures} llms-gaps test(s) failed.`);
   process.exitCode = 1;

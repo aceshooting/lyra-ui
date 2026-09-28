@@ -62,7 +62,7 @@ for the page.
 | `postal-mime` | `^3.0.1 || ^4.0.0` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
-| `shiki` | `^4.4.3` | `lr-agent-workspace`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
+| `shiki` | `^4.4.3` | `lr-agent-workspace`, `lr-change-review`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
 | `svelte` | `>=5 <6` | type-only `@aceshooting/lyra-ui/svelte` entry (no runtime import) |
 | `vue` | `>=3.5 <4` | type-only `@aceshooting/lyra-ui/vue` entry (no runtime import) |
 | `xlsx` | `>=0.20.3 <0.21.0` | `lr-spreadsheet-viewer` |

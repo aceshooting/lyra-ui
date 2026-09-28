@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
@@ -49,6 +50,8 @@ async function semanticListOwner(el: LyraActivityFeed): Promise<HTMLElement> {
   return owner;
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', ['activityFeedLabel', 'activityFeedCompletedSteps']);
 it('defaults to entries=[], mode="live", follow=true, expanded=false, and a localized Activity label', async () => {
   const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
   expect(el.entries).to.deep.equal([]);

@@ -6,7 +6,8 @@
 - **Class** `LyraTerminal`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Deprecated event** `lr-download` since `unreleased`; use event `addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `wrap` / `wrap` since `21.1.0`; use property `without-wrap`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -70,7 +71,7 @@ plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
 `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
-`lr-download` (`detail: { filename }`, cancelable — by
+`lr-download-request` and `lr-download` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -79,6 +80,10 @@ matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
+`lr-download` is the deprecated cancelable alias, dispatched after `lr-download-request` with the
+same filename detail. Either event can suppress the built-in download; it is not a completion
+notification. Subscribe to one spelling.
+
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries

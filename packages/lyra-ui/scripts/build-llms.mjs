@@ -2,9 +2,10 @@
 // Builds every generated agent-facing reference artifact from the authored sources in `llms/`.
 // Authored (edit these):
 //   llms/00-preamble.md       intro paragraphs of llms-full.txt
-//   llms/shared.md            foundation + cross-cutting notes (apply to the whole library)
+//   llms/shared/*.md          focused foundation + cross-cutting topic guides
 //   llms/<family>.md          one file per src/components/<family>/ directory
 // Generated (never edit; `pnpm run llms` rewrites them, CI diffs them):
+//   llms/shared.md            legacy combined guide assembled from llms/shared/*.md
 //   llms-full.txt             concatenation, the single-file reference published since v1
 //   llms/index.md             tag -> family/import/one-line-purpose routing table
 //   llms/components/<tag>.md  one file per custom element (surgical agent reads); a tag sharing a
@@ -32,6 +33,9 @@ import { formatDeprecationSubject } from './component-metadata.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
 import { deprecationRecordFor, validateRenameLedger } from './lyra-rename-ledger.mjs';
+import { SHARED_COMPAT_ORDER, SHARED_TOPICS } from './shared-topics.mjs';
+
+export { SHARED_TOPICS } from './shared-topics.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const llmsDir = path.join(packageDir, 'llms');
@@ -600,8 +604,8 @@ function parseReadmeMirrorNotes(readmeText) {
  * completeness is gated by check-migration-coverage.mjs, not here, so docs still build while a
  * deprecation waits for its entry.
  */
-export function buildLyraRenameReference(renameLedger, inventory) {
-  const findings = validateRenameLedger(renameLedger, { inventory });
+export function buildLyraRenameReference(renameLedger, inventory, { exportDeprecations = [] } = {}) {
+  const findings = validateRenameLedger(renameLedger, { inventory, exportDeprecations });
   if (findings.length) throw new Error(`Cannot build migration reference: ${findings.join('; ')}`);
   const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
   const lines = [];
@@ -640,7 +644,11 @@ export function buildLyraRenameReference(renameLedger, inventory) {
       '| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |',
       '| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |',
       '| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |',
+      '| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |',
+      '| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |',
       '| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |',
+      '| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |',
+      '| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |',
       '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |',
       '| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |',
       '',
@@ -651,7 +659,7 @@ export function buildLyraRenameReference(renameLedger, inventory) {
       'hydration compares template strings.',
       '',
     );
-    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.reviews, profile.slotContent]
+    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews]
       .reduce((sum, entries) => sum + entries.length, 0);
     if (total === 0) {
       lines.push(`No ${from} names are scheduled to change yet.`, '');
@@ -692,6 +700,26 @@ export function buildLyraRenameReference(renameLedger, inventory) {
         '',
       );
     }
+    if (profile.retiredEvents?.length) {
+      lines.push(
+        `The following aliases were still published in ${from} and are removed in ${to}. They are`,
+        'reported without rewriting: move listeners and matching removals together, preserve unrelated',
+        'events with the same name, and check nested event targets and existing canonical handlers.',
+        '',
+        `| Component | Removed event | Replacement | Migration review |`,
+        '|---|---|---|---|',
+        ...profile.retiredEvents.map((entry) => `| \`<${entry.tag}>\` | \`${entry.event}\` | \`${entry.replacement}\` | ${cell(entry.summary)} |`),
+        '',
+      );
+    }
+    if (profile.propertyChanges?.length) {
+      lines.push(
+        `| Component | Property | Semantic change in ${to} (reported, never rewritten) |`,
+        '|---|---|---|',
+        ...profile.propertyChanges.map((entry) => `| \`<${entry.tag}>\` | \`${entry.property}\` | ${cell(entry.summary)} |`),
+        '',
+      );
+    }
     if (profile.reviews.length) {
       const components = new Map(inventory.components.map((component) => [component.tag, component]));
       lines.push(
@@ -717,6 +745,23 @@ export function buildLyraRenameReference(renameLedger, inventory) {
         '',
       );
     }
+    if (profile.moduleReviews.length) {
+      lines.push(
+        'Module migrations are report-only. Named imports and re-exports establish export ownership;',
+        'namespace, dynamic and CommonJS imports require a module-level review. Window event listeners,',
+        'root attribute bindings and selectors are reported without requiring a local module import.',
+        'Computed module paths, computed event/attribute names and application re-export chains still',
+        'need manual inspection. Review event detail, saved preferences and selector scope before updating.',
+        '',
+        '| Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |',
+        '|---|---|---|---|',
+        ...profile.moduleReviews.map((entry) => {
+          const record = exportDeprecations.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
+          return `| ${entry.kind} | \`${cell(entry.module ? `${entry.module}#${entry.name}` : entry.name)}\` | ${cell(record.replacement.usage || record.replacement.name)} | ${record.removalNotBefore} |`;
+        }),
+        '',
+      );
+    }
   }
   return lines;
 }
@@ -724,6 +769,7 @@ export function buildLyraRenameReference(renameLedger, inventory) {
 export function buildMigration() {
   const inventory = JSON.parse(read('scripts', 'fixtures', 'component-inventory.json'));
   const renameLedger = JSON.parse(read('scripts', 'fixtures', 'lyra-renames.json'));
+  const exportDeprecations = JSON.parse(read('scripts', 'fixtures', 'component-metadata.json')).exportDeprecations;
   const readmeNotes = parseReadmeMirrorNotes(read('README.md'));
   const classifications = [
     'exact',
@@ -876,20 +922,6 @@ export function buildMigration() {
       '',
     ];
   };
-  const localProfileRows = inventory.localMigrations
-    .slice()
-    .sort((left, right) => left.origin.localeCompare(right.origin) || left.tag.localeCompare(right.tag))
-    .map((profile) => {
-      const defaults = profile.defaults
-        .map((rule) =>
-          rule.value === true
-            ? `presence \`${rule.member}\``
-            : `\`${rule.member}="${String(rule.value)}"\``,
-        )
-        .join(', ');
-      return `| \`${profile.origin}\` | \`<${profile.tag}>\` | ${defaults} |`;
-    });
-
   return [
     GENERATED('scripts/fixtures/component-inventory.json + scripts/fixtures/lyra-renames.json'),
     '',
@@ -941,25 +973,7 @@ export function buildMigration() {
     'Web Awesome\'s `did-ssr` is its runtime hydration marker, not an authored member to recreate or',
     'rename on a Lyra component. The inventory records these exclusions explicitly.',
     '',
-    '## Migrating Lyra 7 defaults',
-    '',
-    'The local defaults profile is opt-in and separate from Web Awesome/Shoelace migration. It never',
-    'renames an `lr-*` tag or import; it only inserts an absent attribute that preserves a changed',
-    'Lyra 7 default. Boolean `true` is emitted as canonical attribute presence, including the positive',
-    'inverse `without-arrow` spelling.',
-    '',
-    '```bash',
-    'npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check --report=lyra-v7-migration.json src',
-    '```',
-    '',
-    'Opaque framework spreads and DOM aliases block that component profile across the scanned target',
-    'set with a warning. Expand or classify them before applying, then rerun to verify byte idempotence.',
-    '',
-    '| Origin | Component | Inserted only when absent |',
-    '|---|---|---|',
-    ...localProfileRows,
-    '',
-    ...buildLyraRenameReference(renameLedger, inventory),
+    ...buildLyraRenameReference(renameLedger, inventory, { exportDeprecations }),
     '## Classification summary',
     '',
     '| Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |',
@@ -993,15 +1007,15 @@ function packageSpecifier(specifier) {
 
 /**
  * The generated `llms/index.md` section for `component-metadata.json#exportDeprecations`:
- * deprecated entry points and exported types have no component reference to live in. Empty when
+ * deprecated entry points, types and runtime exports have no component reference to live in. Empty when
  * nothing is deprecated, so the index carries no placeholder heading.
  */
 export function buildExportDeprecationsSection(records) {
   if (!records?.length) return '';
   const lines = records.map((entry) => {
-    const subject = entry.kind === 'type'
-      ? `**Deprecated type** \`${entry.name}\` from \`${packageSpecifier(entry.module)}\``
-      : `**Deprecated entry point** \`${packageSpecifier(entry.name)}\``;
+    const subject = entry.module
+      ? `**Deprecated ${entry.kind}** \`${entry.name}\` from \`${packageSpecifier(entry.module)}\``
+      : `**Deprecated ${entry.kind === 'stylesheet' ? 'stylesheet' : 'entry point'}** \`${packageSpecifier(entry.name)}\``;
     const replacementKind = entry.replacement?.kind === 'entry-point'
       ? 'entry point'
       : entry.replacement?.kind ?? 'API';
@@ -1012,7 +1026,7 @@ export function buildExportDeprecationsSection(records) {
   return [
     '## Deprecated package exports',
     '',
-    'These package entry points and exported types still work but are deprecated. Each names its',
+    'These package exports, stylesheets and global DOM contracts still work but are deprecated. Each names its',
     'replacement and the earliest release that may remove it, under the deprecation policy in',
     '`llms/shared.md`.',
     '',
@@ -1043,8 +1057,14 @@ function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
     'valid if its internal family folder moves. Class-only `.class.js` entries intentionally keep',
     'their owning family path and do not register the tag.',
     '',
-    '**Everything else.** Library-wide behavior (base class, events, form association, `locale`/',
-    '`strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.',
+    '**Library-wide topics.** Focused guides cover imports and registration (`llms/shared/imports-and-registration.md`),',
+    'events and types (`llms/shared/events-and-types.md`), forms and accessibility',
+    '(`llms/shared/forms-and-accessibility.md`), styles and tokens',
+    '(`llms/shared/styles-and-tokens.md`), localization and RTL',
+    '(`llms/shared/localization-and-rtl.md`), frameworks and SSR',
+    '(`llms/shared/frameworks-and-ssr.md`), AI and optional peers (`llms/shared/ai-and-peers.md`),',
+    'and testing and utilities (`llms/shared/testing-and-utilities.md`). The combined',
+    'compatibility guide remains at `llms/shared.md`. Design tokens: `llms/tokens.md`.',
     'Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.md`.',
     '',
   ];
@@ -1135,7 +1155,7 @@ export function buildComponentFile(
       ' policy in `llms/shared.md`',
     '- **Release history** [CHANGELOG.md](../../CHANGELOG.md)' +
       (familyHasBreakingNotes
-        ? '; family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)'
+        ? `; family-wide breaking-change summaries: [${facts.family}](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/${facts.family}.md)`
         : ''),
     ...(deprecationLines.length ? deprecationLines : ['- **Deprecations** none']),
     peers.length
@@ -1157,6 +1177,128 @@ export function buildComponentFile(
 const SHARED_CHANGELOG_LINK = '[CHANGELOG.md](../CHANGELOG.md)';
 const ROOT_CHANGELOG_LINK = '[CHANGELOG.md](./CHANGELOG.md)';
 
+const SHARED_STYLE_CONTINUATION = '### Composing looks, surfaces and density';
+const SHARED_ACCESSIBILITY_CONTINUATION = '### Host accessible names and compatibility properties';
+
+function splitSharedSections(text, sourcePath) {
+  const sections = new Map();
+  let title = null;
+  let section = '';
+  const finish = () => {
+    if (title === null) return;
+    if (sections.has(title)) throw new Error(`${sourcePath} repeats shared section "${title}".`);
+    sections.set(title, section.trimEnd() + '\n');
+  };
+  for (const line of text.split(/(?<=\n)/u)) {
+    const match = line.match(/^## (.+?)\s*\n$/u);
+    if (match) {
+      finish();
+      title = match[1];
+      section = line;
+    } else if (title !== null) {
+      section += line;
+    } else if (line.trim()) {
+      throw new Error(`${sourcePath} has content before its first H2 section.`);
+    }
+  }
+  finish();
+  return sections;
+}
+
+function replaceExactlyOnce(text, source, replacement, label) {
+  const count = text.split(source).length - 1;
+  if (count !== 1) throw new Error(`Expected one ${label}, found ${count}.`);
+  return text.replace(source, replacement);
+}
+
+/** Read focused shared sources and assemble the stable combined route and anchor order. */
+export function buildSharedReferences() {
+  const sections = new Map();
+  for (const [name, title] of SHARED_TOPICS) {
+    const sourcePath = `llms/shared/${name}.md`;
+    const source = read('llms', 'shared', `${name}.md`).trimEnd();
+    const heading = `# ${title}`;
+    if (!source.startsWith(`${heading}\n`)) {
+      throw new Error(`${sourcePath} must start with "${heading}".`);
+    }
+    for (const [sectionTitle, sectionText] of splitSharedSections(
+      source.slice(heading.length).trimStart(),
+      sourcePath,
+    )) {
+      if (sections.has(sectionTitle)) {
+        throw new Error(`Shared section "${sectionTitle}" is authored more than once.`);
+      }
+      sections.set(sectionTitle, sectionText);
+    }
+  }
+
+  const stylesPath = 'llms/shared/styles-and-tokens.md';
+  const stylesSource = read('llms', 'shared', 'styles-and-tokens.md');
+  const styleTail = `${SHARED_STYLE_CONTINUATION}${stylesSource.split(SHARED_STYLE_CONTINUATION)[1] ?? ''}`;
+  if (stylesSource.split(SHARED_STYLE_CONTINUATION).length !== 2) {
+    throw new Error(`${stylesPath} must contain exactly one ${SHARED_STYLE_CONTINUATION}.`);
+  }
+  const accessPath = 'llms/shared/forms-and-accessibility.md';
+  const accessSource = read('llms', 'shared', 'forms-and-accessibility.md');
+  const accessTail = `${SHARED_ACCESSIBILITY_CONTINUATION}${accessSource.split(SHARED_ACCESSIBILITY_CONTINUATION)[1] ?? ''}`;
+  if (accessSource.split(SHARED_ACCESSIBILITY_CONTINUATION).length !== 2) {
+    throw new Error(`${accessPath} must contain exactly one ${SHARED_ACCESSIBILITY_CONTINUATION}.`);
+  }
+
+  const nativeStyles = sections.get('Optional native styles and CSS utilities');
+  const accessibility = sections.get('Accessibility contract');
+  if (!nativeStyles?.includes(SHARED_STYLE_CONTINUATION) || !accessibility?.includes(SHARED_ACCESSIBILITY_CONTINUATION)) {
+    throw new Error('Shared topic continuation headings must remain after their source sections.');
+  }
+  sections.set(
+    'Optional native styles and CSS utilities',
+    nativeStyles.slice(0, nativeStyles.indexOf(SHARED_STYLE_CONTINUATION)).trimEnd() + '\n',
+  );
+  sections.set(
+    'Accessibility contract',
+    accessibility.slice(0, accessibility.indexOf(SHARED_ACCESSIBILITY_CONTINUATION)).trimEnd() + '\n',
+  );
+
+  const missing = SHARED_COMPAT_ORDER.filter((title) => !sections.has(title));
+  const extra = [...sections.keys()].filter((title) => !SHARED_COMPAT_ORDER.includes(title));
+  if (missing.length || extra.length) {
+    throw new Error(
+      `Shared reference sections differ from the compatibility inventory; missing: ${missing.join(', ') || 'none'}; extra: ${extra.join(', ') || 'none'}.`,
+    );
+  }
+
+  let assembled = [...SHARED_COMPAT_ORDER.map((title) => sections.get(title)), styleTail, accessTail]
+    .join('\n')
+    .replace(/\n{3,}/gu, '\n\n')
+    .trimEnd();
+  assembled = replaceExactlyOnce(
+    assembled,
+    '../../CHANGELOG.md',
+    '../CHANGELOG.md',
+    'shared topic changelog path',
+  );
+  assembled = replaceExactlyOnce(
+    assembled,
+    './styles-and-tokens.md#',
+    '#',
+    'shared topic style anchor route',
+  );
+  assembled = replaceExactlyOnce(
+    assembled,
+    './testing-and-utilities.md#',
+    '#',
+    'shared cross-topic anchor route',
+  );
+  const compatibility =
+    `${GENERATED('llms/shared/*.md')}\n${assembled}\n`;
+  const sourceChangelog = '[CHANGELOG.md](../CHANGELOG.md)';
+  const occurrences = compatibility.split(sourceChangelog).length - 1;
+  if (occurrences !== 1) {
+    throw new Error(`Expected exactly one ${sourceChangelog} in assembled llms/shared.md, found ${occurrences}.`);
+  }
+  return { compatibility };
+}
+
 export function rewriteSharedLinksForRoot(text) {
   const occurrences = text.split(SHARED_CHANGELOG_LINK).length - 1;
   if (occurrences !== 1) {
@@ -1176,7 +1318,8 @@ export function build({ write = true } = {}) {
   const tagFacts = readTagFacts(manifest);
 
   const preamble = read('llms', '00-preamble.md').trimEnd();
-  const shared = read('llms', 'shared.md').trimEnd();
+  const sharedReferences = buildSharedReferences();
+  const shared = sharedReferences.compatibility.trimEnd();
   const rootShared = rewriteSharedLinksForRoot(shared);
 
   const sectionsByFamily = new Map();
@@ -1284,6 +1427,7 @@ export function build({ write = true } = {}) {
   const artifacts = new Map([
     [path.join(packageDir, 'llms-full.txt'), full],
     [path.join(packageDir, 'llms.txt'), `${shortIndex.join('\n').trimEnd()}\n`],
+    [path.join(llmsDir, 'shared.md'), `${shared}\n`],
     [
       path.join(llmsDir, 'index.md'),
       buildIndex(

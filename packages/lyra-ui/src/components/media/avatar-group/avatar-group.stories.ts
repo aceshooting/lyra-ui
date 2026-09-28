@@ -60,7 +60,7 @@ export const Sizes: Story = {
         <lr-avatar initials="EF"></lr-avatar>
         <lr-avatar initials="GH"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="medium" max="3">
+      <lr-avatar-group size="m" max="3">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
         <lr-avatar initials="EF"></lr-avatar>
@@ -140,7 +140,7 @@ export const BadgeFontSize: Story = {
         <lr-avatar initials="AB" size="small"></lr-avatar>
         <lr-avatar initials="CD" size="small"></lr-avatar>
       </lr-avatar-group>
-      <lr-avatar-group size="medium" max="1">
+      <lr-avatar-group size="m" max="1">
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
       </lr-avatar-group>

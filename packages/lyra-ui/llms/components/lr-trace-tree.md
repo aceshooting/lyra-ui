@@ -6,7 +6,7 @@
 - **Class** `LyraTraceTree`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated property** `hideBars` / `hide-bars` since `21.1.0`; use property `without-bars`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `showCost` / `show-cost` since `21.1.0`; use property `with-cost`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `showTokens` / `show-tokens` since `21.1.0`; use property `with-tokens`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.

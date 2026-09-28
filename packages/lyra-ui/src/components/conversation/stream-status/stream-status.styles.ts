@@ -24,6 +24,7 @@ export const styles = css`
   }
   /* Warning, not danger: a stall defaults to the recoverable/actionable tone -- see the class doc's
      "Visual" section. */
+  :host([connection-state='interrupted']),
   :host([data-stalled]) {
     --_lr-stream-status-dot-color-default: var(--lr-color-warning);
     --_lr-stream-status-dot-opacity-default: 1;
@@ -80,7 +81,7 @@ export const styles = css`
      motion. Same token and rationale as lr-typing-indicator's pulse variant, whose styles explain
      why --lr-transition-ambient suits an ambient loop. */
   :host([connection-state='streaming']:not([data-stalled])) [part='indicator'] {
-    animation: lr-stream-status-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-stream-status-pulse var(--lr-transition-ambient) infinite);
   }
   @keyframes lr-stream-status-pulse {
     0%,
@@ -119,4 +120,40 @@ export const styles = css`
   [part='actions'][hidden] {
     display: none;
   }
+  [part='resume'] {
+    --_lr-stream-status-resume-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-stream-status-resume-active-bg: color-mix(in oklab, var(--_lr-stream-status-resume-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+
+  [part='resume']:hover:where(:not(:disabled)) {
+    background: var(--_lr-stream-status-resume-hover-bg);
+  }
+
+  [part='resume']:active:where(:not(:disabled)) {
+    background: var(--_lr-stream-status-resume-active-bg);
+  }
+
+  [part='resume']:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part='resume']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
+  }
+
 `;

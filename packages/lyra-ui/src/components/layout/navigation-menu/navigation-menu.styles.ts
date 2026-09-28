@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   /* A flex-row header allocates the menu its remaining space instead of its content size: a
@@ -130,4 +131,5 @@ export const styles = css`
       background: CanvasText;
     }
   }
+  ${glassSurface('[part="base"]', css`var(--lr-color-surface)`, css`transparent`)}
 `;

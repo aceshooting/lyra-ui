@@ -222,7 +222,7 @@ export const ClickPosition: Story = {
           seed="42"
           .nodes=${nodes}
           .edges=${links}
-          @lr-node-click=${report}
+          @lr-node-activate=${report}
         ></lr-graph>
         <output>Click a node to inspect its local position.</output>
       </div>
@@ -319,7 +319,7 @@ export const DirectedRelationships: Story = {
       event: CustomEvent<{
         sourceNodeId: string;
         targetNodeId: string;
-        linkId?: string;
+        edgeId?: string;
       }>
     ) => {
       const output = (
@@ -327,7 +327,7 @@ export const DirectedRelationships: Story = {
       ).parentElement?.querySelector('output');
       if (output) {
         output.textContent = `Activated ${
-          event.detail.linkId ?? 'unidentified link'
+          event.detail.edgeId ?? 'unidentified link'
         }: ${event.detail.sourceNodeId} → ${event.detail.targetNodeId}`;
       }
     };
@@ -342,7 +342,7 @@ export const DirectedRelationships: Story = {
           style="height: 20rem"
           .nodes=${relationshipNodes}
           .edges=${relationshipLinks}
-          @lr-link-click=${reportLink}
+          @lr-edge-activate=${reportLink}
         ></lr-graph>
         <output aria-live="polite"
           >Activate a link to inspect its stable id.</output
@@ -401,7 +401,7 @@ export const CanvasLayeredCommunities: Story = {
   },
   render: () => {
     const showHover = (
-      event: CustomEvent<{ nodeId?: string; linkId?: string }>
+      event: CustomEvent<{ nodeId?: string; edgeId?: string }>
     ) => {
       const output = (event.currentTarget as HTMLElement)
         .closest('.graph-canvas-demo')
@@ -410,15 +410,15 @@ export const CanvasLayeredCommunities: Story = {
         output.textContent = event.type.endsWith('-leave')
           ? 'Hover a node or link'
           : `Hovered ${event.detail.nodeId ? 'node' : 'link'}: ${
-              event.detail.nodeId ?? event.detail.linkId
+              event.detail.nodeId ?? event.detail.edgeId
             }`;
     };
     const applySelection = (
-      event: CustomEvent<{ nodeIds: string[]; linkIds: string[] }>
+      event: CustomEvent<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }>
     ) => {
       const graph = event.currentTarget as LyraGraph;
-      graph.selectedNodeIds = event.detail.nodeIds;
-      graph.selectedEdgeIds = event.detail.linkIds;
+      graph.selectedNodeIds = event.detail.selectedNodeIds;
+      graph.selectedEdgeIds = event.detail.selectedEdgeIds;
     };
     const togglePalette = (event: Event) => {
       const graph = (event.currentTarget as HTMLElement)

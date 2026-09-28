@@ -1248,6 +1248,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     };
     const activeSlot = this.activeContentSlot;
     if (!activeSlot) return snapshot;
+    const renderRoot = this.renderRoot ?? this.shadowRoot;
     snapshot.assigned = activeSlot.assignedNodes().length > 0;
 
     // The popup hides itself with `visibility: hidden` while closed. Visibility inherits through
@@ -1255,7 +1256,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // tooltip as empty/non-actionable. Temporarily replace only that internal visibility with the
     // host's inherited value; consumer-authored hidden/visibility rules on the content or its
     // outer composed ancestors still participate in each getComputedStyle() call below.
-    const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+    const popup = renderRoot?.querySelector<HTMLElement>('[part~="popup"]');
     const bypassClosedVisibility =
       popup?.hasAttribute('data-hidden') === true || this.placementPending;
     const previousVisibility = popup?.style.getPropertyValue('visibility') ?? '';
@@ -1281,7 +1282,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         // Side effects only record nodes the bounded traversal actually reached; returning false
         // preserves its normal accessible-text projection.
         shouldPruneNode: (node) => {
-          if (node.getRootNode() !== this.renderRoot && !this.contains(node)) {
+          if (node.getRootNode() !== renderRoot && !this.contains(node)) {
             snapshot.externalRoots.add(node);
           }
           if (node.nodeType !== 1) return false;

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-policy-summary.js to register this component. */
 export * from './policy-summary.class.js';
 import { LyraPolicySummary } from './policy-summary.class.js';
 import { defineElement } from '../../../internal/prefix.js';

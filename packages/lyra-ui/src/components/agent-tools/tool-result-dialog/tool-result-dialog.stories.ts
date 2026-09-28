@@ -203,9 +203,9 @@ export const Events: Story = {
         tool-name="run_python"
         status="success"
         duration-ms="820"
-        @lr-close=${(e: CustomEvent<string>) => {
+        @lr-close=${(e: CustomEvent<{ reason: string }>) => {
           const out = document.getElementById('tool-result-dialog-log');
-          if (out) out.textContent = `lr-close: ${e.detail}`;
+          if (out) out.textContent = `lr-close: ${e.detail.reason}`;
         }}
         @lr-maximize-change-request=${(e: CustomEvent<{ readonly maximized: boolean }>) => {
           const out = document.getElementById('tool-result-dialog-log');

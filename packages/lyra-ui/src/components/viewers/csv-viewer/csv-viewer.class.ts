@@ -482,7 +482,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         .querySelector('[part="header-row"]')
         ?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
       target?.scrollIntoView({
-        behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+        behavior: prefersReducedMotion(this)
           ? 'auto'
           : 'smooth',
         block: 'nearest',
@@ -522,7 +522,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       | HTMLElement
       | undefined;
     target?.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+      behavior: prefersReducedMotion(this)
         ? 'auto'
         : 'smooth',
       block: 'nearest',

@@ -689,12 +689,11 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
         : this.status === 'error'
         ? 'base button base-error'
         : 'base button';
-    const tooltipDisabled = this.tooltip === 'none';
+    const tooltipDisabled = this.tooltip === 'none' || statusLabel.trim() === '';
     const tooltipOpen = !tooltipDisabled && this.status !== 'rest';
     const buttonLabel = this.accessibleLabel?.trim() ? this.accessibleLabel : statusLabel;
     return html`
       <lr-tooltip
-        .content=${statusLabel}
         .trigger=${this.tooltip === 'full' ? 'hover focus' : 'manual'}
         .placement=${this.tooltipPlacement}
         .hoist=${this.hoist}
@@ -710,6 +709,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
           ? nothing
           : html`
               <lr-icon-button
+                slot="trigger"
                 part=${part}
                 exportparts="button:base-control, button:base__control"
                 ?disabled=${this.disabled}
@@ -719,7 +719,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
                 ${this.renderIcon()}
               </lr-icon-button>
             `}
-        <slot @slotchange=${this.onDefaultSlotChange} @click=${this.onCustomTriggerClick}></slot>
+        <slot slot="trigger" @slotchange=${this.onDefaultSlotChange} @click=${this.onCustomTriggerClick}></slot>
+        <span>${statusLabel}</span>
       </lr-tooltip>
       <span part="feedback" aria-hidden="true">${feedback}</span>
     `;

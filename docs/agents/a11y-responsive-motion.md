@@ -195,8 +195,7 @@ component and a release blocker for a new one.
   writes `transition: var(--lr-transition-interactive);` on its *resting* rule — one token
   (`internal/tokens.styles.ts`, next to `--lr-transition-fast`) holding the three-property list
   that ninety-odd rules used to re-type one at a time. A component that wants it on every part it
-  renders composes `internal/interactive-transition.styles.ts` into `static styles` instead; that
-  sheet is `:where([part])`, so zero specificity, and any rule the component writes itself wins.
+  renders can declare the token on `:where([part])`; its zero specificity lets each part override it.
   Never hand-roll the property list again, and never reach for a duration/easing pair here —
   deriving from `--lr-transition-fast` is what makes the central reduced-motion collapse reach it
   with no new `@media` block.

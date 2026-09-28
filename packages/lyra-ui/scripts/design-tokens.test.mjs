@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildDesignTokenArtifacts,
+  buildLookInterchange,
   readCanonicalTokens,
   readLayerOrderStatement,
   validateCanonicalTokens,
@@ -68,6 +69,38 @@ assert.deepEqual(dtcg.theme.color.surface.default.$value, {
 });
 assert.ok(dtcg.theme.color.surface.default.$extensions['com.aceshooting.lyra.modes'].dark);
 
+const lookInterchange = dtcg.$extensions['com.aceshooting.lyra.looks'];
+assert.equal(lookInterchange.schemaVersion, 1);
+assert.equal(lookInterchange.base, 'lyra');
+assert.deepEqual(lookInterchange.definitions.lyra, { id: 'lyra', tokens: {} });
+assert.deepEqual(Object.keys(lookInterchange.definitions), ['lyra', 'material', 'shadcn']);
+for (const id of ['material', 'shadcn']) {
+  const authored = JSON.parse(readFileSync(path.join(packageDir, 'tokens', 'looks', `${id}.json`), 'utf8'));
+  assert.deepEqual(lookInterchange.definitions[id], { id, tokens: authored.tokens });
+}
+const sparseLook = { id: 'sparse', tokens: {
+  '--lr-theme-color-text-normal': { light: null, dark: '#eeeeee' },
+  '--lr-theme-color-text-quiet': { light: '#444444' },
+} };
+assert.deepEqual(buildLookInterchange([sparseLook]).definitions.sparse, sparseLook);
+assert.equal(JSON.stringify(buildLookInterchange([
+  { id: 'zebra', tokens: {} }, sparseLook,
+])), JSON.stringify(buildLookInterchange([
+  sparseLook, { id: 'zebra', tokens: {} },
+])), 'look order cannot change the generated interchange');
+assert.throws(() => buildLookInterchange([sparseLook, sparseLook]), /Duplicate or reserved/);
+assert.throws(() => buildLookInterchange([{ id: 'lyra', tokens: {} }]), /Duplicate or reserved/);
+assert.throws(() => buildLookInterchange([{ id: 'unsafe', tokens: { '--lr-theme-color-focus': 'red; color: blue' } }]));
+assert.throws(() => buildLookInterchange([{ id: 'surface', tokens: { '--lr-theme-surface-opacity': '0.2' } }]));
+assert.throws(() => buildLookInterchange([{ id: 'empty', tokens: { '--lr-theme-color-focus': { light: null, dark: null } } }]));
+const optionInterchange = dtcg.$extensions['com.aceshooting.lyra.options'];
+assert.equal(optionInterchange.schemaVersion, 1);
+assert.deepEqual(Object.keys(optionInterchange.presets), ['elevation', 'shape', 'typography']);
+for (const kind of ['shape', 'typography', 'elevation']) {
+  const authored = JSON.parse(readFileSync(path.join(packageDir, 'tokens', 'options', `${kind}.json`), 'utf8'));
+  assert.deepEqual(optionInterchange.presets[kind], authored.presets);
+}
+
 const css = bySuffix('/src/styles/design-tokens.css');
 assert.match(css, /\[data-lr-design-token-mode='light'\]/);
 assert.match(css, /\[data-lr-design-token-mode='dark'\]/);
@@ -119,7 +152,7 @@ assert.ok(
   'design-tokens.css must repeat theme.css\'s layer order statement exactly',
 );
 assert.ok(
-  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));'),
+  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));'),
   'the decorative border tier is published at document scope, still derived from --lr-color-border',
 );
 
@@ -147,6 +180,7 @@ const presetAssets = readdirSync(themesDir)
 assert.ok(presetAssets.length > 0, 'src/themes/ must ship at least one preset for the layer-order check to cover');
 const layeredAssets = [
   path.join('src', 'theme.css'),
+  path.join('src', 'preferences.css'),
   path.join('src', 'styles', 'native.css'),
   path.join('src', 'styles', 'utilities.css'),
   path.join('src', 'styles', 'tokens-root.css'),
@@ -200,6 +234,18 @@ assert.deepEqual(
 const layerFixture = mkdtempSync(path.join(tmpdir(), 'lyra-layer-order-'));
 try {
   mkdirSync(path.join(layerFixture, 'src'), { recursive: true });
+  mkdirSync(path.join(layerFixture, 'tokens', 'looks'), { recursive: true });
+  // Optional per-mode presets use the resolvers contributed by these built-in looks.
+  for (const file of readdirSync(path.join(packageDir, 'tokens', 'looks')).filter(file => file.endsWith('.json'))) {
+    writeFileSync(path.join(layerFixture, 'tokens', 'looks', file), readFileSync(path.join(packageDir, 'tokens', 'looks', file)));
+  }
+  writeFileSync(path.join(layerFixture, 'tokens', 'looks', 'sparse.json'), JSON.stringify(sparseLook));
+  writeFileSync(path.join(layerFixture, 'tokens', 'canonical-tokens.json'), JSON.stringify(source));
+  mkdirSync(path.join(layerFixture, 'tokens', 'options'), { recursive: true });
+  for (const kind of ['shape', 'typography', 'elevation']) {
+    writeFileSync(path.join(layerFixture, 'tokens', 'options', `${kind}.json`),
+      readFileSync(path.join(packageDir, 'tokens', 'options', `${kind}.json`)));
+  }
   const widened = '@layer lr-base, lr-theme, lr-theme-extra, lr-utilities, lr-overrides;';
   writeFileSync(
     path.join(layerFixture, 'src', 'theme.css'),
@@ -214,6 +260,9 @@ try {
     file.endsWith(`${path.sep}design-tokens.css`),
   )?.[1];
   assert.ok(fixtureModes?.includes(`\n${widened}\n`), 'a widened theme.css layer order must flow into design-tokens.css');
+  writeFileSync(path.join(layerFixture, 'tokens', 'looks', 'wrong.json'), JSON.stringify(sparseLook));
+  assert.throws(() => buildDesignTokenArtifacts(source, layerFixture), /Look id must match its source filename/);
+  rmSync(path.join(layerFixture, 'tokens', 'looks', 'wrong.json'));
   writeFileSync(path.join(layerFixture, 'src', 'theme.css'), ':root { --lr-theme-x: 1px; }\n');
   assert.throws(() => readLayerOrderStatement(layerFixture), /layer order/);
 } finally {

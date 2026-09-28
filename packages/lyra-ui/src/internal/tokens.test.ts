@@ -38,6 +38,14 @@ class NestedTokenProbe extends LitElement {
 }
 customElements.define(tag('nested-token-probe'), NestedTokenProbe);
 
+it('keeps optional shape and row foundations unset until an ancestor supplies them', async () => {
+  expect(await probeVar('--lr-radius-container')).to.equal(await probeVar('--lr-radius'));
+  expect(await probeVar('--lr-table-row-min-height')).to.equal('0px');
+  expect(await probeNestedVar('--lr-radius-container', '--lr-theme-border-radius-container: 19px')).to.equal('19px');
+  expect(await probeNestedVar('--lr-radius-button', '--lr-theme-border-radius-button: 21px')).to.equal('21px');
+  expect(await probeNestedVar('--lr-table-row-min-height', '--lr-theme-table-row-height: 42px')).to.equal('42px');
+});
+
 const SPECIALIST_TOKEN_PATTERN = /^--lr-(?:color-chart-|graph-cat-|terminal-(?:color|bg)-)/;
 
 function needsSpecialistTokens(names: readonly string[]): boolean {
@@ -195,31 +203,36 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter! + 0.05) / (darker! + 0.05);
 }
 
-function expectPaletteContrast(mode: PaletteMode): void {
-  const surface = fallbackHex('--lr-color-surface', mode);
+async function expectPaletteContrast(mode: PaletteMode): Promise<void> {
+  const probe = await fixture<TokenProbe>(html`<lr-token-probe data-lr-theme=${mode}></lr-token-probe>`);
+  const color = (name: string): string => '#' + resolvedColor(probe, name)
+    .map(channel => Math.round(channel).toString(16).padStart(2, '0')).join('');
+  const surface = color('--lr-color-surface');
   const pairs: Array<[label: string, foreground: string, background: string, minimum: number]> = [
-    ['text / surface', fallbackHex('--lr-color-text', mode), surface, 4.5],
-    ['quiet text / surface', fallbackHex('--lr-color-text-quiet', mode), surface, 4.5],
-    ['border / surface', fallbackHex('--lr-color-border', mode), surface, 3],
-    ['text / border', fallbackHex('--lr-color-text', mode), fallbackHex('--lr-color-border', mode), 4.5],
+    ['text / surface', color('--lr-color-text'), surface, 4.5],
+    ['quiet text / surface', color('--lr-color-text-quiet'), surface, 4.5],
+    ['border / surface', color('--lr-color-border'), surface, 3],
+    ['border / raised surface', color('--lr-color-border'), color('--lr-color-surface-raised'), 3],
+    ['border / overlay surface', color('--lr-color-border'), color('--lr-color-surface-overlay'), 3],
+    ['neutral text / normal fill', color('--lr-color-neutral-on-normal'), color('--lr-color-neutral-fill-normal'), 4.5],
   ];
 
   for (const tone of ['brand', 'success', 'warning', 'danger'] as const) {
-    const loud = fallbackHex(`--lr-color-${tone}`, mode);
+    const loud = color(`--lr-color-${tone}`);
     pairs.push(
       [`${tone} / surface`, loud, surface, 4.5],
-      [`${tone} / ${tone}-quiet`, loud, fallbackHex(`--lr-color-${tone}-quiet`, mode), 4.5],
-      [`on-${tone} / ${tone}`, fallbackHex(`--lr-color-on-${tone}`, mode), loud, 4.5],
+      [`${tone} / ${tone}-quiet`, loud, color(`--lr-color-${tone}-quiet`), 4.5],
+      [`on-${tone} / ${tone}`, color(`--lr-color-on-${tone}`), loud, 4.5],
     );
   }
 
   // Neutral ships the same loud/on-loud semantic pair as the other tones, but deliberately has
   // no `--lr-color-neutral-quiet` convenience alias: quiet neutral surfaces use the complete
   // palette token (`--lr-color-neutral-fill-quiet`) through the contextual vocabulary instead.
-  const neutral = fallbackHex('--lr-color-neutral', mode);
+  const neutral = color('--lr-color-neutral');
   pairs.push(
     ['neutral / surface', neutral, surface, 4.5],
-    ['on-neutral / neutral', fallbackHex('--lr-color-on-neutral', mode), neutral, 4.5],
+    ['on-neutral / neutral', color('--lr-color-on-neutral'), neutral, 4.5],
   );
 
   const failures = pairs.flatMap(([label, foreground, background, minimum]) => {
@@ -288,7 +301,7 @@ it('defines an otp-input-segment-size token, themeable via --lr-theme-otp-input-
 });
 
 it('defines the focus-ring tokens, with color aliasing the existing brand token', async () => {
-  expect(await probeVar('--lr-focus-ring-width')).to.equal('2px');
+  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
   expect(await probeVar('--lr-focus-ring-offset')).to.equal('2px');
   expect(await probeVar('--lr-focus-ring-color')).to.equal(await probeVar('--lr-color-brand'));
 });
@@ -312,7 +325,7 @@ it('defines an icon-button-size token', async () => {
 
 it('keeps the focus-ring, icon-button, otp-input, and popover-clamp defaults inside a nested shadow root with no override', async () => {
   expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.5rem');
-  expect(await probeNestedVar('--lr-focus-ring-width')).to.equal('2px');
+  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
   expect(await probeNestedVar('--lr-focus-ring-offset')).to.equal('2px');
   expect(await probeNestedVar('--lr-otp-input-segment-size')).to.equal('2.5em');
   expect(await probeNestedVar('--lr-popover-viewport-clamp')).to.equal('92vw');
@@ -376,7 +389,7 @@ it('leaves --lr-icon-button-size at its default when neither ancestor input is s
 });
 
 it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component nested below another host', async () => {
-  expect(await probeNestedVar('--lr-focus-ring-width', '--lr-theme-focus-ring-width: 4px')).to.equal('4px');
+  expect(resolvedPx(await nestedProbe('--lr-theme-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(4);
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-theme-focus-ring-offset: 5px')).to.equal('5px');
 });
 
@@ -394,7 +407,7 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
   // --lr-icon-button-size on the icon button itself is authoritative, and cannot be overridden
   // from a wrapper -- so nothing that relies on that today changes.
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.5rem');
-  expect(await probeNestedVar('--lr-focus-ring-width', '--lr-focus-ring-width: 4px')).to.equal('2px');
+  expect(resolvedPx(await nestedProbe('--lr-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(2);
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('2px');
   expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-otp-input-segment-size: 4em')).to.equal('2.5em');
   expect(await probeNestedVar('--lr-popover-viewport-clamp', '--lr-popover-viewport-clamp: 50vw')).to.equal('92vw');
@@ -723,7 +736,7 @@ it('resolves --lr-color-border-subtle to exactly --lr-color-border on every mode
   }
   expect(failures.join('\n'), 'routes on which the unset decorative tier diverged').to.equal('');
   // The routes really changed mode, so "equal" is not merely two copies of the light value.
-  expect([...borders]).to.include.members(['#8a8a90', '#6b6b74']);
+  expect([...borders]).to.include.members(['#8a8a90', '#787881']);
 });
 
 it('keeps --lr-color-border-subtle following a retuned --lr-theme-color-surface-border until its own input is set', async () => {
@@ -742,7 +755,7 @@ it('lets --lr-theme-color-surface-border-subtle set on an ancestor reach a compo
   // The dark declaration reads the same input; a literal there would silently ignore the theme.
   inner.setAttribute('data-lr-theme', 'dark');
   expect(read('--lr-color-border-subtle')).to.equal('rgb(1, 2, 3)');
-  expect(read('--lr-color-border')).to.equal('#6b6b74');
+  expect(read('--lr-color-border')).to.equal('#787881');
 });
 
 it('replaces a set --lr-theme-color-surface-border-subtle with the system border colour in forced colors', async function () {
@@ -811,12 +824,12 @@ it('keeps every graph-cat-N slot present for both light and dark', () => {
   }
 });
 
-it('keeps every standalone light fallback semantic pair at WCAG AA contrast', () => {
-  expectPaletteContrast('light');
+it('keeps every standalone light fallback semantic pair at WCAG AA contrast', async () => {
+  await expectPaletteContrast('light');
 });
 
-it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', () => {
-  expectPaletteContrast('dark');
+it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', async () => {
+  await expectPaletteContrast('dark');
 });
 
 it('chains filled-content and border tokens through the matching lyra theme-input roles', async () => {
@@ -924,36 +937,27 @@ function bridgedThemeInputs(): string[] {
   return [...new Set([...layers.matchAll(/var\((--lr-theme-[\w-]+)/g)].map((match) => match[1]!))].sort();
 }
 
-/**
- * Theme inputs deliberately NOT declared in theme.css, because their built-in fallback is another
- * resolved token rather than a literal. A literal in theme.css would be substituted once at :root
- * and inherited as a finished colour, freezing the derivation for every consumer who imports the
- * file -- the reason theme.css already gives for leaving --lr-theme-form-control-radius out.
- * --lr-theme-color-surface-border-subtle falls back to --lr-color-border, so declaring it there
- * would stop every divider following a retuned --lr-theme-color-surface-border.
- */
-const DERIVED_DEFAULT_THEME_INPUTS: readonly string[] = ['--lr-theme-color-surface-border-subtle'];
+// Optional row minimums remain unset so native tables keep content-driven sizing by default.
+const OPTIONAL_THEME_INPUTS: readonly string[] = ['--lr-theme-table-row-height'];
 
 it('declares every bridged theme input in theme.css', async () => {
   const { text } = await loadThemeCss();
   const missing = bridgedThemeInputs().filter(
-    (name) => !DERIVED_DEFAULT_THEME_INPUTS.includes(name) && !new RegExp(`^\\s*${name}:`, 'm').test(text),
+    (name) => !OPTIONAL_THEME_INPUTS.includes(name) && !new RegExp(`^\\s*${name}:`, 'm').test(text),
   );
   expect(missing.join('\n')).to.equal('');
 });
 
-it('leaves each derived-default theme input undeclared in theme.css, and derived from another token', async () => {
-  const { text } = await loadThemeCss();
-  const layers = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
-  const failures = DERIVED_DEFAULT_THEME_INPUTS.flatMap((name) => [
-    ...(new RegExp(`^\\s*${name}:`, 'm').test(text) ? [`${name} is declared in theme.css`] : []),
-    // An exemption for an input nothing reads, or one that falls back to a literal after all, is a
-    // stale exemption hiding a genuinely undocumented input.
-    ...(new RegExp(`var\\(${name},\\s*var\\(--lr-`).test(layers)
-      ? []
-      : [`${name} is not read with another token as its fallback`]),
-  ]);
-  expect(failures.join('\n')).to.equal('');
+it('keeps the decorative boundary derived from an authored control boundary unless explicitly overridden', async () => {
+  await withThemeCss(async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div style="--lr-theme-color-surface-border: #123456"><lr-token-probe></lr-token-probe></div>`);
+    const probe = wrapper.querySelector('lr-token-probe')!;
+    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([18, 52, 86]);
+    wrapper.style.setProperty('--lr-theme-color-surface-border', '#654321');
+    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([101, 67, 33]);
+    wrapper.style.setProperty('--lr-theme-color-surface-border-subtle', '#abcdef');
+    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([171, 205, 239]);
+  });
 });
 
 it('names only theme inputs that a component token layer actually reads', async () => {
@@ -963,10 +967,14 @@ it('names only theme inputs that a component token layer actually reads', async 
   // `palette`, visualization and terminal inputs by the opt-in specialist layer, and the
   // form-control height/radius ladder by the shared control-sizing layers -- `sizes` paints the
   // ladder itself and `contextualSizes` re-reads it for the density-scoped variants.
+  const utilityResponse = await fetch(new URL('../styles/utilities.css', import.meta.url));
+  expect(utilityResponse.ok).to.equal(true);
   const read = [tokens, palette, specialistTokens, sizes, contextualSizes]
     .map((sheet) => sheet.cssText)
     .join('\n');
-  const unused = declared.filter((name) => !read.includes(`var(${name},`));
+  const consumers = read + await utilityResponse.text();
+  // The runtime exposes the requested accent seed independently of its derived palette.
+  const unused = declared.filter((name) => name !== '--lr-theme-accent' && !consumers.includes(`var(${name},`));
   expect(unused.join('\n')).to.equal('');
 });
 
@@ -985,7 +993,6 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
   // four values from the generator's output, not hand-picking new ones.
   const expected: Array<[name: string, value: string]> = [
     ['--lr-icon-button-size', '2.5rem'],
-    ['--lr-focus-ring-width', '2px'],
     ['--lr-focus-ring-offset', '2px'],
     ['--lr-color-surface', '#ffffff'],
     ['--lr-color-surface-raised', '#f6f8fa'],
@@ -1018,6 +1025,7 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
     ['--lr-shadow-xl', '0 12px 32px rgb(0 0 0 / 0.22)'],
   ];
   await withThemeCss(async () => {
+    expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
     const failures: string[] = [];
     for (const [name, value] of expected) {
       const actual = await probeVarUnder('lr-light', name);
@@ -1044,7 +1052,7 @@ it('keeps --lr-color-border-subtle equal to --lr-color-border in both modes when
     const failures: string[] = [];
     for (const [themeClass, expected] of [
       ['lr-light', '#8a8a90'],
-      ['lr-dark', '#6b6b74'],
+      ['lr-dark', '#787881'],
     ] as const) {
       const values = await probeVarsUnder(themeClass, BORDER_TIERS);
       for (const name of BORDER_TIERS) {

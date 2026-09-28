@@ -1,5 +1,5 @@
 {
-  "$comment": "Authored ledger of Lyra-only public names that change across a major release. Each profile drives lyra-ui-migrate --origin=<origin>, the generated llms/migration.md section and the packaged dist/cli/migration-contract.json. renames and reviews must each match an implemented, deprecated Lyra-only member and its component-metadata.json record (removalNotBefore in aliasRemovalMajor, since no later than toMajor.0.0 or 'unreleased'); defaults, detailChanges and slotContent record changes that have no member deprecation record, and a slotContent entry for a slot whose content carries a slot-content record keeps exactly that record's permittedContent as allow. check-migration-coverage.mjs also requires every Lyra-only deprecation removed in aliasRemovalMajor to have a rename or review entry (a slotContent entry for a slot-content record). Entries stay sorted by tag and name. See docs/rfcs/0003-lyra-v21-migration-profile.md.",
+  "$comment": "Authored ledger of Lyra-only public names that change across a major release. Each profile drives lyra-ui-migrate --origin=<origin>, the generated llms/migration.md section and the packaged dist/cli/migration-contract.json. renames and reviews must each match an implemented, deprecated Lyra-only member and its component-metadata.json record (removalNotBefore in aliasRemovalMajor, since no later than toMajor.0.0 or 'unreleased'); defaults, detailChanges and slotContent record changes that have no member deprecation record, and a slotContent entry for a slot whose content carries a slot-content record keeps exactly that record's permittedContent as allow. check-migration-coverage.mjs also requires every Lyra-only deprecation removed in aliasRemovalMajor to have a rename or review entry (a slotContent entry for a slot-content record). Entries stay sorted by tag and name. See docs/rfcs/0003-lyra-v21-migration-profile.md. moduleReviews identify canonical exportDeprecations by kind, module (for named exports/events/attributes) and name, sorted in that order. Replacement guidance and release windows are projected from that metadata, never duplicated here. Module migrations are report-only; check-migration-coverage requires both v21/removal23 and v22/removal24 module cohorts to be complete.",
   "schemaVersion": 1,
   "profiles": [
     {
@@ -1421,18 +1421,6 @@
           "kind": "event",
           "from": "lr-community-click",
           "to": "lr-community-activate"
-        },
-        {
-          "tag": "lr-graph",
-          "kind": "event",
-          "from": "lr-link-enter",
-          "to": "lr-edge-enter"
-        },
-        {
-          "tag": "lr-graph",
-          "kind": "event",
-          "from": "lr-link-leave",
-          "to": "lr-edge-leave"
         },
         {
           "tag": "lr-graph",
@@ -3253,8 +3241,210 @@
           "to": "--lr-zoomable-frame-control-hover-bg"
         }
       ],
-      "defaults": [],
-      "detailChanges": [],
+      "defaults": [
+        {
+          "tag": "lr-attachment-trigger",
+          "attribute": "multiple",
+          "value": true
+        },
+        {
+          "tag": "lr-avatar",
+          "attribute": "size",
+          "value": "medium"
+        },
+        {
+          "tag": "lr-avatar-group",
+          "attribute": "size",
+          "value": "medium"
+        },
+        {
+          "tag": "lr-drop-zone",
+          "attribute": "multiple",
+          "value": true
+        },
+        {
+          "tag": "lr-dropdown",
+          "attribute": "without-arrow",
+          "value": true
+        }
+      ],
+      "detailChanges": [
+        {
+          "tag": "lr-app-rail",
+          "event": "lr-toggle",
+          "summary": "Toggle notifications are now non-cancelable and fire after the state changes; move veto listeners to lr-toggle-request. Detail.expanded always describes the resulting state."
+        },
+        {
+          "tag": "lr-app-rail-group",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-app-rail-group",
+          "event": "lr-toggle-request",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-app-rail-item",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-app-rail-item",
+          "event": "lr-toggle-request",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-callout",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-chat-message",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-chat-message",
+          "event": "lr-toggle-request",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-code-block",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-code-block",
+          "event": "lr-toggle-request",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-code-block-core",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-code-block-core",
+          "event": "lr-toggle-request",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-command-palette",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-details",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-dialog",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-document-viewer",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-drawer",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-flow-canvas",
+          "event": "lr-selection-change",
+          "summary": "Detail.selectedNodeIds and selectedEdgeIds replace nodeIds and edgeIds, matching the selection properties. The deletion action retains nodeIds and edgeIds."
+        },
+        {
+          "tag": "lr-graph",
+          "event": "lr-edge-enter",
+          "summary": "The canonical edge hover detail uses edgeId instead of linkId. Legacy link hover aliases retain linkId."
+        },
+        {
+          "tag": "lr-graph",
+          "event": "lr-edge-leave",
+          "summary": "The canonical edge hover detail uses edgeId instead of linkId. Legacy link hover aliases retain linkId."
+        },
+        {
+          "tag": "lr-graph",
+          "event": "lr-selection-change",
+          "summary": "Selection detail now uses selectedNodeIds and selectedEdgeIds, matching the controlled properties; replace reads of nodeIds and linkIds."
+        },
+        {
+          "tag": "lr-knowledge-base-admin",
+          "event": "lr-tab-change",
+          "summary": "Detail.activeTab replaces tab and matches the activeTab property."
+        },
+        {
+          "tag": "lr-locale-picker",
+          "event": "lr-change",
+          "summary": "The change event is now a non-cancelable notification after the locale selection is accepted. Move veto handlers to lr-change-request."
+        },
+        {
+          "tag": "lr-multi-split",
+          "event": "lr-toggle",
+          "summary": "Toggle notifications are now non-cancelable and fire after the state changes; move veto listeners to lr-toggle-request. Detail.expanded always describes the resulting state."
+        },
+        {
+          "tag": "lr-navigation-menu-item",
+          "event": "lr-toggle",
+          "summary": "Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available."
+        },
+        {
+          "tag": "lr-prompt-studio",
+          "event": "lr-change",
+          "summary": "The change event is now a non-cancelable notification after the accepted state change. Move veto handlers to lr-change-request; preventing lr-change no longer cancels the proposal."
+        },
+        {
+          "tag": "lr-responsive-panel",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-table",
+          "event": "lr-column-resize",
+          "summary": "Resize notifications are now always non-cancelable. Move final-width veto handlers to lr-column-resize-request; per-pixel preview notifications keep their detail."
+        },
+        {
+          "tag": "lr-table",
+          "event": "lr-filter-change",
+          "summary": "Detail.filterText replaces text and matches the filterText property."
+        },
+        {
+          "tag": "lr-table",
+          "event": "lr-selection-change",
+          "summary": "Detail.selectedRowKeys replaces rowKeys and contains the frozen key array for the selectedRowKeys property."
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-tool-result-dialog",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-tool-select-dialog",
+          "event": "lr-change",
+          "summary": "The change event is now a non-cancelable notification after the accepted state change. Move veto handlers to lr-change-request; preventing lr-change no longer cancels the proposal."
+        },
+        {
+          "tag": "lr-tool-select-dialog",
+          "event": "lr-close",
+          "summary": "Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes."
+        },
+        {
+          "tag": "lr-tour",
+          "event": "lr-tour-end",
+          "summary": "Tour end now carries { reason } instead of a raw reason and is a non-cancelable notification after closing. Move ordinary-end vetoes to lr-tour-end-request. Forced unmount still emits lr-tour-end with reason unmount and cannot be vetoed."
+        }
+      ],
       "reviews": [
         {
           "tag": "lr-activity-feed",
@@ -3430,6 +3620,16 @@
           "tag": "lr-geojson-view",
           "kind": "component",
           "name": "lr-geojson-view"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "name": "lr-link-enter"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "name": "lr-link-leave"
         },
         {
           "tag": "lr-histogram",
@@ -3690,7 +3890,3062 @@
           ],
           "summary": "Only items, labels and separators belong in the menu list; move other content to slot=\"header\" or slot=\"footer\", which render it outside role=\"menu\"."
         }
+      ],
+      "moduleReviews": [
+        {
+          "kind": "entry-point",
+          "name": "./components/lr-geojson-view.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/geojson-view/geojson-view.class.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/geojson-view/geojson-view.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./utilities/localization.js"
+        },
+        {
+          "kind": "type",
+          "module": "./components/retrieval/graph/graph.class.js",
+          "name": "LyraGraphLink"
+        },
+        {
+          "kind": "type",
+          "module": "./components/viewers/document-viewer/registry.js",
+          "name": "DocumentFile"
+        },
+        {
+          "kind": "type",
+          "module": "./components/viewers/document-viewer/registry.js",
+          "name": "DocumentRendererDefinition"
+        },
+        {
+          "kind": "type",
+          "module": "./components/viewers/geojson-view/geojson-view.class.js",
+          "name": "LyraGeojsonViewEventMap"
+        }
+      ],
+      "propertyChanges": [
+        {
+          "tag": "lr-app-rail-group",
+          "property": "headingLevel",
+          "summary": "Use the string heading levels '1' through '6', or 'none'; numeric JavaScript assignments must be reviewed and converted. HTML heading-level strings remain valid; invalid values now fall back to '3' instead of numeric clamping."
+        },
+        {
+          "tag": "lr-sequence-strip",
+          "property": "accessibleLabel",
+          "summary": "An authored host aria-label now takes precedence over this legacy property, including an explicitly empty host value. Review consumers that set both names."
+        },
+        {
+          "tag": "lr-table",
+          "property": "accessibleLabel",
+          "summary": "An authored host aria-label now takes precedence over this legacy property, including an explicitly empty host value. Review consumers that set both names."
+        },
+        {
+          "tag": "lr-thread-list",
+          "property": "size",
+          "summary": "Size now controls both search chrome and thread rows. Previously size controlled search while compact controlled rows independently; review explicit size and compact combinations, using row styling where independent density must be preserved."
+        }
+      ],
+      "retiredEvents": [
+        {
+          "tag": "lr-box-plot",
+          "event": "lr-before-legend-visibility-change",
+          "replacement": "lr-legend-visibility-change-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-chart",
+          "event": "lr-before-datum-visibility-change",
+          "replacement": "lr-datum-visibility-change-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-chart",
+          "event": "lr-before-legend-visibility-change",
+          "replacement": "lr-legend-visibility-change-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-command-palette",
+          "event": "lr-open",
+          "replacement": "lr-show",
+          "summary": "The palette lifecycle uses lr-show with the same null detail, timing and cancelability. Keep lr-open listeners for document-library and source-card item activation unchanged."
+        },
+        {
+          "tag": "lr-graph-legend",
+          "event": "lr-before-visibility-change",
+          "replacement": "lr-visibility-change-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-graph-query-builder",
+          "event": "lr-before-query-delete",
+          "replacement": "lr-query-delete-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-graph-query-builder",
+          "event": "lr-before-query-load",
+          "replacement": "lr-query-load-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-graph-query-builder",
+          "event": "lr-before-query-run",
+          "replacement": "lr-query-run-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        },
+        {
+          "tag": "lr-graph-query-builder",
+          "event": "lr-before-query-save",
+          "replacement": "lr-query-save-request",
+          "summary": "The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification."
+        }
       ]
+    },
+    {
+      "origin": "lyra-v22",
+      "fromMajor": 22,
+      "toMajor": 23,
+      "aliasRemovalMajor": 24,
+      "renames": [
+        {
+          "tag": "lr-dropdown",
+          "kind": "attribute",
+          "from": "arrow",
+          "to": "without-arrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-dropdown",
+          "kind": "property",
+          "from": "arrow",
+          "to": "withoutArrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "from": "lr-node-click",
+          "to": "lr-node-activate"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "event",
+          "from": "lr-node-click",
+          "to": "lr-node-activate"
+        },
+        {
+          "tag": "lr-markdown",
+          "kind": "event",
+          "from": "lr-link-click",
+          "to": "lr-link-activate"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "event",
+          "from": "lr-link-click",
+          "to": "lr-link-activate"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "event",
+          "from": "lr-link-click",
+          "to": "lr-link-activate"
+        },
+        {
+          "tag": "lr-sequence-strip",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        }
+      ],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [
+        {
+          "tag": "lr-approval-queue",
+          "kind": "event",
+          "name": "lr-approval-decision"
+        },
+        {
+          "tag": "lr-attachment-trigger",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-callout",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-carousel",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-combobox",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-compare-panel",
+          "kind": "event",
+          "name": "lr-vote"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "event",
+          "name": "lr-approve"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "event",
+          "name": "lr-deny"
+        },
+        {
+          "tag": "lr-context-meter",
+          "kind": "event",
+          "name": "lr-segment-activate"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-dialog",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-document-library",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-drawer",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-eval-run",
+          "kind": "event",
+          "name": "lr-example-tool-approval-decide"
+        },
+        {
+          "tag": "lr-export-button",
+          "kind": "event",
+          "name": "lr-export"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "name": "lr-link-click"
+        },
+        {
+          "tag": "lr-knowledge-base",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "event",
+          "name": "lr-link-click"
+        },
+        {
+          "tag": "lr-lightbox",
+          "kind": "event",
+          "name": "lr-lightbox-close"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-message-actions",
+          "kind": "event",
+          "name": "lr-feedback-submit"
+        },
+        {
+          "tag": "lr-message-feedback",
+          "kind": "event",
+          "name": "lr-feedback-submit"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-progress-bar",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-progress-ring",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-reorder-item",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-sequence-strip",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "property",
+          "name": "accessibleLabel"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "event",
+          "name": "lr-download"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "event",
+          "name": "lr-retry"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "event",
+          "name": "lr-approve"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "event",
+          "name": "lr-deny"
+        },
+        {
+          "tag": "lr-tool-timeline",
+          "kind": "event",
+          "name": "lr-tool-approval-decide"
+        }
+      ],
+      "slotContent": [],
+      "moduleReviews": [
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAccordion"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAccordionItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraActivityFeed"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAgentEvalDashboard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAgentRun"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAgentTrace"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAgentWorkspace"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAlert"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAnimatedImage"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAppRailGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAppRailItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraApprovalQueue"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraArchiveViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraArtifactPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAttachmentTrigger"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAudioVisualizer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAvPlayer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAvatar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAvatarGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBadge"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBarChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBoxPlot"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBranchPicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBreadcrumb"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBreadcrumbItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBrowserFrame"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraBubbleChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraButton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraButtonGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCalendar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCalendarViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCallout"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCarousel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCarouselItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChatComposer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChatMessage"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChatViewport"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCheckbox"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCheckboxGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCheckpoint"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChipGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraChunkInspector"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCitationBadge"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraClaimEvidence"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCodeBlock"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCodeBlockCore"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCodeEditor"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraColorPicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCombobox"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCommandPalette"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCommitCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCommunityCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraComparePanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraConditionBuilder"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraConfirmBar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraContactViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraContextInspector"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraContextMeter"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraControlGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraConversationItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCopyButton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraCsvViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDashboardGrid"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDataGrid"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDatasetViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDateInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDatePicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDetails"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDialog"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDiffView"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDivider"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDockPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDocumentCompare"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDocumentLibrary"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDocumentPreview"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDocumentViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDocxViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDoughnutChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDrawer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDrilldownPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDropZone"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraDropdownItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEbookViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEmailViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEmbeddingExplorer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEmojiPicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEmpty"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEntityCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEntityChip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEntityDossier"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEnvList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEvalDataset"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEvalResult"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraEvalRun"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraExportButton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFileIcon"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFileTree"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFilterBar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlowCanvas"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlowControls"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlowMinimap"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlowNode"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlowRunStatus"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFormatBytes"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFormatDate"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFormatNumber"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFunnel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGauge"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGenerationMetrics"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGeoJsonViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGeojsonView"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGraph"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGraphLegend"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGraphQueryBuilder"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraGroundingSummary"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraHandoffDivider"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraHeatmap"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraHighlightLayer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraHistogram"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraHtmlViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraIcon"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraIconButton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraImageComparer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraImageViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraInclude"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraIngestionQueue"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraIntersectionObserver"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraJsonSchemaViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraJsonViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraKnowledgeBase"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraKnowledgeBaseAdmin"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraKnowledgeGraphExplorer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraKnownDate"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraLightbox"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraLineChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraLiteChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraLiveRegion"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraLocalePicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMap"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMarkdown"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMarkdownCore"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMcpApp"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMediaCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMemoryPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMentionPopover"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMenu"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMenuItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMenuLabel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMenubar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMenubarItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMessageActions"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMessageFeedback"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMessageParts"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMindMap"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraModelSelect"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraModelSettingsPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMultiSplit"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraMutationObserver"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNativeTimeInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNavigationMenu"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNavigationMenuItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNeighborList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNodePalette"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNotebookViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraNumberInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraOption"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraOtpInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPage"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPageRail"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPagination"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPanZoom"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPathStrip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPdfViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPieChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPolarAreaChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPolicySummary"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPollStatus"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPopover"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPopup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPptxViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraProgressBar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraProgressRing"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPromptInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPromptQueue"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPromptStudio"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraProvenancePanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraPushToTalk"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraQrCode"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRadarChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRadio"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRadioButton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRadioGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRagAnswer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRagEvalDashboard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRandomContent"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRating"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRealtimeSession"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRelativeTime"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraReorderItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraReorderList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraResizeObserver"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraResultCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraResultField"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRetrievalCompare"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRetrievalResults"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRetrievalSearch"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRetrievalTrace"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraRubricForm"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraScatterChart"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraScroller"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSegmented"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSelect"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSelectionToolbar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSequencePlayback"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSequenceStrip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSkeleton"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSlider"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSourceCard"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSourceList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSourcePicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSpanWaterfall"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSparkline"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSpinner"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSpreadsheetViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStackTrace"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStat"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStepper"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStreamStatus"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStreamingTextCore"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSubagentPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSuggestionChips"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSvgViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSwatchPicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraSwitch"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTab"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTabGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTabPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTable"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTag"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTaskList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTerminal"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTextarea"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraThinkingPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraThreadList"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTimeInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTimeRange"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTimeline"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTimelineItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToast"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToastItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToggle"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToggleGroup"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTokenInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolApprovalDialog"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolCallBlock"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolCallChip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolParamForm"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolResultDialog"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolResultView"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolSelectDialog"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraToolTimeline"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTooltip"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTour"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTraceTree"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTranscriptFeed"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTree"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTreeItem"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTypingIndicator"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraUsageBadge"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraVideo"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraVideoPlaylist"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraVisuallyHidden"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraVoicePicker"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraWidget"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraWidgetRenderer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraWordCloud"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraXmlViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraZoomableFrame"
+        },
+        {
+          "kind": "constant",
+          "module": "./theme/presets.js",
+          "name": "LYRA_THEME_PRESETS"
+        },
+        {
+          "kind": "constant",
+          "module": "./theme/presets/shadcn.js",
+          "name": "LYRA_SHADCN_THEME_PRESET"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/activity-feed/activity-feed.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/agent-run/agent-run.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/agent-trace/agent-trace.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/approval-queue/approval-queue.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/artifact-panel/artifact-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/browser-frame/browser-frame.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/commit-card/commit-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/compare-panel/compare-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/confirm-bar/confirm-bar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/context-inspector/context-inspector.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/eval-dataset/eval-dataset.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/eval-result/eval-result.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/evaluation-run/evaluation-run.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/mcp-app/mcp-app.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/policy-summary/policy-summary.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/prompt-studio/prompt-studio.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/result-card/result-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/result-card/result-field.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/schema-viewer/schema-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/span-waterfall/span-waterfall.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/stack-trace/stack-trace.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/subagent-panel/subagent-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/task-list/task-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/terminal/terminal.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/test-results/test-results.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/thinking-panel/thinking-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-approval-dialog/tool-approval-dialog.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-call-block/tool-call-block.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-call-chip/tool-call-chip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-param-form/tool-param-form.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-result-dialog/tool-result-dialog.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-result-view/tool-result-view.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-select-dialog/tool-select-dialog.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/tool-timeline/tool-timeline.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/agent-tools/trace-tree/trace-tree.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/bar-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/box-plot.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/bubble-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/doughnut-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/histogram.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/line-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/lite-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/pie-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/polar-area-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/radar-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/charts/chart/scatter-chart.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/agent-workspace/agent-workspace.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/audio-visualizer/audio-visualizer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/branch-picker/branch-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/chat-composer/chat-composer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/chat-message/chat-message.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/chat-viewport/chat-viewport.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/checkpoint/checkpoint.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/code-block/code-block-core.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/code-block/code-block.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/conversation-item/conversation-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/generation-metrics/generation-metrics.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/handoff-divider/handoff-divider.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/markdown/markdown-core.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/markdown/markdown.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/message-actions/message-actions.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/message-feedback/message-feedback.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/message-parts/message-parts.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/model-select/model-select.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/model-settings-panel/model-settings-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/prompt-input/prompt-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/prompt-queue/prompt-queue.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/push-to-talk/push-to-talk.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/realtime-session/realtime-session.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/selection-toolbar/selection-toolbar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/stream-status/stream-status.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/streaming-text/streaming-text-core.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/streaming-text/streaming-text.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/suggestion-chips/suggestion-chips.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/thread-list/thread-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/transcript-feed/transcript-feed.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/typing-indicator/typing-indicator.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/usage-badge/usage-badge.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/voice-picker/voice-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/conversation/widget-renderer/widget-renderer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/calendar/calendar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/condition-builder/condition-builder.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/context-meter/context-meter.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/data-grid/data-grid.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/document-library/document-library.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/env-list/env-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/file-tree/file-tree.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/flow-canvas/flow-canvas.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/flow-controls/flow-controls.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/flow-minimap/flow-minimap.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/flow-node/flow-node.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/flow-run-status/flow-run-status.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/funnel/funnel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/gauge/gauge.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/graph-query-builder/graph-query-builder.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/heatmap/heatmap.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/pagination/pagination.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/sequence-strip/sequence-strip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/sparkline/sparkline.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/stat/stat.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/table/table.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/timeline/timeline-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/timeline/timeline.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/tree/tree-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/tree/tree.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/data/word-cloud/word-cloud.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/button/button.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/checkbox-group/checkbox-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/checkbox/checkbox.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/code-editor/code-editor.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/color-picker/color-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/combobox/combobox.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/combobox/option.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/date-picker/date-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/date-picker/date-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/emoji-picker/emoji-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/icon-button/icon-button.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/input/input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/input/native-time-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/input/number-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/input/time-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/locale-picker/locale-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/otp-input/otp-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/phone-input/phone-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/radio/radio-button.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/radio/radio-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/radio/radio.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/rubric-form/rubric-form.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/select/select.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/slider/slider.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/swatch-picker/swatch-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/switch/switch.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/textarea/textarea.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/time-range/time-range.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/toggle-group/toggle-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/toggle/toggle.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/forms/token-input/token-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/app-rail-group/app-rail-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/app-rail/app-rail-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/app-rail/app-rail.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/breadcrumb/breadcrumb-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/breadcrumb/breadcrumb.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/button-group/button-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/card/card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/carousel/carousel-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/carousel/carousel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/command-palette/command-palette.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/control-group/control-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/dashboard-grid/dashboard-grid.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/details/accordion-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/details/accordion.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/details/details.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/dock-panel/dock-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/drilldown-panel/drilldown-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/filter-bar/filter-bar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menu/dropdown-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menu/menu-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menu/menu-label.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menu/menu.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menubar/menubar-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/menubar/menubar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/multi-split/multi-split.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/navigation-menu-item/navigation-menu-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/navigation-menu/navigation-menu.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/page/page.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/reorder-list/reorder-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/reorder-list/reorder-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/responsive-panel/responsive-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/scroller/scroller.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/segmented/segmented.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/split-panel/split-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/stepper/stepper.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/tab-group/tab-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/tab-group/tab-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/tab-group/tab.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/virtual-list/virtual-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/layout/widget/widget.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/animated-image/animated-image.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/animation/animation.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/attachment-chip/attachment-chip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/attachment-trigger/attachment-trigger.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/av-player/av-player.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/avatar-group/avatar-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/avatar/avatar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/drop-zone/drop-zone.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/file-icon/file-icon.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/file-input/file-input.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/flag/flag.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/image-comparer/image-comparer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/image-viewer/image-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/lightbox/lightbox.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/map/map.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/media-card/media-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/pan-zoom/pan-zoom.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/qr-code/qr-code.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/sequence-playback/sequence-playback.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/video-playlist/video-playlist.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/video/video.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/media/zoomable-frame/zoomable-frame.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/alert/alert.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/badge/badge.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/badge/tag.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/callout/callout.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/chip/chip-group.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/chip/chip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/context-menu/context-menu.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/dialog/dialog.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/drawer/drawer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/empty/empty.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/kbd/kbd.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/overlay/dropdown.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/overlay/popover.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/overlay/tooltip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/popup/popup.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/progress/progress-bar.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/progress/progress-ring.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/rating/rating.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/skeleton/skeleton.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/spinner/spinner.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/toast/toast-item.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/overlays/toast/toast.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/chunk-inspector/chunk-inspector.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/citation-badge/citation-badge.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/claim-evidence/claim-evidence.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/community-card/community-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/embedding-explorer/embedding-explorer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/entity-card/entity-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/entity-chip/entity-chip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/entity-dossier/entity-dossier.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/graph-legend/graph-legend.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/graph/graph.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/grounding-summary/grounding-summary.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/ingestion-queue/ingestion-queue.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/knowledge-base-admin/knowledge-base-admin.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/knowledge-base/knowledge-base.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/memory-panel/memory-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/mind-map/mind-map.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/neighbor-list/neighbor-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/node-palette/node-palette.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/path-strip/path-strip.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/provenance-panel/provenance-panel.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/rag-answer/rag-answer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/retrieval-compare/retrieval-compare.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/retrieval-results/retrieval-results.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/retrieval-search/retrieval-search.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/retrieval-trace/retrieval-trace.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/source-card/source-card.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/source-list/source-list.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/retrieval/source-picker/source-picker.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/copy-button/copy-button.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/diff-view/diff-view.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/divider/divider.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/export-button/export-button.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/format/format-bytes.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/format/format-date.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/format/format-number.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/format/relative-time.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/icon/icon.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/intersection-observer/intersection-observer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/json-viewer/json-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/known-date/known-date.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/live-region/live-region.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/mention-popover/mention-popover.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/mutation-observer/mutation-observer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/poll-status/poll-status.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/random-content/random-content.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/resize-observer/resize-observer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/tour/tour.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/utility/visually-hidden/visually-hidden.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/archive-viewer/archive-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/calendar-viewer/calendar-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/contact-viewer/contact-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/csv-viewer/csv-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/dataset-viewer/dataset-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/document-compare/document-compare.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/document-preview/document-preview.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/document-viewer/document-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/docx-viewer/docx-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/ebook-viewer/ebook-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/email-viewer/email-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/geojson-view/geojson-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/highlight-layer/highlight-layer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/html-viewer/html-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/include/include.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/notebook-viewer/notebook-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/page-rail/page-rail.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/pdf-viewer/pdf-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/pptx-viewer/pptx-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/spreadsheet-viewer/spreadsheet-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/svg-viewer/svg-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./components/viewers/xml-viewer/xml-viewer.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./ssr-loader.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./theme/presets.js"
+        },
+        {
+          "kind": "entry-point",
+          "name": "./theme/presets/shadcn.js"
+        },
+        {
+          "kind": "function",
+          "module": "./theme.js",
+          "name": "getLyraTheme"
+        },
+        {
+          "kind": "function",
+          "module": "./theme.js",
+          "name": "setLyraTheme"
+        },
+        {
+          "kind": "function",
+          "module": "./theme/presets.js",
+          "name": "applyLyraThemePreset"
+        },
+        {
+          "kind": "function",
+          "module": "./theme/presets.js",
+          "name": "defineLyraThemePreset"
+        },
+        {
+          "kind": "root-attribute",
+          "module": "./theme/presets.js",
+          "name": "data-lr-theme-preset"
+        },
+        {
+          "kind": "stylesheet",
+          "name": "./themes/shadcn.css"
+        },
+        {
+          "kind": "type",
+          "module": "./theme.js",
+          "name": "LyraTheme"
+        },
+        {
+          "kind": "type",
+          "module": "./theme.js",
+          "name": "LyraThemeChangeDetail"
+        },
+        {
+          "kind": "type",
+          "module": "./theme.js",
+          "name": "LyraThemeMode"
+        },
+        {
+          "kind": "type",
+          "module": "./theme/presets.js",
+          "name": "LyraThemePreset"
+        },
+        {
+          "kind": "type",
+          "module": "./theme/presets.js",
+          "name": "LyraThemePresetChangeDetail"
+        },
+        {
+          "kind": "type",
+          "module": "./theme/presets.js",
+          "name": "LyraThemePresetName"
+        },
+        {
+          "kind": "window-event",
+          "module": "./theme.js",
+          "name": "lr-theme-change"
+        },
+        {
+          "kind": "window-event",
+          "module": "./theme/presets.js",
+          "name": "lr-theme-preset-change"
+        }
+      ],
+      "propertyChanges": [],
+      "retiredEvents": []
     }
   ]
 }

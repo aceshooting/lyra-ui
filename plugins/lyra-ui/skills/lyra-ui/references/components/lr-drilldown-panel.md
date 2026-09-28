@@ -6,7 +6,7 @@
 - **Class** `LyraDrilldownPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button (the inverse: show-focus-button="false" becomes without-focus-button)`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

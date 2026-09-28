@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -13,7 +14,7 @@ import { styles } from './span-waterfall.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -147,7 +148,6 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
@@ -168,6 +168,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     tokensOut: LYRA_DEFAULT_tokensOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
   /** Span sources can carry opaque provider metadata; the shared normalizer copies only its closed
@@ -412,7 +413,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       const bar = this.renderedBarById(this.activeSpanId);
       if (bar && !bar.hidden) {
         const ownerWindow = bar.ownerDocument.defaultView;
-        const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+        const reducedMotion = !ownerWindow || prefersReducedMotion(this);
         bar.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
       }
     }

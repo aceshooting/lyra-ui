@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './model-settings-panel.js';
 import type { LyraModelSettingsPanel, ModelSettingsChangeDetail } from './model-settings-panel.js';
@@ -15,6 +16,15 @@ function slider(el: LyraModelSettingsPanel): LyraSlider {
 
 // -- Prop forwarding ---------------------------------------------------------
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', [
+  'model',
+  'temperature',
+  'selectModel',
+  'noMatches',
+  'rangeStart',
+  'rangeEnd',
+]);
 it('forwards provider/catalog/model/allow-custom to the internal lr-model-select', async () => {
   const el = (await fixture(html`
     <lr-model-settings-panel

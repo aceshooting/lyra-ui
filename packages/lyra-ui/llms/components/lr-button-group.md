@@ -6,7 +6,7 @@
 - **Class** `LyraButtonGroup`, also available unregistered from `@aceshooting/lyra-ui/components/layout/button-group/button-group.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -30,21 +30,14 @@ use `lr-toggle-group`.
 
 **Slots:** default action controls.
 
-**CSS parts:** `base` (the `role="group"` flex wrapper; wraps, and goes full-width below a 20rem
-container inline-size).
+**CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
 
-**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` _and_ declares
-`container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
-fire at all). Inline-size containment means the box's own content can no longer contribute to its
-width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
-`inline-flex`/`flex` parent, anywhere with no definite width — the group uses its
-`contain-intrinsic-inline-size` fallback of `var(--lr-size-12rem)` instead of growing to fit the
-slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
-or a grid track) whenever it isn't already in a layout that supplies one. Under tighter allocation,
-`min-inline-size: var(--lr-icon-button-size)` remains the hard 2.5rem lower bound rather than the
-unallocated fallback.
+**Sizing.** The group derives its width from its content and wraps within a constrained
+allocation. A definite host width does not stretch the row automatically. Opt into a filled row
+with `lr-button-group::part(base) { inline-size: 100%; }`; this also preserves the former narrow
+allocation fill behavior. `min-inline-size: var(--lr-icon-button-size)` remains the lower bound.
 
 ---

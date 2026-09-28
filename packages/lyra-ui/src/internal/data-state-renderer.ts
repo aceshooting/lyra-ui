@@ -96,6 +96,8 @@ export interface DataStateConfig {
    * type this interface already supplies; `RequestCommitOptions.emitRequest` states why in full.
    */
   emitRetry?: (detail: null, init: { cancelable: true }) => CustomEvent;
+  /** Canonical request adapter. When supplied, the older emitRetry adapter remains a veto alias. */
+  emitRetryRequest?: (detail: null, init: { cancelable: true }) => CustomEvent;
   /**
    * Overrides the name of the `<slot>` a branch is wrapped in. Each branch defaults to its own
    * name (`loading`/`error`/`empty`), which is the library convention and what `lr-table` ships.
@@ -308,10 +310,13 @@ function builtInState(
   const onRetry = (): void => {
     requestThenCommit<null, CustomEvent>({
       requestDetail: null,
-      emitRequest:
-        config.emitRetry ??
-        ((detail: null, init: { cancelable: true }) =>
-          api.emit(retryEventName, detail, init)),
+      emitRequest: (detail, init) => {
+        const request = config.emitRetryRequest?.(detail, init);
+        const legacy = config.emitRetry?.(detail, init) ?? api.emit(retryEventName, detail, init);
+        if (!request) return legacy;
+        if (legacy.defaultPrevented) request.preventDefault();
+        return request;
+      },
       commit: () => config.onRetry?.(),
     });
   };

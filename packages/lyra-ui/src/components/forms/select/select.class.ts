@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -435,7 +436,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox. The listbox is a floating surface, so it retints with every other popup rather
  * than with the trigger it drops from.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
@@ -468,6 +469,7 @@ export class LyraSelect<
     selectValueMissing: LYRA_DEFAULT_selectValueMissing,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',

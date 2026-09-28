@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './neighbor-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
@@ -21,6 +22,20 @@ const rows: LyraNeighborRow[] = [
   },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'neighborListLabel',
+  'neighborDirectionOut',
+  'neighborRowLabel',
+  'neighborDirectionBoth',
+  'neighborDirectionIn',
+  'neighborGroupHeader',
+]);
+expectLocaleFallback('fr', [
+  'neighborListLabel',
+  'neighborDirectionOut',
+  'neighborRowLabel',
+]);
 it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeAt=100', async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`

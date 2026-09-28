@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './community-card.js';
@@ -21,6 +22,13 @@ const members: LyraEntity[] = [
   { id: 'e3', label: 'Henri Becquerel' },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'noData',
+  'communityMemberCount',
+  'communityDrillIn',
+  'showMoreCount',
+]);
 it('renders the noData empty state when community is null (the default)', async () => {
   const el = (await fixture(
     html`<lr-community-card></lr-community-card>`

@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ChatMessageRole,
   MessagePart,
+  MessagePartInterruption,
   ToolInvocation,
 } from './types.js';
 import {
@@ -27,6 +28,8 @@ interface StreamEventBase {
 export type AgentStreamEvent =
   | (StreamEventBase & { type: 'reset' })
   | (StreamEventBase & { type: 'run-start'; runId: string })
+  | (StreamEventBase & { type: 'stream-interrupt'; runId: string; interruption: MessagePartInterruption })
+  | (StreamEventBase & { type: 'stream-resume'; runId: string })
   | (StreamEventBase & { type: 'run-status'; runId?: string; status: AgentStatus })
   | (StreamEventBase & { type: 'messages-snapshot'; messages: ChatMessage[] })
   | (StreamEventBase & { type: 'message-start'; message: ChatMessage })
@@ -87,6 +90,8 @@ export interface AgentStreamState {
   cursor: number;
   limits: Readonly<AgentStreamLimits>;
   runId?: string;
+  /** Explicit transport interruption; resume events never reconnect a transport. */
+  interruption?: MessagePartInterruption;
   status: AgentStatus;
   messages: ChatMessage[];
   tools: ToolInvocation[];
@@ -116,7 +121,7 @@ const FORBIDDEN_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor'
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
 const MESSAGE_STATUSES = new Set(['sending', 'sent', 'failed', 'streaming']);
-const PART_STATES = new Set(['streaming', 'complete']);
+const PART_STATES = new Set(['streaming', 'complete', 'interrupted']);
 // Equal to TOOL_CALL_STATUSES in components/agent-tools/tool-status.ts (the `ToolCallStatus` union a
 // `ToolInvocation` carries); kept local so this runtime layer imports nothing from the component tree.
 const TOOL_STATUSES = new Set(['pending', 'running', 'success', 'error', 'denied', 'incomplete']);
@@ -233,9 +238,16 @@ function validTool(value: unknown, limits: Readonly<AgentStreamLimits>): value i
     && validOptionalRedactionPaths(value['redactedFields']);
 }
 
+function validInterruption(value: unknown, limits: Readonly<AgentStreamLimits>): value is MessagePartInterruption {
+  return isRecord(value)
+    && typeof value['resumable'] === 'boolean'
+    && validOptionalString(value['reason'], limits.maxStatusMessageCharacters);
+}
+
 function validPart(value: unknown, limits: Readonly<AgentStreamLimits>): value is MessagePart {
   if (!isRecord(value) || !validIdentifier(value['id'], limits) || typeof value['type'] !== 'string') return false;
   if (value['state'] !== undefined && !PART_STATES.has(String(value['state']))) return false;
+  if (value['interruption'] !== undefined && !validInterruption(value['interruption'], limits)) return false;
   if (value['metadata'] !== undefined && !isRecord(value['metadata'])) return false;
   switch (value['type']) {
     case 'text':
@@ -537,6 +549,33 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       started.status = { kind: 'running' };
       return commit(state, started, emptyUsage(), cursor);
     }
+    case 'stream-interrupt':
+    case 'stream-resume': {
+      // A foreign run must not consume this run's cursor or change its interruption.
+      if (source['runId'] !== state.runId || !state.runId) return state;
+      const interrupting = source['type'] === 'stream-interrupt';
+      if (interrupting && !validInterruption(source['interruption'], state.limits)) {
+        return failEvent(state, cursor, 'Stream interruption has an invalid shape.', 'invalid_stream_event');
+      }
+      if (!interrupting && state.interruption?.resumable !== true) return state;
+      const interruption = interrupting ? source['interruption'] as MessagePartInterruption : undefined;
+      const messages: ChatMessage[] = [];
+      for (const current of state.messages) {
+        const parts = current.parts?.map((part): MessagePart => {
+          if (interrupting) {
+            return part.state === 'streaming' ? { ...part, state: 'interrupted', interruption } : part;
+          }
+          if (part.state !== 'interrupted' || part.interruption?.resumable !== true) return part;
+          const { interruption: _interruption, ...resumed } = part;
+          return { ...resumed, state: 'streaming' };
+        });
+        const message = ownedMessage({ ...current, ...(parts ? { parts } : {}) }, state.limits);
+        if (!message) return failEvent(state, cursor, 'Interrupted message exceeds the configured limit.', 'stream_limit_exceeded');
+        messages.push(message.value);
+        replaceUsageEntry(usage, 'messages', message.value.id, message.bytes);
+      }
+      return commit(state, { ...state, messages, interruption }, usage, cursor);
+    }
     case 'run-status': {
       if (!validStatus(source['status'], state.limits)
         || (source['runId'] !== undefined && !validIdentifier(source['runId'], state.limits))) {
@@ -619,6 +658,7 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
           };
       const parts = [...(current.parts ?? [])];
       const partIndex = parts.findIndex((candidate) => candidate.id === part.value.id);
+      if (parts[partIndex]?.state === 'interrupted') return commit(state, state, usage, cursor);
       if (partIndex < 0 && parts.length >= state.limits.maxPartsPerMessage) {
         return failEvent(state, cursor, 'Message part count exceeds the configured limit.', 'stream_limit_exceeded');
       }
@@ -658,6 +698,7 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       const parts = [...(current.parts ?? [])];
       const partIndex = parts.findIndex((part) => part.id === source['partId']);
       const previous = partIndex >= 0 ? parts[partIndex] : undefined;
+      if (previous?.state === 'interrupted') return commit(state, state, usage, cursor);
       if (previous && previous.type !== 'text' && previous.type !== 'reasoning') {
         return failEvent(state, cursor, 'Message delta targets a non-text part.', 'invalid_stream_event');
       }
@@ -690,8 +731,8 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       const current = state.messages[index]!;
       const message = ownedMessage({
         ...current,
-        status: 'sent',
-        parts: current.parts?.map((part) => ({ ...part, state: 'complete' })),
+        status: current.parts?.some((part) => part.state === 'interrupted') ? current.status : 'sent',
+        parts: current.parts?.map((part) => part.state === 'interrupted' ? part : { ...part, state: 'complete' }),
       }, state.limits);
       if (!message) return failEvent(state, cursor, 'Completed message has an invalid shape.', 'invalid_stream_event');
       const messages = [...state.messages];

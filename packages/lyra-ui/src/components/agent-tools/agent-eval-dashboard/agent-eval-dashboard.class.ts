@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -19,7 +20,7 @@ import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -79,13 +80,13 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
   protected static override readonly immutableEventDetails = Object.freeze(['lr-run-activate']);
@@ -208,7 +209,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
           })}</div>`
         : nothing}
       ${!this.withoutChart && active && runs.length
-        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} with-legend .accessibleLabel=${active.label}></lr-lite-chart></div>`
+        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} with-legend aria-label=${active.label}></lr-lite-chart></div>`
         : nothing}
       ${this.renderRuns(runs)}
     </section>`;

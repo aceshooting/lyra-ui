@@ -6,10 +6,11 @@
 - **Class** `LyraExportButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecated css-property** `--lr-export-button-active-background` since `21.1.0`; use css-property `--lr-export-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-export-button-background` since `21.1.0`; use css-property `--lr-export-button-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-export-button-hover-background` since `21.1.0`; use css-property `--lr-export-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-export` since `unreleased`; use event `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })`; removal not before `24.0.0` — The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior.
 - **Optional peers** none
 - **Themeable via** 6 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,7 +26,7 @@ immediately) or multi-format (click opens a small menu).
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
   shallow frozen snapshots of the collection and row records; nested cell values remain opaque; the
-  built-in download reads this **after** the cancelable `lr-export` event, so a listener that lets
+  built-in download reads this **after** the cancelable `lr-export-request` event, so a listener that lets
   the download proceed may assign `.rows` from inside its own handler and that data is what gets
   downloaded
 - `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
@@ -37,7 +38,7 @@ immediately) or multi-format (click opens a small menu).
 - `filename: string = 'export'`
 - `getRows?: () => readonly Record<string, unknown>[]` (attribute: false) — lazy row source,
   consulted only when a built-in CSV/JSON download is actually about to be built: after a
-  non-prevented `lr-export`, and never for a custom format this component does not serialize itself.
+  non-prevented `lr-export-request`, and never for a custom format this component does not serialize itself.
   When set it replaces `rows` for that download, so a consumer can export a collection it already
   holds — an `<lr-table>`'s `viewRows`, say — without copying it into this element and keeping a
   second live copy. The `columns` fallback derives its header row from the lazily supplied rows. A
@@ -81,7 +82,7 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
-**Events:** `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
+**Events:** `lr-export-request` and `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
 inside the listener still reaches it, and `getRows` is consulted at the same point),
@@ -91,7 +92,10 @@ unknown }`, fires when a built-in export cannot be serialized or downloaded; the
 also shown via the trigger's `trigger-error` part and announced through the shared light-DOM live
 region, so a listener is needed only for additional handling; activation does not throw into
 consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
-closes caused by disablement, loading, or an unusable format list emit neither event)
+closes caused by disablement, loading, or an unusable format list emit neither event).
+`lr-export` is the deprecated cancelable alias, dispatched after `lr-export-request` with equal
+detail. Either event can veto the export; subscribe to one spelling. Removal of the alias is not
+before 24.0.0.
 
 **Slots:** none.
 
@@ -183,7 +187,7 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
 
 - Format options are read from their direct data fields into a frozen list. Accessor-backed, missing,
   malformed, or throwing descriptor fields are ignored rather than evaluated; later menu rendering
-  and `lr-export` events use that snapshot. The snapshot includes only direct `formatId`, `label`,
+  and `lr-export-request` events use that snapshot. The snapshot includes only direct `formatId`, `label`,
   `description`, and `extension` fields; accepted records are frozen and never reread from the
   caller. An open multi-format menu is a non-modal overlay owned by the element's
   current document: only its topmost menu handles that document's Escape, outside pointer, or Tab.
@@ -191,7 +195,7 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
   while a Tab close permits normal document navigation. Placement uses the current trigger and panel
   geometry and remains clamped to the current document's viewport.
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
-  `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export`; custom formats never trigger a
+  `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export-request`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari

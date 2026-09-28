@@ -94,7 +94,7 @@ export const styles = css`
       --lr-activity-feed-live-status-color,
       var(--lr-color-brand)
     );
-    animation: lr-activity-feed-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-activity-feed-pulse var(--lr-transition-ambient) infinite);
   }
   [part="label"] {
     flex: 0 1 auto;

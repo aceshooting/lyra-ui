@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-geojson-viewer.js to register this component. */
 export * from './geojson-viewer.class.js';
 import { LyraGeoJsonViewer } from './geojson-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

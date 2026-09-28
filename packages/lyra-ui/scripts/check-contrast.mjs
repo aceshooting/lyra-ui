@@ -1,3 +1,5 @@
+import { concreteThemeCss } from './style-axes-model.mjs';
+import { chartPaletteKind, checkOrderedChartScales } from './chart-palette-contract.mjs';
 // Asserts the contrast guarantees the semantic grid claims, so a regenerated palette can never
 // quietly ship a WCAG failure.
 // The grid's whole promise is that a component can pair `--lr-color-<v>-on-<e>` with
@@ -230,9 +232,11 @@ function readSpecialistTokenFallbacks(text, prefix) {
 }
 
 const { light, dark } = readGrids(readFileSync(palettePath, 'utf8'));
-const themeText = readFileSync(themePath, 'utf8');
+const themeText = concreteThemeCss(readFileSync(themePath, 'utf8'));
 const surfaces = readSurfaces(themeText);
-const chart = readThemeRamps(themeText, 'color-chart-');
+const chartInputs = readThemeRamps(themeText, 'color-chart-');
+const chart = Object.fromEntries(Object.entries(chartInputs).map(([mode, values]) =>
+  [mode, new Map([...values].filter(([name]) => chartPaletteKind(name) === 'categorical'))]));
 const terminal = readThemeRamps(themeText, 'terminal-color-');
 // `<lr-terminal>` paints its own panel on the raised surface; that is the reference for its palette.
 const raisedRamp = readThemeRamps(themeText, 'color-surface-raised');
@@ -243,6 +247,14 @@ const raisedSurfaces = {
 
 const findings = [];
 let checks = 0;
+
+for (const [mode, values] of Object.entries(chartInputs)) {
+  if (chart[mode].size !== 8) findings.push(`${mode}: categorical chart palette must contain exactly eight series`);
+  for (const name of values.keys()) if (!chartPaletteKind(name)) findings.push(`${mode}: unclassified chart palette token ${name}`);
+  const ordered = checkOrderedChartScales(values, mode, `theme.css ${mode}`);
+  findings.push(...ordered.findings);
+  checks += ordered.checks + 1;
+}
 
 for (const [mode, grid] of [
   ['light', light],
@@ -539,6 +551,9 @@ for (const file of presetFiles) {
         effective.delete(token);
       }
     }
+    const ordered = checkOrderedChartScales(effective, route.preset, `themes/${file} ${mode}`);
+    findings.push(...ordered.findings);
+    checks += ordered.checks;
     const unverifiable = new Set();
     const read = (token) => {
       const value = effective.get(token);
@@ -594,7 +609,10 @@ for (const file of presetFiles) {
       measure('--lr-theme-color-focus', `--lr-theme-color-surface-${surface}`, NON_TEXT_CONTRAST, 'WCAG 1.4.11');
     }
     for (const token of effective.keys()) {
-      if (token.startsWith('--lr-theme-color-chart-')) {
+      if (token.startsWith('--lr-theme-color-chart-') && !chartPaletteKind(token)) {
+        findings.push(`themes/${file} ${mode}: unclassified chart palette token ${token}`);
+      }
+      if (chartPaletteKind(token) === 'categorical') {
         measure(token, '--lr-theme-color-surface-default', NON_TEXT_CONTRAST, 'WCAG 1.4.11');
       } else if (token.startsWith('--lr-theme-terminal-color-')) {
         measure(token, '--lr-theme-color-surface-raised', TEXT_CONTRAST, 'WCAG 1.4.3');
@@ -611,10 +629,9 @@ if (findings.length) {
   for (const finding of findings) console.error(`- ${finding}`);
   console.error('\nRegenerate with `node scripts/generate-palette.mjs` after adjusting the ramp or the slot map.');
   if (findings.some((finding) => finding.startsWith('themes/'))) {
-    console.error('A `themes/<file>` finding is a hand-authored preset value: adjust it in src/themes/<file>.');
+    console.error('A `themes/<file>` finding is a hand-authored preset value: adjust its definition in tokens/looks/<name>.json.');
   }
   process.exitCode = 1;
 } else {
   console.log(`Contrast contract passed: ${checks} pairs checked across light and dark.`);
 }
-

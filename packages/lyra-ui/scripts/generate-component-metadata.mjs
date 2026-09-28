@@ -3,6 +3,7 @@ import { isMainModule } from './is-main-module.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { compactManifest } from './manifest-compact.mjs';
 
 import {
   annotateComponentSource,
@@ -153,6 +154,7 @@ export function run(argv = process.argv.slice(2)) {
     applyComponentMetadataToManifest(metadata, validationManifest, {
       packageVersion: packageJson.version,
     });
+    validationManifest = compactManifest(validationManifest);
     validationRawManifest = `${JSON.stringify(validationManifest)}\n`;
     nextCurrent = currentHistoryRecord(
       packageJson.version,

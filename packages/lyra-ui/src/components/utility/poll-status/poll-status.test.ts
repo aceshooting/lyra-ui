@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './poll-status.js';
 import '../live-region/live-region.js';
@@ -9,6 +10,8 @@ function liveRegionText(el: LyraPollStatus): string {
   const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
 }
+
+expectLocaleFallback('ar-EG', ['pollPause']);
 
 describe('lr-poll-status', () => {
   it('ticks down the countdown display and reaches the due phase, firing lr-poll-due', async () => {

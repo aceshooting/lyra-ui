@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-json-schema-viewer.js to register this component. */
 export * from './schema-viewer.class.js';
 import { LyraJsonSchemaViewer } from './schema-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

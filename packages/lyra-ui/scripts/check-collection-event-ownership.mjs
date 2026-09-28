@@ -237,6 +237,13 @@ for (const sourceFileName of program.getSourceFileNames()) {
   const relativeFile = path.relative(packageRoot, source.fileName);
   const classes = classDeclarations(source);
   for (const classNode of classes) {
+    const staticNames = new Set(classNode.members
+      .filter((member) => hasStatic(member.modifiers))
+      .map((member) => member.name?.getText(source)));
+    if ((staticNames.has('ownedCollectionProperties') || staticNames.has('immutableEventDetails')) &&
+        !staticNames.has('collectionSupport')) {
+      failures.push(`${relativeFile} ${classNode.name?.text ?? '<anonymous>'}: collection policies require explicit collectionSupport`);
+    }
     const heritage =
       classNode.heritageClauses?.flatMap((clause) => clause.types) ?? [];
     const lyra = heritage.find((entry) =>

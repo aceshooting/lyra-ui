@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -187,7 +188,7 @@ export interface LyraModelSelectEventMap {
  *   themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  *   required marker.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the listbox. Unlike a floating panel's decorative edge, it defaults to
@@ -211,6 +212,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     notInCatalog: LYRA_DEFAULT_notInCatalog,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
 

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -105,6 +106,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     noData: LYRA_DEFAULT_noData,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'topics',

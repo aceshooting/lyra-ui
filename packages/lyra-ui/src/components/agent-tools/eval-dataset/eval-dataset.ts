@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-eval-dataset.js to register this component. */
 export * from './eval-dataset.class.js';
 import '../../data/table/table.js';
 import '../../overlays/chip/chip.js';

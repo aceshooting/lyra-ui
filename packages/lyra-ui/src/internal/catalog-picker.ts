@@ -301,7 +301,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.cancelListboxHideWatch();
     const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
     const view = this.host.ownerDocument.defaultView;
-    if (!listbox || !view || prefersReducedMotion(view)) {
+    if (!listbox || !view || prefersReducedMotion(this.host)) {
       this.setListboxHidden(true);
       return;
     }

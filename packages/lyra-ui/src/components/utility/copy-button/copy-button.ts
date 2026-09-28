@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-copy-button.js to register this component. */
 export * from './copy-button.class.js';
 import '../../overlays/overlay/tooltip.js';
 // The lean icon-button entry: this component only ever slots its own SVG glyphs, so it must not

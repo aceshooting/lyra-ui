@@ -29,3 +29,4 @@ export * from './source-card/source-card.js';
 export * from './source-list/source-list.js';
 export * from './source-picker/source-picker.js';
 
+export * from './research-progress/research-progress.js';

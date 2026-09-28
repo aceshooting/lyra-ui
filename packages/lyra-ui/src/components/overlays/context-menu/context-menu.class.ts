@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -180,7 +181,7 @@ function isContextMenuKey(event: KeyboardEvent): boolean {
  *   size of the popup.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Opening transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Closing transition duration.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius.
@@ -200,6 +201,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze(['lr-show']);
 
@@ -773,7 +775,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
         @click=${{ handleEvent: this.onRegionClick, capture: true }}
         ><slot name="trigger"></slot
       ></span>
-      <lr-dropdown
+      <lr-dropdown without-arrow
         class="shell"
         exportparts="popup, content"
         trigger="manual"

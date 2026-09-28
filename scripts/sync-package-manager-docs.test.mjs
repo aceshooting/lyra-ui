@@ -32,21 +32,19 @@ function fixtureManifests() {
     rootPackage: { packageManager: 'pnpm@11.25.0' },
     lyraUiPackage: { packageManager: 'pnpm@11.25.0' },
     lyraFlagsPackage: { packageManager: 'pnpm@11.25.0' },
-    node20Package: { packageManager: 'pnpm@10.34.5' },
   };
 }
 
-function fixtureDocuments({ node22 = '11.24.0', node20 = '10.34.4' } = {}) {
+function fixtureDocuments({ node22 = '11.24.0' } = {}) {
   return {
     agentsMd:
-      `pnpm workspace (\`pnpm-workspace.yaml\`: \`packages/*\`), Node ≥ 20, \`pnpm@${node22}\`.\n`,
+      `pnpm workspace (\`pnpm-workspace.yaml\`: \`packages/*\`), Node ≥ 22, \`pnpm@${node22}\`.\n`,
     contributingMd:
-      `Node ≥ 20, \`pnpm@${node22}\` (pinned via \`packageManager\` in \`package.json\` — check that file if this\n` +
+      `Node ≥ 22, \`pnpm@${node22}\` (pinned via \`packageManager\` in \`package.json\` — check that file if this\n` +
       'drifts again).\n',
     ciAndGatesMd:
-      `Node 20 uses the pnpm version pinned in \`.github/ci-pnpm10.json\` (\`pnpm@${node20}\`); Node 22\n` +
-      `uses \`package.json#packageManager\` (\`pnpm@${node22}\`).\n` +
-      `Node 20 needs pnpm ${node20}; Node 22 needs pnpm ${node22}.\n`,
+      `Node 22 uses \`package.json#packageManager\` (\`pnpm@${node22}\`).\n` +
+      `Node 22 needs pnpm ${node22}.\n`,
   };
 }
 
@@ -60,7 +58,6 @@ async function writeFixtureRoot(root, { documents = fixtureDocuments(), manifest
   await writeJson(root, 'package.json', manifests.rootPackage);
   await writeJson(root, 'packages/lyra-ui/package.json', manifests.lyraUiPackage);
   await writeJson(root, 'packages/lyra-flags/package.json', manifests.lyraFlagsPackage);
-  await writeJson(root, '.github/ci-pnpm10.json', manifests.node20Package);
   await writeFile(join(root, 'AGENTS.md'), documents.agentsMd);
   await writeFile(join(root, 'CONTRIBUTING.md'), documents.contributingMd);
   await mkdir(join(root, 'docs/agents'), { recursive: true });
@@ -76,17 +73,15 @@ async function replaceWithByteIdenticalInode(target) {
   await rename(replacement, target);
 }
 
-test('derives Node 22 and Node 20 pnpm versions from their authorities', () => {
+test('derives the Node 22 pnpm version from their authorities', () => {
   assert.deepEqual(derivePackageManagerVersions(fixtureManifests()), {
     node22Pnpm: '11.25.0',
-    node20Pnpm: '10.34.5',
   });
 
   for (const [manifestName, packageManager] of [
     ['rootPackage', 'npm@11.25.0'],
     ['lyraUiPackage', 'pnpm@11.24.0'],
     ['lyraFlagsPackage', 'pnpm@11.25'],
-    ['node20Package', 'pnpm@10'],
   ]) {
     const manifests = fixtureManifests();
     manifests[manifestName] = { packageManager };
@@ -134,11 +129,11 @@ test('updates all four anchored documentation claims from the authorities', () =
   assert.match(synchronized.contributingMd, /`pnpm@11\.25\.0`/u);
   assert.match(
     synchronized.ciAndGatesMd,
-    /`pnpm@10\.34\.5`\); Node 22\nuses `package\.json#packageManager` \(`pnpm@11\.25\.0`\)/u,
+    /Node 22 uses `package\.json#packageManager` \(`pnpm@11\.25\.0`\)/u,
   );
   assert.match(
     synchronized.ciAndGatesMd,
-    /Node 20 needs pnpm 10\.34\.5; Node 22 needs pnpm 11\.25\.0\./u,
+    /Node 22 needs pnpm 11\.25\.0\./u,
   );
   assert.doesNotMatch(synchronized.agentsMd, /11\.24\.0/u);
   assert.doesNotMatch(synchronized.contributingMd, /11\.24\.0/u);
@@ -162,10 +157,10 @@ test('fails closed when any documentation anchor is missing or ambiguous', () =>
     );
   }
 
-  const primaryClaim = documents.ciAndGatesMd.split('\nNode 20 needs pnpm')[0];
+  const primaryClaim = documents.ciAndGatesMd.split('\nNode 22 needs pnpm')[0];
   assert.throws(
     () => synchronizePackageManagerDocumentTexts(
-      { ...documents, ciAndGatesMd: `${primaryClaim}\n${primaryClaim}\nNode 20 needs pnpm 10.34.4; Node 22 needs pnpm 11.24.0.\n` },
+      { ...documents, ciAndGatesMd: `${primaryClaim}\n${primaryClaim}\nNode 22 needs pnpm 11.24.0.\n` },
       versions,
     ),
     /expected exactly one CI matrix package-manager claim, found 2/u,
@@ -506,12 +501,11 @@ test('cleanup failures surface the owned private evidence path', async () => {
 });
 
 test('no-op write finally revalidates every authority and every unchanged document identity', async (context) => {
-  const synchronizedDocuments = fixtureDocuments({ node22: '11.25.0', node20: '10.34.5' });
+  const synchronizedDocuments = fixtureDocuments({ node22: '11.25.0' });
   for (const relativePath of [
     'package.json',
     'packages/lyra-ui/package.json',
     'packages/lyra-flags/package.json',
-    '.github/ci-pnpm10.json',
     'AGENTS.md',
     'CONTRIBUTING.md',
     'docs/agents/ci-and-gates.md',
@@ -1433,7 +1427,7 @@ test('the cooperative lock is acquired before snapshots and retained through fin
   const root = await mkdtemp(join(tmpdir(), 'lyra-package-manager-lock-scope-'));
   try {
     await writeFixtureRoot(root, {
-      documents: fixtureDocuments({ node22: '11.25.0', node20: '10.34.5' }),
+      documents: fixtureDocuments({ node22: '11.25.0' }),
     });
     const lockPath = join(root, '.package-manager-docs.lock');
     let lockOpened = false;
@@ -1487,7 +1481,7 @@ test('lock cleanup refuses to unlink a replacement lock inode', async () => {
   const root = await mkdtemp(join(tmpdir(), 'lyra-package-manager-lock-replacement-'));
   try {
     await writeFixtureRoot(root, {
-      documents: fixtureDocuments({ node22: '11.25.0', node20: '10.34.5' }),
+      documents: fixtureDocuments({ node22: '11.25.0' }),
     });
     const lockPath = join(root, '.package-manager-docs.lock');
     const parkedPath = `${lockPath}.owned`;

@@ -185,12 +185,12 @@ export const styles = css`
   /* --- attention ---------------------------------------------------------------------------- */
   :host([pulse]:not([attention])) [part~='base'],
   :host([attention='pulse']) [part~='base'] {
-    animation: lr-badge-pulse var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
-      infinite;
+    animation: var(--_lr-motion-animation, lr-badge-pulse var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
+      infinite);
   }
   :host([attention='bounce']) [part~='base'] {
-    animation: lr-badge-bounce var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
-      infinite;
+    animation: var(--_lr-motion-animation, lr-badge-bounce var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
+      infinite);
   }
 
   @keyframes lr-badge-pulse {

@@ -20,6 +20,26 @@ function stubReducedMotion(matches: boolean): () => void {
   };
 }
 
+it('reduces a registered animation in an inherited scope and respects a local system reset', () => {
+  const restore = stubReducedMotion(false);
+  const scope = document.createElement('section');
+  const element = document.createElement('div');
+  scope.append(element);
+  scope.setAttribute('data-lr-motion', 'reduce');
+  const cleanup = setAnimation(element, 'test.scoped-motion', animation(1, { duration: 400, iterations: Infinity }));
+  try {
+    expect(getAnimation(element, 'test.scoped-motion').options.duration).to.equal(0);
+    expect(getAnimation(element, 'test.scoped-motion').options.iterations).to.equal(1);
+    element.setAttribute('data-lr-motion', 'system');
+    expect(getAnimation(element, 'test.scoped-motion').options.duration).to.equal(400);
+    element.removeAttribute('data-lr-motion');
+    expect(getAnimation(element, 'test.scoped-motion', { respectReducedMotion: false }).options.duration).to.equal(400);
+  } finally {
+    cleanup();
+    restore();
+  }
+});
+
 it('snapshots a global default and resolves defensive copies before exact cleanup', () => {
   const el = document.createElement('div');
   const configured = animation(0.75, { duration: 125 });

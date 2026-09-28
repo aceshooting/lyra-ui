@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-ingestion-queue.js to register this component. */
 export * from './ingestion-queue.class.js';
 import '../../overlays/badge/badge.js';
 import '../../overlays/progress/progress-bar.js';

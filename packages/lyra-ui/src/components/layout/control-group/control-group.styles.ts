@@ -10,7 +10,7 @@ export const styles = css`
   }
 
   /* Query container so a future @container rule can react to this group's own allocated width,
-     matching lr-button-group. Opt-in only -- see the class doc's responsive property. The fill
+     in a narrow panel. Opt-in only -- see the class doc's responsive property. The fill
      below is unconditional and does not depend on this. */
   :host([responsive]) {
     container-type: inline-size;
@@ -34,9 +34,8 @@ export const styles = css`
        indefinite/shrink-to-fit containing block resolves as if 'auto' per the flex sizing
        algorithm, so this is a byte-identical no-op for the default toolbar-in-a-shrink-to-fit-row
        case and only takes effect once an ancestor gives the host itself a definite inline size.
-       lr-button-group deliberately keeps the narrow-only (@container) shape instead of this
-       unconditional one -- see button-group.styles.ts's comment on that rule for why a uniform
-       button row and a mixed-control toolbar want opposite wide-host defaults. */
+       lr-button-group keeps its base shrink-wrapped at every allocation; consumers can opt that
+       group's base into filling through its public CSS part. */
     inline-size: 100%;
     max-inline-size: 100%;
   }

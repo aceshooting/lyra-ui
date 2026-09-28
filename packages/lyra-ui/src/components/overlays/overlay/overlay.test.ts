@@ -76,7 +76,7 @@ describe('effective arrow layout', () => {
       >
     `);
     const dropdown = await fixture<LyraDropdown>(html`
-      <lr-dropdown open><button slot="trigger">Open</button><button>Action</button></lr-dropdown>
+      <lr-dropdown open without-arrow><button slot="trigger">Open</button><button>Action</button></lr-dropdown>
     `);
 
     expect(popup(popover).querySelectorAll('[part~="arrow"]').length).to.equal(0);
@@ -3061,7 +3061,8 @@ describe('mapped popover and tooltip compatibility', () => {
     expect(tooltip.withoutArrow).to.equal(false);
     expect(dropdown.placement).to.equal('bottom-start');
     expect(dropdown.distance).to.equal(0);
-    expect(dropdown.arrow).to.equal(false);
+    expect(dropdown.arrow).to.equal(true);
+    expect(dropdown.withoutArrow).to.equal(false);
   });
 
   it('supports the Shoelace default-trigger plus content slot shape', async () => {
@@ -3400,7 +3401,7 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
     { tag: 'lr-popover', kind: 'property', name: 'arrow' },
   ];
 
-  it('keeps its own false-defaulting arrow opt-in, which never warns', async () => {
+  it('shows its arrow by default and hides it with without-arrow without warnings', async () => {
     let bare!: LyraDropdown;
     let opted!: LyraDropdown;
     const warnings = await captureDeprecationWarnings(ARROW, async () => {
@@ -3408,19 +3409,20 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
         html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
       );
       opted = await fixture<LyraDropdown>(
-        html`<lr-dropdown open arrow><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+        html`<lr-dropdown open without-arrow><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
       );
     });
     expect(warnings).to.have.length(0);
-    expect(bare.arrow).to.be.false;
-    expect(bare.getAttribute('arrow')).to.equal('false');
-    expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
-    expect(opted.arrow).to.be.true;
-    const arrow = opted.shadowRoot!.querySelector('[part~="arrow"]')!;
-    expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow', 'popup__arrow']);
-    opted.withoutArrow = true;
-    await opted.updateComplete;
+    expect(bare.arrow).to.be.true;
+    expect(bare.hasAttribute('arrow')).to.equal(false);
+    expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+    expect(opted.arrow).to.be.false;
     expect(opted.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
+    const arrow = bare.shadowRoot!.querySelector('[part~="arrow"]')!;
+    expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow', 'popup__arrow']);
+    bare.withoutArrow = true;
+    await bare.updateComplete;
+    expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
   });
 
   it('carries popup-popup beside the deprecated popup__popup, while lr-popover keeps its mapped names only', async () => {

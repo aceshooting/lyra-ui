@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
@@ -616,6 +617,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'labels',
@@ -881,12 +883,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  painted inside the shadow root and exposed through that token. This component takes no opinion
    *  on what the highlight looks like, only which marks it applies to. */
   @property({ attribute: false }) selectedIndices: readonly number[] = [];
-  /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
-   *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
-   *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
-   *  exactly. The `accessible-label` attribute spelling is deprecated (use the host `aria-label`
-   *  in markup; removal not before 23.0.0) and logs a one-time development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  private legacyAccessibleLabel: string | undefined = undefined;
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string | undefined {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string | undefined) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
 
   /** The host `aria-label`, which names the chart ahead of every other source. Declared so a
    *  later change re-renders the `<svg>` name. */

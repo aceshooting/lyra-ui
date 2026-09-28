@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-entity-dossier.js to register this component. */
 export * from './entity-dossier.class.js';
 import { LyraEntityDossier } from './entity-dossier.class.js';
 import { defineElement } from '../../../internal/prefix.js';

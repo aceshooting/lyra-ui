@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -513,3 +514,164 @@ for (const serial of [false, true]) {
     });
   }
 }
+
+
+async function strictConsoleHarness(strict = true) {
+  const previous = process.env.WTR_STRICT_CONSOLE;
+  process.env.WTR_STRICT_CONSOLE = strict ? '1' : '0';
+  let configModule;
+  try {
+    configModule = await import(`${configUrl}?strict-console=${strict}`);
+  } finally {
+    if (previous === undefined) delete process.env.WTR_STRICT_CONSOLE;
+    else process.env.WTR_STRICT_CONSOLE = previous;
+  }
+  const logs = [];
+  const errorListeners = [];
+  const deferredTasks = [];
+  const context = {
+    addEventListener(type, listener) {
+      if (type === 'error') errorListeners.push(listener);
+    },
+    setTimeout(callback) { deferredTasks.push(callback); },
+    console: {
+      warn: (...args) => logs.push(['warn', ...args]),
+      error: (...args) => logs.push(['error', ...args]),
+    },
+  };
+  const script = configModule.default.testRunnerHtml('/runner.js').match(/<script>([\s\S]*?)<\/script>/u)[1];
+  runInNewContext(script, context);
+  const calls = [];
+  const existingError = { message: 'existing session failure' };
+  const testCoverage = { fixture: true };
+  const launcher = {
+    getPage(id) {
+      calls.push(`page:${id}`);
+      return { async evaluate(callback) {
+        calls.push('evaluate');
+        return runInNewContext(`(${callback.toString()})()`, context);
+      } };
+    },
+    async stopSession(id) {
+      assert.equal(this, launcher, 'launcher receiver is preserved');
+      calls.push(`stop:${id}`);
+      return { testCoverage, errors: [existingError] };
+    },
+  };
+  configModule.enforceStrictConsole(launcher);
+  return {
+    context, logs, calls, launcher, existingError, testCoverage,
+    dispatchError(event) { for (const listener of errorListeners) listener(event); },
+    flushDeferredTasks() { while (deferredTasks.length) deferredTasks.shift()(); },
+  };
+}
+
+for (const method of ['warn', 'error']) {
+  test(`retains an asynchronous console.${method} failure in the completed session`, async () => {
+    const { context, logs, calls, launcher } = await strictConsoleHarness();
+    await assert.rejects(Promise.resolve().then(() => context.console[method]('async violation')),
+      new RegExp(`Unexpected browser console.${method}: async violation`, 'u'));
+    assert.doesNotThrow(() => context.console.error('runner reports the caught exception'));
+    assert.doesNotThrow(() => context.console.warn('later warning'));
+    await assert.rejects(launcher.stopSession('session-1'), (error) => {
+      assert.equal(error.message, `Unexpected browser console.${method}: async violation`);
+      assert.equal(typeof error.stack, 'string');
+      return true;
+    });
+    assert.deepEqual(calls, ['page:session-1', 'evaluate', 'stop:session-1']);
+    assert.equal(logs.length, 3, 'the one-shot guard keeps logging without recursive throws');
+  });
+}
+
+test('keeps intentional stubs and the existing Shiki advisory exemption armed for later violations', async () => {
+  const { context, launcher, testCoverage, existingError } = await strictConsoleHarness();
+  const originalWarn = context.console.warn;
+  let captured = 0;
+  context.console.warn = () => captured++;
+  context.console.warn('expected warning');
+  context.console.warn = originalWarn;
+  context.console.warn('[Shiki] fixture count advisory');
+  assert.equal(captured, 1);
+  const clean = await launcher.stopSession('clean');
+  assert.equal(clean.errors.length, 1, 'no strict-console failure was added');
+  assert.equal(clean.errors[0], existingError);
+  assert.equal(clean.testCoverage, testCoverage);
+  assert.throws(() => context.console.warn('unexpected'), /Unexpected browser console.warn/u);
+  await assert.rejects(launcher.stopSession('failed'), /Unexpected browser console.warn/u);
+});
+
+test('leaves ordinary browser sessions unchanged when strict mode is off', async () => {
+  const { context, launcher, calls } = await strictConsoleHarness(false);
+  context.console.warn('ordinary warning');
+  context.console.error('ordinary error');
+  assert.equal((await launcher.stopSession('ordinary')).errors.length, 1);
+  assert.deepEqual(calls, ['stop:ordinary']);
+});
+
+
+test('closes the browser and fails closed when strict-console inspection fails', async () => {
+  const { launcher, calls } = await strictConsoleHarness();
+  launcher.getPage = () => ({ async evaluate() { throw new Error('page unavailable'); } });
+  await assert.rejects(launcher.stopSession('unavailable'),
+    /Could not inspect strict browser console: page unavailable/u);
+  assert.deepEqual(calls, ['stop:unavailable']);
+});
+
+
+test('honors explicit cancellation of a ResizeObserver notice without exempting direct null errors', async () => {
+  const { context, launcher, dispatchError, flushDeferredTasks } = await strictConsoleHarness();
+  const event = {
+    error: null, message: 'ResizeObserver loop completed with undelivered notifications.',
+    eventPhase: 2, defaultPrevented: false,
+  };
+  dispatchError(event);
+  context.console.error(null);
+  // The file's own error listener runs after WTR's log bridge and cancels this notice.
+  event.defaultPrevented = true;
+  event.eventPhase = 0;
+  flushDeferredTasks();
+  assert.equal((await launcher.stopSession('canceled-notice')).errors.length, 1);
+  assert.throws(() => context.console.error(null), /Unexpected browser console.error: null/u);
+  await assert.rejects(launcher.stopSession('direct-null'), /Unexpected browser console.error: null/u);
+});
+
+test('fails an uncanceled ResizeObserver notice after dispatch finishes', async () => {
+  const { context, launcher, dispatchError, flushDeferredTasks } = await strictConsoleHarness();
+  const event = { error: null, message: 'ResizeObserver loop limit exceeded', eventPhase: 2, defaultPrevented: false };
+  dispatchError(event);
+  context.console.error(null);
+  event.eventPhase = 0;
+  assert.throws(flushDeferredTasks, /Unexpected browser console.error: null/u);
+  await assert.rejects(launcher.stopSession('uncanceled-notice'), /Unexpected browser console.error: null/u);
+});
+
+test('does not defer null error payloads from unrelated canceled error events', async () => {
+  const { context, launcher, dispatchError } = await strictConsoleHarness();
+  dispatchError({ error: null, message: 'Script error.', eventPhase: 2, defaultPrevented: true });
+  assert.throws(() => context.console.error(null), /Unexpected browser console.error: null/u);
+  await assert.rejects(launcher.stopSession('unrelated-error'), /Unexpected browser console.error: null/u);
+});
+
+test('inspects pending notices at teardown before their deferred task runs', async () => {
+  for (const canceled of [false, true]) {
+    const { context, launcher, dispatchError } = await strictConsoleHarness();
+    const event = { error: null, message: 'ResizeObserver loop limit exceeded', eventPhase: 2, defaultPrevented: false };
+    dispatchError(event);
+    context.console.error(null);
+    event.defaultPrevented = canceled;
+    event.eventPhase = 0;
+    if (canceled) await launcher.stopSession('canceled-pending');
+    else await assert.rejects(launcher.stopSession('uncanceled-pending'), /Unexpected browser console.error: null/u);
+  }
+});
+
+test('does not attribute a nested unrelated error to an outer ResizeObserver notice', async () => {
+  const { context, launcher, dispatchError } = await strictConsoleHarness();
+  const outer = { error: null, message: 'ResizeObserver loop limit exceeded', eventPhase: 2, defaultPrevented: false };
+  dispatchError(outer);
+  dispatchError({ error: null, message: 'Script error.', eventPhase: 2, defaultPrevented: true });
+  assert.throws(() => context.console.error(null), /Unexpected browser console.error: null/u);
+  outer.defaultPrevented = true;
+  outer.eventPhase = 0;
+  await assert.rejects(launcher.stopSession('nested-unrelated-error'), /Unexpected browser console.error: null/u);
+});

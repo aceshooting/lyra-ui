@@ -76,9 +76,9 @@ export const styles = css`
     transition: inline-size var(--lr-transition-base);
   }
   :host([indeterminate]) [part="indicator"] {
-    animation: lr-progress-slide
+    animation: var(--_lr-motion-animation, lr-progress-slide
       var(--lr-progress-duration, var(--lr-transition-ambient)) infinite
-      alternate;
+      alternate);
   }
   [part="label"] {
     display: flex;
@@ -110,7 +110,7 @@ export const styles = css`
      mirrored keyframes to travel end-to-start: right-anchored there, just-off-screen is +100%
      (right) through -250% (left). */
   :host([indeterminate]:dir(rtl)) [part="indicator"] {
-    animation-name: lr-progress-slide-rtl;
+    animation-name: var(--_lr-motion-animation, lr-progress-slide-rtl);
   }
   @keyframes lr-progress-slide-rtl {
     from {
@@ -235,8 +235,8 @@ export const ringStyles = css`
   :host([indeterminate]) [part="indicator"] {
     transform-box: fill-box;
     transform-origin: center;
-    animation: lr-progress-ring-spin
-      var(--lr-progress-duration, var(--lr-transition-ambient)) infinite;
+    animation: var(--_lr-motion-animation, lr-progress-ring-spin
+      var(--lr-progress-duration, var(--lr-transition-ambient)) infinite);
   }
   [part="label"] {
     position: absolute;

@@ -1,5 +1,7 @@
+import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { expect } from '@open-wc/testing';
 import {
+  applyLyraStyleScope,
   createLyraThemeBootstrap,
   setLyraTheme,
   getLyraTheme,
@@ -51,7 +53,9 @@ const OWNERSHIP_KEY = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
 
 function ownershipList(): string[] {
   const list = (document.documentElement as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
-  return Array.isArray(list) ? list.map(String) : [];
+  if (Array.isArray(list)) return list.map(String);
+  const owned = (document.documentElement as unknown as Record<symbol, { properties?: Map<string, unknown> }>)[Symbol.for('@aceshooting/lyra-ui.style-ownership.v1')];
+  return [...(owned?.properties?.keys() ?? [])].filter(name => name.startsWith('--lr-theme-') && name !== '--lr-theme-accent');
 }
 
 function deleteOwnershipList(): void {
@@ -112,6 +116,9 @@ function contrast(left: string, right: string): number {
   const b = luminance(right);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
+
+expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
+expectDeprecatedUsage('./theme.js', 'function', 'getLyraTheme');
 
 describe('theme runtime', () => {
   afterEach(resetRoot);
@@ -302,16 +309,20 @@ describe('theme runtime', () => {
   it('derives a distinct accent hue per resolved mode from a { light, dark } per-role value, not just a different tint weight', () => {
     const lightBrand = '#2563eb';
     const darkBrand = '#f59e0b';
+    setLyraTheme({ mode: 'light', accent: lightBrand });
+    const expectedLight = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
+    setLyraTheme({ mode: 'dark', accent: darkBrand });
+    const expectedDark = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
     setLyraTheme({ mode: 'light', accent: { brand: { light: lightBrand, dark: darkBrand } } });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(lightBrand);
     const lightLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
-    expect(parseColor(lightLoud)).to.deep.equal(parseColor(lightBrand));
+    expect(parseColor(lightLoud)).to.deep.equal(parseColor(expectedLight));
 
     // Same stored record, only the mode changes -- the OTHER base color must now paint.
     setLyraTheme({ mode: 'dark' });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(darkBrand);
     const darkLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
-    expect(parseColor(darkLoud)).to.deep.equal(parseColor(darkBrand));
+    expect(parseColor(darkLoud)).to.deep.equal(parseColor(expectedDark));
 
     // Prove this is a hue change, not merely a different tint weight of the same base color.
     expect(parseColor(lightLoud)).to.not.deep.equal(parseColor(darkLoud));
@@ -439,10 +450,10 @@ describe('theme runtime', () => {
       expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
       // A fully-empty pixel resolves every channel (including alpha) to 0 via the `?? 0`
       // fallback, so the "resolved" accent degrades to the mode's own background color instead
-      // of throwing or leaving a stale ramp.
+      // of throwing or leaving a stale ramp; the cross-look contrast floor still applies.
       expect(
         document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
-      ).to.equal('rgb(255 255 255)');
+      ).to.equal('rgb(102 102 102)');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
     }
@@ -843,9 +854,9 @@ describe('lyraThemeBootstrap', () => {
     expect(document.documentElement.getAttribute('data-theme')).to.equal(expected);
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(expected);
 
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'dark', accent: null }));
+    new Function(lyraThemeBootstrap)();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'unset', accent: null }));
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.documentElement.setAttribute('data-lr-theme', 'dark');
     new Function(lyraThemeBootstrap)();
     expect(document.documentElement.getAttribute('data-theme')).to.equal(null);
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(null);
@@ -1149,18 +1160,18 @@ describe('theme token maps', () => {
     expect(Object.keys(storedRecord())).to.not.include('tokens');
     const expectedNames = new Set<string>(['--lr-theme-accent', ...ALL_RAMP_PROPERTIES]);
     for (const name of Object.keys(inlineThemeProperties())) expect(expectedNames.has(name), name).to.equal(true);
-    expect(ownershipList()).to.deep.equal([]);
-    // The ramp for the same input is byte-identical to the one the pre-token runtime derived.
+    expect(ownershipList()).to.have.members([...BRAND_RAMP_PROPERTIES]);
+    // The same cross-look contrast floor applies with no token map selected.
     expect(Object.fromEntries(BRAND_RAMP_PROPERTIES.map((name) => [name, inline(name)]))).to.deep.equal({
       '--lr-theme-color-brand-fill-quiet': 'rgb(252 227 230)',
       '--lr-theme-color-brand-fill-normal': 'rgb(241 146 159)',
-      '--lr-theme-color-brand-fill-loud': 'rgb(230 57 80)',
+      '--lr-theme-color-brand-fill-loud': 'rgb(184 46 64)',
       '--lr-theme-color-brand-border-quiet': 'rgb(246 180 189)',
-      '--lr-theme-color-brand-border-normal': 'rgb(213 101 116)',
-      '--lr-theme-color-brand-border-loud': 'rgb(184 46 64)',
+      '--lr-theme-color-brand-border-normal': 'rgb(190 90 103)',
+      '--lr-theme-color-brand-border-loud': 'rgb(147 37 51)',
       '--lr-theme-color-brand-on-quiet': 'rgb(0 0 0)',
       '--lr-theme-color-brand-on-normal': 'rgb(0 0 0)',
-      '--lr-theme-color-brand-on-loud': 'rgb(0 0 0)',
+      '--lr-theme-color-brand-on-loud': 'rgb(255 255 255)',
       '--lr-theme-color-focus': 'rgb(230 57 80)',
     });
   });
@@ -1431,7 +1442,7 @@ describe('theme token maps', () => {
 
   it('lets an accent override the map ramp, and reveals the map again when the accent is cleared', () => {
     setLyraTheme({ mode: 'light', accent: '#e63950', tokens: { [T('color-brand-fill-loud')]: '#123456' } });
-    expect(inline(T('color-brand-fill-loud'))).to.equal('rgb(230 57 80)');
+    expect(inline(T('color-brand-fill-loud'))).to.equal('rgb(184 46 64)');
     setLyraTheme({ accent: null });
     expect(inline(T('color-brand-fill-loud'))).to.equal('#123456');
   });
@@ -1526,7 +1537,7 @@ describe('theme token maps', () => {
     const copy = document.createElement('div');
     copy.setAttribute('style', document.documentElement.getAttribute('style') ?? '');
     const names = [...ownershipList(), ...ALL_RAMP_PROPERTIES, '--lr-theme-accent'];
-    expect(ownershipList().length).to.equal(values.accept.length);
+    expect(ownershipList()).to.have.members([...Object.keys(tokens), ...BRAND_RAMP_PROPERTIES]);
     for (const name of names) expect(copy.style.getPropertyValue(name), name).to.equal(inline(name));
   });
 
@@ -1623,7 +1634,10 @@ describe('theme token maps', () => {
       rootStyle.removeProperty(T('a'));
       calls.remove = 0;
       setLyraTheme({ tokens: null });
-      expect(calls).to.deep.equal({ set: 0, remove: 3 });
+      expect(calls).to.deep.equal({ set: 0, remove: 5 });
+      for (const name of [T('b'), T('color-text-normal'), T('font-family-body'), '--_lr-ll-color-text-normal', '--_lr-ld-color-text-normal']) {
+        expect(rootStyle.getPropertyValue(name), name).to.equal('');
+      }
     } finally {
       observer.disconnect();
       CSSStyleDeclaration.prototype.setProperty = originalSet;
@@ -1639,7 +1653,7 @@ describe('lyraThemeBootstrap token maps', () => {
   function runtimeThenBootstrap(record: Parameters<typeof setLyraTheme>[0]) {
     setLyraTheme(record);
     const expected = { inline: inlineThemeProperties(), owned: ownershipList() };
-    for (const name of Object.keys(expected.inline)) document.documentElement.style.removeProperty(name);
+    applyLyraStyleScope(document.documentElement, null);
     deleteOwnershipList();
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.removeAttribute('data-lr-theme');

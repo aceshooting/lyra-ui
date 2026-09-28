@@ -21,7 +21,7 @@ import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolGlyph, toolStatusIcon } fr
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -44,8 +44,13 @@ export type ToolResultDialogCloseReason =
   | 'api'
   | (string & Record<never, never>);
 
+/** The accepted dismissal reason. */
+export interface LyraToolResultDialogCloseDetail {
+  reason: ToolResultDialogCloseReason;
+}
+
 export interface LyraToolResultDialogEventMap {
-  'lr-close': CustomEvent<ToolResultDialogCloseReason>;
+  'lr-close': CustomEvent<LyraToolResultDialogCloseDetail>;
   /** Cancelable request to toggle `maximized`, fired before it changes. */
   'lr-maximize-change-request': CustomEvent<{ readonly maximized: boolean }>;
   /** @deprecated Use `lr-maximize-change-request`; removal not before 23.0.0. Fired right after it
@@ -126,7 +131,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @slot body - The dialog's main content — typically a `<lr-tab-group>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
- * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
+ * @event lr-close - `detail: { reason: ToolResultDialogCloseReason }`. Fired
  * exactly once per dismissal, via Escape, an opted-in backdrop click, the built-in
  * close button, or a `close()` call. The name is not dialog-scoped in this library: nesting this
  * dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also
@@ -186,7 +191,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     maximize: LYRA_DEFAULT_maximize,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -296,7 +300,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lr-close` detail --
+   * opened. `reason` is forwarded as `lr-close` detail.reason --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'` (`'backdrop'` only while
    * `lightDismiss` is enabled); a
    * consumer's own close affordance (e.g. a footer action button) should
@@ -313,7 +317,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   close(reason: ToolResultDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit('lr-close', reason);
+    this.emit('lr-close', { reason });
   }
 
   /** Opens the dialog. No-op when already open. */

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './mention-popover.js';
 import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
@@ -106,6 +107,8 @@ function replacePlacement(el: LyraMentionPopover, handle: DeferredOperationHandl
   internals.cleanup?.();
   internals.cleanup = handle;
 }
+
+expectLocaleFallback('tr', ['mentionResultCount', 'mentionResultPosition', 'mentionSuggestions']);
 
 it('renders items as listbox rows, with icon/description parts only when set', async () => {
   const el = await openWithItems();

@@ -6,12 +6,14 @@
 - **Class** `LyraGraph`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated css-property** `--lr-link-color` since `21.1.0`; use css-property `--lr-graph-edge-color`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
 - **Deprecated css-property** `--lr-node-fill` since `21.1.0`; use css-property `--lr-graph-node-fill`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
-- **Deprecated event** `lr-link-enter` since `21.1.0`; use event `addEventListener('lr-edge-enter', ...)`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
-- **Deprecated event** `lr-link-leave` since `21.1.0`; use event `addEventListener('lr-edge-leave', ...)`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated event** `lr-link-click` since `unreleased`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecated event** `lr-link-enter` since `21.1.0`; use event `addEventListener('lr-edge-enter', event => { /* Read event.detail.edgeId instead of linkId. */ })`; removal not before `23.0.0` — Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId.
+- **Deprecated event** `lr-link-leave` since `21.1.0`; use event `addEventListener('lr-edge-leave', event => { /* Read event.detail.edgeId instead of linkId. */ })`; removal not before `23.0.0` — Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId.
+- **Deprecated event** `lr-node-click` since `unreleased`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
 - **Deprecated property** `dimmedLinkIds` since `21.1.0`; use property `dimmedEdgeIds`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
 - **Deprecated property** `linkDistance` / `link-distance` since `21.1.0`; use property `edge-distance`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
 - **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
@@ -154,18 +156,20 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
 `undefined` when the id is not currently simulated.
 
-**Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
-local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
-linkId? }`; the optional `linkId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
+**Events:** `lr-node-activate` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
+local drawing coordinates), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
+edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
+`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, edgeId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
-(`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
+(`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
-right after its canonical event with an equal detail: `lr-link-enter`/`lr-link-leave` (use
-`lr-edge-enter`/`lr-edge-leave`; removed in 23.0.0) and `lr-community-click` (use
+right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
+`lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
+remain through v23. Older aliases: `lr-link-enter`/`lr-link-leave` (use
+`lr-edge-enter`/`lr-edge-leave` and replace detail.linkId with detail.edgeId; removable from 23.0.0) and `lr-community-click` (use
 `lr-community-activate`; removed in 23.0.0)
 
 **Slots:** none.
@@ -254,8 +258,8 @@ localized `part="error"` alert. Install with
       dash: [6, 3],
     },
   ];
-  g.addEventListener("lr-node-click", (e) => console.log(e.detail.nodeId));
-  g.addEventListener("lr-link-click", (e) =>
+  g.addEventListener("lr-node-activate", (e) => console.log(e.detail.nodeId));
+  g.addEventListener("lr-edge-activate", (e) =>
     console.log(e.detail.linkId, e.detail.sourceNodeId, e.detail.targetNodeId)
   );
 </script>
@@ -319,7 +323,7 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 **Selection & focus:** `selectionMode: 'none' | 'single' | 'multiple' = 'none'` (attribute
 `selection-mode`) gates click/keyboard selection; the component never mutates
 `selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
-only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
+only emits `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`) — the host assigns them back,
 mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching

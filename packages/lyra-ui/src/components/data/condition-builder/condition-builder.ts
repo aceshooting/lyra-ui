@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-condition-builder.js to register this component. */
 export * from './condition-builder.class.js';
 import { LyraConditionBuilder } from './condition-builder.class.js';
 import { defineElement } from '../../../internal/prefix.js';

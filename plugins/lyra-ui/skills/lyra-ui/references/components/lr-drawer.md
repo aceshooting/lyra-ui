@@ -6,9 +6,10 @@
 - **Class** `LyraDrawer`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/drawer/drawer.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Deprecated property** `closable` / `closable` since `21.1.0`; use property `without-close-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -63,7 +64,8 @@ promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
 `lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
-(`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
+(`detail: { reason: DialogCloseReason }`, non-cancelable), plus cancelable `lr-close-request`
+with the same detail — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip. **`lr-close` is not drawer-scoped, same as on `lr-dialog`:**

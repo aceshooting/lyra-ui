@@ -6,7 +6,7 @@
 - **Class** `LyraLineChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/line-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -50,12 +50,10 @@ of every entry in these lists.**
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-activate` (`detail: { datasetIndex,
 index, label, value }`; deprecated alias `lr-point-click`, removed in 23.0.0), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
-complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
-of `lr-legend-visibility-change-request` (removal not before 21.0.0).
+complete `hiddenDatasets` snapshot).
 Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
-`lr-before-datum-visibility-change` is a **deprecated** alias of `lr-datum-visibility-change-request`
-(removal not before 21.0.0).
+
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

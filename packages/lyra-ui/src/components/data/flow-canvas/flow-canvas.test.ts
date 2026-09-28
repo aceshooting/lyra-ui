@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './flow-canvas.js';
 import '../../overlays/empty/empty.js';
@@ -37,6 +38,8 @@ function transformCoordinates(value: string): [number, number] {
   const match = value.match(/^translate\(([-\d.]+)px(?:,\s*([-\d.]+)px)?\)$/);
   return match ? [Number(match[1]), Number(match[2] ?? 0)] : [Number.NaN, Number.NaN];
 }
+
+expectLocaleFallback('ar', ['flowCanvasLabel', 'flowCanvasSummary', 'flowEdge', 'flowInputHandle', 'flowOutputHandle', 'noData']);
 
 it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid bounds', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -1726,12 +1729,12 @@ describe('selection & roving focus', () => {
     el.selectedEdgeIds = ['a-b'];
     await el.updateComplete;
     let clickDetail: { nodeId: string } | undefined;
-    let selectionDetail: { nodeIds: string[]; edgeIds: string[] } | undefined;
+    let selectionDetail: { selectedNodeIds: string[]; selectedEdgeIds: string[] } | undefined;
     el.addEventListener('lr-node-activate', (e) => (clickDetail = (e as CustomEvent).detail));
     el.addEventListener('lr-selection-change', (e) => (selectionDetail = (e as CustomEvent).detail));
     (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).click();
     expect(clickDetail).to.deep.equal({ nodeId: 'a' });
-    expect(selectionDetail).to.deep.equal({ nodeIds: ['a'], edgeIds: [] });
+    expect(selectionDetail).to.deep.equal({ selectedNodeIds: ['a'], selectedEdgeIds: [] });
   });
 
   it('ctrl/cmd+click toggles a node within the existing selection instead of replacing it', async () => {
@@ -3224,6 +3227,22 @@ describe('registerCompanion & decorations', () => {
     expect(animation.animationTimingFunction).to.equal('linear');
   });
 
+  it('updates an existing running edge when its inherited motion preference changes', async () => {
+    const scope = await fixture<HTMLElement>(html`<section><lr-flow-canvas></lr-flow-canvas></section>`);
+    const canvas = scope.querySelector<LyraFlowCanvas>('lr-flow-canvas')!;
+    canvas.nodes = nodes;
+    canvas.edges = edges;
+    canvas.decorations = { 'a-b': { status: 'running' } };
+    await canvas.updateComplete;
+    const edge = () => canvas.shadowRoot!.querySelector('[part="edge"]')!;
+    scope.setAttribute('data-lr-motion', 'reduce');
+    await waitUntil(() => edge().hasAttribute('data-running-static'));
+    expect(edge().hasAttribute('data-running')).to.equal(false);
+    scope.removeAttribute('data-lr-motion');
+    await waitUntil(() => edge().hasAttribute('data-running'));
+    expect(edge().hasAttribute('data-running-static')).to.equal(false);
+  });
+
   it('renders a static dash instead of animating a running edge under prefers-reduced-motion', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
@@ -3975,14 +3994,14 @@ describe('controlled ownership and lifecycle invariants', () => {
     expect(Object.isFrozen(snapshots[0])).to.be.true;
     expect(Object.isFrozen(snapshots[0]!.nodes[0])).to.be.true;
 
-    let detail: Readonly<{ nodeIds: readonly string[]; edgeIds: readonly string[] }> | undefined;
+    let detail: Readonly<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }> | undefined;
     el.addEventListener('lr-selection-change', (event) => {
       detail = (event as CustomEvent).detail;
     });
     nodeControl(el, 'a').click();
     expect(Object.isFrozen(detail)).to.be.true;
-    expect(Object.isFrozen(detail!.nodeIds)).to.be.true;
-    expect(() => (detail!.nodeIds as string[]).push('foreign')).to.throw();
+    expect(Object.isFrozen(detail!.selectedNodeIds)).to.be.true;
+    expect(() => (detail!.selectedNodeIds as string[]).push('foreign')).to.throw();
     expect(el.selectedNodeIds).to.deep.equal(['a']);
   });
 

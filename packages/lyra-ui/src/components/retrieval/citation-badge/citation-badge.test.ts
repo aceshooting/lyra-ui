@@ -1,8 +1,13 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './citation-badge.js';
 import type { LyraCitationBadge } from './citation-badge.js';
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-EG', [
+  'citation',
+]);
 it('defaults to index=1, status="default", empty source-id/href/label', async () => {
   const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
   expect(el.index).to.equal(1);

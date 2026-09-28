@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-community-card.js to register this component. */
 export * from './community-card.class.js';
 import { LyraCommunityCard } from './community-card.class.js';
 import { defineElement } from '../../../internal/prefix.js';

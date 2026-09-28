@@ -145,17 +145,17 @@ export const Events: Story = {
       <lr-tool-approval-dialog
         tool-name="web_search"
         .args=${SEARCH_ARGS}
-        @lr-approve=${(e: CustomEvent<{ args: unknown }>) => {
+        @lr-approve-request=${(e: CustomEvent<{ args: unknown }>) => {
           const out = document.getElementById('tool-approval-dialog-log');
-          if (out) out.textContent = `lr-approve: args=${JSON.stringify(e.detail.args)}`;
+          if (out) out.textContent = `lr-approve-request: args=${JSON.stringify(e.detail.args)}`;
         }}
-        @lr-deny=${() => {
+        @lr-deny-request=${() => {
           const out = document.getElementById('tool-approval-dialog-log');
-          if (out) out.textContent = 'lr-deny';
+          if (out) out.textContent = 'lr-deny-request';
         }}
-        @lr-close=${(e: CustomEvent<string>) => {
+        @lr-close=${(e: CustomEvent<{ reason: string }>) => {
           const out = document.getElementById('tool-approval-dialog-close-log');
-          if (out) out.textContent = `lr-close: ${e.detail}`;
+          if (out) out.textContent = `lr-close: ${e.detail.reason}`;
         }}
       ></lr-tool-approval-dialog>
       <p id="tool-approval-dialog-log">No decision yet.</p>
@@ -172,7 +172,7 @@ export const AsyncPendingApproval: Story = {
       <lr-tool-approval-dialog
         tool-name="send_email"
         .args=${{ to: 'ops@example.com', subject: 'Nightly build failed' }}
-        @lr-approve=${(e: CustomEvent) => {
+        @lr-approve-request=${(e: CustomEvent) => {
           e.preventDefault();
           const dialog = (e.currentTarget as HTMLElement) as LyraToolApprovalDialog;
           setTimeout(() => dialog.close('approve'), 1500);

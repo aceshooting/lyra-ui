@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
@@ -714,10 +715,10 @@ it('allows close to be vetoed and otherwise hides', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
   const veto = (event: Event) => event.preventDefault();
-  el.addEventListener('lr-close', veto);
+  el.addEventListener('lr-close-request', veto);
   button.click();
   expect(el.open).to.be.true;
-  el.removeEventListener('lr-close', veto);
+  el.removeEventListener('lr-close-request', veto);
   const next = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
   next.click();
   expect(el.open).to.be.false;
@@ -741,12 +742,12 @@ it('repairs focused close actions only after dismissal is accepted', async () =>
   const after = host.querySelector<HTMLButtonElement>('#after-callout')!;
   const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
   const veto = (event: Event): void => event.preventDefault();
-  el.addEventListener('lr-close', veto);
+  el.addEventListener('lr-close-request', veto);
   close.focus();
   close.click();
   expect(el.shadowRoot!.activeElement === close).to.equal(true);
 
-  el.removeEventListener('lr-close', veto);
+  el.removeEventListener('lr-close-request', veto);
   close.click();
   expect(el.ownerDocument.activeElement === after).to.equal(true);
   await el.updateComplete;
@@ -1385,3 +1386,5 @@ describe('renamed callout members', () => {
     expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
   });
 });
+
+expectDeprecatedUsage('lr-callout', 'property', 'accessibleLabel');

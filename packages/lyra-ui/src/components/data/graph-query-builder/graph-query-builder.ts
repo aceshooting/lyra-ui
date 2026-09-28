@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-graph-query-builder.js to register this component. */
 export * from './graph-query-builder.class.js';
 import { LyraGraphQueryBuilder } from './graph-query-builder.class.js';
 import { defineElement } from '../../../internal/prefix.js';

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
@@ -35,6 +36,14 @@ const items: LyraPaletteItem[] = [
   { type: 'webhook', label: 'Webhook', category: 'Actions' },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'nodePaletteLabel',
+  'search',
+  'nodePalettePlaceholder',
+  'nodePaletteDragHint',
+  'clear',
+]);
 it('defaults to empty items and an unset label', async () => {
   const el = (await fixture(
     html`<lr-node-palette></lr-node-palette>`

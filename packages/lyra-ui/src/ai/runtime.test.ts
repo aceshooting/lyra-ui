@@ -1267,3 +1267,96 @@ it('rejects malformed tool status, display name, timing and redaction fields as 
   });
   expect(boundary.error, '100 paths of up to 4,096 characters are admitted').to.equal(undefined);
 });
+
+function activeRun() {
+  return reduceAgentStreamEvents(createAgentStreamState(), [
+    { type: 'run-start', generation: 1, sequence: 1, runId: 'run-1' },
+    { type: 'message-start', generation: 1, sequence: 2, message: {
+      id: 'answer', role: 'assistant', parts: [
+        { id: 'done', type: 'text', text: 'Finished.', state: 'complete' },
+        { id: 'partial', type: 'text', text: 'Preserved', state: 'streaming' },
+      ],
+    } },
+  ]);
+}
+
+it('interrupts only active parts and resumes without dropping accumulated text', () => {
+  const initial = activeRun();
+  const interruption = { resumable: true, reason: 'Connection lost' };
+  const interrupted = reduceAgentStream(initial, {
+    type: 'stream-interrupt', generation: 1, sequence: 3, runId: 'run-1', interruption,
+  });
+  interruption.reason = 'Caller mutation';
+  expect(interrupted.interruption).to.deep.equal({ resumable: true, reason: 'Connection lost' });
+  expect(interrupted.messages[0]?.parts?.map(part => part.state)).to.deep.equal(['complete', 'interrupted']);
+  expect(initial.messages[0]?.parts?.[1]?.state).to.equal('streaming');
+  const resumed = reduceAgentStream(interrupted, {
+    type: 'stream-resume', generation: 1, sequence: 4, runId: 'run-1',
+  });
+  expect(resumed.interruption).to.equal(undefined);
+  expect(resumed.messages[0]?.parts?.[1]).to.deep.equal({
+    id: 'partial', type: 'text', text: 'Preserved', state: 'streaming',
+  });
+  expect(resumed.messages[0]?.parts?.[0]?.state).to.equal('complete');
+});
+
+it('rejects foreign, stale, replayed and non-resumable stream transitions', () => {
+  const initial = activeRun();
+  const interrupted = reduceAgentStream(initial, {
+    type: 'stream-interrupt', generation: 1, sequence: 3, runId: 'run-1', interruption: { resumable: true },
+  });
+  for (const event of [
+    { type: 'stream-resume', generation: 1, sequence: 3, runId: 'run-1' },
+    { type: 'stream-resume', generation: 0, sequence: 4, runId: 'run-1' },
+    { type: 'stream-resume', generation: 2, sequence: 4, runId: 'run-1' },
+    { type: 'stream-resume', generation: 1, sequence: 99, runId: 'other' },
+    { type: 'stream-interrupt', generation: 1, sequence: 99, runId: 'other', interruption: { resumable: false } },
+  ] as AgentStreamEvent[]) expect(reduceAgentStream(interrupted, event)).to.equal(interrupted);
+  const stopped = reduceAgentStream(initial, {
+    type: 'stream-interrupt', generation: 1, sequence: 3, runId: 'run-1', interruption: { resumable: false },
+  });
+  expect(reduceAgentStream(stopped, { type: 'stream-resume', generation: 1, sequence: 4, runId: 'run-1' })).to.equal(stopped);
+  const next = reduceAgentStream(interrupted, { type: 'run-start', generation: 2, sequence: 1, runId: 'run-2' });
+  expect(next.interruption).to.equal(undefined);
+  expect(reduceAgentStream(next, { type: 'stream-resume', generation: 1, sequence: 20, runId: 'run-1' })).to.equal(next);
+});
+
+it('keeps interrupted parts paused until explicit resume, including completion traffic', () => {
+  const interrupted = reduceAgentStream(activeRun(), {
+    type: 'stream-interrupt', generation: 1, sequence: 3, runId: 'run-1', interruption: { resumable: true },
+  });
+  const delta = reduceAgentStream(interrupted, {
+    type: 'message-part-delta', generation: 1, sequence: 4, messageId: 'answer', partId: 'partial', partType: 'text', delta: ' late',
+  });
+  expect(delta.messages[0]?.parts?.[1]).to.deep.equal(interrupted.messages[0]?.parts?.[1]);
+  const upsert = reduceAgentStream(delta, {
+    type: 'message-part-upsert', generation: 1, sequence: 5, messageId: 'answer', part: { id: 'partial', type: 'text', text: 'Replacement', state: 'streaming' },
+  });
+  expect(upsert.messages[0]?.parts?.[1]).to.deep.equal(interrupted.messages[0]?.parts?.[1]);
+  const complete = reduceAgentStream(upsert, { type: 'message-complete', generation: 1, sequence: 6, messageId: 'answer' });
+  expect(complete.messages[0]?.parts?.[1]?.state).to.equal('interrupted');
+});
+
+it('validates interruption metadata and retains the prior message on invalid input', () => {
+  const initial = activeRun();
+  for (const interruption of [{ resumable: 'yes' }, { resumable: true, reason: 4 }, null]) {
+    const result = reduceAgentStream(initial, {
+      type: 'stream-interrupt', generation: 1, sequence: 3, runId: 'run-1', interruption,
+    } as unknown as AgentStreamEvent);
+    expect(result.error?.code).to.equal('invalid_stream_event');
+    expect(result.messages).to.deep.equal(initial.messages);
+    expect(result.interruption).to.equal(undefined);
+  }
+});
+
+it('does not mark older completed or already-interrupted parts as active', () => {
+  const state = reduceAgentStream(activeRun(), {
+    type: 'message-part-upsert', generation: 1, sequence: 3, messageId: 'answer',
+    part: { id: 'old', type: 'reasoning', text: 'Earlier interruption', state: 'interrupted', interruption: { resumable: false } },
+  });
+  const interrupted = reduceAgentStream(state, {
+    type: 'stream-interrupt', generation: 1, sequence: 4, runId: 'run-1', interruption: { resumable: true },
+  });
+  const resumed = reduceAgentStream(interrupted, { type: 'stream-resume', generation: 1, sequence: 5, runId: 'run-1' });
+  expect(resumed.messages[0]?.parts?.map(part => part.state)).to.deep.equal(['complete', 'streaming', 'interrupted']);
+});

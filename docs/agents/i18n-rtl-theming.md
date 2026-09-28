@@ -75,6 +75,56 @@ treat a gap in any of them as a bug, not a missing feature.
   string actually reaches the DOM — a key existing in the union doesn't prove the call site is
   wired up correctly.
 
+## Pinned plural-category requirements
+
+`packages/lyra-ui/scripts/fixtures/cldr-plural-categories.json` records the catalog qualification
+categories captured with Node 22.23.2, ICU 78.2, CLDR 48.0 and Unicode 17.0. The translation
+checker and scaffold read this snapshot instead of deriving requirements from an arbitrary host's
+ICU. Normal generators never rewrite it, and a locale missing from the pin fails closed.
+
+To add a locale, use the exact contributor runtime (`nvm use`) and the exported
+`capturePluralCategoryPin([...Object.keys(pin.locales), newTag])` helper in
+`scripts/cldr-plural-categories.mjs`. Inspect the candidate's version/provenance and category diff,
+run `validatePluralCategoryPin(candidate)`, and save the fixture only after review. Changing an
+existing category set also requires checking every affected plural message; it is not an automatic
+consequence of upgrading Node. Runtime message selection still uses the browser's `Intl` and its
+documented fallback behavior.
+
+Authored tags `tl` and `pnb` canonicalize to `fil` and `lah`. ICU 78.2 does not support `lah` plural
+rules, so that entry explicitly records the existing `en-US` fallback categories `one`/`other` in
+`runtimeFallbacks.lah`. This preserves the current runtime contract and does not certify Western
+Punjabi or Lahnda grammar. Do not generalize that exception to another unsupported locale or
+advertise either canonical alias as an additional translated catalog.
+
+## Catalog review tiers and native-speaker review
+
+`scripts/fixtures/translation-reviews.json` in the library package separates each catalog's
+structural coverage from its linguistic evidence. Schema version 2 records `reviewTier` as
+`ai-assisted`, `independent-human`, or `native-speaker`; `reviewer.status` remains a separate
+approval state. Current AI-assisted catalog reviews must stay labeled AI-assisted, even when
+approved. Never infer human or native-speaker review from complete keys, an English-identical
+allowlist, a translated language name, or a contributor's form submission.
+
+Volunteers can open the repository's **Translation review** issue form. It asks for the exact
+locale/script/register, a public reviewer handle, reviewed commit and catalog hash, review scope,
+and evidence covering meaning, terminology, plural counts, placeholders, accessible labels and
+mixed-direction text. It accepts native-speaker and fluent-human offers without treating either
+as completed approval. Do not request private contact information or a legal identity.
+
+A maintainer validates the stated review scope and evidence before updating the ledger. A human
+review tier requires an approved review with a date, public `reviewer.identity`, an HTTPS
+`reviewer.evidenceUrl` pointing to the accepted review record, and `reviewer.catalogSha256`
+matching the current catalog snapshot. A native-speaker tier additionally represents an actual
+native-speaker review of that locale and written register, not merely linguistic fluency or AI
+assistance. Record the reviewer-confirmed scope in `reviewer.evidence`; the intake issue alone is
+not evidence of completion. Catalog edits invalidate an old human-review hash until reviewed
+again. Do not update that hash mechanically or fabricate reviewers to pass a gate.
+
+Run `pnpm --filter @aceshooting/lyra-ui test:translation-reviews` and `check:translations` after
+review metadata changes. The generated locale manifest reports coverage and review tier/status
+separately; fallback messages must never be counted as translated coverage. The pinned CLDR
+category fixture defines structural requirements without claiming linguistic quality.
+
 ## RTL — logical properties, not a forced `dir`
 
 - Components never set their own `dir` attribute. Direction is inherited from the nearest

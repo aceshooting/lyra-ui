@@ -151,10 +151,11 @@ guarantees that hold across combinations.
   component.
 - Exact rendering or behavioural parity with any design system. The Material-inspired look promises
   no ripple and no shape morphing. Glass promises no pointer-driven distortion and no refraction.
-- The full visual theme builder, which is 22.x work. The v22 gallery previews and exports only.
+- The full visual theme builder, which is v23 work. The v22 gallery previews and exports only.
 - Persisting scoped choices, which belong to application state. Syncing tabs through the `storage`
   event: the runtime re-reads storage on every `getLyraStyle()`, as `getLyraTheme()` does today.
-- Sequential and diverging chart palettes (22.x), and item 7's further looks (22.x).
+- Palette editor UI and item 7's further looks, which are v23 work. Categorical, sequential and
+  diverging palette foundations are all required for the initial v22 release.
 
 ## Proposed public contract
 
@@ -347,8 +348,9 @@ build detects this through the look's sentinel and warns.
 
 ### Runtime API
 
-`@aceshooting/lyra-ui/theme.js` stays dependency-free, side-effect-free on import, and importable on
-the server.
+`@aceshooting/lyra-ui/theme.js` stays free of Lit, component and external runtime dependencies,
+side-effect-free on import, and importable on the server. A small internal diagnostic helper shares
+the development warning gate without importing attribute-checking or component machinery.
 
 ```ts
 // New unless marked. LyraThemeTokens, LyraThemeAccentValue and LyraThemeSemanticRole are v21 types,
@@ -360,7 +362,7 @@ export type LyraSurface = 'solid' | 'glass';
 export type LyraDensity = 'compact' | 'comfortable' | 'touch';
 export type LyraMode = 'light' | 'dark' | 'system' | 'unset';
 export type LyraAccentName = 'emerald' | 'peridot' | 'topaz' | 'ruby' | 'tourmaline' | 'amethyst'
-  | 'aquamarine' | 'sapphire' | 'hematite'; // literal copy; theme.js imports nothing
+  | 'aquamarine' | 'sapphire' | 'hematite'; // literal copy; no gemstone catalog dependency
 export type LyraAccent = LyraAccentName | (string & {})
   | { readonly [role in LyraThemeSemanticRole]?: LyraThemeAccentValue } | null;
 export type LyraAccentBackground =
@@ -459,8 +461,10 @@ export function lyraLookCss(look: LyraLook, options?: { readonly modeAliases?: b
   resolved mode as public inline values on `<html>`, as in v21.
   - The ramp is mixed against the first available of: `accentBackground`, the runtime look's own
     surface entries, or the embedded reference surfaces of the applied built-in look.
-  - Its borders, focus colour and on-colours are then also floored against every built-in look's
-    references, so an inherited custom ramp stays legible inside any nested built-in look.
+  - Its loud fill, also used as accent text, is floored to 4.5:1 against its quiet fill and every
+    built-in look's reference surfaces. Borders and focus colour meet 3:1 against those surfaces;
+    on-colours are selected against their corresponding fills. This can darken a light-mode accent
+    and change its on-loud partner from black to white compared with v21.
   - An application's stylesheet look is not known to the runtime. For such a look, pass
     `accentBackground` or use its runtime form. This is a documented limit.
 - **Operating-system mode flips** rewrite only the root's public values, from pairs that were already
@@ -823,8 +827,9 @@ the narrow-allocation tests also run in `compact` and `touch`.
     The two results must fall on the same side of the foreground's luminance, and the nearer one must
     reach the ratio. Because compositing is monotonic in each channel, this bounds every possible
     backdrop.
-  - **Runtime looks, overrides and custom accents** keep the v21 floor, now applied per written mode.
-    Custom accents are also floored against every built-in look.
+  - **Runtime looks and overrides** keep the v21 token-map floor, now applied per written mode.
+    **Custom accents** also floor their loud fill as text to 4.5:1 against quiet and built-in
+    reference surfaces, with a matching on-loud foreground.
   - **Browser tests** add islands × plain values and nested looks × inherited custom accents.
 - **Target size.** The density invariants above apply. `check:hit-area` keeps checking the
   comfortable source, and rendered-box tests cover every built-in look × `compact` and `touch`.
@@ -1007,8 +1012,12 @@ a ceiling.
 
 ## Compatibility and migration
 
-This is a **major** change. A v21 page that adds no attribute, import or call renders identically,
-except for the behaviour changes listed below. The parity tests prove this.
+This is a **major** change. Compatibility excludes only the behaviour changes listed below.
+Default-state parity qualification compares every registered component in a 600px-wide allocation,
+in light and dark roots and mode islands, under both operating-system schemes, against the published
+v21 package. That fixture does not establish parity at every allocation or in populated and open
+states; those require separate qualification. The component corrections in items 6–9 are explicit
+exceptions, not permission for other default-rendering changes.
 
 | Surface | v22 | v23 |
 | --- | --- | --- |
@@ -1034,8 +1043,9 @@ except for the behaviour changes listed below. The parity tests prove this.
   - `tokens: null` resets the look to `lyra`.
 - **Built-in presets.**
   - `system`, `light`, `dark` and `unset` map to `{ mode, accent: null }`.
-  - Each gemstone preset maps to `{ mode: 'system', accent: GEMSTONES[key].fill }`, which is the
-    colour derived at runtime exactly as in v21, not the named accent.
+  - Each gemstone preset still maps to `{ mode: 'system', accent: GEMSTONES[key].fill }`, rather
+    than the named accent. Its runtime ramp now uses the per-mode, cross-look contrast floors,
+    so its rendered loud fill and on-loud foreground can differ from v21.
 - **Reading state.** `getLyraTheme()` returns the v21 shape. Its `tokens` is the runtime look's map
   merged with `overrides`.
 - **Events.** The preset marker and its event keep their v21 occasions.
@@ -1061,6 +1071,33 @@ but compatible.
 4. `lr-theme-change` also fires for calls to the new API. This is additive.
 5. A version 2 record read by v21 code loses the stylesheet look, density, surface and `overrides`,
    and renders a named accent by deriving it from its gemstone colour.
+6. `lr-button-group` sizes to its content at every allocation instead of filling a narrow
+   allocation or reserving an artificial intrinsic width. An explicit host width remains respected.
+   Applications that need the internal row to fill it can set
+   `lr-button-group::part(base) { inline-size: 100%; }`.
+7. The attachment menu inside `lr-prompt-input` follows its explicit surrounding light/dark mode.
+   In WebKit, v21 could instead use operating-system colors when that scheme disagreed with the
+   surrounding mode. This corrects mode inheritance; applications should not depend on that mismatch.
+8. `lr-menu` bounds its minimum width by its containing allocation and viewport; positioned submenus
+   also respect the positioner's available width. Previously the minimum could override those safety
+   bounds and overflow narrow allocations, including at enlarged text sizes. The requested minimum
+   remains effective when sufficient space is available.
+9. The default Lyra dark control boundary (`--lr-theme-color-surface-border` and its shared fallback)
+   changes from `#6b6b74` to `#787881`, meeting 3:1 on the dark overlay `#2b3038` (3.034:1). The old
+   boundary fell below 3:1 on raised and overlay surfaces. Light boundaries, other looks and semantic
+   palettes are unchanged. Chromatic plain-button hover/press text also moves toward body text, and
+   selected tree rows use on-quiet text during hover/press, preserving 4.5:1 as their fills change;
+   resting text and explicit component foreground overrides retain their behavior. Step numbers and
+   interactive context-meter legend rows use matching semantic fill/on-color pairs instead of
+   treating a control-border color as a text background. The opt-in Material look defines 8% hover
+   and 12% press state layers with its `currentColor` partner to retain filled-action contrast.
+10. Runtime custom accents, including legacy gemstone presets and `setLyraTheme({ accent })`,
+    floor the loud fill to 4.5:1 against the quiet fill and built-in reference surfaces because that
+    token also paints accent text. The on-loud foreground is selected for the corrected fill. For
+    example, the light shadcn emerald story changes from `#34d399` with black on-loud text to
+    `#1a6a4d` with white on-loud text; the new fill and white text have 6.537:1 contrast. The same
+    loud token changes checked controls, brand text and streaming accents; secondary neutral
+    controls remain unchanged. The supplied accent value and persisted color are preserved.
 
 **Automated migration.** The `--origin=lyra-v21` profile of
 [RFC 0003](0003-lyra-v21-migration-profile.md) only reports these changes; it does not rewrite them.
@@ -1079,9 +1116,11 @@ It reports:
 **Deprecation records.** The current records cannot express these deprecations. Stage 1 extends the
 schema:
 
-- `component-metadata.json#deprecations` gains module-level records, keyed by `module` rather than
-  `tag`. Their kinds are `function`, `type`, `constant`, `subpath`, `stylesheet`, `window-event` and
-  `root-attribute`, and each carries `since` and `removalNotBefore: 24.0.0`.
+- `component-metadata.json#exportDeprecations` extends the existing package-level ledger. Named
+  exports and DOM contracts are keyed by `module` and `name`; whole paths use `name`. Its kinds are
+  `function`, `type`, `constant`, `entry-point`, `stylesheet`, `window-event` and `root-attribute`.
+  Reuse `entry-point` for subpaths rather than introducing an equivalent second kind. Every record
+  carries `since` and `removalNotBefore: 24.0.0`.
 - RFC 0003's rename ledger, whose entries are keyed by component tag, gains report-only module-level
   review entries for module specifiers, exported names, window events and function calls. Its
   coverage check pairs them with the new records in both directions.
@@ -1212,11 +1251,17 @@ All stages land before v22.0.0, in this order.
 4. **Item 3, the Material-inspired look.** Both forms come from one definition, built on the stage 2
    foundations, with its visual scope documented (no ripple, no shape morphing). It is proven with
    every density and both surfaces.
-5. **Item 8, categorical chart palettes.** One validated palette per built-in look, through the stage
-   1 gate. Sequential and diverging palettes follow in 22.x.
+5. **Item 8, chart palettes.** Validated categorical, sequential and diverging presets, including
+   appropriate light/dark choices for every built-in look, through the stage 1 gate. Palette editor
+   UI and advanced visual diagnostics follow in v23.
 6. **Item 6, the preset gallery.** It previews real components across every axis, and exports
-   validated runtime looks and `lyraLookCss()` output. The full builder follows in 22.x, alongside
+   validated runtime looks and `lyraLookCss()` output. The full builder follows in v23, alongside
    item 7's further looks.
+
+The initial v22 release also includes the roadmap's six design-option foundations: contrast,
+motion, typography, shape, elevation and chart palettes. Their usable inputs/presets, component
+integration and accessibility coverage precede publication; advanced editors follow in v23.
+See [v22 foundation acceptance criteria](../roadmap.md#six-design-option-foundations-required-before-v22-publication).
 
 **Related items.**
 

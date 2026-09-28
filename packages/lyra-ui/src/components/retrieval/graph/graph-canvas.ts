@@ -331,7 +331,7 @@ export function drawGraphScene(
 
 /** `0` (`rgb(0,0,0)`, a cleared/transparent canvas's default readback) is reserved for "no hit" --
  *  every real pick index is offset by +1 so index 0 (the first drawn item) never collides with it. */
-export function indexToPickColor(index: number): string {
+function indexToPickColor(index: number): string {
   const v = index + 1;
   return `rgb(${(v >> 16) & 0xff},${(v >> 8) & 0xff},${v & 0xff})`;
 }

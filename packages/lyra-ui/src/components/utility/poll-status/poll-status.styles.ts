@@ -29,7 +29,7 @@ export const styles = css`
     /* Same token and rationale as lr-stream-status's and lr-typing-indicator's own looping pulse:
        --lr-transition-ambient is the length the library reserves for ambient "still alive" motion,
        so every looping indicator shares one calm rhythm rather than its own duration. */
-    animation: lr-poll-status-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-poll-status-pulse var(--lr-transition-ambient) infinite);
   }
   [part='indicator'][data-due] {
     background: var(--lr-poll-status-due-bg, var(--lr-color-success));

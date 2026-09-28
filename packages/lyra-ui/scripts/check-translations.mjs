@@ -18,9 +18,9 @@ import { isMainModule } from './is-main-module.mjs';
 //      CLDR plural category. A Russian catalog that authors only `{one, other}` -- the English
 //      shape -- silently widens `few`/`many` to `other` for every count from 2 upward, which is
 //      exactly the bug the plural rework existed to remove. The required category set is read
-//      from `Intl.PluralRules(tag).resolvedOptions().pluralCategories`, so it tracks the runtime's
-//      CLDR data rather than a hand-copied table. (If a future ICU adds a category to a locale
-//      this check goes red -- that is a genuine translation gap surfacing, not a false positive.)
+//      from the reviewed CLDR48/ICU78.2 category pin. Contributor runtime updates cannot silently
+//      change catalog requirements; updating the pin is an explicit review operation. Runtime
+//      Intl still selects categories and retains the documented other fallback.
 // Key ORDER is enforced too: catalogs are mechanically comparable only if they enumerate keys in
 // the same order as `DEFAULT_STRINGS`, and a review that cannot diff two catalogs side by side is
 // a review that will not spot 1 and 2 either.
@@ -37,6 +37,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
 import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
 
@@ -47,6 +48,7 @@ const translationsRoot = join(packageRoot, 'src/translations');
 const packageJsonPath = join(packageRoot, 'package.json');
 const reviewFixturePath = join(packageRoot, 'scripts/fixtures/translation-reviews.json');
 const reviewSchemaPath = join(packageRoot, 'scripts/fixtures/translation-reviews.schema.json');
+const pluralCategoryPinPath = join(packageRoot, 'scripts/fixtures/cldr-plural-categories.json');
 const upstreamTagsPath = join(packageRoot, 'scripts/fixtures/upstream-tags.json');
 
 /** The complete CLDR plural category set; a catalog may not invent a seventh. */
@@ -174,6 +176,146 @@ function bareImportSpecifiers(program) {
   return specifiers;
 }
 
+/**
+ * Reads the literal English messages, each complete aggregate locale map, and the generated module
+ * paths that compose it. Shared by the translation checker and locale discovery generator so the
+ * published coverage counts, content hashes, and optional loader map describe the same source.
+ */
+export async function readTranslationCatalogInventory({ packageDir = packageRoot } = {}) {
+  const translationsRoot = join(packageDir, 'src/translations');
+  const localizationFile = join(packageDir, 'src/internal/localization.ts');
+  const englishSource = await readFile(localizationFile, 'utf8');
+  const englishProgram = parseProgram('src/internal/localization.ts', englishSource);
+  const defaults = namedObjectLiteral(englishProgram, 'DEFAULT_STRINGS');
+  if (!defaults) throw new Error('src/internal/localization.ts does not declare DEFAULT_STRINGS as an object literal');
+  const errors = [];
+  const englishEntries = messageEntries(defaults, 'src/internal/localization.ts', errors);
+  if (englishEntries.length < 100) {
+    throw new Error(`implausibly few DEFAULT_STRINGS entries parsed (${englishEntries.length})`);
+  }
+  const englishOrder = englishEntries.map(([key]) => key);
+  const knownFamilies = new Set(
+    JSON.parse(await readFile(join(packageDir, 'scripts/component-families.json'), 'utf8'))
+      .families.map(({ key }) => key),
+  );
+  const rootFiles = (await readdir(translationsRoot))
+    .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
+    .sort();
+  const catalogs = new Map();
+  const modules = [];
+
+  for (const name of rootFiles) {
+    const base = name.slice(0, -'.ts'.length);
+    const file = `src/translations/${name}`;
+    const source = await readFile(join(translationsRoot, name), 'utf8');
+    const program = parseProgram(file, source);
+    const registration = registrationCall(program);
+    if (registration?.tag && registration.identifier) {
+      if (registration.tag !== base) {
+        errors.push(`${file}: registered locale ${registration.tag} does not match its canonical file name`);
+      }
+      const object = namedObjectLiteral(program, registration.identifier);
+      if (!object) {
+        errors.push(`${file}: registered catalog ${registration.identifier} is not a literal object`);
+        continue;
+      }
+      const entries = messageEntries(object, file, errors);
+      catalogs.set(registration.tag, entries);
+      modules.push({ locale: registration.tag, aggregatePath: `./${base}.js`, familyPaths: {} });
+      continue;
+    }
+
+    const localeDir = join(translationsRoot, base);
+    if (!existsSync(localeDir)) {
+      errors.push(`${file}: expected a complete catalog registration or a matching family-slice directory`);
+      continue;
+    }
+    const sliceNames = (await readdir(localeDir))
+      .filter((entry) => entry.endsWith('.ts') && !entry.endsWith('.test.ts'))
+      .sort();
+    const expectedImports = sliceNames.map((entry) => `./${base}/${entry.slice(0, -'.ts'.length)}.js`);
+    const actualImports = bareImportSpecifiers(program);
+    if (JSON.stringify([...actualImports].sort()) !== JSON.stringify([...expectedImports].sort())) {
+      errors.push(`${file}: aggregate imports do not exactly match its authored slice files`);
+      continue;
+    }
+
+    const unionEntries = new Map();
+    const familyPaths = {};
+    let localeTag;
+    for (const sliceName of sliceNames) {
+      const family = sliceName.slice(0, -'.ts'.length);
+      if (family !== 'shared' && !knownFamilies.has(family)) {
+        errors.push(`src/translations/${base}/${sliceName}: unknown locale family slice`);
+        continue;
+      }
+      const sliceFile = `src/translations/${base}/${sliceName}`;
+      const sliceSource = await readFile(join(localeDir, sliceName), 'utf8');
+      const sliceProgram = parseProgram(sliceFile, sliceSource);
+      const sliceRegistration = registrationCall(sliceProgram);
+      if (!sliceRegistration?.tag || !sliceRegistration.identifier) {
+        errors.push(`${sliceFile}: expected registerLyraLocale('<tag>', <catalog>)`);
+        continue;
+      }
+      localeTag ??= sliceRegistration.tag;
+      if (sliceRegistration.tag !== localeTag || localeTag !== base) {
+        errors.push(`${sliceFile}: locale tag does not match the aggregate's canonical file name`);
+        continue;
+      }
+      const object = namedObjectLiteral(sliceProgram, sliceRegistration.identifier);
+      if (!object) {
+        errors.push(`${sliceFile}: registered catalog ${sliceRegistration.identifier} is not a literal object`);
+        continue;
+      }
+      const entries = messageEntries(object, sliceFile, errors);
+      for (const [key, value] of entries) {
+        if (unionEntries.has(key)) errors.push(`src/translations/${base}: duplicate message key ${key}`);
+        else unionEntries.set(key, value);
+      }
+      familyPaths[family] = `./${base}/${family}.js`;
+    }
+    if (localeTag) {
+      catalogs.set(localeTag, englishOrder.filter((key) => unionEntries.has(key)).map((key) => [key, unionEntries.get(key)]));
+      modules.push({ locale: localeTag, aggregatePath: `./${base}.js`, familyPaths });
+    }
+  }
+
+  const pseudoRoot = join(translationsRoot, 'pseudo');
+  const pseudoModules = [];
+  if (existsSync(pseudoRoot)) {
+    for (const name of (await readdir(pseudoRoot)).filter((entry) => entry.endsWith('.ts') && !entry.endsWith('.test.ts')).sort()) {
+      const source = await readFile(join(pseudoRoot, name), 'utf8');
+      const program = parseProgram(`src/translations/pseudo/${name}`, source);
+      let registration;
+      let direction = 'ltr';
+      visitAst(program, (node) => {
+        if (registration || node.type !== 'CallExpression') return;
+        if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraExactLocale') return;
+        registration = literalString(node.arguments?.[0]);
+        const meta = node.arguments?.[2];
+        if (meta?.type === 'ObjectExpression') {
+          for (const property of meta.properties) {
+            if (propertyName(property) !== 'dir') continue;
+            const value = literalString(property.value);
+            if (value === 'ltr' || value === 'rtl') direction = value;
+          }
+        }
+      });
+      const locale = registration ?? name.slice(0, -'.ts'.length);
+      if (locale !== name.slice(0, -'.ts'.length)) {
+        errors.push(`src/translations/pseudo/${name}: registered tag does not match its file name`);
+      }
+      pseudoModules.push({
+        locale,
+        direction,
+        aggregatePath: `./pseudo/${name.slice(0, -'.ts'.length)}.js`,
+      });
+    }
+  }
+  if (errors.length > 0) throw new Error(errors.join('\n'));
+  return { englishEntries, catalogs, modules, pseudoModules };
+}
+
 /** The base language subtag of a locale tag, normalized the way `normalizeLocale()` does. */
 function baseLanguage(tag) {
   return tag.trim().replace(/_/g, '-').toLowerCase().split('-')[0];
@@ -193,8 +335,8 @@ function unionPlaceholders(message) {
   return names;
 }
 
-function pluralCategoriesFor(tag) {
-  return new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
+function pluralCategoriesFor(tag, pin) {
+  return pinnedPluralCategories(pin, tag);
 }
 
 /** Source text of a top-level `function <name>(...)` declaration, or `undefined`. */
@@ -337,7 +479,7 @@ function validateCatalogEntries({ file, entries, expectedOrderedKeys, english, c
       if (uncovered.length > 0) {
         errors.push(
           `${file}: "${key}" is missing the ${uncovered.join('/')} categor(y|ies) this locale requires ` +
-            `(Intl.PluralRules reports ${categories.join('/')}) -- those counts would silently widen to "other"`,
+            `(the pinned category requirements are ${categories.join('/')}) -- those counts would silently widen to "other"`,
         );
       }
       if (!authored.includes('other')) {
@@ -375,6 +517,8 @@ function validateCatalogEntries({ file, entries, expectedOrderedKeys, english, c
 async function main() {
   const errors = [];
   const notes = [];
+  const pluralCategoryPin = JSON.parse(await readFile(pluralCategoryPinPath, 'utf8'));
+  errors.push(...validatePluralCategoryPin(pluralCategoryPin).map((error) => `${pluralCategoryPinPath}: ${error}`));
 
   const localizationSource = await readFile(localizationFile, 'utf8');
   const localizationProgram = parseProgram('src/internal/localization.ts', localizationSource);
@@ -451,9 +595,9 @@ async function main() {
       }
       let categories;
       try {
-        categories = pluralCategoriesFor(tag);
+        categories = pluralCategoriesFor(tag, pluralCategoryPin);
       } catch {
-        errors.push(`${file}: "${tag}" is not a language tag Intl.PluralRules accepts`);
+        errors.push(`${file}: "${tag}" has no pinned CLDR plural-category entry`);
         continue;
       }
 
@@ -525,9 +669,9 @@ async function main() {
 
       let sliceCategories;
       try {
-        sliceCategories = pluralCategoriesFor(sliceRegistration.tag);
+        sliceCategories = pluralCategoriesFor(sliceRegistration.tag, pluralCategoryPin);
       } catch {
-        errors.push(`${sliceFile}: "${sliceRegistration.tag}" is not a language tag Intl.PluralRules accepts`);
+        errors.push(`${sliceFile}: "${sliceRegistration.tag}" has no pinned CLDR plural-category entry`);
         continue;
       }
       const sliceCatalog = namedObjectLiteral(sliceProgram, sliceRegistration.identifier);

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
@@ -8,6 +9,9 @@ type Row = { id: string; name: string };
 const rows: Row[] = [{ id: 'ä', name: 'ä' }, { id: 'z', name: 'z' }];
 const columns: TableColumn<Row>[] = [{ key: 'name', label: 'Name', sortable: true, editTrigger: 'double-click', editValue: (row) => row.name, cell: (row) => row.name }];
 const rowKey = (row: Row) => row.id;
+
+expectLocaleFallback('de', ['next', 'paginationLabel', 'paginationPage', 'previous', 'tableFilterLabel', 'tableFilterPlaceholder']);
+expectLocaleFallback('sv', ['next', 'paginationLabel', 'paginationPage', 'previous', 'tableEditCell', 'tableFilterLabel', 'tableFilterPlaceholder']);
 
 describe('table live derived rows and responsive bands', () => {
   it('treats removed filter-text as absence and recovers without changing null readback', async () => {
@@ -539,7 +543,7 @@ describe('error state', () => {
     expect(builtIn.getClientRects().length).to.equal(0);
   });
 
-  it('emits a cancelable lr-retry and only clears `error` when the default action runs', async () => {
+  it('emits a cancelable lr-retry-request and only clears `error` when the default action runs', async () => {
     const element = await fixture<LyraTable<FailedLoadRow>>(html`<lr-table
       caption="Rows"
       error
@@ -555,12 +559,12 @@ describe('error state', () => {
       received = event as CustomEvent;
       event.preventDefault();
     };
-    element.addEventListener('lr-retry', vetoListener);
+    element.addEventListener('lr-retry-request', vetoListener);
     retryButton.click();
     expect(received?.cancelable).to.equal(true);
     expect(received?.defaultPrevented).to.equal(true);
     expect(element.error, 'a vetoed retry must not clear error').to.equal(true);
-    element.removeEventListener('lr-retry', vetoListener);
+    element.removeEventListener('lr-retry-request', vetoListener);
 
     retryButton.click();
     expect(element.error, 'the default action clears error').to.equal(false);

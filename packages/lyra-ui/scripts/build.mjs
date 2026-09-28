@@ -3,10 +3,12 @@ import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
+import { consolidateBuildDeclarations } from './consolidate-build-declarations.mjs';
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
 import { compactBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
-import { createMigrationRuntimeInventory, readRenameLedger } from './migrate-wa.mjs';
+import { createMigrationRuntimeInventory, readExportDeprecations, readRenameLedger } from './migrate-wa.mjs';
+import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 import {
   assertNormalizedMixinCount,
   normalizeMixinDeclarations,
@@ -53,7 +55,12 @@ console.log(
     `${compactedDeclarations.files} modules.`,
 );
 
-await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.css'));
+const consolidatedDeclarations = consolidateBuildDeclarations(packageDir);
+console.log(`Published declaration entries consolidated: ${consolidatedDeclarations.removed} redundant files removed.`);
+
+for (const asset of ['theme.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
+  await cp(join(packageDir, 'src', asset), join(packageDir, 'dist', asset), { recursive: true });
+}
 
 // Opt-in look presets (`@aceshooting/lyra-ui/themes/<name>.css`). Copied by listing the directory
 // rather than by name, so a preset added to src/themes/ cannot be exported (and made a
@@ -105,25 +112,20 @@ console.log(
     `${compactedCss.stylesheets.toLocaleString('en')} stylesheets.`,
 );
 
-// The public migration executable is deliberately assembled from only its three runtime modules
+// The public migration executable is deliberately assembled from only its runtime module closure
 // and a compact, prevalidated migration projection. Publishing scripts/ wholesale would expose
 // contributor-only maintenance helpers, while publishing the 4+ MiB public-surface inventory
 // would violate the package budget for data the CLI never reads. The projection embeds the
 // authored Lyra rename ledger, validated against that inventory, for the `--origin=lyra-v*`
 // rename profiles.
 const migrationCliDir = join(packageDir, 'dist', 'cli');
-await mkdir(migrationCliDir, { recursive: true });
-await Promise.all(
-  ['migrate-wa.mjs', 'component-inventory.mjs', 'lyra-rename-ledger.mjs'].map((module) =>
-    cp(join(packageDir, 'scripts', module), join(migrationCliDir, module)),
-  ),
-);
+copyMigrationRuntimeModules(join(packageDir, 'scripts'), migrationCliDir);
 const componentInventory = JSON.parse(
   await readFile(join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
 );
 await writeFile(
   join(migrationCliDir, 'migration-contract.json'),
-  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory, { renameLedger: readRenameLedger() }))}\n`,
+  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() }))}\n`,
   'utf8',
 );
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);

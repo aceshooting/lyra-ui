@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -233,6 +234,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-annotation-create',
   ]);

@@ -6,9 +6,11 @@
 - **Class** `LyraThreadList`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated css-property** `--lr-thread-list-excerpt-highlight-background` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-thread-list-excerpt-highlight-foreground` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated property** `compact` / `compact` since `unreleased`; use property `Use size="s" for compact rows and size="m" for the default row density.`; removal not before `24.0.0` — The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window.
 - **Deprecated property** `renamable` / `renamable` since `21.1.0`; use property `without-rename`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `showArchived` / `show-archived` since `21.1.0`; use property `with-archived`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
@@ -66,15 +68,10 @@ false` (reflected) — shows the built-in search field, including a `part="clear
 that appears next to it once it has a value (never when empty), clears it on click, fires the same
 `lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
 accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
-uses). `size?: LyraSize` (reflected) — opt-in density tier for that search field, on the library's
-one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or the Web Awesome/Shoelace `small`/`medium`/`large`
-spellings, accepted as authored). A tier gives the field the row height, text size, gutters and
-corner radius an `lr-input` of that tier has, so the sidebar's own filter box lines up with an
-adjacent themed search field. With no `size` the field keeps exactly the gutters, corner radius and
-inherited text size it shipped with, so existing markup renders unchanged; an unsupported value
-normalizes to the omitted state and removes the attribute rather than snapping to a tier. Only the
-field is tiered — the gutter around it and the clear button keep their own sizes, and have their own
-custom properties. `filter?: (thread, query) => boolean`
+uses). `size: LyraSize = 'm'` (reflected) — shared density tier for the search field and data-mode
+rows, on the six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`; `small`/`medium`/`large` remain
+accepted). Invalid values and attribute removal restore `m`. Slotted rows retain their own size.
+The search gutter and clear button keep their own independent custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -101,13 +98,9 @@ trailing group); deprecated alias: `show-archived`/`showArchived` (use `with-arc
 23.0.0). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off; deprecated alias: `renamable` (use
 `without-rename`; removed in 23.0.0), inverted, so `renamable="false"` equals `without-rename`.
-`compact: boolean = false` (reflected) — data mode only: forwarded to each row
-`lr-conversation-item` as its dense `size="s"`, tightening every row's padding and gaps from one attribute
-(the density itself lives on the row item; retune it through
-`--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
-deliberate no-op — that mode renders host-supplied items as-is, so the host sets `size` on its own
-items there, the same division of responsibility slotted mode already has for every other row
-property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+`compact: boolean = false` (reflected, deprecated; removal not before 24.0.0) — compatibility
+alias of `size="s"` when true and `size="m"` when false. Use `size` for both search and data rows;
+slotted rows retain their own size. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
@@ -197,10 +190,11 @@ and reassigns `collapsedGroupIds` itself keeps working unchanged: this component
 it happens, always precedes that listener in the same synchronous dispatch, so the host's own
 assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
-which are neither. `lr-retry` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
+which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead.
-
+`preventDefault()` leaves it set instead. `lr-retry` is its deprecated cancelable veto alias,
+emitted after `lr-retry-request` and before the default action; canceling either event keeps the
+error state.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,

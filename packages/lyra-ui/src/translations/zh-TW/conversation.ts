@@ -5,6 +5,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  streamInterrupted: '串流已中斷',
+  streamResume: '繼續',
   chatViewportLabel: '對話',
   newMessageCount: '{count}條新訊息',
   newMessagesCount: '{count}條新訊息',

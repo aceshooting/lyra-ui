@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-streaming-text-core.js to register this component. */
 export * from './streaming-text-core.class.js';
 import { LyraStreamingTextCore } from './streaming-text-core.class.js';
 import { defineElement } from '../../../internal/prefix.js';

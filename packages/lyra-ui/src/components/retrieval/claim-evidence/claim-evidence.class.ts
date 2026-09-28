@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -28,7 +29,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
@@ -344,11 +345,11 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'claims',

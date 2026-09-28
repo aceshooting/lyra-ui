@@ -1,0 +1,17 @@
+{
+  "comfortable": {
+    "spacing": 1,
+    "control": 1,
+    "target": "0px"
+  },
+  "compact": {
+    "spacing": 0.75,
+    "control": 0.85,
+    "target": "24px"
+  },
+  "touch": {
+    "spacing": 1.25,
+    "control": 1.15,
+    "target": "max(44px, 2.75rem)"
+  }
+}

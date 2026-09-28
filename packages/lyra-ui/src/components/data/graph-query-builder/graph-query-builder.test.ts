@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './graph-query-builder.js';
 import type {
@@ -29,6 +30,8 @@ function query(overrides: Partial<GraphQuery> = {}): GraphQuery {
     ...overrides,
   };
 }
+
+expectLocaleFallback('ar', ['fieldRequired', 'graphQueryBuilderLabel', 'graphQueryDirectionLabel', 'graphQueryEndLabel', 'graphQueryMaxHopsLabel', 'graphQueryMinHopsLabel', 'graphQueryNodeTypeLabel', 'graphQueryRelationshipTypeLabel', 'graphQueryRun', 'graphQuerySaveButton', 'graphQuerySaveNameLabel', 'graphQuerySavedQueriesLabel', 'graphQueryStartLabel', 'neighborDirectionBoth', 'neighborDirectionIn', 'neighborDirectionOut', 'noData', 'notInCatalog', 'select']);
 
 describe('lr-graph-query-builder', () => {
   it('renders the path fields, direction select, and an empty saved-queries list', async () => {
@@ -379,13 +382,13 @@ describe('lr-graph-query-builder', () => {
     const order: string[] = [];
     const events: Event[] = [];
     const names = [
-      'lr-before-query-run',
+      'lr-query-run-request',
       'lr-query-run',
-      'lr-before-query-save',
+      'lr-query-save-request',
       'lr-query-save',
-      'lr-before-query-load',
+      'lr-query-load-request',
       'lr-query-load',
-      'lr-before-query-delete',
+      'lr-query-delete-request',
       'lr-query-delete',
     ] as const;
     for (const name of names) {
@@ -404,12 +407,8 @@ describe('lr-graph-query-builder', () => {
     (el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLButtonElement).click();
 
     expect(order).to.deep.equal(names);
-    expect(events.filter((event) => event.type.startsWith('lr-before-')).every((event) => event.cancelable)).to.equal(
-      true
-    );
-    expect(events.filter((event) => !event.type.startsWith('lr-before-')).every((event) => !event.cancelable)).to.equal(
-      true
-    );
+    expect(events.filter((event) => event.cancelable)).to.have.length(4);
+    expect(events.filter((event) => !event.cancelable)).to.have.length(4);
     expect(events.every((event) => Object.isFrozen((event as CustomEvent).detail))).to.equal(true);
     for (let index = 0; index < events.length; index += 2) {
       expect(
@@ -429,7 +428,7 @@ describe('lr-graph-query-builder', () => {
   }
   });
 
-  it('lets every before-query phase veto its action without an accepted event or local mutation', async () => {
+  it('lets every canonical query request veto its action without an accepted event or local mutation', async () => {
     const saved: GraphQuerySavedItem[] = [
       { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
     ];
@@ -443,7 +442,7 @@ describe('lr-graph-query-builder', () => {
 
     const accepted = new Map<string, number>();
     for (const action of ['run', 'save', 'load', 'delete'] as const) {
-      el.addEventListener(`lr-before-query-${action}`, (event) => event.preventDefault());
+      el.addEventListener(`lr-query-${action}-request`, (event) => event.preventDefault());
       el.addEventListener(`lr-query-${action}`, () => accepted.set(action, (accepted.get(action) ?? 0) + 1));
     }
 
@@ -462,7 +461,7 @@ describe('lr-graph-query-builder', () => {
     expect(el.savedQueries.map((item) => item.id)).to.deep.equal(['saved-1']);
   });
 
-  it('also fires the canonical -request name for every query action, with detail identical to the deprecated before- alias', async () => {
+  it('fires only canonical query requests for every action', async () => {
     const saved: GraphQuerySavedItem[] = [
       { id: 'saved-1', name: 'Saved traversal', query: query({ startId: 'saved-node' }) },
     ];
@@ -475,15 +474,15 @@ describe('lr-graph-query-builder', () => {
     await el.updateComplete;
 
     const requests = new Map<string, CustomEvent[]>();
-    const deprecatedAliases = new Map<string, CustomEvent[]>();
+    const removedAliasEvents = new Map<string, number>();
     for (const action of ['run', 'save', 'load', 'delete'] as const) {
       requests.set(action, []);
-      deprecatedAliases.set(action, []);
+      removedAliasEvents.set(action, 0);
       el.addEventListener(`lr-query-${action}-request`, (event) =>
         requests.get(action)!.push(event as CustomEvent),
       );
-      el.addEventListener(`lr-before-query-${action}`, (event) =>
-        deprecatedAliases.get(action)!.push(event as CustomEvent),
+      el.addEventListener(`lr-before-query-${action}`, () =>
+        removedAliasEvents.set(action, removedAliasEvents.get(action)! + 1),
       );
     }
 
@@ -497,10 +496,8 @@ describe('lr-graph-query-builder', () => {
 
     for (const action of ['run', 'save', 'load', 'delete'] as const) {
       expect(requests.get(action)!.length, action).to.equal(1);
-      expect(deprecatedAliases.get(action)!.length, action).to.equal(1);
-      expect(requests.get(action)![0]!.detail).to.deep.equal(deprecatedAliases.get(action)![0]!.detail);
+      expect(removedAliasEvents.get(action), action).to.equal(0);
       expect(requests.get(action)![0]!.cancelable, action).to.equal(true);
-      expect(deprecatedAliases.get(action)![0]!.cancelable, action).to.equal(true);
     }
   });
 
@@ -568,8 +565,8 @@ describe('lr-graph-query-builder', () => {
     const nameInput = el.shadowRoot!.querySelector('[part="save-name-input"]') as HTMLElement & { value: string };
     nameInput.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Needs approval' } }));
     await el.updateComplete;
-    el.addEventListener('lr-before-query-save', (event) => event.preventDefault());
-    const requested = oneEvent(el, 'lr-before-query-save');
+    el.addEventListener('lr-query-save-request', (event) => event.preventDefault());
+    const requested = oneEvent(el, 'lr-query-save-request');
 
     (el.shadowRoot!.querySelector('[part="save-button"]') as HTMLButtonElement).click();
     const event = await requested;

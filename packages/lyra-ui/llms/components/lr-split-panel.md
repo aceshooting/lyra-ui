@@ -6,7 +6,7 @@
 - **Class** `LyraSplitPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated part** `split-panel` since `21.1.0`; use part `::part(base)`; removal not before `23.0.0` — split-panel is a Lyra-only second token on the same outer wrapper as base. Neither pinned wa-split-panel nor sl-split-panel publishes a wrapper part, so base, the root part name used across the library, remains the single supported spelling. The removal-not-before version is a policy floor, not a plan: should either upstream publish a component-named wrapper part, this alias stays for as long as upstream ships it.
 - **Optional peers** none
 - **Themeable via** 6 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below

@@ -31,7 +31,7 @@ export interface LyraAppRailItemToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
   /** Whether the item's `children` are (or, on the request, would be) shown. */
-  expanded?: boolean;
+  expanded: boolean;
 }
 
 export interface LyraAppRailItemEventMap {

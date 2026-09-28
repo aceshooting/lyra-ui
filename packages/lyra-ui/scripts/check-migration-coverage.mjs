@@ -14,8 +14,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
-import { buildMigrationContract, buildMirrorMap, readRenameLedger } from './migrate-wa.mjs';
-import { validateRenameLedger } from './lyra-rename-ledger.mjs';
+import { buildMigrationContract, buildMirrorMap, readExportDeprecations, readRenameLedger } from './migrate-wa.mjs';
+import { compareVersions, validateRenameLedger } from './lyra-rename-ledger.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLASSIFICATIONS = [
@@ -119,6 +119,42 @@ function kebabName(name) {
   return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
+/** Released policy evidence stays separate from the current manifest after an alias is removed. */
+export function analyzeRetiredEventHistory(renameLedger, history) {
+  const errors = [];
+  const version = /^lyra-ui@(\d+\.\d+\.\d+)$/.exec(history?.sourceRelease ?? '')?.[1];
+  if (history?.schemaVersion !== 1 || !version || !/^[a-f0-9]{64}$/.test(history?.sourceMetadataSha256 ?? '') ||
+      !Array.isArray(history?.deprecations) || !history.deprecations.length) {
+    return ['retired event history needs a release tag, metadata SHA-256 and nonempty published policy records'];
+  }
+  const profiles = Array.isArray(renameLedger?.profiles) ? renameLedger.profiles : [];
+  const profile = profiles.find((entry) => entry.fromMajor === Number(version.split('.')[0]));
+  if (!profile) return [`retired event history has no migration profile for ${history.sourceRelease}`];
+  const records = new Map();
+  for (const record of history.deprecations) {
+    const key = `${record?.tag} ${record?.name}`;
+    if (records.has(key)) errors.push(`retired event history duplicates ${key}`);
+    records.set(key, record);
+    const introduced = compareVersions(record?.since, version);
+    const eligible = compareVersions(record?.removalNotBefore, `${profile.toMajor}.0.0`);
+    if (record?.kind !== 'event' || record?.replacement?.kind !== 'event' || introduced === null || introduced > 0 ||
+        eligible === null || eligible > 0 || Number(record.removalNotBefore.split('.')[0]) < Number(record.since.split('.')[0]) + 2) {
+      errors.push(`retired event history ${key} is not eligible for retirement in ${profile.toMajor}.0.0`);
+    }
+    const matches = (profile.retiredEvents ?? []).filter((entry) => entry.tag === record?.tag && entry.event === record?.name);
+    if (matches.length !== 1) errors.push(`retired event history ${key} needs exactly one ${profile.origin} retiredEvents entry`);
+    else if (matches[0].replacement !== record.replacement?.name) errors.push(`retired event history ${key} replacement differs from published policy`);
+  }
+  for (const candidate of profiles) {
+    for (const entry of candidate.retiredEvents ?? []) {
+      if (candidate !== profile || !records.has(`${entry.tag} ${entry.event}`)) {
+        errors.push(`${candidate.origin}: retired event ${entry.tag} ${entry.event} has no published policy evidence`);
+      }
+    }
+  }
+  return errors;
+}
+
 /**
  * Ledger findings -- including completeness: every Lyra-only deprecation scheduled for a profile's
  * alias-removal major needs an entry -- plus the prefix polarity rule for Lyra-only renames. A
@@ -130,16 +166,20 @@ function kebabName(name) {
  * are judged by the ledger's default check instead: a boolean defaulting to true that becomes one
  * defaulting to false must be declared inverted or keep its default through a `defaults` entry.
  */
-export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = null } = {}) {
-  const errors = validateRenameLedger(renameLedger, { inventory, requireCoverage: true, sharedTokens });
+export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = null, exportDeprecations = [], retiredEventHistory = null } = {}) {
+  const errors = validateRenameLedger(renameLedger, { inventory, exportDeprecations, requireCoverage: true, sharedTokens });
+  if (retiredEventHistory) errors.push(...analyzeRetiredEventHistory(renameLedger, retiredEventHistory));
   const summary = {};
   for (const profile of Array.isArray(renameLedger?.profiles) ? renameLedger.profiles : []) {
     summary[profile.origin] = {
       renames: profile.renames?.length ?? 0,
       defaults: profile.defaults?.length ?? 0,
       detailChanges: profile.detailChanges?.length ?? 0,
+      propertyChanges: profile.propertyChanges?.length ?? 0,
+      retiredEvents: profile.retiredEvents?.length ?? 0,
       reviews: profile.reviews?.length ?? 0,
       slotContent: profile.slotContent?.length ?? 0,
+      moduleReviews: profile.moduleReviews?.length ?? 0,
     };
     for (const entry of profile.renames ?? []) {
       if (entry?.kind !== 'attribute' && entry?.kind !== 'property') continue;
@@ -203,7 +243,7 @@ function namedReadmeUpstream(readme) {
  * Returns every migration-coverage defect without mutating its inputs. This is exported so the
  * safety assertions can be exercised with synthetic fixtures rather than by rewriting repo files.
  */
-export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null }) {
+export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null, exportDeprecations = [], retiredEventHistory = null }) {
   const errors = [];
   const polarityCheckablePairs = [];
   const expected = catalog(upstreamTags);
@@ -433,7 +473,7 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
       inventoryMappings.filter((mapping) => mapping.classification === classification).length,
     ]),
   );
-  const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens }) : null;
+  const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens, exportDeprecations, retiredEventHistory }) : null;
   if (renameAnalysis) errors.push(...renameAnalysis.errors);
   return {
     errors: [...new Set(errors)].sort(),
@@ -464,7 +504,7 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
       .map(
         ([origin, counts]) =>
           ` Lyra rename ledger ${origin}: ${counts.renames} rename(s), ${counts.defaults} default(s), ` +
-          `${counts.detailChanges} detail change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s).`,
+          `${counts.retiredEvents} retired event review(s), ${counts.detailChanges} detail change(s), ${counts.propertyChanges} property change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s), ${counts.moduleReviews} module review(s).`,
       )
       .join('')
   );
@@ -480,6 +520,8 @@ function run() {
     lyraManifest: readJson('custom-elements.json'),
     readme: fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8'),
     renameLedger: readRenameLedger(),
+    retiredEventHistory: readJson('scripts', 'fixtures', 'retired-event-history.json'),
+    exportDeprecations: readExportDeprecations(),
     sharedTokens: new Set(Object.keys(readJson('tokens', 'canonical-tokens.json').tokens)),
   });
 

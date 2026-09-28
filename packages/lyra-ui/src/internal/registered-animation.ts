@@ -80,7 +80,7 @@ function clampReducedMotion(
   target: HTMLElement,
   options: KeyframeAnimationOptions,
 ): KeyframeAnimationOptions {
-  if (!prefersReducedMotion(target.ownerDocument?.defaultView)) return options;
+  if (!prefersReducedMotion(target)) return options;
   return { ...options, duration: 0, delay: 0, endDelay: 0, iterations: 1 };
 }
 

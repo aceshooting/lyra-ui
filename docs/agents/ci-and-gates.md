@@ -269,9 +269,9 @@ the PR checks list tells you which of these to reproduce locally:
    `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
    while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
-   `packages/lyra-ui/visual-baselines/README.md`). The 109 stories expand to 313 axis-level
-   captures: 117 compare against tracked baselines and 196 are evidence-only. They are lexically
-   sorted and round-robin partitioned across a three-leg matrix (105/104/104 captures), so the
+   `packages/lyra-ui/visual-baselines/README.md`). The 111 stories expand to 321 axis-level
+   captures: 114 compare against tracked baselines and 207 are evidence-only. They are lexically
+   sorted and round-robin partitioned across a three-leg matrix (107/107/107 captures), so the
    historical ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
    `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
@@ -287,30 +287,15 @@ VISUAL_SHARD_INDEX=1 VISUAL_SHARD_TOTAL=3 \
 
 Sharding happens after an optional `--filter` and at capture-axis granularity, not story
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
-at most one; an ordinary unsharded local run still exercises all 313 captures.
+at most one; an ordinary unsharded local run still exercises all 321 captures.
 
-A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
-Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the
-pinned Playwright image; only the branded Chrome and Edge legs stay on the runner VM, where browser
-setup is cached and apt work is bounded and retried. Every leg installs with `--frozen-lockfile`,
-then sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1` and runs
-`pnpm --filter @aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as
-Chromium-channel jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses
-`channel: msedge`). Firefox Node 22 is split into four deterministic round-robin shards
-(`WTR_SHARD_TOTAL=4`); Chromium Node 22 into two (`WTR_SHARD_TOTAL=2`); Chrome, Edge, and Safari
-Node 22 each run single-shard, as do Node 20 Firefox and Safari. Shard counts were tuned from
-measured per-leg wall time: the prior 20-leg matrix (8-way Firefox, 4-way Chromium, 2-way
-everything else) had most Node 22 legs finishing in 50-110s, of which roughly half was fixed
-per-job overhead (checkout/install/browser setup) rather than test execution against the then-26-file
-`test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
-gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@12.6.0`). The package's supported engine remains
-`node >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
-20-job throughput limit, so `max-parallel` no longer needs to chase that cap. The Firefox/Node 20
-leg runs the same packed contract mode as the primary contract lane: every runtime, install,
-declaration, bundle, and framework recipe check at the supported floor, with only the duplicate
-ATTW sweep omitted. ATTW uses its own bundled TypeScript resolver, so the four exhaustive Node 22
-shards cover that package-level contract without turning Node 20 into the new critical path.
+A separate `platform-contracts` matrix runs the curated contract suite in nine Node 22 legs:
+Chromium in two shards, Firefox in four, and Chrome, Edge and Safari (WebKit) in one each.
+Seven legs use the pinned Playwright image; branded Chrome and Edge use the runner VM with
+bounded browser setup. Every leg installs with `--frozen-lockfile` and enables strict browser
+console checking. The primary packed-consumer jobs cover the supported Node floor, declarations,
+tree shaking and framework recipes without repeating that package matrix in each browser leg.
+Node 22 uses `package.json#packageManager` (`pnpm@12.6.0`).
 
 ## Scheduled full Firefox/WebKit suite
 
@@ -336,7 +321,7 @@ fixed per-job overhead, whereas the complete suite is ~490 files and still leave
 Every shard builds first because `package-entrypoints.test.ts` imports the package's built `dist/`
 targets. The package's `pretest` lifecycle provides the same build-first guarantee for a clean
 `pnpm test`. Each shard then runs with strict browser-console handling. The smaller `test:platform`
-matrix in `ci.yml` remains the blocking Node 20/22 pull-request contract and does not substitute
+matrix in `ci.yml` remains the blocking Node 22 pull-request contract and does not substitute
 for this complete sweep; releases require a manual-dispatch run from `main` with all eight shards
 for both browsers successful for the exact release commit before any tag is created.
 
@@ -383,22 +368,20 @@ artifact fails the run instead of silently falling back to a clone-generated man
 the same checksum-pinned actionlint workflow gate as `static-checks`.
 
 - `./scripts/ci.sh --platform` adds the unsharded `test:platform` browser sweep under the active
-  Node 22/pnpm 11 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
-  Safari. It is useful for broad installed-browser coverage, but it is not the sharded two-Node CI
-  matrix.
+  Node 22/pnpm 12 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
+  Safari. It covers every installed browser in an unsharded run.
 - Firefox runs one test page per browser process, including when `WTR_CONCURRENCY` requests more.
   Its native pointer capture crosses separate browser contexts, so concurrent page gestures can
   release or intercept each other's input. Existing process shards retain parallel execution.
   When no explicit concurrency is assigned, Chromium retains its automatic default and
   WebKit/Safari retain the smaller of four pages or half the available CPUs. The aggregate runner
   budgets shard pages from the sum of Firefox's one-page and WebKit's four-page allocations.
-- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
-  local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
-  (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
-  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 12.6.0.
-  The `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
-  accept explicit executable paths. For Node 22, the runner accepts only the `.nvmrc` patch
-  (`22.23.2`); its Node 20 resolver may select the newest installed Node 20 patch.
+- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same nine
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.6.0.
+  Its 9 legs are source-derived: Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
+  Firefox (4 shards), and Safari (1 shard).
+  `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
+  must match the exact `.nvmrc` patch (`22.23.2`).
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;
   platform modes still install their own dependencies and requested Playwright engines.
 - `--keep-going` aggregates only generated-artifact freshness failures. Real lint, build, test,
@@ -760,7 +743,10 @@ in `docs-and-storybook`. `plugins/lyra-ui/skills/lyra-ui/references/` is GENERAT
 `./package.sh`, so hand-editing it breaks the build; `skills/*.skill` archives are produced by the
 same script and CI checks their freshness by rerunning it and diffing the result.
 `packages/lyra-ui/llms-full.txt` is the GENERATED concatenation of the authored `llms/<family>.md`,
-`llms/shared.md` and `llms/00-*.md` sources (`pnpm run llms`).
+the focused authored `llms/shared/*.md` guides (through the generated `llms/shared.md`
+compatibility assembly), and `llms/00-*.md` sources (`pnpm run llms`). It remains a repository
+archive rather than an npm package path; `package.sh` includes the focused shared routes in the
+standalone reference tree as well as the compatibility route.
 
 ## CI topology at a glance
 
@@ -770,12 +756,13 @@ The gates expose six stable check families split along real data dependencies (`
 reproduce instead of "build-test". The `lint` family derives the authoritative `contract-policy`
 commands plus the three `lint` type-check suffixes and balances them across three hosted workers; a
 fail-closed aggregate retains the stable check name. Local `pnpm lint` remains the complete
-sequential command. Within `build-and-coverage`, four independently hosted coverage shards consume
+sequential command. `pnpm lint:parallel` runs the same authoritative three CI shards locally;
+`CI_JOBS` caps its workers at three without omitting checks. Within `build-and-coverage`, four independently hosted coverage shards consume
 the shared `dist/` artifact; a fail-closed merge job requires every raw coverage, JUnit, and
 test-manifest artifact before it enforces whole-suite floors and reports to Codecov. Local
 `test:coverage` deliberately retains the complete four-shard sequential run. A separate
 `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
-(WebKit) under Node 20/22, with Chromium, Chrome, and Edge also covered under Node 22.
+(WebKit), Chromium, Chrome, and Edge under Node 22.
 `.github/workflows/full-engine.yml` runs the complete non-coverage suite in eight deterministic,
 cost-balanced shards per browser on a weekly schedule and by manual dispatch.
 `.github/workflows/test-all-browsers.yml` manually runs the same complete suite in Chromium,

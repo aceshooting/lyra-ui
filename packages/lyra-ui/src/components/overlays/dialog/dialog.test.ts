@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dialog.js';
@@ -5,6 +6,30 @@ import '../../forms/input/input.js';
 import type { LyraDialog } from './dialog.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
+
+it('inherits heading fonts across a component boundary without changing body fonts or explicit part styling', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-font-family-body: monospace">
+      <lr-dialog open label="Heading" style="--lr-duration-base: 0ms">Body</lr-dialog>
+    </div>
+  `);
+  const dialog = wrapper.querySelector<LyraDialog>('lr-dialog')!;
+  await dialog.updateComplete;
+  const heading = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+  try {
+    expect(getComputedStyle(heading).fontFamily).to.equal('monospace');
+    wrapper.style.setProperty('--lr-theme-font-family-heading', 'serif');
+    expect(getComputedStyle(heading).fontFamily).to.equal('serif');
+    expect(getComputedStyle(dialog).fontFamily).to.equal('monospace');
+    heading.style.fontFamily = 'cursive';
+    expect(getComputedStyle(heading).fontFamily).to.equal('cursive');
+    heading.style.removeProperty('font-family');
+    wrapper.style.removeProperty('--lr-theme-font-family-heading');
+    expect(getComputedStyle(heading).fontFamily).to.equal('monospace');
+  } finally {
+    await dialog.close('api');
+  }
+});
 
 it('resolves safe-area insets on the fixed dialog frame', async () => {
   const el = (await fixture(html`
@@ -155,7 +180,7 @@ it('closes on backdrop click and emits lr-close with reason "backdrop"', async (
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('backdrop');
+  expect(detail).to.deep.equal({ reason: 'backdrop' });
 });
 
 it('closes on Escape and emits lr-close with reason "escape"', async () => {
@@ -167,7 +192,7 @@ it('closes on Escape and emits lr-close with reason "escape"', async () => {
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('escape');
+  expect(detail).to.deep.equal({ reason: 'escape' });
 });
 
 it('does not respond to Escape while closed', async () => {
@@ -208,7 +233,7 @@ it('close() sets open false, emits with the given reason, and is idempotent once
 
   expect(el.open).to.be.false;
   expect(count).to.equal(1);
-  expect(detail).to.equal('save');
+  expect(detail).to.deep.equal({ reason: 'save' });
 });
 
 it('moves focus into the panel to the first focusable element when opened', async () => {
@@ -824,7 +849,7 @@ it('renders a close button by default, which closes the dialog via the same clos
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('close-button');
+  expect(detail).to.deep.equal({ reason: 'close-button' });
 });
 
 it('renders a header row containing just the close button when no visible title is set', async () => {
@@ -1050,10 +1075,10 @@ describe('lightDismiss', () => {
 });
 
 describe('close() respects preventDefault()', () => {
-  it('a lr-close listener calling preventDefault() stops the dialog from closing, for every close path', async () => {
+  it('a lr-close-request listener calling preventDefault() stops the dialog from closing, for every close path', async () => {
     const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
-    el.addEventListener('lr-close', (e) => e.preventDefault());
+    el.addEventListener('lr-close-request', (e) => e.preventDefault());
 
     // Escape.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -1083,10 +1108,10 @@ describe('close() respects preventDefault()', () => {
     expect(el.open).to.be.false;
   });
 
-  it('lr-close is cancelable', async () => {
+  it('lr-close-request is cancelable', async () => {
     const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
-    const listener = oneEvent(el, 'lr-close');
+    const listener = oneEvent(el, 'lr-close-request');
     el.close('api');
     const event = await listener;
     expect((event as Event).cancelable).to.be.true;
@@ -1110,7 +1135,7 @@ describe('external removal while open', () => {
     await Promise.resolve();
 
     expect(count).to.equal(1);
-    expect(detail).to.equal('unmount');
+    expect(detail).to.deep.equal({ reason: 'unmount' });
     expect(el.open).to.be.false;
   });
 
@@ -2352,4 +2377,63 @@ describe('lr-dialog renamed members', () => {
     expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
     await alias!.close('api');
   });
+});
+
+it('separates a reasoned close proposal from the accepted close notification', async () => {
+  const el = await fixture<LyraDialog>(html`<lr-dialog open label="Close contract"></lr-dialog>`);
+  const observed: Array<{ name: string; reason: string; open: boolean; cancelable: boolean }> = [];
+  const veto = (event: Event): void => event.preventDefault();
+  el.addEventListener('lr-close-request', (event: CustomEvent<{ reason: string }>) => {
+    observed.push({ name: event.type, reason: event.detail.reason, open: el.open, cancelable: event.cancelable });
+  });
+  el.addEventListener('lr-close', (event) => {
+    observed.push({ name: event.type, reason: event.detail.reason, open: el.open, cancelable: event.cancelable });
+    event.preventDefault();
+  });
+  el.addEventListener('lr-close-request', veto);
+  await el.close('api');
+  expect(el.open).to.equal(true);
+  expect(observed).to.deep.equal([{ name: 'lr-close-request', reason: 'api', open: true, cancelable: true }]);
+  el.removeEventListener('lr-close-request', veto);
+  await el.close('api');
+  expect(el.open).to.equal(false);
+  expect(observed.slice(1)).to.deep.equal([
+    { name: 'lr-close-request', reason: 'api', open: true, cancelable: true },
+    { name: 'lr-close', reason: 'api', open: false, cancelable: false },
+  ]);
+});
+
+it('does not settle an interrupted close after its accepted notification reopens the dialog', async () => {
+  const el = await fixture<LyraDialog>(html`<lr-dialog open label="Reopen contract"></lr-dialog>`);
+  let hidden = 0;
+  el.addEventListener('lr-after-hide', () => hidden++);
+  el.addEventListener('lr-close', () => { void el.show(); }, { once: true });
+  await el.close('api');
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(hidden).to.equal(0);
+});
+
+expectDeprecatedUsage('lr-dialog', 'property', 'accessibleLabel');
+
+it('warns once for the accessibleLabel property while native host naming stays current', async () => {
+  const usage = [{ tag: 'lr-dialog', kind: 'property', name: 'accessibleLabel' }] as const;
+  const warnings = await captureDeprecationWarnings(usage, async () => {
+    const el = await fixture<LyraDialog>(html`<lr-dialog open label="Heading"></lr-dialog>`);
+    el.accessibleLabel = 'Legacy fallback';
+    el.accessibleLabel = 'Updated fallback';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('Updated fallback');
+    el.ariaLabel = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('');
+  });
+  expect(warnings).to.have.length(1);
+  const current = await captureDeprecationWarnings(usage, async () => {
+    const el = await fixture<LyraDialog>(html`<lr-dialog open aria-label="Current name"></lr-dialog>`);
+    el.ariaLabel = 'Updated name';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('Updated name');
+  });
+  expect(current).to.have.length(0);
 });

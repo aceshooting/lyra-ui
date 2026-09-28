@@ -1,9 +1,16 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './branch-picker.js';
 import type { LyraBranchPicker } from './branch-picker.js';
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'branchPickerLabel',
+  'branchPrevious',
+  'branchNext',
+]);
 it('defaults to index 0, count 1, and renders nothing while count < 2', async () => {
   const el = (await fixture(html`<lr-branch-picker></lr-branch-picker>`)) as LyraBranchPicker;
   expect(el.index).to.equal(0);

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-image-comparer.js to register this component. */
 import { defineElement } from '../../../internal/prefix.js';
 import { LyraImageComparer } from './image-comparer.class.js';
 

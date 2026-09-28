@@ -5,6 +5,16 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: '연구 진행',
+  researchProgressEmpty: '사용할 수 있는 연구 단계가 없습니다.',
+  researchProgressLimit: '처음 {count}개의 연구 단계를 표시합니다.',
+  researchProgressStatusPending: '보류 중',
+  researchProgressStatusRunning: '진행 중',
+  researchProgressStatusCompleted: '완료됨',
+  researchProgressStatusFailed: '실패',
+  researchProgressSources: {
+    other: '{count}개 소스',
+  },
   graphLegendLabel: '그래프 범례',
   entityChipWithType: '{label}, {type}',
   showMore: '더 보기',

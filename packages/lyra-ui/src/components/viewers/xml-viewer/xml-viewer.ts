@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-xml-viewer.js to register this component. */
 export * from './xml-viewer.class.js';
 import { html } from 'lit';
 import { LyraXmlViewer } from './xml-viewer.class.js';

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-provenance-panel.js to register this component. */
 export * from './provenance-panel.class.js';
 import { LyraProvenancePanel } from './provenance-panel.class.js';
 import { defineElement } from '../../../internal/prefix.js';

@@ -6,7 +6,8 @@
 - **Class** `LyraApprovalQueue`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Deprecated event** `lr-approval-decision` since `unreleased`; use event `addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -29,15 +30,19 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
+**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` and `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
-`lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
+`lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
+`lr-approval-decision` is the deprecated cancelable alias, dispatched after the request with the
+same detail. Preventing either event keeps the nested decision pending; subscribe to one spelling.
+The selection and close events are non-cancelable notifications.
 
 Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
 selection and dialog state before another activation can use it; a request that disappears or is
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
 stale request.
+
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`

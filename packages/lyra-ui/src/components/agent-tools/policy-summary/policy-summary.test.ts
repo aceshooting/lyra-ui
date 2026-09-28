@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import './policy-summary.js';
 import type { LyraPolicySummary, PolicyDecision } from './policy-summary.js';
@@ -34,6 +35,21 @@ const decisions: PolicyDecision[] = [
   },
 ];
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'policySummaryAllowCount',
+  'policySummaryDenyCount',
+  'policySummaryNeedsReviewCount',
+  'policySummaryLabel',
+  'policySummaryCategoryGuardrail',
+  'policySummaryStateAllow',
+  'policySummaryCategoryPermission',
+  'policySummaryStateDeny',
+  'policySummaryDetailLabel',
+  'policySummaryCategoryPrivacy',
+  'policySummaryStateNeedsReview',
+  'policySummaryCategoryTool',
+]);
 it('renders historical explanations without mounting live status or alert roles', async () => {
   const el = (await fixture(html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`)) as LyraPolicySummary;
   const explanations = [...el.shadowRoot!.querySelectorAll('[part="explanation"]')];

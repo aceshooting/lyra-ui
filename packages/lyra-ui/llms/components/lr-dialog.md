@@ -6,9 +6,10 @@
 - **Class** `LyraDialog`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Deprecated property** `closable` / `closable` since `21.1.0`; use property `without-close-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -116,31 +117,16 @@ chrome remains visible. The fallback order appears below.
 - `lr-request-close` — cancelable request from a built-in affordance; detail source is
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
-- `lr-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`. The same name
-  is already used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
-  `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
-  covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
-  reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
-  open. **But the name is not dialog-scoped.** Nine components in this library emit `lr-close`,
-  several of them commonly nested *inside* a dialog: `<lr-callout>`, `<lr-tab>`/`<lr-tab-group>`,
-  `<lr-command-palette>`, `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three tool
-  dialogs (`<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, `<lr-tool-approval-dialog>`).
-  Library events bubble and are composed, so a listener bound directly on
-  `<lr-dialog>` also receives a descendant's close — a closable callout or tab inside a dialog would
-  otherwise dismiss the whole dialog. Guard on the target, the way `<lr-document-viewer>` already
-  does internally:
-
-  ```js
-  dialog.addEventListener('lr-close', (event) => {
-    if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
-    // ...
-  });
-  ```
+- `lr-close-request` — cancelable proposal with `{ reason: DialogCloseReason }`, after `lr-hide`
+  and before state changes. Preventing default keeps the dialog open.
+- `lr-close` — non-cancelable accepted dismissal with `{ reason: DialogCloseReason }`. It fires
+  after `open` becomes false. External removal while open reports `{ reason: 'unmount' }`.
+  Filter by event target to distinguish the owning dialog from nested component dismissals.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-close` → `lr-after-hide`.
+direct close sequence is `lr-hide` → `lr-close-request` → state change → `lr-close` → `lr-after-hide`.
 A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
@@ -157,7 +143,7 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-close` (reason `'unmount'`) and `lr-after-hide` in that
+`lr-hide`, `lr-close` (`{ reason: 'unmount' }`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via

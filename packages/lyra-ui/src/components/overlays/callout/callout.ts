@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-callout.js to register this component. */
 export * from './callout.class.js';
 // The lean icon-button entry: the close control slots this component's own "×" glyph, so it must
 // not drag lr-icon (and its unreachable sanitizer chunk) into a consumer's graph.

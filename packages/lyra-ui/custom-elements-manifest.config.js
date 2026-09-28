@@ -1476,6 +1476,21 @@ export default {
       },
     },
     {
+      name: 'lr-current-native-attribute-of-deprecated-property',
+      packageLinkPhase({ customElementsManifest }) {
+        const declaration = customElementsManifest.modules.flatMap((module) => module.declarations ?? [])
+          .find((entry) => entry.tagName === 'lr-message-parts');
+        const member = declaration?.members?.find((entry) => entry.name === 'accessibleLabel');
+        const attribute = declaration?.attributes?.find((entry) => entry.name === 'aria-label');
+        if (!member?.deprecated || member.attribute !== 'aria-label' || !attribute?.deprecated) {
+          throw new Error('lr-message-parts: native aria-label projection requires the deprecated accessibleLabel mapping');
+        }
+        // The legacy property keeps native attribute hydration during its compatibility window.
+        // Its JSDoc notice must not deprecate the surviving native attribute spelling.
+        attribute.deprecated = false;
+      },
+    },
+    {
       name: 'lr-current-overrides-of-deprecated-members',
       packageLinkPhase({ customElementsManifest }) {
         const declarations = new Map();

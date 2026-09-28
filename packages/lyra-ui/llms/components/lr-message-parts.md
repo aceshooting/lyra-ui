@@ -6,12 +6,14 @@
 - **Class** `LyraMessageParts`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated css-property** `--lr-message-parts-error-background` since `21.1.0`; use css-property `--lr-message-parts-error-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-link-click` since `unreleased`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `element.setAttribute('aria-label', 'Message content');`; removal not before `24.0.0` — Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window.
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
 - **Deprecated property** `showReasoning` / `show-reasoning` since `21.1.0`; use property `without-reasoning`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 21 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -68,6 +70,15 @@ output is the host's own: it is never masked by `redactedFields`.
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
 unsupported `tool-display` values normalize and reflect as `chip`.
 
+**Interruption.** `MessagePartState` also accepts `interrupted`, with optional
+`interruption: { resumable: boolean; reason?: string }`. The accumulated content stays visible,
+alongside localized interruption text and the host-provided reason. A resumable interrupted part
+shows a resume button that emits controlled `lr-part-resume` (`{ part }`, clone-owned snapshot,
+bubbling and composed). It does not mutate the part or reconnect. `disabled: boolean = false`
+disables built-in retry and resume actions; custom renderers own their controls. Custom rendering
+replaces interruption controls too. An interrupted tool result remains a separate visible part in
+block display so its interruption and resume action stay reachable.
+
 **Tool display.** `MessagePartsToolDisplay = 'chip' | 'block'` (exported from the class module).
 `chip` (the default, unchanged) renders a `tool-call` part as `<lr-tool-call-chip>` and a
 `tool-result` part as a separate `<lr-tool-result-view>`. `tool-display="block"` renders each
@@ -119,9 +130,9 @@ retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; 
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
 are ignored so each rendered identity and announcement remains unambiguous.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
-`lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-highlight-activate`, `lr-link-activate`, deprecated compatibility alias `lr-link-click` (same `{ href }` detail, emitted afterward), `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
@@ -129,7 +140,7 @@ In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, c
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+**CSS parts:** `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
 `audio-transcript`, `error`, `retry`. Block display forwards five block parts:
 `tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,
@@ -173,13 +184,13 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-copy` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
-- `lr-link-click` event — Passthrough from rendered Markdown.
+- `lr-link-activate` event — Passthrough from rendered Markdown.
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
   `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
   tool-call block (`callId` included).
-- `lr-retry` event — Passthrough from a rendered attachment.
+- `lr-retry-request` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.

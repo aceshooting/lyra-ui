@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-email-viewer.js to register this component. */
 export * from './email-loader.js';
 export * from './email-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

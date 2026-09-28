@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-approval-dialog.js';
 import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
@@ -278,7 +279,7 @@ describe('editing', () => {
     await el.updateComplete;
     expect(textarea(el).value).to.equal('null');
 
-    const approved = oneEvent(el, 'lr-approve');
+    const approved = oneEvent(el, 'lr-approve-request');
     approveButton(el).click();
     expect((await approved).detail).to.deep.equal({ args: null });
   });
@@ -392,7 +393,7 @@ describe('editing', () => {
         style="--lr-color-surface: rgb(40, 50, 60); --lr-color-brand-quiet: rgb(1, 2, 3)"
       ></lr-tool-approval-dialog>
     `)) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
     const edit = editButton(el);
@@ -424,7 +425,7 @@ describe('editing', () => {
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
-    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('approve');
@@ -597,7 +598,7 @@ describe('editing', () => {
     editButton(el).click();
     await el.updateComplete;
     setTextareaValue(el, '{"query":"stale edit"}');
-    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('approve');
@@ -635,11 +636,11 @@ describe('editing', () => {
 });
 
 describe('approve/deny', () => {
-  it('emits lr-approve with the original args, then lr-close with reason "approve", when not editing', async () => {
+  it('emits lr-approve-request with the original args, then lr-close with reason "approve", when not editing', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const approveListener = oneEvent(el, 'lr-approve');
+    const approveListener = oneEvent(el, 'lr-approve-request');
     const closeListener = oneEvent(el, 'lr-close');
     approveButton(el).click();
 
@@ -647,11 +648,11 @@ describe('approve/deny', () => {
     const closeEvent = await closeListener;
 
     expect(approveEvent.detail).to.deep.equal({ args: ARGS });
-    expect(closeEvent.detail).to.equal('approve');
+    expect(closeEvent.detail).to.deep.equal({ reason: 'approve' });
     expect(el.open).to.be.false;
   });
 
-  it('emits lr-approve with the parsed, edited args when approved mid-edit', async () => {
+  it('emits lr-approve-request with the parsed, edited args when approved mid-edit', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
@@ -660,18 +661,18 @@ describe('approve/deny', () => {
     setTextareaValue(el, '{"query": "edited", "max_results": 1}');
     await el.updateComplete;
 
-    const listener = oneEvent(el, 'lr-approve');
+    const listener = oneEvent(el, 'lr-approve-request');
     approveButton(el).click();
     const { detail } = await listener;
 
     expect(detail).to.deep.equal({ args: { query: 'edited', max_results: 1 } });
   });
 
-  it('emits lr-deny, then lr-close with reason "deny"', async () => {
+  it('emits lr-deny-request, then lr-close with reason "deny"', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const denyListener = oneEvent(el, 'lr-deny');
+    const denyListener = oneEvent(el, 'lr-deny-request');
     const closeListener = oneEvent(el, 'lr-close');
     denyButton(el).click();
 
@@ -679,21 +680,21 @@ describe('approve/deny', () => {
     const closeEvent = await closeListener;
 
     // CustomEventInit's `detail` member defaults to `null`, not `undefined`,
-    // per the DOM spec -- this.emit('lr-deny') passes no second argument,
+    // per the DOM spec -- this.emit('lr-deny-request') passes no second argument,
     // which is equivalent to an absent `detail` option.
     expect(denyEvent.detail).to.be.null;
-    expect(closeEvent.detail).to.equal('deny');
+    expect(closeEvent.detail).to.deep.equal({ reason: 'deny' });
     expect(el.open).to.be.false;
   });
 
-  it('lr-approve/lr-deny report cancelable:true, and only a prevented listener stops the default close', async () => {
+  it('lr-approve-request/lr-deny-request report cancelable:true, and only a prevented listener stops the default close', async () => {
     const approveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    const approvePromise = oneEvent(approveEl, 'lr-approve-request');
     approveButton(approveEl).click();
     const approveEvent = await approvePromise;
-    expect(approveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(approveEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
     expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
     await approveEl.updateComplete;
     expect(approveEl.open, 'not-prevented path closes normally').to.be.false;
@@ -702,11 +703,11 @@ describe('approve/deny', () => {
     const preventedApproveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-approve');
-    preventedApproveEl.addEventListener('lr-approve', (e) => e.preventDefault(), { once: true });
+    const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-approve-request');
+    preventedApproveEl.addEventListener('lr-approve-request', (e) => e.preventDefault(), { once: true });
     approveButton(preventedApproveEl).click();
     const preventedApproveEvent = await preventedApprovePromise;
-    expect(preventedApproveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(preventedApproveEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
     expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
     await preventedApproveEl.updateComplete;
     expect(preventedApproveEl.open, 'prevented path never closes').to.be.true;
@@ -715,10 +716,10 @@ describe('approve/deny', () => {
     const denyEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    const denyPromise = oneEvent(denyEl, 'lr-deny-request');
     denyButton(denyEl).click();
     const denyEvent = await denyPromise;
-    expect(denyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(denyEvent.cancelable, 'lr-deny-request must be cancelable').to.equal(true);
     expect(denyEvent.defaultPrevented).to.equal(false);
     await denyEl.updateComplete;
     expect(denyEl.open).to.be.false;
@@ -726,11 +727,11 @@ describe('approve/deny', () => {
     const preventedDenyEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny');
-    preventedDenyEl.addEventListener('lr-deny', (e) => e.preventDefault(), { once: true });
+    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny-request');
+    preventedDenyEl.addEventListener('lr-deny-request', (e) => e.preventDefault(), { once: true });
     denyButton(preventedDenyEl).click();
     const preventedDenyEvent = await preventedDenyPromise;
-    expect(preventedDenyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(preventedDenyEvent.cancelable, 'lr-deny-request must be cancelable').to.equal(true);
     expect(preventedDenyEvent.defaultPrevented).to.equal(true);
     await preventedDenyEl.updateComplete;
     expect(preventedDenyEl.open).to.be.true;
@@ -749,7 +750,7 @@ describe('dismissal', () => {
 
     const closed = oneEvent(el, 'lr-close');
     el.hide();
-    expect((await closed).detail).to.equal('api');
+    expect((await closed).detail).to.deep.equal({ reason: 'api' });
     expect(el.open).to.be.false;
   });
 
@@ -758,7 +759,7 @@ describe('dismissal', () => {
       <lr-tool-approval-dialog open></lr-tool-approval-dialog>
     `);
     const reasons: string[] = [];
-    el.addEventListener('lr-close', (event) => reasons.push(event.detail));
+    el.addEventListener('lr-close', (event) => reasons.push(event.detail.reason));
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
     await el.updateComplete;
 
@@ -776,7 +777,7 @@ describe('dismissal', () => {
     const { detail } = await listener;
 
     expect(el.open).to.be.false;
-    expect(detail).to.equal('backdrop');
+    expect(detail).to.deep.equal({ reason: 'backdrop' });
   });
 
   it('closes on Escape and emits lr-close with reason "escape"', async () => {
@@ -788,7 +789,7 @@ describe('dismissal', () => {
     const { detail } = await listener;
 
     expect(el.open).to.be.false;
-    expect(detail).to.equal('escape');
+    expect(detail).to.deep.equal({ reason: 'escape' });
   });
 
   it('does not respond to Escape while closed', async () => {
@@ -1246,17 +1247,17 @@ describe('async pending decisions', () => {
     )) as LyraToolApprovalDialog;
     editButton(el).click();
     await el.updateComplete;
-    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
     expect(textarea(el).readOnly).to.be.true;
     expect(editButton(el).disabled).to.be.true;
   });
-  it('lr-approve/lr-deny are cancelable; preventDefault() sets pendingAction instead of closing', async () => {
+  it('lr-approve-request/lr-deny-request are cancelable; preventDefault() sets pendingAction instead of closing', async () => {
     const approveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    approveEl.addEventListener('lr-approve', (e) => e.preventDefault());
+    approveEl.addEventListener('lr-approve-request', (e) => e.preventDefault());
     let approveClosed = false;
     approveEl.addEventListener('lr-close', () => (approveClosed = true));
     approveButton(approveEl).click();
@@ -1269,7 +1270,7 @@ describe('async pending decisions', () => {
     const denyEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open light-dismiss></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
+    denyEl.addEventListener('lr-deny-request', (e) => e.preventDefault());
     let denyClosed = false;
     denyEl.addEventListener('lr-close', () => (denyClosed = true));
     denyButton(denyEl).click();
@@ -1283,7 +1284,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     approveButton(el).click();
     await el.updateComplete;
     expect(approveButton(el).loading).to.be.true;
@@ -1296,7 +1297,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     approveButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('approve');
@@ -1304,12 +1305,12 @@ describe('async pending decisions', () => {
     const closeListener = oneEvent(el, 'lr-close');
     el.close('approve');
     const { detail } = await closeListener;
-    expect(detail).to.equal('approve');
+    expect(detail).to.deep.equal({ reason: 'approve' });
     expect(el.open).to.be.false;
   });
 
   it('a listener that vetoes and clears pending itself synchronously wins over the built-in fallback', async () => {
-    // Regression: onApprove()/onDeny() used to dispatch lr-approve/lr-deny synchronously, then
+    // Regression: onApprove()/onDeny() used to dispatch lr-approve-request/lr-deny-request synchronously, then
     // unconditionally overwrite `pending` with their own built-in value -- clobbering whatever a
     // synchronous listener had just set (e.g. a listener that resolves out of band and bounces
     // pending straight back to null instead of ever wanting the loading/disabled pending
@@ -1317,7 +1318,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (e) => {
+    el.addEventListener('lr-approve-request', (e) => {
       e.preventDefault();
       el.pendingAction = null;
     });
@@ -1335,7 +1336,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    el.addEventListener('lr-deny-request', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('deny');
@@ -1353,7 +1354,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    el.addEventListener('lr-deny-request', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('deny');
@@ -1382,7 +1383,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    el.addEventListener('lr-deny-request', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('deny');
@@ -1402,12 +1403,12 @@ describe('async pending decisions', () => {
     )) as LyraToolApprovalDialog;
     expect(el.pendingAction).to.equal(null);
     expect(el.hasAttribute('pending-action')).to.be.false;
-    const approveListener = oneEvent(el, 'lr-approve');
+    const approveListener = oneEvent(el, 'lr-approve-request');
     const closeListener = oneEvent(el, 'lr-close');
     approveButton(el).click();
     await approveListener;
     const { detail } = await closeListener;
-    expect(detail).to.equal('approve');
+    expect(detail).to.deep.equal({ reason: 'approve' });
     expect(el.pendingAction).to.equal(null);
   });
 
@@ -1415,7 +1416,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     approveButton(el).click();
     await el.updateComplete;
     // Prove the pending state actually landed before checking accessibility -- otherwise this
@@ -1426,7 +1427,7 @@ describe('async pending decisions', () => {
   });
 
   it('a listener that vetoes and sets its own out-of-band pending value synchronously wins over the built-in fallback', async () => {
-    // Regression: onApprove/onDeny used to dispatch lr-approve/lr-deny synchronously, then
+    // Regression: onApprove/onDeny used to dispatch lr-approve-request/lr-deny-request synchronously, then
     // unconditionally overwrite `pending` with their own built-in value -- clobbering whatever a
     // synchronous listener had just set. Unlike lr-confirm-bar, nothing else in this component
     // reconciled it. `pending` is guaranteed `null` immediately before dispatch (the guard at the
@@ -1436,7 +1437,7 @@ describe('async pending decisions', () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    el.addEventListener('lr-approve', (e) => {
+    el.addEventListener('lr-approve-request', (e) => {
       e.preventDefault();
       el.pendingAction = 'deny';
     });
@@ -1451,8 +1452,8 @@ describe('async pending decisions', () => {
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     let closeReason: string | undefined;
-    el.addEventListener('lr-close', (e) => (closeReason = (e as CustomEvent<string>).detail));
-    el.addEventListener('lr-deny', (e) => {
+    el.addEventListener('lr-close', (e) => (closeReason = (e as CustomEvent<{ reason: string }>).detail.reason));
+    el.addEventListener('lr-deny-request', (e) => {
       e.preventDefault();
       el.close('deny');
     });
@@ -1550,7 +1551,7 @@ describe('lr-tool-approval-dialog deprecated editable and pending aliases', () =
       const el = await fixture<LyraToolApprovalDialog>(
         html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
       );
-      el.addEventListener('lr-approve', (e) => {
+      el.addEventListener('lr-approve-request', (e) => {
         e.preventDefault();
         el.pending = null;
       });
@@ -1605,3 +1606,88 @@ describe('lr-tool-approval-dialog deprecated editable and pending aliases', () =
     expect(warnings).to.have.length(0);
   });
 });
+
+expectDeprecatedUsage('lr-tool-approval-dialog', 'event', 'lr-approve');
+
+expectDeprecatedUsage('lr-tool-approval-dialog', 'event', 'lr-deny');
+
+it('retains the deprecated lr-approve veto alias', async () => {
+    const el = (await fixture(html`
+      <lr-tool-approval-dialog
+        open
+        tool-name="web_search"
+        .args=${ARGS}
+        style="--lr-color-surface: rgb(40, 50, 60); --lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    approveButton(el).click();
+    await el.updateComplete;
+    const edit = editButton(el);
+    expect(edit.disabled).to.be.true;
+    const rect = edit.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(edit).backgroundColor === 'rgb(40, 50, 60)', 'edit background color never reached rgb(40, 50, 60)');
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
+  });
+
+it('retains the deprecated lr-deny veto alias', async () => {
+    const approveEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const approvePromise = oneEvent(approveEl, 'lr-approve-request');
+    approveButton(approveEl).click();
+    const approveEvent = await approvePromise;
+    expect(approveEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
+    expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
+    await approveEl.updateComplete;
+    expect(approveEl.open, 'not-prevented path closes normally').to.be.false;
+    expect(approveEl.pendingAction).to.equal(null);
+
+    const preventedApproveEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const preventedApprovePromise = oneEvent(preventedApproveEl, 'lr-approve-request');
+    preventedApproveEl.addEventListener('lr-approve-request', (e) => e.preventDefault(), { once: true });
+    approveButton(preventedApproveEl).click();
+    const preventedApproveEvent = await preventedApprovePromise;
+    expect(preventedApproveEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
+    expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
+    await preventedApproveEl.updateComplete;
+    expect(preventedApproveEl.open, 'prevented path never closes').to.be.true;
+    expect(preventedApproveEl.pendingAction).to.equal('approve');
+
+    const denyEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    denyButton(denyEl).click();
+    const denyEvent = await denyPromise;
+    expect(denyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(denyEvent.defaultPrevented).to.equal(false);
+    await denyEl.updateComplete;
+    expect(denyEl.open).to.be.false;
+
+    const preventedDenyEl = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny');
+    preventedDenyEl.addEventListener('lr-deny', (e) => e.preventDefault(), { once: true });
+    denyButton(preventedDenyEl).click();
+    const preventedDenyEvent = await preventedDenyPromise;
+    expect(preventedDenyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(preventedDenyEvent.defaultPrevented).to.equal(true);
+    await preventedDenyEl.updateComplete;
+    expect(preventedDenyEl.open).to.be.true;
+    expect(preventedDenyEl.pendingAction).to.equal('deny');
+  });

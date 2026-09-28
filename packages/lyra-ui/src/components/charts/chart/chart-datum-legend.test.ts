@@ -7,9 +7,17 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('fr', [
-  'chart', 'chartCategory', 'chartData', 'chartSummary', 'chartSummarySeparator',
-  'chartSummaryWithData', 'chartTrendDecreasing', 'chartTrendFlat', 'chartTrendIncreasing',
-  'chartTypeDoughnut', 'chartValueLabel',
+  'chart',
+  'chartCategory',
+  'chartData',
+  'chartSummary',
+  'chartSummarySeparator',
+  'chartSummaryWithData',
+  'chartTrendDecreasing',
+  'chartTrendFlat',
+  'chartTrendIncreasing',
+  'chartTypeDoughnut',
+  'chartValueLabel',
 ]);
 const buttons = (el: LyraChart): HTMLButtonElement[] =>
   [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="legend-item"]')];
@@ -100,7 +108,7 @@ describe('chart datum legends', () => {
     const committed: CustomEvent<DatumVisibility>[] = [];
     let veto = true;
     let datasetEvents = 0;
-    el.addEventListener('lr-before-datum-visibility-change', (event) => {
+    el.addEventListener('lr-datum-visibility-change-request', (event) => {
       before = event as CustomEvent<DatumVisibility>;
       if (veto) event.preventDefault();
     });
@@ -140,28 +148,24 @@ describe('chart datum legends', () => {
     expect(peer(el).getDataVisibility(1)).to.equal(true);
   });
 
-  it('also fires the canonical lr-datum-visibility-change-request alias with the same detail, and either name can veto', async () => {
+  it('fires one canonical datum-visibility request and no removed before-alias', async () => {
     const el = await chart();
     const requests: CustomEvent<DatumVisibility>[] = [];
-    const deprecatedAliases: CustomEvent<DatumVisibility>[] = [];
+    let removedAliasEvents = 0;
     let commits = 0;
     el.addEventListener('lr-datum-visibility-change-request', (event) => {
       requests.push(event as CustomEvent<DatumVisibility>);
     });
-    el.addEventListener('lr-before-datum-visibility-change', (event) => {
-      deprecatedAliases.push(event as CustomEvent<DatumVisibility>);
-    });
+    el.addEventListener('lr-before-datum-visibility-change', () => removedAliasEvents++);
     el.addEventListener('lr-datum-visibility-change', () => commits++);
 
     buttons(el)[0]!.click();
     await el.updateComplete;
 
     expect(requests.length).to.equal(1);
-    expect(deprecatedAliases.length).to.equal(1);
-    expect(requests[0]?.detail).to.deep.equal(deprecatedAliases[0]?.detail);
+    expect(removedAliasEvents).to.equal(0);
     expect(requests[0]?.detail).to.deep.equal({ index: 0, visible: false, hiddenDatums: [0] });
     expect(requests[0]?.cancelable).to.equal(true);
-    expect(deprecatedAliases[0]?.cancelable).to.equal(true);
     expect(commits).to.equal(1);
   });
 
@@ -176,15 +180,20 @@ describe('chart datum legends', () => {
     expect(el.hiddenDatums).to.deep.equal([]);
   });
 
-  it('vetoes the datum toggle when only the deprecated lr-before-datum-visibility-change alias is canceled', async () => {
+  it('does not dispatch the removed datum veto alias or let its listener veto', async () => {
     const el = await chart();
     let commits = 0;
-    el.addEventListener('lr-before-datum-visibility-change', (event) => event.preventDefault());
+    let removedAliasEvents = 0;
+    el.addEventListener('lr-before-datum-visibility-change', (event) => {
+      removedAliasEvents++;
+      event.preventDefault();
+    });
     el.addEventListener('lr-datum-visibility-change', () => commits++);
     buttons(el)[0]!.click();
     await el.updateComplete;
-    expect(commits).to.equal(0);
-    expect(el.hiddenDatums).to.deep.equal([]);
+    expect(removedAliasEvents).to.equal(0);
+    expect(commits).to.equal(1);
+    expect(el.hiddenDatums).to.deep.equal([0]);
   });
 
   it('owns programmatic hidden indexes and restores them across data, type and connection changes', async () => {

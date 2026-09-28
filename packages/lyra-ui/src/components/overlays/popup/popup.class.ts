@@ -346,7 +346,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     if (token !== this.popupHideToken || this.active) return;
     const popup = this.popup;
     const view = this.ownerDocument.defaultView;
-    if (popup && view && !prefersReducedMotion(view)) {
+    if (popup && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(popup);
       const durationMs =
         maxCssTransitionTime(computed.transitionDuration) +

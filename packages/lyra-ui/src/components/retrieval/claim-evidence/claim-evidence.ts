@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-claim-evidence.js to register this component. */
 export * from './claim-evidence.class.js';
 import { LyraClaimEvidence } from './claim-evidence.class.js';
 import { defineElement } from '../../../internal/prefix.js';

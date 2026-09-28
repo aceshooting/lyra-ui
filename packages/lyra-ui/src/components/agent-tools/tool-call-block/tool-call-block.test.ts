@@ -9,9 +9,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
-expectLocaleFallback('de-DE', [
-  'durationSeconds', 'toolCallBlockHeaderPending',
-]);
+expectLocaleFallback('de-DE', ['durationSeconds', 'toolCallBlockHeaderPending']);
 
 type Block = LyraToolCallBlock;
 let uniqueCounter = 0;

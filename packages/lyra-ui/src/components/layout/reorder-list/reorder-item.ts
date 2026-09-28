@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-reorder-item.js to register this component. */
 export * from './reorder-item.class.js';
 // The lean icon-button entry: the move controls slot this component's own chevron glyph, so they
 // must not drag lr-icon (and its unreachable sanitizer chunk) into a consumer's graph.

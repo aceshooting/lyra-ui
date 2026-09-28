@@ -6,7 +6,7 @@
 - **Class** `LyraRealtimeSession`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated property** `showCapture` / `show-capture` since `21.1.0`; use property `without-capture`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

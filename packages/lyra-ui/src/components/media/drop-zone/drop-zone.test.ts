@@ -53,7 +53,7 @@ it('renders the wrapped region as real light-DOM content behind the base part', 
 });
 
 it('fires lr-files on drop with no lr-file-input anywhere in the tree', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone><div class="panel">drop here</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple><div class="panel">drop here</div></lr-drop-zone>`);
   expect(
     el.querySelector('lr-file-input, input[type="file"]') === null,
     'no file-input present',
@@ -124,7 +124,7 @@ it('a .strings override on the overlay/status text provably reaches rendered DOM
 });
 
 it('rejects a file beyond max-files, keeping the rest of the drop', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="2"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-files="2"><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');
   dropWith(base(el), [makeFile('a.txt'), makeFile('b.txt'), makeFile('c.txt')]);
   const event = await result;
@@ -137,7 +137,7 @@ it('rejects a file beyond max-files, keeping the rest of the drop', async () => 
 });
 
 it('rejects a file beyond max-total-size', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-total-size="100"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-total-size="100"><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');
   dropWith(base(el), [makeSizedFile('small.bin', 60), makeSizedFile('big.bin', 60)]);
   const event = await result;
@@ -147,7 +147,7 @@ it('rejects a file beyond max-total-size', async () => {
 });
 
 it('heldFileCount/heldTotalSize default to 0, leaving max-files rejection and remaining-allowance byte-identical to before they existed', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="2"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-files="2"><div>region</div></lr-drop-zone>`);
   expect(el.heldFileCount).to.equal(0);
   expect(el.heldTotalSize).to.equal(0);
   const result = oneEvent(el, 'lr-files');
@@ -161,7 +161,7 @@ it('heldFileCount/heldTotalSize default to 0, leaving max-files rejection and re
 });
 
 it('held-file-count adds an externally-held baseline to max-files, spanning separate drops', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="3" held-file-count="2"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-files="3" held-file-count="2"><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');
   dropWith(base(el), [makeFile('a.txt'), makeFile('b.txt')]);
   const event = await result;
@@ -174,7 +174,7 @@ it('held-file-count adds an externally-held baseline to max-files, spanning sepa
 });
 
 it('held-total-size adds an externally-held byte baseline to max-total-size', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-total-size="100" held-total-size="60"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-total-size="100" held-total-size="60"><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');
   dropWith(base(el), [makeSizedFile('small.bin', 30), makeSizedFile('big.bin', 30)]);
   const event = await result;
@@ -186,7 +186,7 @@ it('held-total-size adds an externally-held byte baseline to max-total-size', as
 });
 
 it('normalizes a negative, NaN, or Infinity held-file-count/held-total-size to 0 rather than corrupting the check', async () => {
-  const el = await fixture<LyraDropZone>(html`<lr-drop-zone max-files="2" max-total-size="100"><div>region</div></lr-drop-zone>`);
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-files="2" max-total-size="100"><div>region</div></lr-drop-zone>`);
   el.heldFileCount = Number.NaN;
   el.heldTotalSize = Number.NEGATIVE_INFINITY;
   await el.updateComplete;
@@ -355,4 +355,25 @@ it('lets a public --lr-drop-zone-overlay-font-size/-icon-size override win over 
   dragEnterWith(base(el), [makeFile('a.txt')]);
   await el.updateComplete;
   expect(overlayChrome(el).fontSize).to.equal('22px');
+});
+
+it('defaults to one file and preserves explicit multiple opt-in and false spelling', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone>Drop files</lr-drop-zone>`);
+  expect(el.multiple).to.equal(false);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('first.txt'), makeFile('second.txt')]);
+  const detail = (await result).detail as LyraDropZoneFilesDetail;
+  expect(detail.files.map(file => file.name)).to.deep.equal([]);
+  expect(detail.rejected.map(item => item.reason)).to.deep.equal(['count', 'count']);
+  el.setAttribute('multiple', '');
+  await el.updateComplete;
+  expect(el.multiple).to.equal(true);
+  el.setAttribute('multiple', 'false');
+  await el.updateComplete;
+  expect(el.multiple).to.equal(false);
+  el.multiple = true;
+  await el.updateComplete;
+  el.removeAttribute('multiple');
+  await el.updateComplete;
+  expect(el.multiple).to.equal(false);
 });

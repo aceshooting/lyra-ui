@@ -6,7 +6,11 @@ import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../te
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
-  'close', 'durationSeconds', 'maximize', 'statusPending', 'toolCall',
+  'close',
+  'durationSeconds',
+  'maximize',
+  'statusPending',
+  'toolCall',
 ]);
 
 // A stand-in for a slotted component (e.g. lr-tab-group) whose real focusable
@@ -269,7 +273,7 @@ it('does not light-dismiss on a backdrop click unless explicitly enabled', async
     <lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>
   `);
   const reasons: string[] = [];
-  el.addEventListener('lr-close', (event) => reasons.push(event.detail));
+  el.addEventListener('lr-close', (event) => reasons.push(event.detail.reason));
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
 
@@ -287,7 +291,7 @@ it('closes on backdrop click with reason "backdrop" when light dismissal is enab
   const { detail } = await listener;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('backdrop');
+  expect(detail).to.deep.equal({ reason: 'backdrop' });
 });
 
 it('closes on the built-in close button and emits lr-close with reason "close-button"', async () => {
@@ -299,7 +303,7 @@ it('closes on the built-in close button and emits lr-close with reason "close-bu
   const { detail } = await listener;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('close-button');
+  expect(detail).to.deep.equal({ reason: 'close-button' });
 });
 
 it('closes on Escape and emits lr-close with reason "escape"', async () => {
@@ -311,7 +315,7 @@ it('closes on Escape and emits lr-close with reason "escape"', async () => {
   const { detail } = await listener;
 
   expect(el.open).to.be.false;
-  expect(detail).to.equal('escape');
+  expect(detail).to.deep.equal({ reason: 'escape' });
 });
 
 it('does not respond to Escape while closed', async () => {
@@ -350,7 +354,7 @@ it('offers consistent show() and hide() lifecycle methods', async () => {
   expect(el.open).to.be.true;
   const closed = oneEvent(el, 'lr-close');
   el.hide();
-  expect((await closed).detail).to.equal('api');
+  expect((await closed).detail).to.deep.equal({ reason: 'api' });
   expect(el.open).to.be.false;
 });
 
@@ -371,7 +375,7 @@ it('close() sets open false, emits with the given reason, and is idempotent once
 
   expect(el.open).to.be.false;
   expect(count).to.equal(1);
-  expect(detail).to.equal('rerun');
+  expect(detail).to.deep.equal({ reason: 'rerun' });
 });
 
 it('moves focus to the first focusable element (the maximize button) when opened with no slotted content', async () => {
@@ -506,7 +510,7 @@ it('closes only the topmost dialog on Escape when two instances are open at once
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const { detail } = await listener;
 
-  expect(detail).to.equal('escape');
+  expect(detail).to.deep.equal({ reason: 'escape' });
   expect(front.open).to.be.false;
   expect(back.open, 'the dialog beneath the topmost must stay open').to.be.true;
 

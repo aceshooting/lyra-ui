@@ -1,3 +1,6 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -117,6 +120,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     randomContentResume: LYRA_DEFAULT_randomContentResume,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-content-change',
@@ -178,7 +182,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private timer?: number;
   private timerWindow?: Window;
   private reduceMotion = false;
-  private mediaQuery?: MediaQueryList;
+  private stopMotionWatch?: () => void;
   private sequenceCursor = 0;
   private previousSelection?: Element[];
   private lastPool: Element[] = [];
@@ -212,10 +216,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     });
     this.startAuthorStateObserver();
     this.startAnnouncementContentObserver();
-    const ownerWindow = this.ownerDocument.defaultView;
-    this.mediaQuery = ownerWindow?.matchMedia?.('(prefers-reduced-motion: reduce)');
-    this.reduceMotion = this.mediaQuery?.matches ?? false;
-    this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    this.reduceMotion = prefersReducedMotion(this);
+    this.stopMotionWatch = observeReducedMotion(this, this.onMotionPreferenceChange);
     // `firstUpdated()` only ever runs once per element lifetime, but
     // `disconnectedCallback()` unconditionally stops the timer on every
     // disconnect -- without restarting here too, a disconnect/reconnect
@@ -248,8 +250,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
     this.focusWithin = false;
     this.restoreManagedPool();
-    this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
-    this.mediaQuery = undefined;
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
     super.disconnectedCallback();
   }
 
@@ -279,8 +281,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.hasUpdatedOnce = true;
   }
 
-  private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
-    this.reduceMotion = event.matches;
+  private onMotionPreferenceChange = (reduced: boolean): void => {
+    this.reduceMotion = reduced;
     this.restartAutoplay();
   };
 

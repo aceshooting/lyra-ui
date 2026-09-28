@@ -6,7 +6,8 @@
 - **Class** `LyraKnowledgeBase`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `hideCreate` / `hide-create` since `21.1.0`; use property `without-create`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `hideSummary` / `hide-summary` since `21.1.0`; use property `without-summary`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
@@ -64,10 +65,12 @@ names.
 before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-base-admin>` already
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
-`lr-retry` (`detail: null`, cancelable) — the nested table's built-in retry button was activated,
-only rendered while `error` is set; the default action clears `error`, `preventDefault()` leaves it
-set. This component intercepts the nested table's own `lr-retry` and re-proposes its own, so the
-outer `error` property never drifts out of sync with the table's internal state.
+`lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
+retry button is activated. It fires before the deprecated cancelable `lr-retry` alias (also
+`detail: null`); preventing either event keeps both the parent and table in the error state.
+Without a veto, the default action clears `error`. The alias remains supported until removal no
+earlier than 24.0.0 and warns only when vetoed. This component contains both nested table retry
+events and re-proposes its own pair, so hosts receive each parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.

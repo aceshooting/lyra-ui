@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -72,6 +73,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     characterData: 'charData',
     subtree: ['withoutSubtree', invertAlias, invertAlias],
   };
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-mutation',

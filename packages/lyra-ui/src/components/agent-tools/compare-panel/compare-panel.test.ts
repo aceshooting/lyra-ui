@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
@@ -26,12 +27,12 @@ describe('lr-compare-panel', () => {
     expect(el.textContent).to.include('The prompt');
   });
 
-  it('emits lr-vote and reflects vote on the chosen button', async () => {
+  it('emits lr-vote-request and reflects vote on the chosen button', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const buttons = el.shadowRoot!.querySelectorAll('[part="vote-button"]');
     setTimeout(() => (buttons[0] as HTMLElement).click());
-    const ev = await oneEvent(el, 'lr-vote');
+    const ev = await oneEvent(el, 'lr-vote-request');
     expect(ev.detail).to.deep.equal({ choice: 'a', itemId: 'pair-1' });
     await el.updateComplete;
     expect(el.vote).to.equal('a');
@@ -41,7 +42,7 @@ describe('lr-compare-panel', () => {
   it('emits the cancelable vote before mutation and honors a veto', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
     let voteDuringEvent: unknown = 'unset';
-    el.addEventListener('lr-vote', (event) => {
+    el.addEventListener('lr-vote-request', (event) => {
       voteDuringEvent = el.vote;
       event.preventDefault();
     });
@@ -55,7 +56,7 @@ describe('lr-compare-panel', () => {
     const el = (await fixture(html`
       <lr-compare-panel item-id="pair-1" label-a="Original A" label-b="Original B"></lr-compare-panel>
     `)) as LyraComparePanel;
-    el.addEventListener('lr-vote', () => {
+    el.addEventListener('lr-vote-request', () => {
       el.itemId = 'pair-2';
       el.labelA = 'Next A';
       el.labelB = 'Next B';
@@ -69,7 +70,7 @@ describe('lr-compare-panel', () => {
 
   it('skips the vote write when a listener re-entrantly advances itemId mid-cast', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
-    el.addEventListener('lr-vote', () => {
+    el.addEventListener('lr-vote-request', () => {
       el.itemId = 'pair-2';
     });
     (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
@@ -81,37 +82,37 @@ describe('lr-compare-panel', () => {
     expect(el.itemId).to.equal('pair-2');
   });
 
-  it('emits lr-vote for the B pane and marks the B button pressed', async () => {
+  it('emits lr-vote-request for the B pane and marks the B button pressed', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-2"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const buttons = el.shadowRoot!.querySelectorAll('[part="vote-button"]');
     setTimeout(() => (buttons[1] as HTMLElement).click());
-    const ev = await oneEvent(el, 'lr-vote');
+    const ev = await oneEvent(el, 'lr-vote-request');
     expect(ev.detail).to.deep.equal({ choice: 'b', itemId: 'pair-2' });
     await el.updateComplete;
     expect(el.vote).to.equal('b');
     expect((buttons[1] as HTMLElement).getAttribute('aria-pressed')).to.equal('true');
   });
 
-  it('emits lr-vote for a tie and marks the tie button pressed', async () => {
+  it('emits lr-vote-request for a tie and marks the tie button pressed', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-3"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     // Button order: A, B, tie, both-bad.
     const tieButton = el.shadowRoot!.querySelectorAll('[part="vote-button"]')[2] as HTMLElement;
     setTimeout(() => tieButton.click());
-    const ev = await oneEvent(el, 'lr-vote');
+    const ev = await oneEvent(el, 'lr-vote-request');
     expect(ev.detail).to.deep.equal({ choice: 'tie', itemId: 'pair-3' });
     await el.updateComplete;
     expect(el.vote).to.equal('tie');
     expect(tieButton.getAttribute('aria-pressed')).to.equal('true');
   });
 
-  it('emits lr-vote for both-bad and marks that button pressed', async () => {
+  it('emits lr-vote-request for both-bad and marks that button pressed', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-4"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;
     const bothBadButton = el.shadowRoot!.querySelectorAll('[part="vote-button"]')[3] as HTMLElement;
     setTimeout(() => bothBadButton.click());
-    const ev = await oneEvent(el, 'lr-vote');
+    const ev = await oneEvent(el, 'lr-vote-request');
     expect(ev.detail).to.deep.equal({ choice: 'both-bad', itemId: 'pair-4' });
     await el.updateComplete;
     expect(el.vote).to.equal('both-bad');
@@ -705,4 +706,33 @@ describe('lr-compare-panel deprecated --lr-compare-panel-selected-background ali
     expect(fill(alias)).to.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
+});
+
+expectDeprecatedUsage('lr-compare-panel', 'event', 'lr-vote');
+
+it('retains the deprecated lr-vote veto alias', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
+    let voteDuringEvent: unknown = 'unset';
+    el.addEventListener('lr-vote', (event) => {
+      voteDuringEvent = el.vote;
+      event.preventDefault();
+    });
+    (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(voteDuringEvent).to.equal(null);
+    expect(el.vote).to.equal(null);
+  });
+
+it('keeps explicit host vote writes and blocks recursive requests', async () => {
+  const el = await fixture<LyraComparePanel>(html`<lr-compare-panel item-id="pair"></lr-compare-panel>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="vote-button"]')!;
+  let requests = 0;
+  el.addEventListener('lr-vote-request', () => {
+    requests++;
+    el.vote = 'b';
+    if (requests === 1) button.dispatchEvent(new MouseEvent('click'));
+  });
+  button.click();
+  expect(requests).to.equal(1);
+  expect(el.vote).to.equal('b');
 });

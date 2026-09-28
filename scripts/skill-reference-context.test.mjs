@@ -20,7 +20,9 @@ import {
   rewriteStandaloneSharedReference,
   STANDALONE_CHANGELOG_POINTER,
   trimStandaloneChangelog,
+  validateSharedTopicLinks,
 } from './skill-reference-context.mjs';
+import { SHARED_TOPICS } from '../packages/lyra-ui/scripts/shared-topics.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const packageRoot = path.join(root, 'packages', 'lyra-ui');
@@ -82,6 +84,23 @@ function validateStandaloneTree(treeRoot) {
   const componentFiles = referenceFiles.filter((file) =>
     file.includes(`${path.sep}references${path.sep}components${path.sep}`),
   );
+  const sharedTopicFiles = referenceFiles.filter((file) =>
+    file.includes(`${path.sep}references${path.sep}shared${path.sep}`),
+  );
+  assert.equal(
+    sharedTopicFiles.length,
+    SHARED_TOPICS.length,
+    'the standalone reference tree must include every focused shared topic',
+  );
+  const skillIndex = readFileSync(path.join(treeRoot, 'SKILL.md'), 'utf8');
+  for (const [topic] of SHARED_TOPICS) {
+    assert.ok(skillIndex.includes(`${topic}.md`), `SKILL.md must route to ${topic}.md`);
+  }
+  assert.equal(
+    validateSharedTopicLinks(path.join(treeRoot, 'references', 'shared')),
+    true,
+    'all focused shared routes, including relative heading anchors, must resolve in the skill tree',
+  );
   assert.ok(componentFiles.length > 250, 'the standalone catalog must not become vacuous');
   assert.ok(
     skillMarkdownFiles.includes(path.join(treeRoot, 'SKILL.md')),
@@ -119,23 +138,31 @@ function validateStandaloneTree(treeRoot) {
   }
   assert.equal(
     changelogLinks,
-    componentFiles.length + 1,
-    'every component plus shared.md must link the standalone changelog exactly once',
+    componentFiles.length + 1 + sharedTopicFiles.reduce((count, file) => {
+      const contents = readFileSync(file, 'utf8');
+      return count + markdownLinkTargets(contents).filter(isChangelogMarkdownTarget).length;
+    }, 0),
+    'every component, shared.md, and focused topic changelog link must resolve inside the skill',
   );
   return { componentFiles, referenceFiles, skillMarkdownFiles };
 }
 
 test('context rewrites are exact and fail closed on drift', () => {
   const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');
+  assert.equal(
+    validateSharedTopicLinks(path.join(packageRoot, 'llms', 'shared')),
+    true,
+    'published topic paths and heading anchors must resolve from their package location',
+  );
   const standaloneShared = rewriteStandaloneSharedReference(packageShared);
   assert.match(
     standaloneShared,
-    /bundled\s+\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\):\s+it\s+holds\s+the\s+newest\s+three\s+major\s+versions/u,
+    /bundled\s+\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\):\s+it\s+holds\s+the\s+current\s+major/u,
   );
   assert.doesNotMatch(standaloneShared, /self-contained changelog/u);
   assert.match(
     standaloneShared,
-    /Family-wide\s+breaking-change\s+summaries\s+are\s+in\s+the\s+installed\s+package's\s+`llms-full\.txt`/u,
+    /Family-wide\s+breaking-change\s+summaries\s+are\s+linked/u,
   );
   assert.deepEqual(
     markdownLinkTargets(standaloneShared).filter(isLlmsFullMarkdownTarget),
@@ -269,20 +296,38 @@ test('staged standalone references preserve package truth in their own link cont
   const stagedChangelog = readFileSync(path.join(skillRoot, 'CHANGELOG.md'), 'utf8');
   assert.equal(stagedChangelog, trimStandaloneChangelog(packageChangelog));
   assert.ok(
-    stagedChangelog.length < packageChangelog.length,
-    'the staged standalone changelog must be trimmed, not a full copy',
+    stagedChangelog.length <= packageChangelog.length,
+    'the staged standalone changelog retains only the current major',
   );
   assert.ok(stagedChangelog.includes(STANDALONE_CHANGELOG_POINTER));
 
   const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');
   const stagedShared = readFileSync(path.join(referencesRoot, 'shared.md'), 'utf8');
   assert.equal(stagedShared, rewriteStandaloneSharedReference(packageShared));
-  assert.match(stagedShared, /installed[\s\S]*`llms-full\.txt`[\s\S]*standalone\s+skill/u);
+  assert.match(stagedShared, /breaking-change summaries are linked/u);
+
+  const packageSharedTopics = path.join(packageRoot, 'llms', 'shared');
+  const stagedSharedTopics = path.join(referencesRoot, 'shared');
+  for (const [topic] of SHARED_TOPICS) {
+    const packageTopic = readFileSync(path.join(packageSharedTopics, `${topic}.md`), 'utf8');
+    const stagedTopic = readFileSync(path.join(stagedSharedTopics, `${topic}.md`), 'utf8');
+    assert.equal(stagedTopic, packageTopic, `${topic} must keep its package-relative route in the skill copy`);
+  }
+  assert.match(
+    readFileSync(path.join(stagedSharedTopics, 'imports-and-registration.md'), 'utf8'),
+    /\]\(\.\/styles-and-tokens\.md#the-shadcn-look--themesshadcncss\)/u,
+    'topic-local relative anchors must survive standalone packaging',
+  );
+  assert.match(
+    readFileSync(path.join(stagedSharedTopics, 'localization-and-rtl.md'), 'utf8'),
+    /\]\(\.\/testing-and-utilities\.md#shared-helpers-utilities\)/u,
+    'cross-topic relative anchors must survive standalone packaging',
+  );
 
   const staged = validateStandaloneTree(skillRoot);
   const table = readFileSync(path.join(referencesRoot, 'components', 'lr-table.md'), 'utf8');
   assert.match(table, /\[CHANGELOG\.md\]\(\.\.\/\.\.\/CHANGELOG\.md\)/u);
-  assert.doesNotMatch(table, /family-wide breaking-change summaries/u);
+  assert.match(table, /family-wide breaking-change summaries/u);
   assert.equal(staged.componentFiles.length, expectedComponentCount);
 });
 

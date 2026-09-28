@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-document-library.js to register this component. */
 export * from './document-library.class.js';
 import { LyraDocumentLibrary } from './document-library.class.js';
 import { defineElement } from '../../../internal/prefix.js';

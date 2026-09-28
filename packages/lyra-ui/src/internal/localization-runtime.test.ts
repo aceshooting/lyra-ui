@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
 import { expect } from '@open-wc/testing';
 import {
   canonicalizeLyraLocale,
@@ -88,6 +89,7 @@ it('bounds a registered catalog to the maximum retained message count', () => {
   expect(resolveLyraString(host, 'key4095')).to.equal('value4095');
   // Well past the 4,096-entry cap: never copied into the snapshot, so lookup falls through to the
   // raw key (no fallback/defaults were supplied).
+  expectLocaleFallback(locale, ['key4099']);
   expect(resolveLyraString(host, 'key4099')).to.equal('key4099');
 });
 
@@ -193,6 +195,7 @@ it('removes reverse regional fallback when an existing catalog becomes exact-onl
   registerLyraExactLocale('qaa-AA', { topologyProbe: 'exact' });
 
   expect(resolveLyraString(localeHost('qaa-AA'), 'topologyProbe')).to.equal('exact');
+  expectLocaleFallback('qaa', ['topologyProbe']);
   expect(resolveLyraString(localeHost('qaa'), 'topologyProbe')).to.equal('topologyProbe');
 });
 
@@ -210,6 +213,7 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
   registerLyraLocale('x-accessor-catalog', accessorCatalog);
   accessorCatalog['retained'] = 'mutated';
   expect(resolveLyraString(localeHost('x-accessor-catalog'), 'retained')).to.equal('yes');
+  expectLocaleFallback('x-accessor-catalog', ['unsafe']);
   expect(resolveLyraString(localeHost('x-accessor-catalog'), 'unsafe')).to.equal('unsafe');
   expect(getterCalls).to.equal(0);
 
@@ -219,6 +223,7 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
     },
   });
   registerLyraLocale('x-prototype-trap', prototypeTrap as Record<string, string>);
+  expectLocaleFallback('x-prototype-trap', ['missing']);
   expect(resolveLyraString(localeHost('x-prototype-trap'), 'missing')).to.equal('missing');
 
   const enumerationTrap = new Proxy({ retained: 'yes', unread: 'no' }, {
@@ -229,6 +234,7 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
   });
   registerLyraLocale('x-enumeration-trap', enumerationTrap);
   expect(resolveLyraString(localeHost('x-enumeration-trap'), 'retained')).to.equal('yes');
+  expectLocaleFallback('x-enumeration-trap', ['unread']);
   expect(resolveLyraString(localeHost('x-enumeration-trap'), 'unread')).to.equal('unread');
 
   const ownKeysTrap = new Proxy({ unread: 'no' }, {
@@ -237,6 +243,7 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
     },
   });
   registerLyraLocale('x-own-keys-trap', ownKeysTrap);
+  expectLocaleFallback('x-own-keys-trap', ['unread']);
   expect(resolveLyraString(localeHost('x-own-keys-trap'), 'unread')).to.equal('unread');
 });
 
@@ -298,6 +305,7 @@ it('contains descriptor and enumeration failures inside catalog snapshots', () =
   registerLyraLocale('x-plural-enumeration-trap', {
     items: pluralTrap,
   } as unknown as Parameters<typeof registerLyraLocale>[1]);
+  expectLocaleFallback('x-plural-enumeration-trap', ['items']);
   expect(resolveLyraString(localeHost('x-plural-enumeration-trap'), 'items')).to.equal('items');
 
   const pluralDescriptorTrap = new Proxy({ other: 'many' }, {
@@ -308,6 +316,7 @@ it('contains descriptor and enumeration failures inside catalog snapshots', () =
   registerLyraLocale('x-plural-descriptor-trap', {
     items: pluralDescriptorTrap,
   } as unknown as Parameters<typeof registerLyraLocale>[1]);
+  expectLocaleFallback('x-plural-descriptor-trap', ['items']);
   expect(resolveLyraString(localeHost('x-plural-descriptor-trap'), 'items')).to.equal('items');
 });
 
@@ -326,6 +335,7 @@ it('contains a plural data-descriptor failure after safe enumeration', () => {
     Object.getOwnPropertyDescriptor = original;
   }
 
+  expectLocaleFallback('x-plural-data-trap', ['items']);
   expect(resolveLyraString(localeHost('x-plural-data-trap'), 'items')).to.equal('items');
 });
 

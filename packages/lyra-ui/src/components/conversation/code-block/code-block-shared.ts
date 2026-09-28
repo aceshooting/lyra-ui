@@ -288,7 +288,7 @@ export async function scrollCodeBlockToAnchor(
   if (!body || !lineEl) return false;
   const offset = lineEl.offsetTop - body.clientHeight / 2;
   const ownerWindow = body.ownerDocument.defaultView;
-  const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+  const reducedMotion = !ownerWindow || prefersReducedMotion(body);
   body.scrollTo({
     top: Math.max(0, offset),
     behavior: reducedMotion ? 'auto' : 'smooth',
@@ -700,7 +700,7 @@ export type LyraCodeBlockCopyAppearance = 'text' | 'icon';
 export interface LyraCodeBlockToggleDetail {
   /** Whether the code region is shown in the resulting (on `lr-toggle-request`, the proposed)
    *  state. */
-  expanded?: boolean;
+  expanded: boolean;
   /** The inverse of `expanded`.
    *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
   collapsed: boolean;

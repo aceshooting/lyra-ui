@@ -27,7 +27,9 @@ export interface ConfirmOptions {
 // light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
   'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
-  'border-radius: var(--lr-radius); cursor: pointer; border: var(--lr-border-width-thin) solid var(--lr-color-border);';
+  'border-radius: var(--lr-theme-border-radius-button, var(--lr-radius)); ' +
+  'min-block-size: max(var(--lr-size-1-5rem), var(--_lr-density-target-min, 0px)); ' +
+  'cursor: pointer; border: var(--lr-border-width-thin) solid var(--lr-color-border);';
 const CANCEL_STYLE =
   '--lr-confirm-button-fill: var(--lr-color-surface); ' +
   'background: var(--lr-confirm-button-state, var(--lr-color-surface)); color: var(--lr-color-text);';
@@ -136,13 +138,12 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     }
 
     dialog.addEventListener('lr-close', (event) => {
-      // A close veto can be installed above this transient dialog (including a capture listener
-      // on document). Settle only after the event has completed its entire propagation path so a
-      // later bubble listener's preventDefault() is honored too.
+      // Settle after the accepted notification has propagated, so consumers observe the dialog
+      // before this helper removes it. Dismissal vetoes belong to lr-close-request.
       queueMicrotask(() => {
         if (settled || event.defaultPrevented) return;
         settled = true;
-        const reason = (event as CustomEvent<DialogCloseReason>).detail;
+        const reason = (event as CustomEvent<{ reason: DialogCloseReason }>).detail.reason;
         resolve(reason === 'confirm');
         dialog.remove();
       });

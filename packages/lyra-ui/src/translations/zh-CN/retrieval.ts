@@ -5,6 +5,14 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: '研究进度',
+  researchProgressEmpty: '没有可用的研究步骤。',
+  researchProgressLimit: '显示前 {count} 个研究步骤。',
+  researchProgressStatusPending: '待处理',
+  researchProgressStatusRunning: '进行中',
+  researchProgressStatusCompleted: '已完成',
+  researchProgressStatusFailed: '失败',
+  researchProgressSources: { other: '{count} 个来源' },
   graphLegendLabel: '图谱图例',
   entityChipWithType: '{label}，{type}',
   showMore: '显示更多',

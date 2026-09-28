@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
@@ -29,6 +30,8 @@ function announcementTexts(politeness: 'polite' | 'assertive'): string[] {
 const isWebKit =
   /Safari\//.test(navigator.userAgent) &&
   !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
+
+expectLocaleFallback('ar', ['closeWithContext']);
 
 it('announces only the normalized message when toast() supplies icon and action controls', async () => {
   const assertiveBefore = announcementTexts('assertive');

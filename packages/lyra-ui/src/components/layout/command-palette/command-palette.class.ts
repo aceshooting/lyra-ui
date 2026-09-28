@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -208,13 +209,18 @@ function projectCommands(value: unknown): readonly CanonicalCommand[] {
     return EMPTY_CANONICAL_COMMANDS;
   }
 }
+export type LyraCommandPaletteCloseReason = 'api' | 'escape' | 'backdrop' | 'select';
+
+/** The affordance that requested palette dismissal. */
+export interface LyraCommandPaletteCloseDetail {
+  reason: LyraCommandPaletteCloseReason;
+}
+
 export interface LyraCommandPaletteEventMap {
   'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
   'lr-show': CustomEvent<null>;
-  /** @deprecated Use `lr-show` instead; removed no earlier than 21.0.0. Fired identically
-   *  (same `detail`, cancelability, and timing) alongside `lr-show` at the same call site. */
-  'lr-open': CustomEvent<null>;
-  'lr-close': CustomEvent<null>;
+  'lr-close-request': CustomEvent<LyraCommandPaletteCloseDetail>;
+  'lr-close': CustomEvent<LyraCommandPaletteCloseDetail>;
   focus: CustomEvent<null>;
   blur: CustomEvent<null>;
 }
@@ -230,14 +236,8 @@ export interface LyraCommandPaletteEventMap {
  * @event lr-select - A command was chosen; detail is `{ command }`.
  * @event lr-show - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
  * closed.
- * @event lr-open - Deprecated alias for `lr-show`, fired identically (same `detail`,
- * cancelability, and timing) at the same call site; either event's `preventDefault()` vetoes the
- * open. Removed no earlier than 21.0.0.
- * @event lr-close - Emitted before the palette closes. Cancelable: `preventDefault()` keeps it
- * open. The name is not dialog-scoped in this library: nesting this palette inside a consumer's
- * own `<lr-dialog>` means that dialog's `lr-close` listener also observes this event. See
- * `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the
- * `event.target !== event.currentTarget` guard.
+ * @event lr-close-request - Cancelable proposal before dismissal, with `{ reason }` detail.
+ * @event lr-close - Non-cancelable notification after closing, with `{ reason }` detail.
  * @event focus - Re-dispatched when the search input receives focus. Native `focus` neither
  * bubbles nor crosses the shadow boundary, so a host listener on `<lr-command-palette>` itself
  * never sees it otherwise.
@@ -296,6 +296,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'commands',
@@ -614,8 +615,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       host: this,
       panel: () =>
         this.shadowRoot?.querySelector<HTMLElement>('[part="dialog"]') ?? null,
-      onEscape: () => this.close(),
-      onBackdrop: () => this.close(),
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
       lockScroll: true,
       suspendWhenUnrendered: true,
     });
@@ -625,22 +626,19 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.requestOpen(true);
   }
 
-  close(): void {
-    this.requestOpen(false);
+  close(reason: LyraCommandPaletteCloseReason = 'api'): void {
+    this.requestOpen(false, reason);
   }
 
-  private requestOpen(next: boolean): boolean {
+  private requestOpen(next: boolean, reason: LyraCommandPaletteCloseReason = 'api'): boolean {
     if (next === this._open || this.openRequestTarget === next) return false;
     this.openRequestTarget = next;
     let prevented: boolean;
     if (next) {
-      // `lr-open` is a deprecated alias for `lr-show`: both fire, unconditionally, at this same
-      // call site with identical `detail`/cancelability, and either one can veto the open.
       const showPrevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
-      const openPrevented = this.emit('lr-open', null, { cancelable: true }).defaultPrevented;
-      prevented = showPrevented || openPrevented;
+      prevented = showPrevented;
     } else {
-      prevented = this.emit('lr-close', null, { cancelable: true }).defaultPrevented;
+      prevented = this.emit('lr-close-request', { reason }, { cancelable: true }).defaultPrevented;
     }
     this.openRequestTarget = undefined;
     if (prevented) {
@@ -649,6 +647,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     if (next) this.resetOpeningState();
     this.commitOpen(next);
+    if (!next) this.emit('lr-close', { reason });
     return true;
   }
 
@@ -712,7 +711,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (command.disabled) return;
     this.emit('lr-select', { command: command.source });
     command.onSelect?.();
-    this.close();
+    this.close('select');
   }
   /** First enabled index at or past `from`, walking in `step` direction; -1 when every row that
    *  way is disabled (callers then keep the current index, preserving clamp-at-the-ends arrow

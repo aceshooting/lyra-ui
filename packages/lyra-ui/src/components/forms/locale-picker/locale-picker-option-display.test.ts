@@ -1,11 +1,16 @@
 import { expect, fixture, fixtureCleanup, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import './locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
-before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+before(() => {
+  setFlagUrlResolver(async () => TEST_FLAG_SRC);
+  // Option-display tests select this tag without loading its catalog.
+  expectLocaleFallback('fr-CA', ['localePickerLabel', 'loading']);
+});
 after(() => {
   fixtureCleanup();
   setFlagUrlResolver(null);

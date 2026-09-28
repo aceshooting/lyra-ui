@@ -47,6 +47,7 @@ if (pkg.customElements !== 'custom-elements.json') {
   problems.push('package.json#customElements must be the published custom-elements.json path.');
 }
 for (const [subpath, stem] of [
+  ['./framework-types', 'framework-types'],
   ['./custom-elements-jsx', 'custom-elements-jsx'],
   ['./vue', 'vue'],
   ['./svelte', 'svelte'],
@@ -77,7 +78,7 @@ if (!pkg.devDependencies?.['@types/react']) {
 }
 
 const sideEffects = new Set(Array.isArray(pkg.sideEffects) ? pkg.sideEffects : []);
-for (const stem of ['custom-elements-jsx', 'vue', 'svelte']) {
+for (const stem of ['framework-types', 'custom-elements-jsx', 'vue', 'svelte']) {
   for (const file of [`./src/${stem}.ts`, `./dist/${stem}.js`]) {
     if (sideEffects.has(file)) {
       problems.push(`${file} is types-only and must not be listed in package.json#sideEffects.`);

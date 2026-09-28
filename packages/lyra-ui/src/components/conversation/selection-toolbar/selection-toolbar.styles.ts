@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles } from '../../../internal/glass-surface.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
@@ -74,7 +75,7 @@ export const styles = css`
   }
 
   [part~='action']:hover {
-    color: var(--lr-color-brand);
+    color: var(--_lr-glass-brand-text, var(--lr-color-brand));
   }
 
   /* Each action is an <lr-button appearance="plain">, which already supplies its own pressed
@@ -82,7 +83,7 @@ export const styles = css`
      brand accent one step. A background box on the host would sit behind the button's transparent
      base and read as a second, misaligned control. */
   [part~='action']:active {
-    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: color-mix(in oklab, var(--_lr-glass-brand-text, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 
   [part~='action']:focus-visible {
@@ -90,4 +91,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
+
+  ${glassScrollLayerStyles}
+  .glass-scroll-layer { margin-inline-end: calc(-1 * var(--lr-space-2xs)); }
+  ${glassSurface('[part=\'toolbar\']', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
 `;

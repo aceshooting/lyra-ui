@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.lyra-ui.com/schemas/option-presets.schema.json",
+  "title": "Lyra optional token presets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "presets"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "kind": { "enum": ["shape", "typography", "elevation"] },
+    "presets": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 16,
+      "propertyNames": { "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64 },
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 512,
+        "propertyNames": { "pattern": "^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 80 },
+        "additionalProperties": {
+          "oneOf": [
+            { "$ref": "#/$defs/cssValue" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "properties": {
+                "light": { "$ref": "#/$defs/branch" },
+                "dark": { "$ref": "#/$defs/branch" }
+              },
+              "anyOf": [
+                { "required": ["light"], "properties": { "light": { "$ref": "#/$defs/cssValue" } } },
+                { "required": ["dark"], "properties": { "dark": { "$ref": "#/$defs/cssValue" } } }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "cssValue": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "branch": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/cssValue" }] }
+  }
+}

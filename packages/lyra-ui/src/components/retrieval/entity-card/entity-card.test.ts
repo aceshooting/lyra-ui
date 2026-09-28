@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './entity-card.js';
 import type { LyraEntityCard, LyraEntity } from './entity-card.js';
@@ -21,6 +22,14 @@ const entity: LyraEntity = {
 
 const types = [{ id: 'person', label: 'Person', color: '#7c3aed' }];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'noData',
+  'focusInGraph',
+  'entityDegree',
+  'entityCommunity',
+  'resultFieldLabel',
+]);
 it('renders the noData empty state when entity is null (the default)', async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`

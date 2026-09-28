@@ -75,7 +75,7 @@ export const styles = css`
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: lr-typing-dot-bounce var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
+    animation: var(--_lr-motion-animation, lr-typing-dot-bounce var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   [part='dot']:nth-child(2) {
     animation-delay: var(--lr-typing-indicator-dot-stagger-1, var(--lr-typing-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default)));
@@ -105,7 +105,7 @@ export const styles = css`
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: lr-typing-pulse var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
+    animation: var(--_lr-motion-animation, lr-typing-pulse var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   @keyframes lr-typing-pulse {
     0%,
@@ -129,7 +129,7 @@ export const styles = css`
     background: currentColor;
     border-radius: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
     opacity: 1;
-    animation: lr-typing-cursor-blink var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
+    animation: var(--_lr-motion-animation, lr-typing-cursor-blink var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   @keyframes lr-typing-cursor-blink {
     0%,

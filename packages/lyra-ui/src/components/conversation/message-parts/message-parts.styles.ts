@@ -16,6 +16,7 @@ export const styles = css`
 
   [part~='part'] {
     min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
 
   /* De-emphasises this part's OWN text while an answer streams. A colour change, not an opacity on
@@ -124,4 +125,51 @@ export const styles = css`
       gap: var(--lr-space-xs);
     }
   }
+  [part='interruption'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    margin-block-start: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  [part='resume'] {
+    --_lr-message-parts-resume-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-message-parts-resume-active-bg: color-mix(in oklab, var(--_lr-message-parts-resume-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+
+  [part='resume']:hover:where(:not(:disabled)) {
+    background: var(--_lr-message-parts-resume-hover-bg);
+  }
+
+  [part='resume']:active:where(:not(:disabled)) {
+    background: var(--_lr-message-parts-resume-active-bg);
+  }
+
+  [part='resume']:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part='resume']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
+  }
+
 `;

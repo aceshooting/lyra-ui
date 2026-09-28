@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -44,7 +46,7 @@ import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/depre
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -52,7 +54,8 @@ import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DE
  * entirely to the built-in renderer, keeping every built-in affordance intact. Returning any other
  * value fully REPLACES the built-in rendering for that part -- not just its visual content but
  * every interactive affordance and event the built-in renderer would otherwise wire up for that
- * part type: the `error` part's retry button (`lr-part-retry`), a `citation` part's activation
+ * part type: interrupted resume (`lr-part-resume`), the `error` part's retry button
+ * (`lr-part-retry`), a `citation` part's activation
  * (`lr-citation-select`), and the composed children's own events for `tool-call`
  * (`<lr-tool-call-chip>`'s `lr-tool-call-chip-select`, or `<lr-tool-call-block>`'s `lr-toggle` in
  * `tool-display="block"`), `tool-result`/`attachment`
@@ -135,6 +138,7 @@ export interface LyraMessagePartsEventMap
     Omit<LyraWidgetRendererEventMap, 'lr-render-error'> {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
+  'lr-part-resume': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
   'lr-toggle': CustomEvent<ThinkingPanelToggleDetail | ToolCallBlockToggleDetail>;
   'lr-render-error': CustomEvent<
     { error: unknown } | { toolName: string; error: unknown } | ToolCallBlockRenderErrorDetail
@@ -155,11 +159,16 @@ export interface LyraMessagePartsEventMap
  * `streaming-render="progressive"` renders each settled top-level block as Markdown while the
  * part is still streaming.
  *
+ * Interrupted parts retain their content and show interruption status. When their optional
+ * `interruption.resumable` is true, a resume button emits `lr-part-resume` without changing the
+ * part. `disabled` gates built-in retry and resume requests. Custom renderers own their controls.
+ *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
  *
  * `tool-display="block"` pairs each `tool-call` part with the first `tool-result` part carrying its
  * invocation id and renders the pair through one collapsed `<lr-tool-call-block>` at the call's
  * position; the folded result part renders nothing (it still counts toward `max-rendered-parts`).
+ * Interrupted results remain separate so their interruption and resume controls stay visible.
  * The block shows a running state until the result arrives, and reads its duration from the
  * invocation's `startedAt`/`endedAt`. An invocation marked `denied` or `incomplete` keeps that
  * status whatever result part is paired with it. In either display, an invocation's `displayName`
@@ -176,13 +185,15 @@ export interface LyraMessagePartsEventMap
  *
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
+ * @event lr-part-resume - Requests host-managed resume of an interrupted, resumable part. `detail: { part }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
  * @event lr-toggle - Passthrough from a rendered reasoning panel or tool-call block.
  * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
  * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
  * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content, or
  * tool-call block (`callId` included).
- * @event lr-link-click - Passthrough from rendered Markdown.
+ * @event lr-link-activate - Passthrough from rendered Markdown.
+ * @event lr-link-click - Deprecated compatibility alias of `lr-link-activate`.
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
  * @event lr-anchor-result - Passthrough from rendered Markdown.
@@ -198,6 +209,9 @@ export interface LyraMessagePartsEventMap
  * @csspart base - The ordered message-part list.
  * @csspart part - Every rendered part wrapper.
  * @csspart part-streaming - Additional part name on a streaming part.
+ * @csspart part-interrupted - Additional part name on an interrupted part.
+ * @csspart interruption - Interrupted status and optional host-provided reason.
+ * @csspart resume - An interrupted part's resume request button.
  * @csspart text - A text part.
  * @csspart reasoning - A reasoning part.
  * @csspart tool-call - A tool-call part.
@@ -236,9 +250,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
     retry: LYRA_DEFAULT_retry,
+    streamInterrupted: LYRA_DEFAULT_streamInterrupted,
+    streamResume: LYRA_DEFAULT_streamResume,
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
 
@@ -250,10 +267,14 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-part-retry',
+    'lr-part-resume',
   ]);
 
   /** Ordered message content. */
   @property({ attribute: false }) parts: readonly MessagePart[] = [];
+
+  /** Disables built-in retry and resume requests. Custom-rendered controls remain host-owned. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   private contentModeValue: MessagePartsContentMode = 'markdown';
 
@@ -340,8 +361,19 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
   @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
 
-  /** Accessible name override for the internal message-part group. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Accessible name override for the internal message-part group.
+   * @deprecated Use the host's native `aria-label` attribute. */
+  @property({ attribute: 'aria-label' })
+  get accessibleLabel(): string | null { return this._accessibleLabel; }
+  set accessibleLabel(value: string | null) {
+    if (value !== null && !this.hasAttribute('aria-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'ariaLabel');
+    }
+    const previous = this._accessibleLabel;
+    this._accessibleLabel = value;
+    this.requestUpdate('accessibleLabel', previous);
+  }
+  private _accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
   /** First tool-call's projected `redactedFields` per invocation id; only non-empty entries. */
   private redactionByInvocation = new Map<string, readonly unknown[]>();
@@ -498,6 +530,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         break;
     }
     if (part.state === 'streaming') parts.push('part-streaming');
+    if (part.state === 'interrupted') parts.push('part-interrupted');
     return parts.join(' ');
   }
 
@@ -538,7 +571,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     const results = new Map<string, ToolResultMessagePart>();
     const folded = new Set<string>();
     for (const part of parts) {
-      if (part.type !== 'tool-result' || custom.has(part.id)) continue;
+      if (part.type !== 'tool-result' || part.state === 'interrupted' || custom.has(part.id)) continue;
       const id = part.invocationId;
       if (!isNonBlankIdentity(id)) continue;
       const callPartId = calls.get(id);
@@ -649,11 +682,32 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
                 size="s"
                 variant="neutral"
                 aria-label=${this.localize('messagePartRetry')}
-                @click=${() => this.emit('lr-part-retry', { part })}
+                ?disabled=${this.disabled}
+                @click=${() => { if (!this.disabled) this.emit('lr-part-retry', { part }); }}
                 >${this.localize('retry')}</lr-button
               >`
             : nothing}`;
     }
+  }
+
+  private resumeDispatching = false;
+  private requestResume(part: MessagePart): void {
+    const current = this.renderedParts.find(candidate => candidate.id === part.id);
+    if (this.resumeDispatching || this.disabled || current !== part || part.state !== 'interrupted' || part.interruption?.resumable !== true) return;
+    this.resumeDispatching = true;
+    try {
+      this.emit('lr-part-resume', { part });
+    } finally {
+      this.resumeDispatching = false;
+    }
+  }
+
+  private renderInterruption(part: MessagePart): TemplateResult | typeof nothing {
+    if (part.state !== 'interrupted') return nothing;
+    return html`<div part="interruption"><span>${this.localize('streamInterrupted')}</span>${part.interruption?.reason
+      ? html`<span>${part.interruption.reason}</span>` : nothing}${part.interruption?.resumable === true
+      ? html`<button part="resume" type="button" ?disabled=${this.disabled}
+          @click=${() => this.requestResume(part)}>${this.localize('streamResume')}</button>` : nothing}</div>`;
   }
 
   private renderOne(
@@ -665,11 +719,11 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     if (part.type === 'reasoning' && this.withoutReasoning) return nothing;
     if (pairing?.folded.has(part.id)) return nothing;
     return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}
-      >${custom.has(part.id) ? custom.get(part.id) : this.renderBuiltin(part, citationRank, pairing)}</div>`;
+      >${custom.has(part.id) ? custom.get(part.id) : html`${this.renderBuiltin(part, citationRank, pairing)}${this.renderInterruption(part)}`}</div>`;
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel ?? this.localize('messagePartsLabel');
+    const label = this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.localize('messagePartsLabel');
     // Ranks are derived from the FULL sequence, before any rendering window is applied, so a
     // citation's number stays stable even once an earlier citation rolls out of view.
     const allParts = this.effectiveParts;

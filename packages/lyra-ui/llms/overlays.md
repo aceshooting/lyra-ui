@@ -58,7 +58,7 @@ boolean, and all three drive the same code path: `el.show()` is indistinguishabl
 `el.open = true`, and `el.hide()` from `el.open = false`. The property, the reflected attribute and
 the two methods can therefore never disagree, and each method is a no-op when the overlay is already
 in the requested state. `lr-dialog` and `lr-drawer` keep `close(reason)` alongside — `hide()` plus
-the reason string that `lr-close` carries.
+the `detail.reason` string that `lr-close` carries.
 
 **Four events, and where the veto sits.**
 
@@ -91,33 +91,15 @@ relying on the opposite polarity and has to be re-read.
 no `open` setter and no `show()` (a context menu needs a point, so it opens through a gesture or
 `showAt()`); and a close that a new gesture interrupts emits no `lr-after-hide`.
 
-`lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
-points, documented in their sections. Their cancelable `lr-close` fires **after** `lr-hide` and
-before `lr-after-hide`; it carries the close reason as `detail: DialogCloseReason`. Vetoing
-`lr-hide` stops it from firing at all, and `preventDefault()` on `lr-close` itself also vetoes the
-close. The same name is already used by the `lr-tool-select-dialog`/`lr-tool-result-dialog`/
-`lr-tool-approval-dialog` trio, which mirrors this identical detail shape, so one listener covers
-all of them. `lr-drawer` inherits `lr-close` unchanged.
+`lr-dialog` and `lr-drawer` retain upstream `lr-initial-focus` and `lr-request-close` veto
+points. After `lr-hide`, the Lyra-specific `lr-close-request` proposes dismissal with
+`{ reason: DialogCloseReason }`. Preventing either proposal keeps the dialog open. Accepted
+changes emit non-cancelable `lr-close` with the same reason object after `open` becomes false,
+then `lr-after-hide` after the transition. Tool dialogs also report `{ reason }` on `lr-close`.
 
-> **`lr-close` is not a dialog-scoped name — filter by target.** Nine components in this library
-> emit `lr-close`, several of them commonly nested *inside* a dialog: `<lr-callout>` (an inline
-> notice above a form), `<lr-tab>`/`<lr-tab-group>`, `<lr-command-palette>`,
-> `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three tool dialogs. Library events bubble
-> and are composed, so a listener bound directly on `<lr-dialog>` **also receives a descendant's
-> close** — a closable callout inside a dialog would otherwise dismiss the whole dialog. The details
-> differ too (`<lr-callout>` and `<lr-tab>` carry none, where the dialog carries a
-> `DialogCloseReason`), so a handler reading `event.detail.reason` throws on a foreign one. It is
-> latent rather than broken-on-arrival, because a callout or tab only emits once it is given a close
-> affordance — which is what makes it a bad failure mode: it shows up later and presents as the
-> dialog dismissing itself. Guard on the target, the way `<lr-document-viewer>` already does
-> internally:
->
-> ```js
-> dialog.addEventListener('lr-close', (event) => {
->   if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
->   // ...
-> });
-> ```
+Close events bubble from descendants. Check `event.target === event.currentTarget` when handling
+only the owning dialog. The upstream-mirrored `lr-tab` close event retains its null detail.
+
 
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
@@ -188,11 +170,11 @@ so the default close button never wins merely because it appears first in shadow
 `lr-popup` share one anchoring vocabulary, all of it new in 8.0.0 (`lr-popup` itself is new in
 8.0.0).
 
-- An arrow pointing at the anchor is exposed as the `arrow` CSS part. Popover and tooltip render
-  it by default and `without-arrow` (boolean, reflected) suppresses it; dropdown and popup render
-  it only when their own `arrow` attribute (default `false`) is set, and `without-arrow` still
-  suppresses a dropdown's. Deprecated alias: `arrow` on `lr-popover`/`lr-tooltip` (use
-  `without-arrow`, which `arrow="false"` equals; removed in 23.0.0). The part's attribute also carries the **resolved side** as
+- An arrow pointing at the anchor is exposed as the `arrow` CSS part. Popover, dropdown and tooltip render
+  it by default and `without-arrow` (boolean, reflected) suppresses it. Popup retains its own
+  false-defaulting `arrow` opt-in. Deprecated inverse alias: `arrow` on popover/tooltip
+  (removal not before 23.0.0) and dropdown (removal not before 24.0.0). `arrow="false"`
+  equals `without-arrow`. The part's attribute also carries the **resolved side** as
   a second token — `arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right` — so
   `::part(arrow arrow-top)` styles one side. `::part(arrow)[data-side]` and
   `::part(arrow) .inner` are invalid selectors that silently never match; the state is in the part
@@ -644,7 +626,8 @@ promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
 `lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
-(`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
+(`detail: { reason: DialogCloseReason }`, non-cancelable), plus cancelable `lr-close-request`
+with the same detail — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip. **`lr-close` is not drawer-scoped, same as on `lr-dialog`:**
@@ -825,31 +808,16 @@ chrome remains visible. The fallback order appears below.
 - `lr-request-close` — cancelable request from a built-in affordance; detail source is
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
-- `lr-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`. The same name
-  is already used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
-  `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
-  covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
-  reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
-  open. **But the name is not dialog-scoped.** Nine components in this library emit `lr-close`,
-  several of them commonly nested *inside* a dialog: `<lr-callout>`, `<lr-tab>`/`<lr-tab-group>`,
-  `<lr-command-palette>`, `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three tool
-  dialogs (`<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, `<lr-tool-approval-dialog>`).
-  Library events bubble and are composed, so a listener bound directly on
-  `<lr-dialog>` also receives a descendant's close — a closable callout or tab inside a dialog would
-  otherwise dismiss the whole dialog. Guard on the target, the way `<lr-document-viewer>` already
-  does internally:
-
-  ```js
-  dialog.addEventListener('lr-close', (event) => {
-    if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
-    // ...
-  });
-  ```
+- `lr-close-request` — cancelable proposal with `{ reason: DialogCloseReason }`, after `lr-hide`
+  and before state changes. Preventing default keeps the dialog open.
+- `lr-close` — non-cancelable accepted dismissal with `{ reason: DialogCloseReason }`. It fires
+  after `open` becomes false. External removal while open reports `{ reason: 'unmount' }`.
+  Filter by event target to distinguish the owning dialog from nested component dismissals.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-close` → `lr-after-hide`.
+direct close sequence is `lr-hide` → `lr-close-request` → state change → `lr-close` → `lr-after-hide`.
 A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
@@ -866,7 +834,7 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-close` (reason `'unmount'`) and `lr-after-hide` in that
+`lr-hide`, `lr-close` (`{ reason: 'unmount' }`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
@@ -2207,8 +2175,9 @@ its surface.
   and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
-- `arrow: boolean = false` (reflected) — the dropdown's own opt-in arrow; unlike on `lr-popover`
-  it is not deprecated. `withoutArrow` (`without-arrow`) still suppresses it.
+- `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
+  pointer. `arrow: boolean = true` remains its deprecated inverse alias (removal not before
+  24.0.0). Set `without-arrow` to preserve the previous omitted-arrow appearance.
 - `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are retained from
   `lr-popover` for existing Lyra consumers.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
@@ -3043,8 +3012,9 @@ Every reflected closed set normalizes identically from markup and untyped JavaSc
 unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
 while an unsupported `appearance` becomes the omitted state.
 
-**Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
-unless a listener calls `preventDefault()`. This name is not dialog-scoped — see `<lr-dialog>`'s
+**Events:** cancelable `lr-close-request` with `{ reason: 'close-button' }`; preventing default
+keeps the callout open. Otherwise it sets `open = false` and emits non-cancelable `lr-close`
+with the same reason object. This name is not dialog-scoped — see `<lr-dialog>`'s
 own `lr-close` section above for the full list of emitters and the target-filtering guard, which
 matters whenever a callout is nested inside a dialog.
 When accepted close or a direct `open = false` write removes the focused close action, focus moves

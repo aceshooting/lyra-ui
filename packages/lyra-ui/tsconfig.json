@@ -3,6 +3,12 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    // Source checks also run with rootDir widened to include test harnesses, before dist exists.
+    // Runtime consumers still resolve package.json's development/default import conditions.
+    "paths": {
+      "#lyra-dev-warning": ["./src/internal/dev-warning.production.ts"],
+      "#lyra-dev-attributes": ["./src/internal/dev-mode-attribute-warning.production.ts"]
+    },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "noUnusedLocals": true,
@@ -19,6 +25,7 @@
     "allowUnusedLabels": false,
     "useDefineForClassFields": false,
     "experimentalDecorators": true,
+    "importHelpers": true,
     "declaration": true,
     // Local-only: the published build runs through tsconfig.build.json, which turns
     // both of these off because `dist` ships without `src`, leaving every emitted map

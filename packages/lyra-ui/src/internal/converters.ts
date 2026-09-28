@@ -168,6 +168,12 @@ export const presenceTrueDefaultBooleanConverter: ComplexAttributeConverter<bool
   toAttribute: (value): string | null => (value ? '' : null),
 };
 
+/** Presence boolean preserving the explicit legacy spelling `="false"`. Absence is false. */
+export const falseDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute: (value) => value !== null && value !== 'false',
+  toAttribute: (value): string | null => (value ? '' : null),
+};
+
 /** Native spellcheck serialization using the explicit `"true"` / `"false"` vocabulary. */
 export const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute: trueUnlessLiteralFalse,

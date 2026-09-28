@@ -6,7 +6,7 @@
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -15,6 +15,14 @@
 ---
 
 ## `lr-av-player`
+
+`controls-surface="regular"` (default) keeps the owned playback-rate toolbar's ordinary surface.
+`controls-surface="clear"` opts that toolbar into a white foreground over its own dark gradient
+scrim. Load `@aceshooting/lyra-ui/surfaces/glass.css` for its translucent recipe; without it the
+scrim remains opaque. This option never changes browser-owned native media controls. Increased
+contrast and reduced-transparency preferences make the treatment opaque; forced colours use
+system colours. The `LyraAvControlsSurface` type is `'regular' | 'clear'`.
+
 
 An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
@@ -49,6 +57,9 @@ consumer supplies `cues` directly.
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected),
 `volume: number = 1` (attribute `volume`, reflected; normalized to `0..1`),
+`controlsSurface: LyraAvControlsSurface = 'regular'` (attribute `controls-surface`, reflected) —
+selects the owned playback-rate toolbar treatment; `'clear'` uses a white foreground and dark
+gradient scrim, while browser-owned native media controls are unchanged,
 `rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
 `cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
 (attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is

@@ -87,8 +87,8 @@ export const styles = css`
   }
   [part="current-step-icon"] svg {
     display: block;
-    animation: lr-agent-run-spin
-      var(--lr-agent-run-spin, var(--_lr-agent-run-spin)) infinite;
+    animation: var(--_lr-motion-animation, lr-agent-run-spin
+      var(--lr-agent-run-spin, var(--_lr-agent-run-spin)) infinite);
   }
   [part="current-step-label"] {
     overflow: hidden;

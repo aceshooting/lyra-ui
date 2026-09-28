@@ -87,6 +87,45 @@ function hasSubclassAnnotationOverride(key, entry, superclass) {
   );
 }
 
+const DEPRECATION_ARRAYS = [...INHERITABLE_ARRAYS, 'cssStates'];
+const deprecationKey = (entry) => `${entry.kind}:${entry.name ?? ''}`;
+
+function compactDeclarationDeprecations(declaration) {
+  const records = new Map((declaration.deprecations ?? []).map((entry) => [deprecationKey(entry), entry]));
+  for (const key of DEPRECATION_ARRAYS) {
+    for (const entry of declaration[key] ?? []) {
+      if (!entry.deprecation) continue;
+      const reference = deprecationKey(entry.deprecation);
+      if (JSON.stringify(records.get(reference)) !== JSON.stringify(entry.deprecation)) continue;
+      entry.deprecated ??= true;
+      entry.deprecationRef = reference;
+      delete entry.deprecation;
+    }
+  }
+}
+
+/** Expand shared deprecation records without changing the manifest's inheritance topology. */
+export function expandManifestDeprecations(manifest) {
+  const output = structuredClone(manifest);
+  for (const module of output.modules ?? []) {
+    for (const declaration of module.declarations ?? []) {
+      const records = new Map((declaration.deprecations ?? []).map((entry) => [deprecationKey(entry), entry]));
+      for (const key of DEPRECATION_ARRAYS) {
+        for (const entry of declaration[key] ?? []) {
+          if (entry.deprecationRef === undefined) continue;
+          const record = records.get(entry.deprecationRef);
+          if (!record) throw new Error(`${declaration.name}: dangling deprecation reference ${entry.deprecationRef}`);
+          if (entry.deprecation !== undefined && JSON.stringify(entry.deprecation) !== JSON.stringify(record))
+            throw new Error(`${declaration.name}: conflicting deprecation reference ${entry.deprecationRef}`);
+          entry.deprecation = structuredClone(record);
+          delete entry.deprecationRef;
+        }
+      }
+    }
+  }
+  return output;
+}
+
 /**
  * Produces the published Custom Elements Manifest representation. Private/protected implementation
  * members are never public API, and standard-resolvable inherited surfaces belong on their base
@@ -116,6 +155,7 @@ export function compactManifest(manifest) {
         });
         if (declaration[key].length === 0) delete declaration[key];
       }
+      compactDeclarationDeprecations(declaration);
     }
   }
   return output;
@@ -125,7 +165,7 @@ export function compactManifest(manifest) {
  * emit flattened editor/framework declarations. Public consumers may perform the same traversal
  * directly from the compact standards-compliant manifest. */
 export function expandManifestInheritance(manifest) {
-  const output = structuredClone(manifest);
+  const output = expandManifestDeprecations(manifest);
   const index = declarationIndex(output);
   const expanded = new WeakSet();
   const active = new WeakSet();

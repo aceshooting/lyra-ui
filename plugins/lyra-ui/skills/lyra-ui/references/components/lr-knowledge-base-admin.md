@@ -6,7 +6,7 @@
 - **Class** `LyraKnowledgeBaseAdmin`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated property** `hideIngestion` / `hide-ingestion` since `21.1.0`; use property `without-ingestion`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -32,14 +32,14 @@ normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.
 
-**Events:** `lr-tab-change` (`{ tab }`, emitted only for a distinct accepted selection),
+**Events:** `lr-tab-change` (`{ activeTab }`, emitted only for a distinct accepted selection),
 `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
 `lr-activate` (`detail: { value: 'sources' | 'ingestion' }`, bubbling, composed, non-cancelable)
 fires on **every** user activation of an available tab — a click, or an Arrow/Home/End key —
 whether or not `activeTab` actually moved. `value` is the activated tab, the same identity
-`lr-tab-change` reports under the key `tab`. It reports that the user picked a tab and gates
+`lr-tab-change` reports under the key `activeTab`. It reports that the user picked a tab and gates
 nothing. Use it for the repeat pick `lr-tab-change` deliberately stays silent for — "refresh that
 queue" is a real intent — which from the keyboard is otherwise unobservable, because Home on an
 already-first active tab (or End on an already-last one) activates a tab and produces no click at

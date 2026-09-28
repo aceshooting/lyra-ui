@@ -10,7 +10,9 @@ import { styles } from './button-group.styles.js';
  * `<lr-button-group>` — a responsive grouping primitive for related actions.
  * It preserves the consumer's button elements and exposes the group semantics
  * on the element that owns the label. A host `aria-label` wins by attribute
- * presence, including an explicitly empty value.
+ * presence, including an explicitly empty value. The group sizes to its content at every
+ * allocation; an explicit host width remains respected. Set `::part(base) { inline-size: 100% }`
+ * when its internal row should fill that allocation.
  *
  * @customElement lr-button-group
  * @slot - Buttons or other action controls.

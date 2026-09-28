@@ -157,9 +157,9 @@ describe('lr-avatar', () => {
     expect(replacement.getAttribute('src')).to.equal(TEST_IMAGE_SRC_REPLACEMENT);
   });
 
-  it('defaults size to medium, shape to circle, variant to neutral', async () => {
+  it('defaults size to m, shape to circle, variant to neutral', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
-    expect(el.size).to.equal('medium');
+    expect(el.size).to.equal('m');
     expect(el.shape).to.equal('circle');
     expect(el.variant).to.equal('neutral');
   });
@@ -193,10 +193,10 @@ describe('lr-avatar', () => {
     expect(background(stale), 'a stale tone="brand" no longer does').to.equal(background(neutral));
   });
 
-  it('normalizes a removed legacy sm/md/lg spelling to medium', async () => {
+  it('normalizes a removed legacy sm/md/lg spelling to m', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB" size="lg"></lr-avatar>`)) as LyraAvatar;
-    expect(el.size).to.equal('medium');
-    expect(el.getAttribute('size')).to.equal('medium');
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
   });
 
   it('is accessible', async () => {
@@ -622,10 +622,10 @@ it('normalizes every closed presentation property after foreign runtime writes',
   (el as unknown as { variant: string }).variant = 'purple';
   await el.updateComplete;
   expect([el.loading, el.size, el.shape, el.variant]).to.deep.equal([
-    'eager', 'medium', 'circle', 'neutral',
+    'eager', 'm', 'circle', 'neutral',
   ]);
   expect([el.getAttribute('size'), el.getAttribute('shape'), el.getAttribute('variant')]).to.deep.equal([
-    'medium', 'circle', 'neutral',
+    'm', 'circle', 'neutral',
   ]);
 });
 
@@ -750,4 +750,13 @@ it('paints the neutral disc from the neutral quiet fill role, not the border tok
   const el = (await fixture(html`<lr-avatar initials="AB" label="Account owner" style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"></lr-avatar>`)) as LyraAvatar;
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
+it('defaults its Lyra size extension to m and keeps the medium spelling', async () => {
+  const el = await fixture<LyraAvatar>(html`<lr-avatar initials="AB"></lr-avatar>`);
+  expect(el.size).to.equal('m');
+  const initialWidth = el.getBoundingClientRect().width;
+  el.size = 'medium';
+  await el.updateComplete;
+  expect(el.getBoundingClientRect().width).to.equal(initialWidth);
 });

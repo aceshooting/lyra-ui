@@ -6,7 +6,7 @@
 - **Class** `LyraAgentEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated css-property** `--lr-agent-eval-dashboard-active-background` since `21.1.0`; use css-property `--lr-agent-eval-dashboard-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `showChart` / `show-chart` since `21.1.0`; use property `without-chart`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none

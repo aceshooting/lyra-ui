@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './file-tree.js';
 import type { LyraFileTree, FileTreeNode } from './file-tree.js';
@@ -18,6 +19,8 @@ function required<T>(value: T | undefined, context: string): T {
   if (value === undefined) throw new Error(`Missing ${context}`);
   return value;
 }
+
+expectLocaleFallback('ar', ['fileTreeDiffSummary', 'fileTreeLabel', 'fileTypeFile', 'noData']);
 
 describe('lr-file-tree', () => {
   it('renders a row per file/directory, deepest-first order preserved', async () => {

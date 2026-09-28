@@ -1610,19 +1610,20 @@ it("rebinds carousel globals, timers, slides, and announcements to an adopted if
     frameDocument,
     "visibilityState"
   );
-  let frameMediaQueries = 0;
+  const frameMediaQueries: string[] = [];
+  let frameMediaSubscriptions = 0;
   let frameIntervalSchedules = 0;
   let frameIntervalClears = 0;
   let autoplayTick: (() => void) | undefined;
   let el: LyraCarousel | undefined;
 
   frameWindow.matchMedia = ((query: string) => {
-    frameMediaQueries += 1;
+    frameMediaQueries.push(query);
     return {
       matches: false,
       media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
+      addEventListener: () => { frameMediaSubscriptions++; },
+      removeEventListener: () => { frameMediaSubscriptions--; },
     } as unknown as MediaQueryList;
   }) as typeof frameWindow.matchMedia;
   frameWindow.setInterval = ((handler: TimerHandler) => {
@@ -1654,7 +1655,9 @@ it("rebinds carousel globals, timers, slides, and announcements to an adopted if
     await el.updateComplete;
 
     expect(el.slides, "iframe-realm HTML elements remain valid slides").to.equal(2);
-    expect(frameMediaQueries, "reconnect reads the adopted document's media query").to.equal(1);
+    expect(frameMediaQueries, "reconnect reads the adopted document's media query")
+      .to.include('(prefers-reduced-motion: reduce)');
+    expect(frameMediaSubscriptions, 'the adopted document watches motion preference changes').to.equal(1);
     expect(
       frameDocument.querySelector(
         `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
@@ -1696,6 +1699,7 @@ it("rebinds carousel globals, timers, slides, and announcements to an adopted if
     );
 
     el.remove();
+    expect(frameMediaSubscriptions, 'disconnect releases the adopted motion watcher').to.equal(0);
     const schedulesAfterDisconnect = frameIntervalSchedules;
     frameDocument.dispatchEvent(new frameWindow.Event("visibilitychange"));
     expect(
@@ -3451,10 +3455,6 @@ it("falls back to no reduced-motion query and an inline timer-less scheduler in 
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(
-      (el as unknown as { mediaQuery?: MediaQueryList }).mediaQuery,
-      "no window means no media query to hold"
-    ).to.be.undefined;
-    expect(
       (el as unknown as { reduceMotion: boolean }).reduceMotion,
       "falls back to false"
     ).to.be.false;
@@ -3893,3 +3893,5 @@ describe('collecting already-slotted slides without relying on the initial slotc
     }
   });
 });
+
+expectDeprecatedUsage('lr-carousel', 'property', 'accessibleLabel');

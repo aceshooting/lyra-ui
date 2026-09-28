@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-pan-zoom.js to register this component. */
 import { defineElement } from '../../../internal/prefix.js';
 import { LyraPanZoom } from './pan-zoom.class.js';
 

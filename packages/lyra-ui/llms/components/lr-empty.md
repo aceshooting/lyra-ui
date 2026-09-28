@@ -6,7 +6,7 @@
 - **Class** `LyraEmpty`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below

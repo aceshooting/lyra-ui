@@ -195,7 +195,7 @@ export const styles = css`
   }
   :host([status='streaming']) [part='status-indicator'] {
     background: var(--lr-chat-message-streaming-indicator-color, var(--lr-color-brand));
-    animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-chat-message-pulse var(--lr-transition-ambient) infinite);
   }
   :host([status='failed']) [part='status-indicator'] {
     background: var(--lr-chat-message-failed-indicator-color, var(--lr-color-danger));

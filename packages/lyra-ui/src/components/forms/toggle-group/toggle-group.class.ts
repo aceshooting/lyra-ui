@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -144,6 +145,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   // Both details are detached and frozen at the boundary so a listener cannot mutate the group's
   // bookkeeping through them; `option` is the one field kept by identity, because naming which
   // toggle is acting is the point of it.
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-toggle-group-toggle-request',
     'lr-change',

@@ -6,8 +6,7 @@
 - **Class** `LyraGraphLegend`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecated event** `lr-before-visibility-change` since `19.0.1`; use event `addEventListener('lr-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated property** `interactive` / `interactive` since `21.1.0`; use property `without-interaction`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -43,10 +42,7 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
 **Events:** cancelable `lr-visibility-change-request` (`detail: { hiddenTypes }`, a frozen complete
 next array) fires before a toggle changes state or announces it. Preventing it suppresses all three.
 `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array) fires after an
-accepted assignment and announcement. `lr-before-visibility-change` is a **deprecated** alias of
-`lr-visibility-change-request`, fired immediately after it from the same gesture with the same
-frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners to
-`lr-visibility-change-request`.
+accepted assignment and announcement.
 
 **Slots:** none.
 

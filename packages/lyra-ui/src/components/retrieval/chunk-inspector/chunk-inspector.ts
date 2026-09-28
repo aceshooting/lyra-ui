@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-chunk-inspector.js to register this component. */
 export * from './chunk-inspector.class.js';
 import { LyraChunkInspector } from './chunk-inspector.class.js';
 import { defineElement } from '../../../internal/prefix.js';

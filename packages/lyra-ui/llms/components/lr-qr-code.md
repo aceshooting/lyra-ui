@@ -6,7 +6,7 @@
 - **Class** `LyraQrCode`, also available unregistered from `@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated css-property** `--lr-qr-code-background` since `21.1.0`; use css-property `--lr-qr-code-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `base` since `8.2.3`; use part `::part(qr-code)`; removal not before `10.0.0` — The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it.
 - **Optional peers** `qrcode` — see `llms/peers.md`

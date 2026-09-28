@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -129,6 +130,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     super.attributeChangedCallback(name, oldValue, value);
     if (name === 'aria-level' && oldValue !== value) this.requestUpdate();
   }
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'entity',

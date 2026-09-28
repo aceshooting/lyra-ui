@@ -50,3 +50,14 @@ export const InsideARail: StoryObj = {
     </div>
   `,
 };
+
+export const HeadingLevels: StoryObj = {
+  render: () => html`
+    <lr-app-rail-group heading="Secondary navigation" heading-level="2">
+      <lr-app-rail-item href="/docs">Documentation</lr-app-rail-item>
+    </lr-app-rail-group>
+    <lr-app-rail-group heading="Quick links" heading-level="none">
+      <lr-app-rail-item href="/help">Help</lr-app-rail-item>
+    </lr-app-rail-group>
+  `,
+};

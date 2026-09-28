@@ -9,6 +9,8 @@ export const THEME_ATTRIBUTES = [
   'data-lr-density',
   'data-lr-accent',
   'data-lr-theme-scope',
+  'data-lr-contrast',
+  'data-lr-motion',
   'data-theme',
   'data-color-scheme',
 ] as const;

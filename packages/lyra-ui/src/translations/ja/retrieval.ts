@@ -5,6 +5,16 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: '研究の進捗状況',
+  researchProgressEmpty: '利用可能な調査手順はありません。',
+  researchProgressLimit: '最初の {count} の調査ステップを表示します。',
+  researchProgressStatusPending: '保留中',
+  researchProgressStatusRunning: '進行中',
+  researchProgressStatusCompleted: '完了',
+  researchProgressStatusFailed: '失敗しました',
+  researchProgressSources: {
+    other: '{count} ソース',
+  },
   graphLegendLabel: 'グラフの凡例',
   entityChipWithType: '{label}、{type}',
   showMore: 'もっと見る',

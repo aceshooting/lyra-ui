@@ -16,6 +16,7 @@ import {
   isEditorProperty,
   webTypesElementContributions,
 } from './editor-web-types.mjs';
+import { editorDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -96,14 +97,16 @@ const synthetic = {
 const properties = elementProperties(synthetic);
 assert.deepEqual(
   properties.map(({ name }) => name),
-  ['datasets', 'labelText', 'resolved', 'autoWidth'],
-  'static, private and method members are not JS properties',
+  ['datasets', 'labelText', 'resolved'],
+  'deprecated, static, private and method members are not JS properties',
 );
 
 const datasets = properties[0];
 assert.equal(datasets.type, 'readonly ExampleDataset[]');
 assert.equal(datasets.default, '[]');
-assert.equal(datasets.description, 'Series rendered by the chart.\n\nSecond paragraph.');
+assert.equal(datasets.description, editorDescription('Series rendered by the chart.', 'lr-example'));
+assert.ok(!datasets.description.includes('Second paragraph.'));
+assert.match(datasets.description, /\[Documentation\]\(https:\/\//);
 assert.ok(!Object.hasOwn(datasets, 'read-only'), 'a writable property carries no read-only flag');
 
 const labelText = properties[1];
@@ -113,29 +116,19 @@ assert.match(labelText.description, /Reflected to its attribute\./);
 
 assert.equal(properties[2]['read-only'], true);
 
-const autoWidth = properties[3];
-assert.equal(autoWidth.deprecated, 'Use `canvas="auto"` instead.');
-assert.match(autoWidth.description, /Deprecated since `8\.0\.0`/);
-assert.match(autoWidth.description, /Removal is not permitted before `10\.0\.0`/);
-
-assert.deepEqual(elementEvents(synthetic), [
-  {
-    name: 'lr-cell-click',
-    description: 'Fired on cell activation.',
-    type: 'CustomEvent<LyraExampleCellClickDetail>',
-  },
-  { name: 'lr-change' },
-]);
-
-assert.deepEqual(elementSlots(synthetic), [
-  { name: '', description: 'Default content.' },
-  { name: 'header', description: 'Header content.' },
-]);
+assert.ok(!properties.some(({ name }) => name === 'autoWidth'));
+assert.equal(editorSummary('First sentence. Second sentence.'), 'First sentence.');
+assert.equal(editorSummary('x'.repeat(500)).length, 238);
+assert.deepEqual(elementEvents(synthetic).map(({ name }) => name), ['lr-cell-click', 'lr-change']);
+assert.equal(elementEvents(synthetic)[0].description, editorDescription('Fired on cell activation.', 'lr-example'));
+assert.deepEqual(elementSlots(synthetic).map(({ name }) => name), ['', 'header']);
+assert.deepEqual(elementEvents({ events: [{ name: 'old', deprecated: true }] }), []);
+assert.deepEqual(elementSlots({ slots: [{ name: 'old', deprecation: { since: '21.0.0' } }] }), []);
 
 const contributions = webTypesElementContributions(synthetic);
 assert.deepEqual(Object.keys(contributions), ['slots', 'js']);
 assert.deepEqual(Object.keys(contributions.js), ['properties', 'events']);
-assert.equal(contributions.js.properties.length, 4);
+assert.equal(contributions.js.properties.length, 3);
 
 assert.deepEqual(
   webTypesElementContributions({ tagName: 'lr-bare' }),
@@ -173,11 +166,11 @@ let tagsWithSlots = 0;
 for (const declaration of declarations) {
   const projection = webTypesElementContributions(declaration);
   const expectedProperties = (declaration.members ?? [])
-    .filter((member) => member.kind === 'field' && !member.static &&
+    .filter((member) => member.kind === 'field' && !member.static && isCurrentEditorEntry(member) &&
       (member.privacy === undefined || member.privacy === 'public'))
     .map(({ name }) => name);
-  const expectedEvents = (declaration.events ?? []).map(({ name }) => name);
-  const expectedSlots = (declaration.slots ?? []).map(({ name }) => name);
+  const expectedEvents = (declaration.events ?? []).filter(isCurrentEditorEntry).map(({ name }) => name);
+  const expectedSlots = (declaration.slots ?? []).filter(isCurrentEditorEntry).map(({ name }) => name);
 
   assert.deepEqual(
     projection.js?.properties?.map(({ name }) => name) ?? [],
@@ -206,18 +199,18 @@ for (const declaration of declarations) {
     if (!isEditorProperty(member) || !member.description) continue;
     const property = projection.js.properties.find(({ name }) => name === member.name);
     assert.ok(
-      property.description?.includes(member.description),
+      property.description?.includes(editorSummary(member.description)),
       `${declaration.tagName}.${member.name} carries its manifest description`,
     );
   }
-  for (const event of declaration.events ?? []) {
+  for (const event of (declaration.events ?? []).filter(isCurrentEditorEntry)) {
     const projected = projection.js.events.find(({ name }) => name === event.name);
-    if (event.description) assert.equal(projected.description, event.description);
+    assert.equal(projected.description, editorDescription(event.description, declaration.tagName));
     if (event.type?.text) assert.equal(projected.type, event.type.text);
   }
-  for (const slot of declaration.slots ?? []) {
+  for (const slot of (declaration.slots ?? []).filter(isCurrentEditorEntry)) {
     const projected = projection.slots.find(({ name }) => name === slot.name);
-    if (slot.description) assert.equal(projected.description, slot.description);
+    assert.equal(projected.description, editorDescription(slot.description, declaration.tagName));
   }
 
   projectedProperties += projection.js?.properties?.length ?? 0;
@@ -228,7 +221,7 @@ for (const declaration of declarations) {
   if (projection.slots?.length) tagsWithSlots += 1;
 }
 
-assert.ok(projectedProperties > 3000, `expected the full field inventory, got ${projectedProperties}`);
+assert.ok(projectedProperties > 2500, `expected the full field inventory, got ${projectedProperties}`);
 assert.ok(projectedEvents > 1000, `expected the full event inventory, got ${projectedEvents}`);
 assert.ok(projectedSlots > 400, `expected the full slot inventory, got ${projectedSlots}`);
 assert.equal(tagsWithProperties, declarations.length, 'every element contributes JS properties');

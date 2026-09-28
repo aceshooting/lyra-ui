@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-eval-run.js to register this component. */
 // policy-allow(component-dependency: lr-icon): the composed <lr-icon-button> reaches this graph
 // through its LEAN registration entry, which deliberately registers only that tag. <lr-icon> is
 // reachable from lr-icon-button's class module only when its `icon`/`src` attribute is set, and

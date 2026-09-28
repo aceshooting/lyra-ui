@@ -56,7 +56,7 @@ const requestRowKey: number = requestDetail.detail.rowKey;
 void requestRowKey;
 
 declare const selectionDetail: LyraTableEventMap<Row, number>['lr-selection-change'];
-const selectionKeys: readonly number[] = selectionDetail.detail.rowKeys;
+const selectionKeys: readonly number[] = selectionDetail.detail.selectedRowKeys;
 void selectionKeys;
 
 // --- an unparameterized table keeps the pre-existing `string | number` union unchanged -----------

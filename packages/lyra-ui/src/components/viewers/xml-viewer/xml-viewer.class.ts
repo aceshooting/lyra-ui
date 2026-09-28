@@ -836,7 +836,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     await this.updateComplete;
     const active = this.renderRoot.querySelector('[data-active-match]') as HTMLElement | null;
     active?.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
       block: 'center',
     });
   }

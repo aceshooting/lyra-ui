@@ -163,7 +163,7 @@ export const styles = css`
     }
   }
   .card[data-pulse] {
-    animation: lr-flow-node-pulse var(--lr-duration-ambient) var(--lr-easing-emphasized) infinite;
+    animation: var(--_lr-motion-animation, lr-flow-node-pulse var(--lr-duration-ambient) var(--lr-easing-emphasized) infinite);
   }
   :host([status='running']) .card {
     border-color: var(--lr-flow-node-running-border, var(--lr-color-brand));

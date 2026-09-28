@@ -93,13 +93,13 @@ export const styles = css`
   /* A three-quarter arc, not a full ring: a full circle looks identical at every rotation
      frame. */
   :host([status="running"]) [part="icon"] svg {
-    animation: lr-tool-call-chip-spin
-      var(--lr-tool-call-chip-spin, var(--_lr-tool-call-chip-spin)) infinite;
+    animation: var(--_lr-motion-animation, lr-tool-call-chip-spin
+      var(--lr-tool-call-chip-spin, var(--_lr-tool-call-chip-spin)) infinite);
   }
   /* Subtler than the spin: a slow opacity breathe, so several still-queued chips do not compete
      visually with any 'running' ones next to them. */
   :host([status="pending"]) [part="icon"] svg {
-    animation: lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite);
   }
 
   [part="label"] {

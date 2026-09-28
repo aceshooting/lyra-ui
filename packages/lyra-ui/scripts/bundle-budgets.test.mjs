@@ -558,6 +558,11 @@ async function probeToolParamFormRegistrationGraph() {
       metafile: true,
       platform: 'node',
       plugins: [registrationStubs],
+      // This probe bundles source before dist exists; keep the package's production condition.
+      alias: {
+        '#lyra-dev-warning': path.join(packageDir, 'src/internal/dev-warning.production.ts'),
+        '#lyra-dev-attributes': path.join(packageDir, 'src/internal/dev-mode-attribute-warning.production.ts'),
+      },
       write: false,
     });
     assert.equal(result.outputFiles.length, 1);

@@ -6,13 +6,14 @@
 - **Class** `LyraDataGrid`, also available unregistered from `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated css-property** `--lr-data-grid-control-active-background` since `21.1.0`; use css-property `--lr-data-grid-control-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-data-grid-control-hover-background` since `21.1.0`; use css-property `--lr-data-grid-control-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-data-grid-page-size-active-background` since `21.1.0`; use css-property `--lr-data-grid-page-size-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-data-grid-row-active-background` since `21.1.0`; use css-property `--lr-data-grid-row-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-data-grid-sortable-header-active-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-data-grid-sortable-header-hover-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Optional peers** none
 - **Themeable via** 59 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -221,14 +222,17 @@ contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
-`error` state (see `error` above); `lr-retry` (`detail: null`, cancelable) — the built-in
+`error` state (see `error` above); `lr-retry-request` and `lr-retry` (`detail: null`, cancelable) — the built-in
 `[part='retry-button']` was activated, only rendered while `error` is set; the default action
 clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
-composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry` are cancelable. Structured
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, `lr-retry-request`, and `lr-retry` are cancelable. Structured
 details and their owned collections are frozen. The toolbar search and active column-filter inputs
 re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
 preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
 crossing the shadow boundary.
+`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
+null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
+alias is not before 24.0.0.
 
 **Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
 leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the
@@ -295,7 +299,14 @@ localized loading text to that shared polite sink, including repeated loading cy
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
 `--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
-`--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
+`--transition-duration`. Defaults resolve through Lyra design tokens. The optional
+`--lr-theme-table-row-height` supplies a minimum alongside the grid's existing size-specific
+baseline. Density scales that baseline and minimum together; it never makes every size share one
+fixed row height. `--row-height` and `--header-row-height` remain explicit component overrides,
+subject to a 24px minimum and the active density's target floor. Virtual-row estimates read the
+same resolved height as the CSS, and measured content may make individual rows taller.
+`--lr-theme-border-radius-container` changes the outer frame while control corners keep their own
+radius; `--border-radius` continues to override both. Set `--max-height: none` to
 render every row instead of a virtual window. `--border-color` (default `var(--lr-color-border)`)
 paints the control boundaries (search, buttons, page size) and, unless the separate grid-line hook
 is set, the grid lines too. `--lr-data-grid-line-color` (default

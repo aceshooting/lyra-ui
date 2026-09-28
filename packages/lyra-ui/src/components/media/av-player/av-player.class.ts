@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type {
@@ -42,6 +43,10 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
+
+/** Surface treatment for the player-owned playback-rate controls. */
+export type LyraAvControlsSurface = 'regular' | 'clear';
+const CONTROLS_SURFACE = literalSetConverter<LyraAvControlsSurface>(['regular', 'clear'], 'regular');
 
 export type LyraAvKind = 'audio' | 'video';
 export type LyraAvPreload = 'none' | 'metadata' | 'auto';
@@ -267,7 +272,7 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   native event.
  * @csspart base - The root wrapper.
  * @csspart media - The native `<audio>`/`<video>` element.
- * @csspart toolbar - The playback-rate control row.
+ * @csspart toolbar - The playback-rate control row. The clear surface owns a gradient scrim beneath its controls; native media controls remain browser-owned.
  * @csspart rate-select - The playback-rate `<select>`.
  * @csspart timeline - The waveform canvas or plain seek rail; click-to-seek and arrow-key seeking.
  *   It is disabled and removed from sequential focus until duration is positive.
@@ -390,6 +395,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this._volume = finiteRange(next, 1, 0, 1);
     this.requestUpdate('volume', old);
   }
+  /** The clear treatment requires surfaces/glass.css and draws its own contrast-qualified scrim.
+   * Only the owned playback-rate toolbar is affected; native media controls stay browser-owned. */
+  @property({ attribute: 'controls-surface', reflect: true, converter: CONTROLS_SURFACE })
+  controlsSurface: LyraAvControlsSurface = 'regular';
+
   private _rates: readonly number[] = DEFAULT_RATES;
   /** Selectable rates offered by `[part="rate-select"]`; snapshotted, deduplicated, bounded to 32. */
   @property({ attribute: false })
@@ -545,6 +555,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('controlsSurface')) {
+      this.controlsSurface = CONTROLS_SURFACE.normalizeReflected(this, 'controls-surface', this.controlsSurface);
+    }
     // A host aria-label names the aggregate player, so give it a real default semantic owner.
     // An explicit author `role` attribute still overrides ElementInternals semantics.
     this.semanticInternals.role = hostAriaLabel(this) !== null ? 'region' : null;

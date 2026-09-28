@@ -121,6 +121,8 @@ function keyboardHighlightIdFrom(
 // `error TS2304: Cannot find name 'MarkdownRuntimeEventMap'` in a consumer's declaration check).
 export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-link-activate': CustomEvent<{ href: string }>;
+  /** @deprecated Use lr-link-activate. */
   'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
@@ -838,7 +840,10 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       event.clientY
     ) ?? keyboardHighlightIdFrom(this.resolvedHighlightRanges, event);
     if (highlightId) this.emit('lr-highlight-activate', { highlightId });
-    if (href !== null) this.emit('lr-link-click', { href });
+    if (href !== null) {
+      this.emit('lr-link-activate', { href });
+      this.emit('lr-link-click', { href });
+    }
   };
 
   override render(): TemplateResult {

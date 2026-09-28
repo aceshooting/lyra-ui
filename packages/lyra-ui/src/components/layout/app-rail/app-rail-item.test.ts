@@ -749,6 +749,31 @@ describe("current-state cssprops", () => {
 // removes it outright -- `active` is now a plain, unobserved expando: Lit no longer manages it as
 // a reactive property, and setting it (as an attribute or after mount) has no effect on the
 // rendered current state.
+async function withRemovedActiveWarning(body: () => Promise<LyraAppRailItem>): Promise<LyraAppRailItem> {
+  const global = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const previousStore = global.litIssuedWarnings;
+  const store = (global.litIssuedWarnings ??= new Set<string>());
+  const key = 'lyra-unknown-attribute:lr-app-rail-item:active';
+  const wasSeeded = store.delete(key);
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => {
+    const message = args.map(String).join(' ');
+    if (message === "<lr-app-rail-item>: unknown attribute 'active'") warnings.push(message);
+    else originalWarn.apply(console, args);
+  };
+  try {
+    const el = await body();
+    expect(warnings).to.have.length(1);
+    return el;
+  } finally {
+    console.warn = originalWarn;
+    if (wasSeeded) store.add(key);
+    else store.delete(key);
+    if (previousStore === undefined) delete global.litIssuedWarnings;
+  }
+}
+
 describe('active (removed 16.0.0; no longer an alias for current)', () => {
   it('is not registered as a Lit reactive property', async () => {
     const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
@@ -757,9 +782,9 @@ describe('active (removed 16.0.0; no longer an alias for current)', () => {
   });
 
   it('does not mark the item current when set as the active attribute', async () => {
-    const el = (await fixture(
+    const el = await withRemovedActiveWarning(() => fixture<LyraAppRailItem>(
       html`<lr-app-rail-item active>Reports</lr-app-rail-item>`
-    )) as LyraAppRailItem;
+    ));
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part~="base"]')!;
     expect(base.getAttribute('aria-current')).to.equal('false');
@@ -818,9 +843,9 @@ describe('current-indicator part', () => {
   });
 
   it('does not render for the removed `active` attribute', async () => {
-    const el = (await fixture(
+    const el = await withRemovedActiveWarning(() => fixture<LyraAppRailItem>(
       html`<lr-app-rail-item href="/home" active>Home</lr-app-rail-item>`
-    )) as LyraAppRailItem;
+    ));
     expect(
       el.shadowRoot!.querySelector('[part="current-indicator"]') === null,
       'current-indicator should not render for the removed active attribute'

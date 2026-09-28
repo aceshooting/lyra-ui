@@ -6,7 +6,7 @@
 - **Class** `LyraMemoryPanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-memory-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below

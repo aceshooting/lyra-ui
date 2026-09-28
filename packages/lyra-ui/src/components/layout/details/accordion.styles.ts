@@ -17,7 +17,7 @@ export const styles = css`
     min-inline-size: 0;
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-accordion-outlined-border-color, var(--lr-color-border-subtle));
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-container);
     background: var(--lr-accordion-outlined-bg, var(--lr-color-surface));
   }
   :host([appearance='filled']) [part='base'] {

@@ -1,3 +1,5 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { toRgba } from '../../../../test/color-contrast.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./app-rail.js";
 import {
@@ -20,6 +22,11 @@ import { sendKeys } from '@web/test-runner-commands';
 // property or invoke the component's own private matchMedia listener
 // directly with a fabricated event -- see computeAppRailMode's doc for why
 // the breakpoint-response logic is a separately-testable pure function.
+const normalizeColor = (value: string): string => {
+  const [r, g, b, a] = toRgba(value);
+  return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+};
+
 let originalMatchMedia: typeof window.matchMedia;
 
 beforeEach(() => {
@@ -32,6 +39,8 @@ beforeEach(() => {
       removeEventListener: () => {},
     } as unknown as MediaQueryList)) as typeof window.matchMedia;
 });
+
+expectLocaleFallback('ar-EG', ['navigation', 'openNavigation', 'resizeNavigation']);
 
 it("restores breakpoint, persistence, width, and automatic mode defaults after attribute removal", async () => {
   const automatic = (await fixture(
@@ -275,7 +284,7 @@ function resolvedInShadow(
   el.shadowRoot!.appendChild(probe);
   const value = getComputedStyle(probe).getPropertyValue(property);
   probe.remove();
-  return value;
+  return property.endsWith("color") ? normalizeColor(value) : value;
 }
 
 // -- computeAppRailMode (pure) -----------------------------------------
@@ -1068,7 +1077,7 @@ it("toggling emits lr-toggle with the new open state", async () => {
   expect((ev.detail as LyraAppRailToggleDetail).open).to.be.true;
 });
 
-it("fires lr-toggle as cancelable and keeps the overlay open when a host calls preventDefault()", async () => {
+it("fires lr-toggle-request as cancelable and keeps the overlay open when a host calls preventDefault()", async () => {
   const el = (await fixture(
     html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
@@ -1077,9 +1086,9 @@ it("fires lr-toggle as cancelable and keeps the overlay open when a host calls p
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
-  el.addEventListener("lr-toggle", (e) => e.preventDefault());
+  el.addEventListener("lr-toggle-request", (e) => e.preventDefault());
 
-  const listener = oneEvent(el, "lr-toggle");
+  const listener = oneEvent(el, "lr-toggle-request");
   toggle.click();
   const ev = await listener;
 
@@ -1087,7 +1096,7 @@ it("fires lr-toggle as cancelable and keeps the overlay open when a host calls p
   expect(el.open).to.be.false;
 });
 
-it("keeps a re-entrant mode change from a cancelable lr-toggle listener closed", async () => {
+it("keeps a re-entrant mode change from a cancelable lr-toggle-request listener closed", async () => {
   const el = (await fixture(
     html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
@@ -1096,7 +1105,7 @@ it("keeps a re-entrant mode change from a cancelable lr-toggle listener closed",
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
-  el.addEventListener("lr-toggle", () => {
+  el.addEventListener("lr-toggle-request", () => {
     el.forceMode = 'full';
   });
 
@@ -1838,7 +1847,7 @@ describe("resizable", () => {
 
     expect(resizable!.shadowRoot!.querySelector('[part="resizer"]') != null).to.be.true;
     expect(edge(plain!)).to.equal("rgb(1, 2, 3)");
-    expect(edge(resizable!)).to.equal("rgb(4, 5, 6)");
+    expect(normalizeColor(edge(resizable!))).to.equal("rgb(4, 5, 6)");
     expect(edge(iconOnly!)).to.equal("rgb(1, 2, 3)");
   });
 
@@ -3240,7 +3249,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     )) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).backgroundColor).to.equal(
+    expect(normalizeColor(getComputedStyle(base).backgroundColor)).to.equal(
       resolvedInShadow(el, "background: var(--lr-color-surface)", "background-color")
     );
 
@@ -3249,7 +3258,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     el.open = true;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).backgroundColor).to.equal(
+    expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.equal(
       resolvedInShadow(
         el,
         "background: var(--lr-color-surface-overlay)",
@@ -3267,13 +3276,13 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
       >`
     )) as LyraAppRail;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(10, 20, 30)");
+    expect(normalizeColor(getComputedStyle(base).backgroundColor)).to.equal("rgb(10, 20, 30)");
 
     fireMobileChange(el, true);
     await el.updateComplete;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(40, 50, 60)");
+    expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.equal("rgb(40, 50, 60)");
   });
 
   it("renders --lr-app-rail-header-padding/--lr-app-rail-footer-padding byte-identical to --lr-space-m when unset", async () => {
@@ -3864,14 +3873,14 @@ describe("app-rail canonical names and their deprecated aliases", () => {
         ><button>a</button></lr-app-rail
       >`
     )) as LyraAppRail;
-    expect(getComputedStyle(base(el)).backgroundColor).to.equal("rgb(10, 20, 30)");
+    expect(normalizeColor(getComputedStyle(base(el)).backgroundColor)).to.equal("rgb(10, 20, 30)");
     el.style.setProperty("--lr-app-rail-bg", "rgb(1, 2, 3)");
-    expect(getComputedStyle(base(el)).backgroundColor, "the canonical name wins").to.equal("rgb(1, 2, 3)");
+    expect(normalizeColor(getComputedStyle(base(el)).backgroundColor), "the canonical name wins").to.equal("rgb(1, 2, 3)");
     fireMobileChange(el, true);
     await el.updateComplete;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(40, 50, 60)");
+    expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.equal("rgb(40, 50, 60)");
   });
 
   it("reports the overlay state as expanded beside the deprecated open key", async () => {

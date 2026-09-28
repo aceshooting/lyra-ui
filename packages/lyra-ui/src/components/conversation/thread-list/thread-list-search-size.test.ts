@@ -67,41 +67,21 @@ async function searchableFixture(): Promise<LyraThreadList> {
 }
 
 describe('lr-thread-list search sizing', () => {
-  it('renders the untiered search field on exactly its pre-ladder geometry', async () => {
+  it('renders the default search field on the shared m geometry', async () => {
     const el = await searchableFixture();
     const expected = resolveInShadow(el, [
-      ['padding-inline-start', 'var(--lr-space-s)'],
-      ['padding-block-start', 'var(--lr-space-xs)'],
-      ['border-start-start-radius', 'var(--lr-radius)'],
+      ['min-block-size', 'var(--lr-form-control-height)'],
+      ['font-size', 'var(--lr-form-control-font-size)'],
+      ['padding-inline-start', 'var(--lr-form-control-padding-inline)'],
+      ['padding-block-start', 'var(--lr-form-control-padding-block)'],
+      ['border-start-start-radius', 'var(--lr-form-control-radius)'],
     ]);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
     const geometry = fieldGeometry(el);
-    const wrapperFontSize = getComputedStyle(
-      el.shadowRoot!.querySelector('[part="search"]')!
-    ).fontSize;
-
-    expect(el.size, 'no size tier is opted into by default').to.equal(
-      undefined
-    );
-    expect(el.hasAttribute('size')).to.equal(false);
-    // `min-block-size` never resolves while both the public hook and the tier slot are unset, so
-    // the field is exactly as tall as its own text plus padding -- its pre-ladder height.
-    expect(geometry['min-block-size']).to.equal('auto');
-    expect(geometry['font-size']).to.equal(wrapperFontSize);
-    expect(geometry['padding-inline-start']).to.equal(
-      expected['padding-inline-start']
-    );
-    expect(geometry['padding-inline-end']).to.equal(
-      expected['padding-inline-start']
-    );
-    expect(geometry['padding-block-start']).to.equal(
-      expected['padding-block-start']
-    );
-    expect(geometry['padding-block-end']).to.equal(
-      expected['padding-block-start']
-    );
-    expect(geometry['border-start-start-radius']).to.equal(
-      expected['border-start-start-radius']
-    );
+    for (const [property, value] of Object.entries(expected)) {
+      expect(geometry[property], property).to.equal(value);
+    }
   });
 
   it('resolves the search field onto the shared form-control ladder for a size tier', async () => {
@@ -153,7 +133,7 @@ describe('lr-thread-list search sizing', () => {
     expect(fieldGeometry(alias)).to.deep.equal(fieldGeometry(canonical));
   });
 
-  it('drops an unsupported size back to the untiered field and removes the attribute', async () => {
+  it('restores the m field after an unsupported size or attribute removal', async () => {
     const el = await searchableFixture();
     const untiered = fieldGeometry(el);
 
@@ -164,13 +144,13 @@ describe('lr-thread-list search sizing', () => {
     el.size = 'huge' as never;
     await el.updateComplete;
 
-    expect(el.size, 'an unsupported tier reads back as omitted').to.equal(
-      undefined
-    );
-    expect(
-      el.hasAttribute('size'),
-      'an unsupported tier must not leave a stale attribute for the tier selectors'
-    ).to.equal(false);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    el.size = 's';
+    await el.updateComplete;
+    el.removeAttribute('size');
+    await el.updateComplete;
+    expect(el.size).to.equal('m');
     expect(fieldGeometry(el)).to.deep.equal(untiered);
   });
 

@@ -5,6 +5,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  streamInterrupted: '스트림이 중단되었습니다.',
+  streamResume: '계속',
   chatViewportLabel: '채팅',
   newMessageCount: '새 메시지 {count}개',
   newMessagesCount: '새 메시지 {count}개',

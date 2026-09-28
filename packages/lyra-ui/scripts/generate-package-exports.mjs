@@ -1,3 +1,4 @@
+import { deriveLocaleDeclarationExports } from './declaration-entrypoints.mjs';
 import { isMainModule } from './is-main-module.mjs';
 
 // Replaces the broad component/AI wildcard package exports with the exact supported public
@@ -141,6 +142,8 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/positioner.ts',
   'src/utilities/prefix.ts',
   'src/utilities/scroll-lock.ts',
+  'src/utilities/scoped-registry.ts',
+  'src/utilities/scoped-registry-loader.ts',
   'src/utilities/theme.ts',
 ]);
 
@@ -246,12 +249,17 @@ export function findUnclassifiedHelperModules(
 
 export function deriveExplicitComponentExports(
   inventory,
-  { packageDir, helperModules = CURATED_COMPONENT_HELPER_MODULES } = {},
+  { packageDir, helperModules = CURATED_COMPONENT_HELPER_MODULES, exportDeprecations = [] } = {},
 ) {
   invariant(inventory?.schemaVersion === 1, 'schemaVersion must be 1');
   invariant(Array.isArray(inventory.components), 'components must be an array');
   invariant(Array.isArray(helperModules), 'helperModules must be an array');
 
+  // Only historical duplicate routes receive compatibility exports. Newly introduced components
+  // expose their stable tag registration and class module without creating a new deprecated route.
+  const compatibilityRoutes = new Set(
+    exportDeprecations.filter((entry) => entry.kind === 'entry-point').map((entry) => entry.name),
+  );
   const routes = new Map();
   const families = new Set();
   const tags = new Set();
@@ -275,13 +283,18 @@ export function deriveExplicitComponentExports(
     ]) {
       const [exportPath, target] = exportedModule(sourceModule);
       assertSourceExists(packageDir, sourceModule);
-      addRoute(routes, exportPath, target, `${component.tag} ${kind} module`);
+      if (kind === 'class' || compatibilityRoutes.has(exportPath)) {
+        addRoute(routes, exportPath, target, `${component.tag} ${kind} module`);
+      }
     }
 
     const aliasModule = `src/components/${component.tag}.ts`;
     assertSourceExists(packageDir, aliasModule);
     const [aliasExport, aliasTarget] = exportedModule(aliasModule);
-    addRoute(routes, aliasExport, aliasTarget, `${component.tag} stable alias`);
+    addRoute(routes, aliasExport, {
+      types: `./${component.registrationModule.replace(/^src\//, 'dist/').replace(/\.ts$/, '.d.ts')}`,
+      default: aliasTarget,
+    }, `${component.tag} stable alias`);
   }
 
   for (const family of families) {
@@ -338,12 +351,12 @@ export function deriveExplicitUtilityExports(
 }
 
 /**
- * Retains every non-component export byte-for-byte at the JSON value level, removes the broad AI
+ * Retains unrelated export targets, regenerates exact component and locale routes, removes the broad AI
  * wildcard, and replaces the complete component export region at its existing position. Keeping
  * `./ai` itself preserves the curated AI barrel while preventing private adapter/assertion modules
  * from becoming accidental public contracts.
  */
-export function closeWildcardPackageExports(currentExports, componentExports, utilityExports = {}) {
+export function closeWildcardPackageExports(currentExports, componentExports, utilityExports = {}, localeExports = {}) {
   invariant(currentExports && typeof currentExports === 'object' && !Array.isArray(currentExports), 'package exports must be an object');
   const generatedEntries = Object.entries(componentExports);
   const generatedUtilityEntries = Object.entries(utilityExports);
@@ -376,10 +389,12 @@ export function closeWildcardPackageExports(currentExports, componentExports, ut
       continue;
     }
     if (key === './ai/*') continue;
+    if (key.startsWith('./translations/') && key !== './translations/*' && !key.startsWith('./translations/pseudo/')) continue;
     result[key] = value;
   }
   insertComponents();
   insertUtilities();
+  Object.assign(result, localeExports);
   return result;
 }
 
@@ -388,14 +403,17 @@ function expectedPackage(packageDir) {
   const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
   const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'));
-  const componentExports = deriveExplicitComponentExports(inventory, { packageDir });
+  const metadata = JSON.parse(readFileSync(join(packageDir, 'scripts', 'fixtures', 'component-metadata.json'), 'utf8'));
+  const componentExports = deriveExplicitComponentExports(inventory, {
+    packageDir, exportDeprecations: metadata.exportDeprecations,
+  });
   const utilityExports = deriveExplicitUtilityExports({ packageDir });
   return {
     packageJsonPath,
     pkg,
     componentExports,
     utilityExports,
-    exports: closeWildcardPackageExports(pkg.exports, componentExports, utilityExports),
+    exports: closeWildcardPackageExports(pkg.exports, componentExports, utilityExports, deriveLocaleDeclarationExports(packageDir)),
   };
 }
 

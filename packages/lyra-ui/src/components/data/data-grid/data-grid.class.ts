@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -664,7 +666,9 @@ function normalizedGroupBy(
  *   NOT set `error` itself -- `error` is a separate, host-controlled property (see `@slot error`),
  *   so a consumer that wants this rejection to replace the row content with the built-in
  *   failed-load state sets `error = true` from its own listener.
- * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
+ * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
+ *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
  * @event lr-filter-change - Fired after a user changes a column filter.
@@ -767,7 +771,8 @@ function normalizedGroupBy(
  *   the decorative grid lines: the outer edge, header, row, cell and footer separators, and the
  *   toolbar and pager rules. Defaults to the subtle tier so a theme can soften the grid without
  *   weakening its control boundaries.
- * @cssprop [--border-radius=var(--lr-radius)] - Outer and control corner radius.
+ * @cssprop [--border-radius=var(--lr-radius)] - Outer and control corner radius. When unset, the
+ *   outer frame uses --lr-radius-container and controls keep --lr-radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Grid and cell border width.
  * @cssprop [--cell-padding=var(--lr-space-m)] - Header, cell, and footer padding.
  * @cssprop [--lr-data-grid-cell-color=inherit] - Text colour of body cells.
@@ -800,7 +805,8 @@ function normalizedGroupBy(
  * @cssprop --lr-data-grid-sortable-header-hover-bg - Hovered sortable-header background.
  * @cssprop --lr-data-grid-sortable-header-hover-background - Deprecated alias of `--lr-data-grid-sortable-header-hover-bg`;
  *   removal not before 23.0.0.
- * @cssprop [--row-height=var(--lr-size-3-5rem)] - Estimated and minimum row height.
+ * @cssprop [--row-height=var(--lr-size-3-5rem)] - Estimated and minimum row height; overrides the
+ *   size baseline and optional --lr-theme-table-row-height minimum, subject to the 24px and density target floors.
  * @cssprop --row-hover-background - Hovered-row background.
  * @cssprop [--selected-background=var(--lr-color-brand-quiet)] - Selected-row background.
  * @cssprop [--stripe-background=var(--lr-color-surface-raised)] - Alternating-row background.
@@ -847,6 +853,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'request',
@@ -3377,6 +3384,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (
       !pending ||
       this.measurementUpdateQueued ||
+      this.measurementScrollSyncQueued ||
       this.pendingMeasurementAnchor !== undefined
     )
       return;
@@ -3390,9 +3398,35 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const target = [...this.renderRoot.querySelectorAll<HTMLElement>(
       '[part~="row"][data-virtual-item-key]'
     )].find((element) => element.dataset['virtualItemKey'] === pending.itemKey);
-    if (!target) return;
-    this.pendingVirtualScroll = undefined;
+    const body = this.bodyElement;
+    if (!target || !body) return;
+    const targetRect = target.getBoundingClientRect();
+    const viewportTop = body.getBoundingClientRect().top + body.clientTop;
+    const viewportBottom = viewportTop + body.clientHeight;
+    const alignmentDelta = pending.align === 'center'
+      ? (targetRect.top + targetRect.bottom - viewportTop - viewportBottom) / 2
+      : pending.align === 'end'
+        ? targetRect.bottom - viewportBottom
+        : pending.align === 'start'
+          ? targetRect.top - viewportTop
+          : targetRect.top < viewportTop
+            ? targetRect.top - viewportTop
+            : Math.max(0, targetRect.bottom - viewportBottom);
+    // CSSOM scroll offsets round fractional pixels differently across engines. A settled
+    // subpixel alignment must not alternate adjacent integer offsets indefinitely.
+    if (Math.abs(alignmentDelta) <= 1) {
+      this.pendingVirtualScroll = undefined;
+      return;
+    }
+    const previousTop = body.scrollTop;
     target.scrollIntoView({ block: pending.align });
+    // Alignment can change the virtual window itself. Keep the command until that window
+    // commits, otherwise replacing overscan rows with estimated spacers shifts the target.
+    if (body.scrollTop === previousTop) this.pendingVirtualScroll = undefined;
+    else {
+      this.expectedBodyScroll = Object.freeze({ body, top: body.scrollTop });
+      this.queueMeasurementUpdate();
+    }
     this.queueBodyScrollStateSync();
   }
 
@@ -3401,7 +3435,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       '--row-height',
       '--_lr-data-grid-row-height'
     );
-    return finiteRange(resolveCssTokenLength(raw, { host: this }) ?? 56, 56, 1);
+    const targetFloor = resolveCssTokenLength(this.computedToken('--_lr-density-target-min'), { host: this }) ?? 0;
+    return finiteRange(resolveCssTokenLength(raw, { host: this }) ?? 56, 56, Math.max(24, targetFloor));
   }
 
   private get virtualWindow(): {
@@ -4334,7 +4369,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private renderColumnsMenu(): TemplateResult {
     const label = this.localize('showAllColumns');
     return html`
-      <lr-dropdown
+      <lr-dropdown without-arrow
         part="columns-menu"
         aria-label=${label}
         stay-open-on-select
@@ -4916,8 +4951,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 errorHeading: this.errorHeading,
                 errorDescription: this.errorDescription,
                 onRetry: this.onErrorRetry,
-                emitRetry: (detail, init: { cancelable: true }) =>
-                  this.emit('lr-retry', detail, init),
+                emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
+                emitRetry: (detail, init: { cancelable: true }) => {
+                  const legacy = this.emit('lr-retry', detail, init);
+                  if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+                  return legacy;
+                },
               },
               'error',
               'lr-retry'

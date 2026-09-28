@@ -1,0 +1,28 @@
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
+@layer lr-theme-preset.density {
+  [data-lr-density='comfortable'] {
+    --_lr-density-installed: 1;
+    --_lr-dense-on: initial;
+    --_lr-dense-off: ;
+    --_lr-density-space: 1;
+    --_lr-density-control: 1;
+    --_lr-density-target-min: 0px;
+  }
+  [data-lr-density='compact'] {
+    --_lr-density-installed: 1;
+    --_lr-dense-on: ;
+    --_lr-dense-off: initial;
+    --_lr-density-space: 0.75;
+    --_lr-density-control: 0.85;
+    --_lr-density-target-min: 24px;
+  }
+  [data-lr-density='touch'] {
+    --_lr-density-installed: 1;
+    --_lr-dense-on: ;
+    --_lr-dense-off: initial;
+    --_lr-density-space: 1.25;
+    --_lr-density-control: 1.15;
+    --_lr-density-target-min: max(44px, 2.75rem);
+  }
+}

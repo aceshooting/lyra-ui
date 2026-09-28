@@ -31,7 +31,7 @@ export const styles = css`
     min-inline-size: 0;
     overflow: auto;
     overscroll-behavior-inline: contain;
-    scroll-behavior: smooth;
+    scroll-behavior: var(--_lr-motion-scroll, smooth);
     /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
        --lr-theme-scrollbar-* directly, with this viewport's own previous literal as the fallback,
        so nothing changes for a consumer who never sets the theme input. */
@@ -219,7 +219,7 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part="viewport"] {
-      scroll-behavior: auto;
+      scroll-behavior: var(--_lr-motion-scroll, auto);
     }
   }
 `;

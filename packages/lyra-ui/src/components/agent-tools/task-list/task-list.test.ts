@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
@@ -20,6 +21,14 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'taskListLabel',
+  'taskListCompletedOfTotal',
+  'statusSuccess',
+  'statusRunning',
+  'statusPending',
+]);
 it('defaults to items=[], a localized Tasks heading, collapsed=false, withoutCollapse=false', async () => {
   const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
   expect(el.items).to.deep.equal([]);

@@ -4,7 +4,6 @@ import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import type { Placement } from '@floating-ui/dom';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { MenuFocusTarget } from '../../layout/menu/menu-shared.js';
@@ -70,8 +69,7 @@ interface ConsumerMenuSnapshot {
  * @csspart popup-popup - Exported popup alias on the positioned popup.
  * @csspart popup__popup - Deprecated alias of `popup-popup` on the same node; removal not before
  *   23.0.0.
- * @csspart arrow - The arrow element, rendered only while `arrow` is set and `without-arrow` is
- *   not. Its part name also carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`,
+ * @csspart arrow - The arrow element, rendered unless `without-arrow` is set. Its part name also carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`,
  *   `arrow-right`), so `::part(arrow arrow-top)` can style one side.
  * @csspart popup-arrow - Exported alias on the arrow, on the same node.
  * @csspart popup__arrow - Deprecated alias of `popup-arrow` on the same node; removal not before
@@ -85,7 +83,7 @@ interface ConsumerMenuSnapshot {
  *   inherited from the popover surface.
  * @cssprop --lr-overlay-max-inline-size - Maximum inline size of the popup.
  * @cssprop --lr-overlay-arrow-size - Retained Lyra arrow-size fallback.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  *   inherited from the popover surface.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour, inherited from the popover surface.
@@ -104,18 +102,11 @@ interface ConsumerMenuSnapshot {
  */
 export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   static override styles = [LyraPopover.styles, styles];
-  /** `arrow` is the dropdown's own false-defaulting opt-in, read alongside `without-arrow`, not
-   *  the popover's deprecated inverted alias of it, so the pair is not kept in step here. */
-  protected static override deprecatedAliases: LyraDeprecatedAliases | undefined = undefined;
-
   /** Dropdowns sit flush against their trigger by default; generic popovers retain eight pixels. */
   override distance = 0;
 
   /** Action menus retain their mapped below-trigger placement. */
   override placement: Placement = 'bottom-start';
-
-  /** Dropdowns do not render a pointer unless a consumer explicitly enables it. */
-  override arrow = false;
 
   /** Density propagated to directly owned mapped items. */
   @property({ reflect: true }) size: LyraSize = 'm';
@@ -228,11 +219,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override get arrowPartNames(): string {
     return 'arrow popup-arrow popup__arrow';
-  }
-
-  /** The dropdown keeps its own false-defaulting `arrow` opt-in alongside `without-arrow`. */
-  protected override get rendersArrow(): boolean {
-    return this.arrow && !this.withoutArrow;
   }
 
   protected override isInsideLightDismissBoundary(path: EventTarget[]): boolean {

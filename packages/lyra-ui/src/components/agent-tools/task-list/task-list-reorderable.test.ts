@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
@@ -72,6 +73,14 @@ async function liveRegionText(el: LyraTaskList): Promise<string> {
     .textContent!;
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-u-nu-arab', [
+  'taskListLabel',
+  'taskListCompletedOfTotal',
+  'statusSuccess',
+  'statusPending',
+  'statusRunning',
+]);
 describe('reorderable', () => {
   it('is opt-in: unset task rows remain non-focusable and Ctrl+Arrow never emits lr-reorder', async () => {
     const el = (await fixture(html`<lr-task-list .items=${clone()}></lr-task-list>`)) as LyraTaskList;

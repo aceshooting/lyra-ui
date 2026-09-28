@@ -23,28 +23,35 @@ const fixture = JSON.parse(
 
 const generated = generateFrameworkTypes(fixture);
 assert.deepEqual([...generated.keys()], [
+  'src/framework-types.ts',
   'src/custom-elements-jsx.ts',
   'src/svelte.ts',
   'src/vue.ts',
 ]);
 
+const shared = generated.get('src/framework-types.ts');
 const react = generated.get('src/custom-elements-jsx.ts');
+assert.match(shared, /export interface LyraComponentTypeMap/);
+for (const entry of ['src/custom-elements-jsx.ts', 'src/vue.ts', 'src/svelte.ts']) {
+  assert.match(generated.get(entry), /from '\.\/framework-types\.js'/);
+  assert.doesNotMatch(generated.get(entry), /from '\.\/components\//);
+}
 assert.match(
-  react,
+  shared,
   /import type \{ [^}]*LyraSampleField[^}]*LyraSampleFieldEventMap[^}]* \} from '\.\/components\/forms\/sample-field\/sample-field\.class\.js';/,
 );
 assert.match(react, /export interface LyraReactIntrinsicElements/);
 assert.match(react, /export type LyraSampleFieldReactProps = LyraReactElementProps</);
 assert.match(react, /'lr-sample-field': LyraSampleFieldReactProps/);
-assert.match(react, /LyraSampleField,[\s\S]*'accessibleLabel'[\s\S]*'disabled'[\s\S]*'value'/);
-assert.doesNotMatch(react, /formAssociated|effectiveLocale|internalRows|computedRows/);
-assert.match(react, /'aria-label'\?: LyraSampleField\['accessibleLabel'\]/);
-assert.match(react, /'icon-only'\?: LyraAttributeValue<boolean>/);
-assert.match(react, /'untyped-alias'\?: LyraUnknownAttributeValue/);
-assert.match(react, /'lr-change'/);
-assert.match(react, /'--lr-sample-field-width'/);
+assert.match(shared, /LyraSampleField,[\s\S]*'accessibleLabel'[\s\S]*'disabled'[\s\S]*'value'/);
+assert.doesNotMatch(shared, /formAssociated|effectiveLocale|internalRows|computedRows/);
+assert.match(shared, /'aria-label'\?: LyraSampleField\['accessibleLabel'\]/);
+assert.match(shared, /'icon-only'\?: LyraAttributeValue<boolean>/);
+assert.match(shared, /'untyped-alias'\?: LyraUnknownAttributeValue/);
+assert.match(shared, /'lr-change'/);
+assert.match(shared, /'--lr-sample-field-width'/);
 assert.match(react, /React\.RefAttributes<ElementType>/);
-assert.match(react, /LyraSampleFieldEventMap,/);
+assert.match(shared, /events: LyraSampleFieldEventMap;/);
 assert.match(react, /declare module 'react'/);
 
 const vue = generated.get('src/vue.ts');
@@ -53,8 +60,8 @@ assert.match(vue, /export type LyraSampleTableVueProps = LyraVueCustomElement</)
 assert.match(vue, /'lr-sample-table': LyraSampleTableVueProps/);
 assert.match(vue, /\$emit: LyraVueEmit<ElementType, ElementEvents, EventNames>/);
 assert.match(vue, /declare module 'vue'/);
-assert.match(vue, /'icon-only'\?: LyraAttributeValue<boolean>/);
-assert.match(vue, /'untyped-alias'\?: LyraUnknownAttributeValue/);
+assert.match(shared, /'icon-only'\?: LyraAttributeValue<boolean>/);
+assert.match(shared, /'untyped-alias'\?: LyraUnknownAttributeValue/);
 
 const svelte = generated.get('src/svelte.ts');
 assert.match(svelte, /declare module 'svelte\/elements'/);
@@ -63,8 +70,8 @@ assert.match(svelte, /`on:\$\{Name\}`/);
 assert.match(svelte, /`on\$\{Name\}`/);
 assert.match(svelte, /`style:\$\{Name\}`/);
 assert.doesNotMatch(svelte, /__lyraCSSCustomProperties__/);
-assert.match(svelte, /'icon-only'\?: LyraAttributeValue<boolean>/);
-assert.match(svelte, /'untyped-alias'\?: LyraUnknownAttributeValue/);
+assert.match(shared, /'icon-only'\?: LyraAttributeValue<boolean>/);
+assert.match(shared, /'untyped-alias'\?: LyraUnknownAttributeValue/);
 
 // Attribute aliases backed by public class fields are rendered through indexed access on the
 // class. Their manifest type text is therefore not a dependency of this generated module. In
@@ -134,7 +141,7 @@ sampleField.attributes.push({
 });
 
 const fieldBackedGenerated = generateFrameworkTypes(fieldBackedDependencies);
-for (const declarations of fieldBackedGenerated.values()) {
+for (const declarations of [fieldBackedGenerated.get('src/framework-types.ts')]) {
   assert.doesNotMatch(
     declarations,
     /import type \{[^}]*\b(?:LyraHeadingLevel|LyraChartIndexAxis|Row|Intl|DateTimeFormatOptions)\b[^}]*\}/,
@@ -183,43 +190,18 @@ asymmetric.modules[1].declarations[0].members.push(
   },
 );
 const asymmetricGenerated = generateFrameworkTypes(asymmetric);
-for (const [relative, frameworkName] of [
-  ['src/custom-elements-jsx.ts', 'React'],
-  ['src/svelte.ts', 'Svelte'],
-  ['src/vue.ts', 'Vue'],
-]) {
-  const declarations = asymmetricGenerated.get(relative);
-  const block = declarations.match(
-    new RegExp(`export type LyraSampleField${frameworkName}Props[\\s\\S]*?\\n>;`),
-  )?.[0];
-  assert.ok(block, `${relative}: missing asymmetric sample-field props block`);
-  assert.match(
-    block,
-    /value: string \| null \| undefined/,
-    `${relative}: framework props must preserve the wider setter vocabulary`,
-  );
-  assert.match(block, /filters: readonly string\[\] \| null \| undefined/);
-  assert.match(block, /form: HTMLFormElement \| string \| null/);
-  assert.match(block, /options: SampleSetterOptions \| null \| undefined/);
-  assert.match(block, /timeZone: Intl\.DateTimeFormatOptions\['timeZone'\] \| null/);
-  assert.match(
-    declarations,
-    /import type \{ [^}]*SampleSetterOptions[^}]* \} from '\.\/components\/forms\/sample-field\/sample-field\.class\.js';/,
-    `${relative}: a needed exported dependency must come from its canonical class module`,
-  );
-  assert.doesNotMatch(
-    declarations,
-    /import type \{[^}]*\b(?:Intl|DateTimeFormatOptions)\b[^}]*\}/,
-    `${relative}: platform namespace members must not become class-module imports`,
-  );
-}
-for (const declarations of asymmetricGenerated.values()) {
-  assert.match(
-    declarations,
-    /Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides>/,
-    'framework helpers must replace narrow getter properties with write-type overrides',
-  );
-}
+const asymmetricShared = asymmetricGenerated.get('src/framework-types.ts');
+assert.match(asymmetricShared, /value: string \| null \| undefined/);
+assert.match(asymmetricShared, /filters: readonly string\[\] \| null \| undefined/);
+assert.match(asymmetricShared, /form: HTMLFormElement \| string \| null/);
+assert.match(asymmetricShared, /options: SampleSetterOptions \| null \| undefined/);
+assert.match(asymmetricShared, /timeZone: Intl\.DateTimeFormatOptions\['timeZone'\] \| null/);
+assert.match(
+  asymmetricShared,
+  /import type \{ [^}]*SampleSetterOptions[^}]* \} from '\.\/components\/forms\/sample-field\/sample-field\.class\.js';/,
+);
+assert.doesNotMatch(asymmetricShared, /import type \{[^}]*\b(?:Intl|DateTimeFormatOptions)\b[^}]*\}/);
+assert.match(asymmetricShared, /Omit<Pick<ElementType, PropertyNames>, keyof PropertyOverrides>/);
 
 // Compile the generated declarations as framework consumers, rather than merely matching their
 // text. This proves each adapter accepts the complete setter vocabulary while the element class
@@ -325,6 +307,20 @@ try {
       assignments('LyraSampleFieldSvelteProps', 'svelte'),
       "type VueProps = InstanceType<LyraSampleFieldVueProps>['$props'];",
       assignments('VueProps', 'vue'),
+      "const reactEvent: LyraSampleFieldReactProps = { 'onlr-change': event => { const value: string = event.detail.value; const target: string = event.currentTarget.value; } };",
+      "const reactCapture: LyraSampleFieldReactProps = { 'onlr-changeCapture': event => { const value: string = event.detail.value; } };",
+      "const svelteEvent: LyraSampleFieldSvelteProps = { 'on:lr-change': event => { const value: string = event.detail.value; const target: string = event.currentTarget.value; } };",
+      "const svelteNative: LyraSampleFieldSvelteProps = { onfocus: event => { const target: EventTarget | null = event.relatedTarget; } };",
+      "const reactAliases: LyraSampleFieldReactProps = { 'icon-only': 'false', 'aria-label': null };",
+      "const reactStyle: LyraSampleFieldReactProps = { style: { '--lr-sample-field-width': 12 } };",
+      "const svelteStyle: LyraSampleFieldSvelteProps = { 'style:--lr-sample-field-width': 12 };",
+      '// @ts-expect-error attribute-only booleans reject arbitrary strings',
+      "const invalidAlias: VueProps = { 'icon-only': 'yes' };",
+      '// @ts-expect-error event detail remains typed',
+      "const invalidEvent: LyraSampleFieldReactProps = { 'onlr-change': event => { const value: number = event.detail.value; } };",
+      '// @ts-expect-error style directives remain typed',
+      "const invalidStyle: LyraSampleFieldSvelteProps = { 'style:--lr-sample-field-width': {} };",
+
     ].join('\n'),
   );
   write(
@@ -383,12 +379,12 @@ inherited.modules.push({
     },
   ],
 });
-const inheritedReact = generateFrameworkTypes(inherited).get('src/custom-elements-jsx.ts');
+const inheritedShared = generateFrameworkTypes(inherited).get('src/framework-types.ts');
 assert.match(
-  inheritedReact,
-  /export type LyraSampleNumberFieldReactProps = LyraReactElementProps<[\s\S]*?LyraSampleFieldEventMap,/,
+  inheritedShared,
+  /'lr-sample-number-field': \{[\s\S]*?events: LyraSampleFieldEventMap;/,
 );
-assert.doesNotMatch(inheritedReact, /LyraSampleNumberFieldEventMap/);
+assert.doesNotMatch(inheritedShared, /LyraSampleNumberFieldEventMap/);
 
 const duplicate = structuredClone(fixture);
 duplicate.modules[1].declarations[0].tagName = 'lr-sample-table';
@@ -416,21 +412,9 @@ for (const name of ['zoomIn', 'zoomOut', 'resetZoom']) {
     `lr-flow-canvas#${name} must remain callable method metadata`,
   );
 }
-for (const [relative, typeName] of [
-  ['src/custom-elements-jsx.ts', 'React'],
-  ['src/svelte.ts', 'Svelte'],
-  ['src/vue.ts', 'Vue'],
-]) {
-  const declarations = readFileSync(path.join(packageDir, relative), 'utf8');
-  const block = declarations.match(
-    new RegExp(`export type LyraFlowCanvas${typeName}Props[\\s\\S]*?(?=\\nexport type LyraFlowControls)`),
-  )?.[0];
-  assert.ok(block, `${relative}: missing LyraFlowCanvas props block`);
-  assert.doesNotMatch(
-    block,
-    /'zoomIn'|'zoomOut'|'resetZoom'/,
-    `${relative}: methods must not be emitted as assignable framework props`,
-  );
-}
+const currentShared = readFileSync(path.join(packageDir, 'src/framework-types.ts'), 'utf8');
+const flowBlock = currentShared.match(/'lr-flow-canvas': \{[\s\S]*?(?=\n  'lr-flow-controls')/)?.[0];
+assert.ok(flowBlock, 'shared map must contain lr-flow-canvas');
+assert.doesNotMatch(flowBlock, /'zoomIn'|'zoomOut'|'resetZoom'/, 'methods must not become assignable framework props');
 
 console.log('Framework declaration generator fixture tests passed.');

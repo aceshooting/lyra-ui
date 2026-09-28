@@ -6,7 +6,7 @@
 - **Class** `LyraTour`, also available unregistered from `@aceshooting/lyra-ui/components/utility/tour/tour.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecated event** `lr-tour-step-change` since `21.1.0`; use event `addEventListener('lr-tour-step-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Deprecated property** `showProgress` / `show-progress` since `21.1.0`; use property `without-progress`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
@@ -75,9 +75,11 @@ ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`). Deprecated alias:
 `lr-tour-step-change` (use `lr-tour-step-change-request`; still fires right after it with an equal
-detail and can still veto; removed in 23.0.0); `lr-tour-end`
-(`detail: LyraTourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
-element is removed while still open by something other than its own `end()`);
+detail and can still veto; removal not before 23.0.0); `lr-tour-end-request`
+(`detail: { reason }`, cancelable before ordinary completion); `lr-tour-end`
+(`detail: { reason }`, non-cancelable after closing). Forced removal still notifies with reason
+`unmount`, without a request because removal cannot be vetoed. Migrate old raw-detail reads to
+`detail.reason` and move end vetoes to `lr-tour-end-request`.
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
 it renders that step viewport-centered with no spotlight).
 

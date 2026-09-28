@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -39,7 +40,7 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -340,7 +341,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
@@ -349,6 +349,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
@@ -489,11 +490,20 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    * localized message. Barred (own or fieldset-cascaded `disabled`) exactly like the intrinsic
    * constraint. */
   @property({ attribute: false }) validators: LyraFileInputValidator[] = [];
-  /** Accessible name forwarded to the semantic dropzone and native file input. A host `aria-label`
-   * wins over it. When neither is set, the form label (`label` or the `label` slot) names the
-   * dropzone, then the localized instruction. The `accessible-label` attribute spelling is
-   * deprecated in favour of the host `aria-label`; removal not before 23.0.0. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private legacyAccessibleLabel: string = '';
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
   /** The host `aria-label`: names the dropzone ahead of every other source, by presence, so an
    *  explicitly empty value stays empty. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;

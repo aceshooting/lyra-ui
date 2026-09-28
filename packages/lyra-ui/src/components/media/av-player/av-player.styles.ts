@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -23,6 +24,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   [part='toolbar'] {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -271,4 +273,42 @@ export const styles = css`
       outline: var(--lr-border-width-medium) solid Highlight;
     }
   }
+
+  ${glassSurface('[part=\'toolbar\']', css`var(--lr-color-surface)`, css`transparent`)}
+
+  :host([controls-surface='clear']) [part='toolbar'] {
+    /* The gradient and translucent fill are painted by the same owned control surface. */
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--lr-mask-opaque) calc(max(var(--_lr-media-clear-scrim-start, 1), var(--_lr-preference-glass-opacity, 0)) * 100%), transparent),
+      color-mix(in srgb, var(--lr-mask-opaque) calc(max(var(--_lr-media-clear-scrim-end, 1), var(--_lr-preference-glass-opacity, 0)) * 100%), transparent)
+    );
+    background-color: var(--_lr-media-clear-fill, transparent);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-s);
+    color: var(--_lr-media-clear-text, var(--lr-color-on-strong-overlay));
+    --lr-focus-ring-color: var(--_lr-media-clear-text, var(--lr-color-on-strong-overlay));
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+  }
+  :host([controls-surface='clear']) [part='rate-select'] {
+    color: inherit;
+    background: transparent;
+    border-color: var(--_lr-media-clear-text, var(--lr-color-border));
+  }
+  :host([controls-surface='clear']) .rate-select-chevron { color: inherit; }
+  :host([controls-surface='clear']) [part='rate-select']:where(:hover, :active) {
+    background: var(--_lr-media-clear-fill, var(--lr-color-brand-quiet));
+  }
+  :host([controls-surface='clear']) [part='rate-select'] option {
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+  }
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    :host([controls-surface='clear']) [part='toolbar'] {
+      background: Canvas;
+      color: CanvasText;
+      --lr-focus-ring-color: Highlight;
+    }
+    :host([controls-surface='clear']) [part='rate-select'] { border-color: ButtonText; }
+  }
+
 `;

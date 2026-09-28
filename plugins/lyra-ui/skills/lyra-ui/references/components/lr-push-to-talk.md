@@ -6,7 +6,7 @@
 - **Class** `LyraPushToTalk`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/push-to-talk/push-to-talk.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated property** `showTimer` / `show-timer` since `21.1.0`; use property `without-timer`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below

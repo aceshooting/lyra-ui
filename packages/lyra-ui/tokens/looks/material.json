@@ -1,0 +1,165 @@
+{
+  "id": "material",
+  "tokens": {
+    "--lr-theme-color-surface-default": {
+      "light": "#fff8f5",
+      "dark": "#18120f"
+    },
+    "--lr-theme-color-surface-raised": {
+      "light": "#f8eeea",
+      "dark": "#251d19"
+    },
+    "--lr-theme-color-surface-overlay": {
+      "light": "#fff8f5",
+      "dark": "#302621"
+    },
+    "--lr-theme-color-text-normal": {
+      "light": "#241b17",
+      "dark": "#f8eee8"
+    },
+    "--lr-theme-color-text-quiet": {
+      "light": "#67594f",
+      "dark": "#c9b9ae"
+    },
+    "--lr-theme-color-surface-border": {
+      "light": "#89786a",
+      "dark": "#a18d7e"
+    },
+    "--lr-theme-color-surface-border-subtle": {
+      "light": "#dfd0c5",
+      "dark": "#514037"
+    },
+    "--lr-theme-color-border-strong": {
+      "light": "#67594f",
+      "dark": "#c9b9ae"
+    },
+    "--lr-theme-color-brand-fill-quiet": {
+      "light": "#f8e0ca",
+      "dark": "#492d17"
+    },
+    "--lr-theme-color-brand-fill-normal": {
+      "light": "#ead0b5",
+      "dark": "#6d4729"
+    },
+    "--lr-theme-color-brand-fill-loud": {
+      "light": "#704319",
+      "dark": "#f2b983"
+    },
+    "--lr-theme-color-brand-border-quiet": {
+      "light": "#ead0b5",
+      "dark": "#6d4729"
+    },
+    "--lr-theme-color-brand-border-normal": {
+      "light": "#94643b",
+      "dark": "#c2946d"
+    },
+    "--lr-theme-color-brand-border-loud": {
+      "light": "#704319",
+      "dark": "#f2b983"
+    },
+    "--lr-theme-color-brand-on-quiet": {
+      "light": "#241b17",
+      "dark": "#fff8f5"
+    },
+    "--lr-theme-color-brand-on-normal": {
+      "light": "#241b17",
+      "dark": "#fff8f5"
+    },
+    "--lr-theme-color-brand-on-loud": {
+      "light": "#ffffff",
+      "dark": "#281607"
+    },
+    "--lr-theme-color-focus": {
+      "light": "#704319",
+      "dark": "#f2b983"
+    },
+    "--lr-theme-border-radius-xs": "0.25rem",
+    "--lr-theme-border-radius-m": "0.75rem",
+    "--lr-theme-border-radius-button": "1.5rem",
+    "--lr-theme-border-radius-container": "1rem",
+    "--lr-theme-font-family-heading": "system-ui, sans-serif",
+    "--lr-theme-form-control-height-s": "2.25rem",
+    "--lr-theme-form-control-height-m": "2.75rem",
+    "--lr-theme-form-control-height-l": "3.25rem",
+    "--lr-theme-icon-button-size": "2.75rem",
+    "--lr-theme-color-mix-partner": "currentColor",
+    "--lr-theme-color-mix-hover": "8%",
+    "--lr-theme-color-mix-active": "12%",
+    "--lr-theme-color-chart-1": {
+      "light": "#0e006e",
+      "dark": "#bbff94"
+    },
+    "--lr-theme-color-chart-2": {
+      "light": "#4d011a",
+      "dark": "#ffbce8"
+    },
+    "--lr-theme-color-chart-3": {
+      "light": "#862002",
+      "dark": "#2bd66a"
+    },
+    "--lr-theme-color-chart-4": {
+      "light": "#503983",
+      "dark": "#bb99cb"
+    },
+    "--lr-theme-color-chart-5": {
+      "light": "#315fdd",
+      "dark": "#7888fe"
+    },
+    "--lr-theme-color-chart-6": {
+      "light": "#935e7c",
+      "dark": "#9b6b90"
+    },
+    "--lr-theme-color-chart-7": {
+      "light": "#de6906",
+      "dark": "#db3a29"
+    },
+    "--lr-theme-color-chart-8": {
+      "light": "#8f81d3",
+      "dark": "#555de3"
+    },
+    "--lr-theme-color-chart-sequential-1": {
+      "light": "#ede9fe",
+      "dark": "#2e1065"
+    },
+    "--lr-theme-color-chart-sequential-2": {
+      "light": "#8b5cf6",
+      "dark": "#8b5cf6"
+    },
+    "--lr-theme-color-chart-sequential-3": {
+      "light": "#4c1d95",
+      "dark": "#ddd6fe"
+    },
+    "--lr-theme-color-chart-diverging-1": {
+      "light": "#9d174d",
+      "dark": "#f9a8d4"
+    },
+    "--lr-theme-color-chart-diverging-2": {
+      "light": "#f5f3ff",
+      "dark": "#3f3f46"
+    },
+    "--lr-theme-color-chart-diverging-3": {
+      "light": "#115e59",
+      "dark": "#5eead4"
+    },
+    "--lr-theme-color-surface-container-lowest": {
+      "light": "#ffffff",
+      "dark": "#120d0a"
+    },
+    "--lr-theme-color-surface-container-low": {
+      "light": "#fcf2ed",
+      "dark": "#211914"
+    },
+    "--lr-theme-color-surface-container": {
+      "light": "#f8eeea",
+      "dark": "#251d19"
+    },
+    "--lr-theme-color-surface-container-high": {
+      "light": "#f2e7e0",
+      "dark": "#302621"
+    },
+    "--lr-theme-color-surface-container-highest": {
+      "light": "#ecdfd7",
+      "dark": "#3a2f29"
+    }
+  }
+}

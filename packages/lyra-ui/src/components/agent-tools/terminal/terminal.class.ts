@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -153,10 +155,12 @@ interface SearchState {
 }
 
 export interface LyraTerminalEventMap {
+  /** @deprecated Use `lr-download-request`. */
+  'lr-download': LyraTerminalEventMap['lr-download-request'];
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-download': CustomEvent<{ filename: string }>;
+  'lr-download-request': CustomEvent<{ filename: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
@@ -189,7 +193,8 @@ export interface LyraTerminalEventMap {
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
- * @event lr-download - `detail: { filename }` — the download button was activated. Cancelable: by
+ * @event lr-download - Deprecated cancelable compatibility alias of `lr-download-request`.
+ * @event lr-download-request - `detail: { filename }` — the download button was activated. Cancelable: by
  *   default this component itself builds an in-memory Blob of the current plain-text log and
  *   triggers a browser download via a synthetic `<a download>` click; a host that calls
  *   `preventDefault()` on this event suppresses that built-in download entirely and can substitute
@@ -285,6 +290,17 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     terminalLabel: LYRA_DEFAULT_terminalLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private emitDownloadRequest(detail: LyraTerminalEventMap['lr-download-request']['detail']): CustomEvent {
+    const request = this.emit('lr-download-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-download', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-download', 'lr-download-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-text-select',
@@ -864,22 +880,29 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (this.announceRegionEl) this.announceRegionEl.textContent = '';
   }
 
+  private downloadDispatching = false;
   private onDownload = (): void => {
-    const filename = this.filename || 'terminal.log';
-    // `lr-download` fires first and is cancelable -- a host that calls preventDefault() on it
-    // suppresses the built-in Blob download below and can substitute its own handling instead
-    // (e.g. routing a large log through a server-side export), matching <lr-media-card>'s
-    // `lr-open` convention. See the class doc's event list.
-    if (this.emit('lr-download', { filename }, { cancelable: true }).defaultPrevented) return;
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const blob = new ownerWindow.Blob([this.getPlainText()], { type: 'text/plain' });
-    const url = ownerWindow.URL.createObjectURL(blob);
-    const a = this.ownerDocument.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    ownerWindow.setTimeout(() => ownerWindow.URL.revokeObjectURL(url), 5000);
+    if (this.downloadDispatching) return;
+    this.downloadDispatching = true;
+    try {
+      const filename = this.filename || 'terminal.log';
+      // `lr-download-request` fires first and is cancelable -- a host that calls preventDefault() on it
+      // suppresses the built-in Blob download below and can substitute its own handling instead
+      // (e.g. routing a large log through a server-side export), matching <lr-media-card>'s
+      // `lr-open` convention. See the class doc's event list.
+      if (this.emitDownloadRequest({ filename }).defaultPrevented) return;
+      const ownerWindow = this.ownerDocument.defaultView;
+      if (!ownerWindow) return;
+      const blob = new ownerWindow.Blob([this.getPlainText()], { type: 'text/plain' });
+      const url = ownerWindow.URL.createObjectURL(blob);
+      const a = this.ownerDocument.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      ownerWindow.setTimeout(() => ownerWindow.URL.revokeObjectURL(url), 5000);
+    } finally {
+      this.downloadDispatching = false;
+    }
   };
 
   // --- Follow tracking via virtual-list's visible-range event ---------------

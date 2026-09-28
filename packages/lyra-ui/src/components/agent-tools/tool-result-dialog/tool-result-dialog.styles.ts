@@ -201,9 +201,9 @@ export const styles = css`
     );
   }
   :host([status="running"]) [part="status"] svg {
-    animation: lr-tool-result-dialog-spin
+    animation: var(--_lr-motion-animation, lr-tool-result-dialog-spin
       var(--lr-tool-result-dialog-spin, var(--_lr-tool-result-dialog-spin))
-      infinite;
+      infinite);
   }
   [part="duration"] {
     max-inline-size: 100%;

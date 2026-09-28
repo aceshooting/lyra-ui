@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-poll-status.js to register this component. */
 export * from './poll-status.class.js';
 import { LyraPollStatus } from './poll-status.class.js';
 import { defineElement } from '../../../internal/prefix.js';

@@ -92,7 +92,7 @@ uses for its own `[part="body"]`.
   `_blank`, so rendered links open in the same tab
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
-  intercepted on click and reported via `lr-link-click` instead of navigating; empty (the default)
+  intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
   means every link is treated as external
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
   source `token.depth` before emitting `<h${depth}>` (e.g. `heading-offset="2"` renders a source `#`
@@ -191,10 +191,12 @@ placed first and preserved inside both ceilings.
 
 **Events:**
 
-- `lr-link-click` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
+- `lr-link-activate` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
   link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
+- `lr-link-click` — deprecated compatibility alias of `lr-link-activate`, emitted afterward with
+  the same detail.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
@@ -212,7 +214,6 @@ placed first and preserved inside both ceilings.
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 - `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
   code-block copy chrome; both bubble and are composed.
-
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; respects
@@ -303,7 +304,7 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
 <script>
   document
     .querySelector("lr-markdown")
-    .addEventListener("lr-link-click", (e) => {
+    .addEventListener("lr-link-activate", (e) => {
       router.navigate(e.detail.href);
     });
 </script>
@@ -456,9 +457,10 @@ for syntax highlighting. `getHeadingTree()` — same contract as
 `LyraMarkdownCore.updateAll(): void` provide the same variant-scoped compatibility-parser contract
 as the full class; the core route exports its own `Marked` alias.
 
-**Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
+**Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
-`<lr-markdown>`'s own.
+`<lr-markdown>`'s own. `lr-link-click` is the deprecated compatibility alias of `lr-link-activate`,
+emitted afterward with the same detail.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -1021,7 +1023,7 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
-host drives `connectionState` for `idle`/`connecting`/`streaming`, and calls the imperative
+host drives `connectionState` for `idle`/`connecting`/`streaming`/`interrupted`, and calls the imperative
 `recordActivity()` method on every _semantic_ frame received while streaming — a real content
 chunk, never a transport-level keep-alive ping. This component has no payload-inspection logic of
 its own: "ignore heartbeats" is entirely call-site discipline, which is exactly why a connection
@@ -1031,9 +1033,9 @@ reads as stalled.
 **Properties:**
 
 - `connectionState: StreamConnectionState = 'idle'` (attribute `connection-state`, reflected) —
-  host-owned transport state (`'idle' | 'connecting' | 'streaming'`). Invalid attribute or property
+  host-owned transport state (`'idle' | 'connecting' | 'streaming' | 'interrupted'`). Invalid attribute or property
   writes normalize to `idle`.
-- `phase: LyraStreamPhase` (readonly) — effective state: `connectionState`, or component-owned
+- `phase: StreamStatusPhase` (readonly) — effective state: `connectionState`, or component-owned
   `'stalled'` while an active stream has exceeded its inactivity threshold
 - `stallThresholdMs: number = 10000` (attribute `stall-threshold-ms`) — how long `phase` may stay
   `'streaming'` with no `recordActivity()` call before the component auto-transitions to
@@ -1041,6 +1043,13 @@ reads as stalled.
   no-op, so the phase will never auto-stall). Changing this value while already `'streaming'`
   re-arms the timer immediately against the new value, rather than waiting for the next
   `recordActivity()` call or phase change.
+
+- `resumable: boolean = false` — shows a built-in resume action only while interrupted.
+- `disabled: boolean = false` — disables that resume action.
+
+An interrupted connection disarms the stall timer. `lr-resume` (`detail: null`, bubbling and
+composed) requests host-managed resume; the component never reconnects or changes state in response
+to the click. The host must update `connectionState` after handling the request.
 
 **Methods:**
 
@@ -1051,7 +1060,7 @@ reads as stalled.
   - While `phase === 'stalled'`: recovers — the effective phase becomes `'streaming'` again (firing
     `lr-recover` and arming the timer fresh, via the same transition handling a direct host
     transport transition would also go through).
-  - While `phase` is `'idle'` or `'connecting'`: a no-op. Safe to call defensively before formally
+  - While `phase` is `'idle'`, `'connecting'`, or `'interrupted'`: a no-op. Safe to call defensively before formally
     flipping to `'streaming'`; it never throws or starts a timer early.
 - `markStalled(): void` — installs the component-owned stalled override for an active streaming
   connection; no-op in other transport states or when already stalled
@@ -1062,14 +1071,14 @@ whenever the effective phase transitions out of `'stalled'`, whether via `record
 host transport transition. Neither fires for a same-value
 reassignment, and neither fires for whatever phase the element happens to _mount_ with — only a
 later change counts as a transition.
-
+`lr-resume` (`detail: null`) requests host-managed resume of an interrupted, resumable connection; it does not resume transport itself.
 **Slots:** default (custom copy shown only while the readonly `phase` is `'stalled'`, e.g. "Taking longer than
 usual…" — falls back to a built-in default message when nothing is slotted), `actions` (a
 stop/retry button row; always present in the template regardless of `phase` — its wrapper's
 visibility is driven purely by whether anything is slotted into it, not by `phase`)
 
 **CSS parts:** `base`, `indicator`, `phase` (persistent localized effective-state text), `message`,
-`actions`
+`actions`, `resume` (built-in interrupted resume button)
 
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (idle dot color),
 `--lr-color-brand` (connecting/streaming dot color), `--lr-color-warning` (stalled dot color,
@@ -2638,15 +2647,15 @@ frozen `detail: { ok: true, text }`, emitted only after the embedded `lr-copy-bu
 write fulfills (bubbles/composed already, not re-emitted). A failed write surfaces generic
 `lr-error` (`detail: null`) plus `lr-copy-error` with frozen
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
-`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded, thumbs-only
+`lr-feedback-change`/`lr-feedback-submit-request` — bubble unchanged from the embedded, thumbs-only
 `lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
-pass to either settlement method. A colliding event from an
+pass to either settlement method. Its deprecated cancelable `lr-feedback-submit` compatibility
+alias also bubbles unchanged and retains the same detail and cancellation behavior. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
 Composite toolbar providers must expose nonblank action ids that are unique within that provider;
 invalid actions and later duplicates are omitted before roving focus ownership.
-
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
 navigation. A standalone `lr-toggle` (pin, read aloud) is a `LyraToolbarActionProvider` and joins the
@@ -2725,7 +2734,7 @@ no-argument settlement remains available only for the first transaction that has
 invalidated; stale or mismatched settlements return `false`.
 
 **Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
-provisional rating changes or clears. `lr-feedback-submit` — cancelable
+provisional rating changes or clears. `lr-feedback-submit-request` — cancelable
 `detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string; submissionId: string }`, fired for every
 terminal thumbs-only choice/clear and by the detail panel's submit button. The pending transaction
 is installed before dispatch, so even a synchronous listener may finalize/revert it safely. The
@@ -2738,7 +2747,8 @@ When uncanceled it retains the synchronous close/announce/focus behavior. The op
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
 toolbar actions change availability or order.
-
+The deprecated cancelable compatibility alias `lr-feedback-submit` carries the same frozen detail
+and cancellation behavior as `lr-feedback-submit-request`.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
@@ -3119,15 +3129,10 @@ false` (reflected) — shows the built-in search field, including a `part="clear
 that appears next to it once it has a value (never when empty), clears it on click, fires the same
 `lr-filter-change`/`lr-query-change` event typing already fires, and returns focus to the field. Its
 accessible name is the localized `clear` message (the same key `<lr-input>`'s own clear button
-uses). `size?: LyraSize` (reflected) — opt-in density tier for that search field, on the library's
-one six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`, or the Web Awesome/Shoelace `small`/`medium`/`large`
-spellings, accepted as authored). A tier gives the field the row height, text size, gutters and
-corner radius an `lr-input` of that tier has, so the sidebar's own filter box lines up with an
-adjacent themed search field. With no `size` the field keeps exactly the gutters, corner radius and
-inherited text size it shipped with, so existing markup renders unchanged; an unsupported value
-normalizes to the omitted state and removes the attribute rather than snapping to a tier. Only the
-field is tiered — the gutter around it and the clear button keep their own sizes, and have their own
-custom properties. `filter?: (thread, query) => boolean`
+uses). `size: LyraSize = 'm'` (reflected) — shared density tier for the search field and data-mode
+rows, on the six-step ladder (`2xs`/`xs`/`s`/`m`/`l`/`xl`; `small`/`medium`/`large` remain
+accepted). Invalid values and attribute removal restore `m`. Slotted rows retain their own size.
+The search gutter and clear button keep their own independent custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
@@ -3154,13 +3159,9 @@ trailing group); deprecated alias: `show-archived`/`showArchived` (use `with-arc
 23.0.0). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off; deprecated alias: `renamable` (use
 `without-rename`; removed in 23.0.0), inverted, so `renamable="false"` equals `without-rename`.
-`compact: boolean = false` (reflected) — data mode only: forwarded to each row
-`lr-conversation-item` as its dense `size="s"`, tightening every row's padding and gaps from one attribute
-(the density itself lives on the row item; retune it through
-`--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
-deliberate no-op — that mode renders host-supplied items as-is, so the host sets `size` on its own
-items there, the same division of responsibility slotted mode already has for every other row
-property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+`compact: boolean = false` (reflected, deprecated; removal not before 24.0.0) — compatibility
+alias of `size="s"` when true and `size="m"` when false. Use `size` for both search and data rows;
+slotted rows retain their own size. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
@@ -3250,10 +3251,11 @@ and reassigns `collapsedGroupIds` itself keeps working unchanged: this component
 it happens, always precedes that listener in the same synchronous dispatch, so the host's own
 assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
-which are neither. `lr-retry` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
+which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead.
-
+`preventDefault()` leaves it set instead. `lr-retry` is its deprecated cancelable veto alias,
+emitted after `lr-retry-request` and before the default action; canceling either event keeps the
+error state.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
@@ -4113,6 +4115,15 @@ output is the host's own: it is never masked by `redactedFields`.
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
 unsupported `tool-display` values normalize and reflect as `chip`.
 
+**Interruption.** `MessagePartState` also accepts `interrupted`, with optional
+`interruption: { resumable: boolean; reason?: string }`. The accumulated content stays visible,
+alongside localized interruption text and the host-provided reason. A resumable interrupted part
+shows a resume button that emits controlled `lr-part-resume` (`{ part }`, clone-owned snapshot,
+bubbling and composed). It does not mutate the part or reconnect. `disabled: boolean = false`
+disables built-in retry and resume actions; custom renderers own their controls. Custom rendering
+replaces interruption controls too. An interrupted tool result remains a separate visible part in
+block display so its interruption and resume action stay reachable.
+
 **Tool display.** `MessagePartsToolDisplay = 'chip' | 'block'` (exported from the class module).
 `chip` (the default, unchanged) renders a `tool-call` part as `<lr-tool-call-chip>` and a
 `tool-result` part as a separate `<lr-tool-result-view>`. `tool-display="block"` renders each
@@ -4164,9 +4175,9 @@ retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; 
 and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
 are ignored so each rendered identity and announcement remains unambiguous.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
-`lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-highlight-activate`, `lr-link-activate`, deprecated compatibility alias `lr-link-click` (same `{ href }` detail, emitted afterward), `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
@@ -4174,7 +4185,7 @@ In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, c
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+**CSS parts:** `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
 `audio-transcript`, `error`, `retry`. Block display forwards five block parts:
 `tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,
@@ -4218,13 +4229,13 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-copy` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
-- `lr-link-click` event — Passthrough from rendered Markdown.
+- `lr-link-activate` event — Passthrough from rendered Markdown.
 - `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
   `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
   tool-call block (`callId` included).
-- `lr-retry` event — Passthrough from a rendered attachment.
+- `lr-retry-request` event — Passthrough from a rendered attachment.
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
@@ -4504,7 +4515,7 @@ import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-s
 - **Markdown:** GFM task checkboxes stay disabled. When a checkbox has nonblank primary inline
   text, that primary inline text names the checkbox; nested-list text is excluded and an otherwise blank
   task receives no invented label. For an intercepted internal link that overlaps a highlight,
-  `lr-highlight-activate` fires before `lr-link-click` for pointer and Enter activation;
+  `lr-highlight-activate` fires before `lr-link-activate` for pointer and Enter activation;
   external links keep their native navigation.
 - **Catalog controls:** `lr-model-select` and `lr-voice-picker` reflect `readonly`. It blocks user
   typing and catalog commits without disabling focus, popup navigation, selection/copy, reset,
@@ -4515,7 +4526,7 @@ import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-s
   reflect to `idle`. `lr-prompt-input` and `lr-agent-workspace` read invalid forwarded status as the
   safe `idle` state without rewriting their host attributes.
 - **Feedback toolbar:** `lr-message-actions.feedbackPending` identifies a built-in feedback request
-  awaiting settlement. Pass the frozen `submissionId` from `lr-feedback-submit` to
+  awaiting settlement. Pass the frozen `submissionId` from `lr-feedback-submit-request` to
   `finalizePendingSubmit()` or `revertPendingSubmit()`. Logical toolbar actions may implement
   `releaseTabIndex()` to restore an unchanged authored tabindex when the toolbar stops managing it;
   a later author write is never overwritten.
@@ -4940,3 +4951,13 @@ These named interfaces and helper signatures are available to typed integrations
 
 `MarkdownStreamingRender = 'plain' | 'progressive'` is the canonical streaming mode type;
 `MarkdownStreamingRenderMode` remains an equivalent compatibility export.
+
+Markdown, Markdown Core and Message Parts retain `lr-link-click` as a deprecated compatibility
+event through v23. It follows `lr-link-activate` with the same `{ href }` detail.
+
+On `lr-thread-list`, `lr-retry-request` is the canonical retry veto. The deprecated `lr-retry`
+alias still fires afterward and may veto the same action; removal is not before 24.0.0.
+
+The feedback persistence event's previous `lr-feedback-submit` spelling remains a deprecated
+cancelable compatibility alias of `lr-feedback-submit-request`, including through
+`lr-message-actions`. Listen to one spelling; either can hold the same correlated submission.

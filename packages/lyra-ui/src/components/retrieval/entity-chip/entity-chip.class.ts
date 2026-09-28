@@ -47,7 +47,7 @@ const HIDE_DELAY_MS = 200;
  * lets a host theme per type from CSS, e.g. `lr-entity-chip[type='person'] { --lr-entity-chip-color: ... }`.
  * @cssprop [--lr-entity-chip-bg=var(--lr-color-brand-quiet)] - Background color.
  * @cssprop [--lr-entity-chip-border=transparent] - Border color of the chip.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the anchored detail popover.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  * colour, on the anchored detail popover.

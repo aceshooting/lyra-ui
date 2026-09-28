@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './known-date.js';
@@ -38,6 +39,11 @@ function typeInto(input: HTMLInputElement, text: string): void {
   input.value = text;
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 }
+
+expectLocaleFallback('ar', ['dateInputInvalid', 'knownDateDay', 'knownDateMonth', 'knownDateYear']);
+expectLocaleFallback('de-DE', ['dateInputInvalid', 'knownDateDay', 'knownDateMonth', 'knownDateYear']);
+expectLocaleFallback('fa', ['dateInputInvalid', 'knownDateDay', 'knownDateMonth', 'knownDateYear']);
+expectLocaleFallback('ja-JP', ['knownDateDay', 'knownDateMonth', 'knownDateYear']);
 
 it('exposes fresh callable static validators that project live composite validity', async () => {
   const first = LyraKnownDate.validators;

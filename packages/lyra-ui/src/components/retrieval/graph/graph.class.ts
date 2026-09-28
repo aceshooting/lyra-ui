@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
@@ -266,7 +267,11 @@ function sameIds(
 }
 
 export interface LyraGraphEventMap {
+  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
+  /** @deprecated Use lr-node-activate. */
   'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  /** @deprecated Use lr-edge-activate and its edgeId detail field. */
   'lr-link-click': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
@@ -278,23 +283,23 @@ export interface LyraGraphEventMap {
   'lr-edge-enter': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
-    linkId?: string;
+    edgeId?: string;
   }>;
   /** The hover from `lr-edge-enter` ended. */
   'lr-edge-leave': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
-    linkId?: string;
+    edgeId?: string;
   }>;
   /** @deprecated Use `lr-edge-enter`; removal not before 23.0.0. Fired right after it from the
-   *  same hover, with an equal detail. */
+   *  same hover, with the compatibility linkId field. */
   'lr-link-enter': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
     linkId?: string;
   }>;
   /** @deprecated Use `lr-edge-leave`; removal not before 23.0.0. Fired right after it from the
-   *  same hover end, with an equal detail. */
+   *  same hover end, with the compatibility linkId field. */
   'lr-link-leave': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
@@ -302,7 +307,7 @@ export interface LyraGraphEventMap {
   }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   'lr-selection-change': CustomEvent<
-    LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>
+    LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }>
   >;
   /** A hull was activated by pointer or keyboard. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;
@@ -358,28 +363,30 @@ export interface LyraGraphEventMap {
  * effective identities are first-wins before layout, keyed DOM, selection, focus, or events.
  * Retained identity spelling is not rewritten.
  *
- * @event lr-node-click - `detail: { nodeId, x, y }`, where `x` and `y` are the
+ * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail.
+ * @event lr-edge-activate - Pointer or keyboard edge activation with `{ sourceNodeId, targetNodeId, edgeId? }` detail.
+ * @event lr-node-click - Deprecated: use `lr-node-activate`. Compatibility detail remains unchanged. `detail: { nodeId, x, y }`, where `x` and `y` are the
  *   node's current coordinates in the graph's local drawing space.
- * @event lr-link-click - `detail: { sourceNodeId, targetNodeId, linkId? }`.
+ * @event lr-link-click - Deprecated: use `lr-edge-activate` and `edgeId`. Compatibility detail remains unchanged. `detail: { sourceNodeId, targetNodeId, linkId? }`.
  * @event lr-node-enter - A node was hovered. `detail: { nodeId }`. Suppressed while dragging or
  *   panning. Canvas enter/leave events fire once per hit-identity transition or exit. In SVG,
  *   also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
  *   pure-CSS theming (not a substitute for this event — a consumer computing its own
  *   adjacency-based highlight needs the id, which only the event carries).
  * @event lr-node-leave - The hover from `lr-node-enter` ended. `detail: { nodeId }`.
- * @event lr-edge-enter - An edge was hovered. `detail: { sourceNodeId, targetNodeId, linkId? }`.
+ * @event lr-edge-enter - An edge was hovered. `detail: { sourceNodeId, targetNodeId, edgeId? }`.
  *   Same suppression/`data-hovered` behavior as `lr-node-enter`. Fires before `lr-link-enter`.
  * @event lr-edge-leave - The hover from `lr-edge-enter` ended. `detail: { sourceNodeId,
- *   targetNodeId, linkId? }`. Fires before `lr-link-leave`.
+ *   targetNodeId, edgeId? }`. Fires before `lr-link-leave`.
  * @event lr-link-enter - Deprecated alias of `lr-edge-enter`, kept firing unchanged right after it
- *   with an equal detail. Removal not before 23.0.0.
+ *   with the original linkId detail field. Removal not before 23.0.0.
  * @event lr-link-leave - Deprecated alias of `lr-edge-leave`, kept firing unchanged right after it
- *   with an equal detail. Removal not before 23.0.0.
+ *   with the original linkId detail field. Removal not before 23.0.0.
  * @event lr-node-expand - A node was double-activated (native `dblclick`, or two Enter/Space
  *   activations of the same focused node within 500ms). `detail: { nodeId }`. Fires for any node
  *   regardless of `LyraGraphNode.expandable` -- that flag only controls the visual "+" affordance and
  *   spoken "expandable" suffix.
- * @event lr-selection-change - `detail: { nodeIds, linkIds }`. Fires when `selectionMode` is not
+ * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`. Fires when `selectionMode` is not
  *   `'none'` and the user activates/clears a node or edge. The component never assigns
  *   `selectedNodeIds`/`selectedEdgeIds` itself -- controlled, mirroring `lr-heatmap.selectedCell`.
  * @event lr-community-activate - A hull was activated by pointer or keyboard.
@@ -471,6 +478,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     noData: LYRA_DEFAULT_noData,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
@@ -859,7 +867,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     | {
         kind: 'link';
         id: string;
-        detail: LyraGraphEventMap['lr-edge-enter']['detail'];
+        detail: LyraGraphEventMap['lr-link-enter']['detail'];
       };
   private hoverRafId?: number;
   private hoverRafOwner?: BrowserWindow;
@@ -909,14 +917,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private linkPaintProbe?: HTMLCanvasElement;
   private readonly linkPaintVisibilityCache = new Map<string, boolean>();
   private readonly resolvedCssColorCache = new Map<string, string>();
+  private reducedMotion = false;
 
   constructor() {
     super();
     new ThemeWatcher(this, () => {
+      const reduced = prefersReducedMotion(this);
+      if (reduced !== this.reducedMotion) {
+        this.reducedMotion = reduced;
+        if (reduced) this.simulation?.stop();
+        else if (this.safeSeed == null) this.simulation?.restart();
+      }
       this.linkPaintVisibilityCache.clear();
       this.resolvedCssColorCache.clear();
       if (this.renderer === 'canvas') this.markCanvasDirty();
-    });
+    }, ['(prefers-reduced-motion: reduce)']);
   }
 
   override attributeChangedCallback(
@@ -962,6 +977,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.reducedMotion = prefersReducedMotion(this);
     this.syncAnnouncementSinks();
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
     // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
@@ -999,7 +1015,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // whole ~300-tick alpha=1 settle animation for no reason — just resume
     // the existing simulation in place instead.
     if (this.d3) {
-      this.simulation?.restart();
+      if (!this.reducedMotion && this.safeSeed == null) this.simulation?.restart();
       // renderer="canvas" mode's own resize/DPR watchers are torn down by disconnectedCallback()
       // below on every disconnect (including this reconnect) -- the <canvas> element itself
       // survived the reparent along with the rest of this shadow tree (canvasEl === zoomedEl still
@@ -1597,7 +1613,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         resolve(false);
         return;
       }
-      if (prefersReducedMotion(frameOwner)) {
+      if (prefersReducedMotion(this)) {
         this.applyZoomTransform(computeTarget());
         this.isCameraTweening = false;
         this.cameraTweenResolve = undefined;
@@ -1620,7 +1636,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           resolve(false);
           return;
         }
-        const t = duration > 0 ? Math.min(1, (now - start) / duration) : 1;
+        const t = !prefersReducedMotion(this) && duration > 0 ? Math.min(1, (now - start) / duration) : 1;
         const target = computeTarget();
         const targetK = target.k as number;
         const targetX = target.x as number;
@@ -2622,14 +2638,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const selected = this.isSelected(kind, id);
     if (this.selectionMode === 'single' || !toggle) {
       if (this.selectionMode === 'single' && selected) {
-        this.emit('lr-selection-change', { nodeIds: [], linkIds: [] });
+        this.emit('lr-selection-change', { selectedNodeIds: [], selectedEdgeIds: [] });
         return;
       }
       this.emit(
         'lr-selection-change',
         kind === 'node'
-          ? { nodeIds: [id], linkIds: [] }
-          : { nodeIds: [], linkIds: [id] }
+          ? { selectedNodeIds: [id], selectedEdgeIds: [] }
+          : { selectedNodeIds: [], selectedEdgeIds: [id] }
       );
       return;
     }
@@ -2647,7 +2663,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           ? selectedLinkIds.filter((x) => x !== id)
           : [...selectedLinkIds, id]
         : selectedLinkIds;
-    this.emit('lr-selection-change', { nodeIds, linkIds });
+    this.emit('lr-selection-change', { selectedNodeIds: nodeIds, selectedEdgeIds: linkIds });
   }
 
   private clearSelection(): void {
@@ -2657,7 +2673,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       !canonicalIdentityList(this.selectedEdgeIds).length
     )
       return;
-    this.emit('lr-selection-change', { nodeIds: [], linkIds: [] });
+    this.emit('lr-selection-change', { selectedNodeIds: [], selectedEdgeIds: [] });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -3338,7 +3354,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       .on('tick', () => this.onTick());
     this.simulation = simulation;
 
-    if (prefersReducedMotion(this.ownerWindow) || this.safeSeed != null) {
+    if (prefersReducedMotion(this) || this.safeSeed != null) {
       // Pin every node that already had a known position before this rebuild -- either carried
       // over directly (fx/fy, the same mechanism a user drag uses) or restored from
       // lastPositionById after being hidden by hiddenTypes -- so introducing a new node/link can't
@@ -3487,11 +3503,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
-    this.emit('lr-node-click', {
-      nodeId: node.id,
-      x: node.x ?? 0,
-      y: node.y ?? 0,
-    });
+    const detail = { nodeId: node.id, x: node.x ?? 0, y: node.y ?? 0 };
+    this.emit('lr-node-activate', { ...detail });
+    this.emit('lr-node-click', { ...detail });
     this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
   }
 
@@ -3512,6 +3526,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       typeof link.target === 'object'
         ? (link.target as SimNode).id
         : String(link.target);
+    this.emit('lr-edge-activate', {
+      sourceNodeId: source,
+      targetNodeId: target,
+      ...(link.id ? { edgeId: link.id } : {}),
+    });
     this.emit('lr-link-click', {
       sourceNodeId: source,
       targetNodeId: target,
@@ -3551,7 +3570,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private linkHoverDetail(
     link: SimLink
-  ): LyraGraphEventMap['lr-edge-enter']['detail'] {
+  ): LyraGraphEventMap['lr-link-enter']['detail'] {
     const source =
       typeof link.source === 'object'
         ? (link.source as SimNode).id
@@ -3577,13 +3596,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  copy of the detail. */
   private emitEdgeHover(
     phase: 'enter' | 'leave',
-    detail: LyraGraphEventMap['lr-edge-enter']['detail']
+    detail: LyraGraphEventMap['lr-link-enter']['detail']
   ): void {
+    const { linkId, ...endpoints } = detail;
+    const canonical = { ...endpoints, ...(linkId ? { edgeId: linkId } : {}) };
     if (phase === 'enter') {
-      this.emit('lr-edge-enter', { ...detail });
+      this.emit('lr-edge-enter', canonical);
       this.emit('lr-link-enter', { ...detail });
     } else {
-      this.emit('lr-edge-leave', { ...detail });
+      this.emit('lr-edge-leave', canonical);
       this.emit('lr-link-leave', { ...detail });
     }
   }

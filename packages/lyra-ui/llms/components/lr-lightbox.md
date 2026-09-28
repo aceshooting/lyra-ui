@@ -6,7 +6,8 @@
 - **Class** `LyraLightbox`, also available unregistered from `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
+- **Deprecated event** `lr-lightbox-close` since `unreleased`; use event `Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation.`; removal not before `24.0.0` — The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window.
 - **Deprecated property** `showCounter` / `show-counter` since `21.1.0`; use property `without-counter`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -66,11 +67,11 @@ detail.
 
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
 cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
-`lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
-'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
-closing on every path, including a consumer's own `close()` call), followed after a successful
-closed render by `lr-after-hide`. Removal while open emits the settled non-vetoable
-hide/close/after-hide order with reason `'unmount'`. `lr-index-change` (`detail: { index }`, fired
+cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`; accepted dismissal
+sets `open = false` and emits non-cancelable `lr-close` with the same reason object. The deprecated
+`lr-lightbox-close` remains a string-detail, cancelable compatibility event between the proposal
+and state change. Use `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
+`lr-after-hide` follows the closed render. Removal while open reports reason `unmount`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.

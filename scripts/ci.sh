@@ -9,8 +9,8 @@
 #                                          # (platform modes still install their own engines)
 #   ./scripts/ci.sh --platform      # ALSO run the platform-contracts subset locally
 #                                   # (firefox + chromium + chrome + edge + safari; browsers downloaded on demand)
-#   ./scripts/ci.sh --platform-matrix # primary jobs plus CI's Node 20/22 browser matrix
-#                                   # requires Node 20/22 and pnpm 10/11 locally
+#   ./scripts/ci.sh --platform-matrix # primary jobs plus CI's Node 22 browser matrix
+#                                   # requires Node 22 and the pinned pnpm locally
 #   ./scripts/ci.sh --all           # alias for --platform-matrix
 #   ./scripts/ci.sh --keep-going    # (-k) don't abort at the first STALE GENERATED ARTIFACT;
 #                                   # collect every freshness failure and report them together at
@@ -20,7 +20,6 @@
 #                                   # Real test/lint/build failures still abort immediately.
 #
 # The platform matrix can use non-default executable names/paths when needed:
-#   CI_SH_NODE20_BIN=/path/to/node20 CI_SH_PNPM20_BIN=/path/to/pnpm10 \
 #   CI_SH_NODE22_BIN=/path/to/node22 CI_SH_PNPM22_BIN=/path/to/pnpm \
 #   ./scripts/ci.sh --platform-matrix
 set -euo pipefail
@@ -126,28 +125,10 @@ node_patch_for_binary() {
   "$node_bin" -p 'process.versions.node' 2>/dev/null || true
 }
 
-semver_is_newer() {
-  local candidate="$1"
-  local current="$2"
-  [[ -z "$current" ]] && return 0
-  local candidate_major candidate_minor candidate_patch
-  local current_major current_minor current_patch
-  IFS=. read -r candidate_major candidate_minor candidate_patch <<< "$candidate"
-  IFS=. read -r current_major current_minor current_patch <<< "$current"
-  if (( 10#$candidate_major != 10#$current_major )); then
-    (( 10#$candidate_major > 10#$current_major ))
-  elif (( 10#$candidate_minor != 10#$current_minor )); then
-    (( 10#$candidate_minor > 10#$current_minor ))
-  else
-    (( 10#$candidate_patch > 10#$current_patch ))
-  fi
-}
-
 resolve_node_for_version() {
   local version="$1"
   local override=""
   case "$version" in
-    20) override="${CI_SH_NODE20_BIN:-}" ;;
     22) override="${CI_SH_NODE22_BIN:-}" ;;
   esac
 
@@ -189,34 +170,7 @@ resolve_node_for_version() {
     return
   fi
 
-  local resolved
-  resolved="$(resolve_command "node$version")"
-  [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
-  resolved="$(resolve_command "node-$version")"
-  [[ -n "$resolved" ]] && { printf '%s\n' "$resolved"; return; }
 
-  # NVM installations commonly expose versioned node binaries without a
-  # node20/node22 shim. Pick the newest installed patch numerically; GNU
-  # `sort -V` is deliberately avoided because stock macOS/BSD sort lacks it.
-  if [[ -n "${NVM_DIR:-}" ]]; then
-    local candidate=""
-    local candidate_version=""
-    local newest=""
-    local newest_version=""
-    while IFS= read -r candidate; do
-      [[ -x "$candidate" ]] || continue
-      candidate_version="$(node_patch_for_binary "$candidate")"
-      [[ "$candidate_version" =~ ^$version\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
-      if semver_is_newer "$candidate_version" "$newest_version"; then
-        newest="$candidate"
-        newest_version="$candidate_version"
-      fi
-    done < <(compgen -G "$NVM_DIR/versions/node/v$version.*/bin/node")
-    if [[ -n "$newest" ]]; then
-      printf '%s\n' "$newest"
-      return
-    fi
-  fi
 }
 
 CI_SH_ACTIVE_TOOLCHAIN_PID=""
@@ -387,7 +341,7 @@ _run_with_toolchain_worker() {
   # temporary directory again after `--dir` changes its cwd, so a relative
   # TMPDIR that was valid here dangles there; hand it the resolved absolute
   # parent that already hosts the proxy directory.
-  # pnpm 12 reads PNPM_CONFIG_SCRIPT_SHELL; retain npm_config_script_shell for pnpm 10/11.
+  # pnpm 12 reads PNPM_CONFIG_SCRIPT_SHELL; retain npm_config_script_shell for the pinned pnpm.
   set -m
   PATH="$selected_node_proxy_dir:$PATH" \
     TMPDIR="$selected_node_proxy_parent" \
@@ -416,18 +370,12 @@ validate_platform_toolchain() {
   local node_bin="$2"
   local pnpm_bin="$3"
   local manifest="package.json"
-  [[ "$node_version" == "20" ]] && manifest=".github/ci-pnpm10.json"
 
-  if [[ "$node_version" == "22" ]]; then
-    "$node_bin" scripts/check-node-version.mjs || return
-  else
-    local actual_node_major
-    actual_node_major="$("$node_bin" -p 'process.versions.node.split(".")[0]')"
-    if [[ "$actual_node_major" != "$node_version" ]]; then
-      echo "$node_bin is Node $actual_node_major, expected Node $node_version" >&2
-      return 1
-    fi
+  if [[ "$node_version" != "22" ]]; then
+    echo "Unsupported platform Node major: $node_version" >&2
+    return 1
   fi
+  "$node_bin" scripts/check-node-version.mjs || return
 
   local expected_pnpm
   local actual_pnpm
@@ -454,11 +402,6 @@ run_platform_matrix_leg() {
   WTR_BROWSER="$browser" WTR_TEST_SUITE=platform WTR_SHARD_INDEX="$shard_index" WTR_SHARD_TOTAL="$shard_total" \
     WTR_STRICT_CONSOLE=1 \
     run_with_toolchain "$node_bin" "$pnpm_bin" --filter @aceshooting/lyra-ui test:platform-shard || return
-  if [[ "$node_version" == "20" && "$browser" == "firefox" && "$shard_index" == "1" && "$shard_total" == "1" ]]; then
-    step "packed consumer: Node 20"
-    run_with_toolchain "$node_bin" "$pnpm_bin" build || return
-    run_with_toolchain "$node_bin" "$pnpm_bin" check:packed-consumer:contracts || return
-  fi
 }
 
 require_primary_toolchain
@@ -537,6 +480,28 @@ pnpm --filter @aceshooting/lyra-ui check:coverage-floors
 step "manifest freshness"
 pnpm manifest
 freshness_diff "custom-elements.json (pnpm manifest)" packages/lyra-ui/custom-elements.json
+
+step "framework type freshness"
+pnpm --filter @aceshooting/lyra-ui run framework-types
+freshness_diff "framework types (pnpm framework-types)" \
+  packages/lyra-ui/src/framework-types.ts \
+  packages/lyra-ui/src/custom-elements-jsx.ts \
+  packages/lyra-ui/src/vue.ts \
+  packages/lyra-ui/src/svelte.ts
+
+step "registration graph and scoped definition freshness"
+pnpm --filter @aceshooting/lyra-ui run registration-graph
+pnpm --filter @aceshooting/lyra-ui run scoped-definitions
+freshness_diff "registration graph and scoped definitions" \
+  packages/lyra-ui/registrations.json \
+  packages/lyra-ui/src/internal/scoped-definitions.generated.ts
+
+step "locale metadata freshness"
+pnpm --filter @aceshooting/lyra-ui run locale-manifest
+freshness_diff "locale metadata (pnpm locale-manifest)" \
+  packages/lyra-ui/locales.json \
+  packages/lyra-ui/src/internal/locale-loaders.generated.ts
+
 step "editor data freshness"
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 freshness_diff "editor data (pnpm generate-editor-data)" packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
@@ -619,18 +584,14 @@ fi
 
 if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
   platform_failures=0
-  for node_version in 20 22; do
+  for node_version in 22; do
     node_bin="$(resolve_node_for_version "$node_version")"
     if [[ -z "$node_bin" ]]; then
       echo "could not find Node $node_version; install it or set CI_SH_NODE${node_version}_BIN" >&2
       exit 1
     fi
 
-    if [[ "$node_version" == "20" ]]; then
-      pnpm_request="${CI_SH_PNPM20_BIN:-pnpm10}"
-    else
-      pnpm_request="${CI_SH_PNPM22_BIN:-pnpm}"
-    fi
+    pnpm_request="${CI_SH_PNPM22_BIN:-pnpm}"
     pnpm_bin="$(resolve_command "$pnpm_request")"
     if [[ -z "$pnpm_bin" ]]; then
       echo "could not find $pnpm_request for Node $node_version; install it or set CI_SH_PNPM${node_version}_BIN" >&2
@@ -640,40 +601,29 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
       exit 1
     fi
 
-    if [[ "$node_version" == "20" ]]; then
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox 1 1 firefox; then
+    for shard in 1 2; do
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chromium "$shard" 2 chromium; then
         platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "firefox" >&2
+        printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "chromium" "$shard" >&2
       fi
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari 1 1 webkit; then
+    done
+    if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chrome 1 1 chrome; then
+      platform_failures=$((platform_failures + 1))
+      printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "chrome" >&2
+    fi
+    if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" edge 1 1 msedge; then
+      platform_failures=$((platform_failures + 1))
+      printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "edge" >&2
+    fi
+    for shard in 1 2 3 4; do
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox "$shard" 4 firefox; then
         platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "safari" >&2
+        printf '\033[31mFAILED: Node %s / %s / shard %s/4\033[0m\n' "$node_version" "firefox" "$shard" >&2
       fi
-    else
-      for shard in 1 2; do
-        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chromium "$shard" 2 chromium; then
-          platform_failures=$((platform_failures + 1))
-          printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "chromium" "$shard" >&2
-        fi
-      done
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chrome 1 1 chrome; then
-        platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "chrome" >&2
-      fi
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" edge 1 1 msedge; then
-        platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "edge" >&2
-      fi
-      for shard in 1 2 3 4; do
-        if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox "$shard" 4 firefox; then
-          platform_failures=$((platform_failures + 1))
-          printf '\033[31mFAILED: Node %s / %s / shard %s/4\033[0m\n' "$node_version" "firefox" "$shard" >&2
-        fi
-      done
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari 1 1 webkit; then
-        platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "safari" >&2
-      fi
+    done
+    if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari 1 1 webkit; then
+      platform_failures=$((platform_failures + 1))
+      printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "safari" >&2
     fi
   done
   if ((platform_failures > 0)); then

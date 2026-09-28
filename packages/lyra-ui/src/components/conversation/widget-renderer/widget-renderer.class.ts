@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { ref } from 'lit/directives/ref.js';
 import { property, state } from 'lit/decorators.js';
@@ -163,6 +164,7 @@ export interface LyraWidgetRendererEventMap {
  * @since 4.0.0
  */
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'document',
   ]);

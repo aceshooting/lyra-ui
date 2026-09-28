@@ -165,3 +165,11 @@ export const ConsumerMenu: StoryObj = {
     </lr-dropdown>
   `,
 };
+
+export const WithoutArrow: StoryObj = {
+  render: () => html`<lr-dropdown without-arrow>
+    <button slot="trigger">Actions</button>
+    <lr-dropdown-item>Rename</lr-dropdown-item>
+    <lr-dropdown-item>Archive</lr-dropdown-item>
+  </lr-dropdown>`,
+};

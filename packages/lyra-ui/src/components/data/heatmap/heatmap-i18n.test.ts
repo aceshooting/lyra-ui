@@ -1,6 +1,11 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import './heatmap.js';
 import type { LyraHeatmap } from './heatmap.js';
+
+expectLocaleFallback('de-DE', ['heatmapMatrixLabel', 'heatmapValueLabel']);
+expectLocaleFallback('fa-IR', ['heatmapMatrixLabel', 'heatmapValueLabel']);
+expectLocaleFallback('fr-FR', ['heatmapCalendarLabel', 'heatmapValueLabel']);
 
 it('localizes the built-in value label in the legend and generated accessible name', async () => {
   const el = (await fixture(html`

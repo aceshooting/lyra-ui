@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
@@ -86,6 +87,21 @@ const channels = (color: string): [number, number, number] => {
   return [red, green, blue];
 };
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', [
+  'traceTree',
+  'durationSeconds',
+  'spanKindAgent',
+  'statusSuccess',
+  'accessibleLabelSeparator',
+]);
+expectLocaleFallback('ar-EG', [
+  'traceTree',
+  'durationMilliseconds',
+  'spanKindTool',
+  'statusSuccess',
+  'accessibleLabelSeparator',
+]);
 describe('lr-trace-tree', () => {
   it('projects admitted span fields once from own data descriptors without invoking accessors', () => {
     let unsafeReads = 0;

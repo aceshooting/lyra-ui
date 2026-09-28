@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
 import { sendKeys } from '@web/test-runner-commands';
@@ -10,6 +11,8 @@ import {
   settlePointer,
 } from "../../../../test/wtr-mouse.js";
 import { VALIDITY_ANCHOR } from "../../../internal/anchored-validity.js";
+
+expectLocaleFallback('ar-EG', ['rangeEnd', 'rangeStart', 'rubricSubmit']);
 
 it("contains long field and action content at 320px in LTR and RTL", async () => {
   const label =

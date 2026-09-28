@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-handoff-divider.js to register this component. */
 export * from './handoff-divider.class.js';
 import '../../utility/live-region/live-region.js';
 import { LyraHandoffDivider } from './handoff-divider.class.js';

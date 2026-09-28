@@ -5,6 +5,21 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'تقدم البحث',
+  researchProgressEmpty: 'لا توجد خطوات بحثية متاحة.',
+  researchProgressLimit: 'عرض أول {count} خطوة بحثية.',
+  researchProgressStatusPending: 'في انتظار',
+  researchProgressStatusRunning: 'قيد التقدم',
+  researchProgressStatusCompleted: 'مكتمل',
+  researchProgressStatusFailed: 'فشل',
+  researchProgressSources: {
+    zero: '{count} مصدر',
+    one: 'مصدر واحد',
+    two: 'مصدران',
+    few: '{count} مصادر',
+    many: '{count} مصدرًا',
+    other: '{count} مصدر',
+  },
   graphLegendLabel: 'وسيلة إيضاح الرسم البياني',
   entityChipWithType: '{label}، {type}',
   showMore: 'عرض المزيد',

@@ -33,6 +33,7 @@ export const styles = css`
   [part~="heading"] {
     margin: 0;
     font: inherit;
+    font-family: var(--lr-font-heading);
   }
   [part~="button"] {
     display: flex;
@@ -133,13 +134,13 @@ export const styles = css`
   }
   :host([expanded]) [part~="icon"] {
     rotate: 90deg;
-    transition-duration: var(
+    transition-duration: var(--_lr-motion-duration, var(
       --show-duration,
       var(
         --lr-accordion-item-show-duration,
         var(--_lr-accordion-item-show-duration)
       )
-    );
+    ));
   }
   :host([expanded]:dir(rtl)) [part~="icon"] {
     rotate: -90deg;

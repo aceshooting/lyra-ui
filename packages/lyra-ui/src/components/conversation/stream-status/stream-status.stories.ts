@@ -199,3 +199,11 @@ export const ReducedMotion: Story = {
   },
   render: () => html`<lr-stream-status connection-state="streaming"></lr-stream-status>`,
 };
+
+export const Interrupted: Story = {
+  render: () => html`<div style="max-inline-size: 20rem" dir="rtl">
+    <lr-stream-status connection-state="interrupted" resumable
+      @lr-resume=${(event: Event) => { (event.currentTarget as LyraStreamStatus).connectionState = 'connecting'; }}
+    ></lr-stream-status>
+  </div>`,
+};

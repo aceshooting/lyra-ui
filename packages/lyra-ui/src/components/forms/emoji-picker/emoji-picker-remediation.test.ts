@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
@@ -90,6 +91,8 @@ for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
     });
   }
 }
+
+expectLocaleFallback('fr', ['emojiPickerGridLabel', 'emojiPickerGroupSmileysEmotion', 'emojiPickerSearchLabel', 'emojiPickerSearchPlaceholder']);
 
 it('projects live host descriptions onto the value listbox with external-first identity ordering', async () => {
   const el = await picker();

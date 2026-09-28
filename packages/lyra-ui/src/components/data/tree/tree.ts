@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-tree.js to register this component. */
 export * from './tree.class.js';
 import { LyraTree } from './tree.class.js';
 import { defineElement } from '../../../internal/prefix.js';

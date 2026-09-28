@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './chart.js';
 import './line-chart.js';
@@ -524,3 +525,5 @@ describe('lr-lite-chart: deprecated aliases', () => {
     expect((details.get('lr-point-activate') as { datasetIndex: number }).datasetIndex).to.equal(0);
   });
 });
+
+expectDeprecatedUsage('lr-lite-chart', 'property', 'accessibleLabel');

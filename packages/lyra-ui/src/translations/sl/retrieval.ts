@@ -5,6 +5,14 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Napredek raziskave',
+  researchProgressEmpty: 'Na voljo ni nobenega koraka raziskave.',
+  researchProgressLimit: 'Prikazanih je prvih {count} korakov raziskave.',
+  researchProgressStatusPending: 'Na čakanju',
+  researchProgressStatusRunning: 'V teku',
+  researchProgressStatusCompleted: 'Dokončano',
+  researchProgressStatusFailed: 'Spodletelo',
+  researchProgressSources: { few: '{count} viri', one: '{count} vir', two: '{count} vira', other: '{count} virov' },
   graphLegendLabel: 'Legenda grafa',
   entityChipWithType: '{label}, {type}',
   showMore: 'Pokaži več',

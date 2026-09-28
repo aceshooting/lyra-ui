@@ -72,6 +72,11 @@ export interface LyraDialogModalController {
   deactivateExternal(): void;
 }
 
+/** The accepted dismissal reason. */
+export interface LyraDialogCloseDetail {
+  reason: DialogCloseReason;
+}
+
 export interface LyraDialogEventMap {
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
@@ -79,7 +84,8 @@ export interface LyraDialogEventMap {
   'lr-after-hide': CustomEvent<null>;
   'lr-initial-focus': CustomEvent<null>;
   'lr-request-close': CustomEvent<LyraDialogRequestCloseDetail>;
-  'lr-close': CustomEvent<DialogCloseReason>;
+  'lr-close-request': CustomEvent<LyraDialogCloseDetail>;
+  'lr-close': CustomEvent<LyraDialogCloseDetail>;
 }
 /**
  * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
@@ -93,8 +99,8 @@ export interface LyraDialogEventMap {
  *
  * Lifecycle: `show()` emits `lr-show` (cancelable) and then, once the enter animation has
  * finished, `lr-after-show`. `hide()`/`close()` emit `lr-hide` (cancelable), then
- * `lr-close` (cancelable, carrying the dismissal reason), then — once the exit animation
- * has finished — `lr-after-hide`. Assigning `open` runs the same lifecycle, so the property, the
+ * `lr-close-request` (cancelable, carrying `{ reason }`), then `lr-close` after acceptance and —
+ * once the exit animation has finished — `lr-after-hide`. Assigning `open` runs the same lifecycle, so the property, the
  * reflected attribute, and the two method calls can never disagree. Markup that renders open
  * from the start emits nothing, matching `<lr-menu>`.
  *
@@ -174,35 +180,12 @@ export interface LyraDialogEventMap {
  *   dialogs defer it until rendered, and reconnecting the same open dialog does not repeat it.
  * @event lr-request-close - A built-in affordance requested dismissal. Cancelable; detail is
  *   `{ source: 'close-button' | 'keyboard' | 'overlay' }`.
- * @event lr-close - `detail: DialogCloseReason`. Cancelable — a listener calling
- *   `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop,
- *   the built-in close button, `hide()`, `open = false`, or a consumer's own `close()` call).
- *   Fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked
- *   for the close. The plain `lr-close` spelling matches `<lr-tool-select-dialog>`,
- *   `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`, whose own docs already describe
- *   their close-reason detail as mirroring this shape. Also fired (with reason `'unmount'`,
- *   non-cancelable there since the element is already being removed) when the dialog is removed
- *   from the DOM while still open.
- *
- *   **The name is not dialog-scoped, so filter by target.** `lr-close` is emitted by nine
- *   components in this library, several of which are commonly nested *inside* a dialog:
- *   `<lr-callout>` (an inline notice above a form), `<lr-tab>`/`<lr-tab-group>`,
- *   `<lr-command-palette>`, `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three
- *   tool dialogs. Library events bubble and are composed, so a listener bound directly on
- *   `<lr-dialog>` also receives a descendant's close — and a closable callout inside a dialog would
- *   otherwise dismiss the whole dialog. Their details differ too (`<lr-callout>` and `<lr-tab>`
- *   carry none, where this event carries a `DialogCloseReason`), so a handler reading
- *   `event.detail.reason` would throw on a foreign one. This is latent rather than
- *   broken-on-arrival, because a callout or tab only emits once given a close affordance — which
- *   is what makes it a bad failure mode: it appears later and presents as the dialog dismissing
- *   itself. Guard on the target, the way `<lr-document-viewer>` already does internally:
- *
- *   ```js
- *   dialog.addEventListener('lr-close', (event) => {
- *     if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
- *     // ...
- *   });
- *   ```
+ * @event lr-close-request - Cancelable proposal before closing; detail is `{ reason: DialogCloseReason }`.
+ *   It follows `lr-hide` and covers built-in controls, `hide()`, `open = false` and `close()`.
+ * @event lr-close - Non-cancelable notification after the close is accepted; detail is
+ *   `{ reason: DialogCloseReason }`. Removing an open dialog reports `{ reason: 'unmount' }`.
+ *   Events from descendants bubble too: check `event.target === event.currentTarget` when
+ *   handling only this dialog's dismissal. Use `lr-close-request` to veto dismissal.
  * @csspart base - Shoelace wrapper alias.
  * @csspart backdrop - The full-viewport scrim behind the panel; also carries `overlay`.
  * @csspart overlay - Shoelace alias on the backdrop.
@@ -273,7 +256,7 @@ export interface LyraDialogEventMap {
  *   enter/exit animation.
  * @cssprop [--lr-dialog-backdrop-duration=var(--lr-duration-fast)] - Duration of the backdrop's
  *   fade.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared floating-surface fill,
  *   on the panel. The same family every anchored popup now reads, so one declaration retints the
  *   dialog and the popups opened from it together.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
@@ -378,10 +361,20 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  `--lr-dialog-max-width` override still wins over any tier. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /** Explicit accessible-only panel name. Unlike `label`, it never renders visible text. In
-   *  markup, name the panel with the host `aria-label`; the `accessible-label` attribute spelling
-   *  is deprecated (removal not before 23.0.0) and logs a one-time development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private legacyAccessibleLabel: string = '';
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
 
   /** Host-level `aria-label` override for the panel's accessible name — wins by attribute
    *  presence, including an explicitly empty value, over every other naming source (a slotted
@@ -574,7 +567,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
             return;
           }
           this.applyOpenState(false);
-          this.emit('lr-close', 'unmount');
+          this.emit('lr-close', { reason: 'unmount' });
           this.emit('lr-after-hide');
         }
       });
@@ -763,7 +756,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lr-close` detail --
+   * opened. `reason` is forwarded as `lr-close` detail.reason --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
    * consumer's own close affordance (e.g. a footer Cancel button) should
    * call this directly with its own reason string, so every dismissal path
@@ -787,7 +780,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
-    const close = this.emit('lr-close', reason, { cancelable: true });
+    const close = this.emit('lr-close-request', { reason }, { cancelable: true });
     if (close.defaultPrevented || this.openRequestWasSuperseded(false)) {
       this.finishOpenRequest();
       this.syncOpenAttribute();
@@ -799,6 +792,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.applyOpenState(false);
     const settled = this.settleTransition('lr-after-hide');
     this.hideSettled = settled;
+    this.emit('lr-close', { reason });
     return settled;
   }
 

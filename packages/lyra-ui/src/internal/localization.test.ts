@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import {
   getLyraLocale,
@@ -759,6 +760,7 @@ it('bounds hostile locale-prefix construction and avoids rebuilding the chain pe
 it('memoizes canonical identity and candidate work across repeated bounded lookups', async () => {
   const locale = `qaa-Latn-LU-x-${Math.random().toString(36).slice(2, 8)}`;
   const host = await localeHost(locale);
+  expectLocaleFallback(locale, ['x-cached-locale-miss']);
   const originalCanonicalizer = Intl.getCanonicalLocales;
   let canonicalizerCalls = 0;
   Intl.getCanonicalLocales = ((locales?: string | readonly string[]) => {
@@ -977,6 +979,7 @@ it('bounds registered catalog records before committing them', async () => {
   expect(() => registerLyraLocale(locale, oversized)).not.to.throw();
   expect(resolveLyraString(await localeHost(locale), 'noData')).to.equal('last valid');
   expect(resolveLyraString(await localeHost(locale), 'x-message-4095')).to.equal('message 4095');
+  expectLocaleFallback(locale, ['x-message-4096']);
   expect(resolveLyraString(await localeHost(locale), 'x-message-4096')).to.equal('x-message-4096');
 });
 

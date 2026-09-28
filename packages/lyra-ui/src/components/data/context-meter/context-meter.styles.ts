@@ -185,9 +185,11 @@ export const styles = css`
   }
   button[part~='legend-item']:where(:not(:disabled)):where(:hover) {
     background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand-on-quiet);
   }
   button[part~='legend-item']:where(:not(:disabled)):where(:active) {
-    background: var(--lr-color-border);
+    background: var(--lr-color-neutral-fill-normal);
+    color: var(--lr-color-neutral-on-normal);
   }
   button[part~='legend-item']:where(:focus-visible) {
     outline: var(--lr-focus-ring);

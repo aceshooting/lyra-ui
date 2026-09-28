@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-agent-trace.js to register this component. */
 export * from './agent-trace.class.js';
 import '../trace-tree/trace-tree.js';
 import '../../retrieval/graph-legend/graph-legend.js';

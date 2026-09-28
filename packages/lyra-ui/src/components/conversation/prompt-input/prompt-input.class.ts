@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -188,6 +189,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     promptInputSources: LYRA_DEFAULT_promptInputSources,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'attachments',
@@ -720,7 +722,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private renderDefaultAttachmentTrigger(): TemplateResult {
-    return html`<lr-attachment-trigger
+    return html`<lr-attachment-trigger multiple
       .capabilities=${this.attachmentCapabilities}
       .disabled=${this.disabled}
       @lr-files=${this.onFiles}
@@ -894,7 +896,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .minLength=${this.minLength}
         .maxLength=${this.maxLength}
         .withoutEnterSubmit=${this.withoutEnterSubmit}
-        .accessibleLabel=${label}
+        aria-label=${label}
         @lr-input=${this.onInput}
         @lr-change=${this.onChange}
         @lr-submit=${this.onSubmit}

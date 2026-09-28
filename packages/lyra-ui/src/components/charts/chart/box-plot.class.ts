@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -167,9 +168,6 @@ export interface LyraBoxPlotEventMap {
   'lr-point-click': CustomEvent<LyraBoxPlotPointDetail>;
   /** Canonical name for the legend-visibility veto point. */
   'lr-legend-visibility-change-request': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
-  /** Deprecated alias of `lr-legend-visibility-change-request`, kept firing unchanged for
-   *  back-compat; slated for removal in 21.0.0. */
-  'lr-before-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-datum-activate': CustomEvent<
     LyraChartDatumActivateDetail<'box', LyraBoxPlotSummary | null>
@@ -325,11 +323,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   more than 1,000 records.
  * @event lr-legend-visibility-change-request - Cancelable proposed DOM legend visibility change.
- *   Fires before `lr-before-legend-visibility-change`, from the same gesture; either event may
- *   veto.
- * @event lr-before-legend-visibility-change - Deprecated cancelable alias of
- *   `lr-legend-visibility-change-request`, kept firing unchanged for back-compat; slated for
- *   removal in 21.0.0. Same detail.
+ *   This request is the sole veto point for the gesture.
  * @event lr-legend-visibility-change - Committed DOM legend visibility change.
  * @event lr-point-activate - Fired when pointer input lands on a box, or when Enter/Space
  *   activates the keyboard-current box. `detail: { datasetIndex: number, index: number, label:
@@ -398,6 +392,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     loading: LYRA_DEFAULT_loading,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'labels',
@@ -415,7 +410,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-legend-visibility-change-request',
-    'lr-before-legend-visibility-change',
     'lr-legend-visibility-change',
   ]);
 
@@ -955,7 +949,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
-        animation: prefersReducedMotion(this.ownerWindow) ? false : undefined,
+        animation: prefersReducedMotion(this) ? false : undefined,
         onClick: (event: unknown, _elements: unknown, chart: BoxPlotChartRuntime) =>
           this.handlePointClick(event, chart),
         elements: {
@@ -1494,14 +1488,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       legendVisibilityDetail(index, visible, nextHidden),
       { cancelable: true },
     );
-    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
-    // still veto, exactly as one bound only to the canonical name can.
-    const deprecatedAlias = this.emit(
-      'lr-before-legend-visibility-change',
-      legendVisibilityDetail(index, visible, nextHidden),
-      { cancelable: true },
-    );
-    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
+    if (proposed.defaultPrevented) return;
     this.hiddenDatasets = nextHidden;
     this.applyDatasetVisibility();
     this.chart.update('none');

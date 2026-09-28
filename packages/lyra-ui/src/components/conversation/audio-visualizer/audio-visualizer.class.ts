@@ -1,3 +1,4 @@
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -171,8 +172,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private resizeObserver?: ResizeObserver;
   private dprQuery?: MediaQueryList;
   private dprChangeListener?: (event: MediaQueryListEvent) => void;
-  private motionQuery?: MediaQueryList;
-  private motionChangeListener?: (event: MediaQueryListEvent) => void;
+  private stopMotionWatch?: () => void;
   private drawFrameRequest?: OwnedAnimationFrame;
   private lastAmbientDrawMs = 0;
   private generatedAriaLabel?: string;
@@ -249,22 +249,9 @@ export class LyraAudioVisualizer extends LyraElement {
     this.watchDpr();
     // The draw loop parks itself while ambient output is static under reduced motion, so a
     // preference flip must restart it (and re-simplify/re-animate the pattern) explicitly.
-    if (typeof owner.matchMedia === 'function') {
-      const query = owner.matchMedia('(prefers-reduced-motion: reduce)');
-      const listener = (): void => {
-        if (
-          !this.isConnected ||
-          this.ownerDocument.defaultView !== owner ||
-          this.motionQuery !== query
-        ) {
-          return;
-        }
-        this.scheduleDraw();
-      };
-      this.motionQuery = query;
-      this.motionChangeListener = listener;
-      query.addEventListener('change', listener);
-    }
+    this.stopMotionWatch = observeReducedMotion(this, () => {
+      if (this.isConnected) this.scheduleDraw();
+    });
     // A reconnect may land under a different theme scope, so neither canvas colors nor the ambient
     // cycle duration can safely survive it.
     this.resolvedColors = undefined;
@@ -400,11 +387,8 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   private clearMotionWatcher(): void {
-    if (this.motionQuery && this.motionChangeListener) {
-      this.motionQuery.removeEventListener('change', this.motionChangeListener);
-    }
-    this.motionQuery = undefined;
-    this.motionChangeListener = undefined;
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
   }
 
   /** Redraws canvas content after an upstream token or theme change. */
@@ -553,7 +537,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private get isTimeDriven(): boolean {
     if (this.analyser && this.audioCtx?.state === 'running') return true;
     if (this.level != null) return false;
-    if (prefersReducedMotion(this.ownerDocument.defaultView)) return false;
+    if (prefersReducedMotion(this)) return false;
     return this.state !== 'idle';
   }
 
@@ -576,7 +560,7 @@ export class LyraAudioVisualizer extends LyraElement {
     // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
     // catches up. Redraws resume once the observer reports intersecting again via `scheduleDraw()`.
     if (!this.visibilityKnown || !this.visible) return;
-    const reduced = prefersReducedMotion(request.owner);
+    const reduced = prefersReducedMotion(this);
     if (reduced && !this.hasLiveSignal) {
       if (nowMs - this.lastAmbientDrawMs < AMBIENT_REDUCED_MOTION_INTERVAL_MS) {
         this.scheduleDraw();
@@ -662,7 +646,7 @@ export class LyraAudioVisualizer extends LyraElement {
       const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
       return new Array(n).fill(this.effectiveLevel);
     }
-    return this.ambientAmplitudes(nowMs, prefersReducedMotion(this.ownerDocument.defaultView));
+    return this.ambientAmplitudes(nowMs, prefersReducedMotion(this));
   }
 
   /** Resolves and validates the two drawing colors once; the theme/color-scheme observers and

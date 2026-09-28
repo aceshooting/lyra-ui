@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseSync } from 'oxc-parser';
 
-import { expandManifestInheritance } from './manifest-compact.mjs';
+import { expandManifestInheritance, expandManifestDeprecations } from './manifest-compact.mjs';
 
 // 2 added the required top-level `exportDeprecations` ledger for package entry points and types.
 const COMPONENT_METADATA_SCHEMA_VERSION = 2;
@@ -14,7 +14,11 @@ const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
 export const UNRELEASED_VERSION = 'unreleased';
 /** Host declarations a consumer can write on the tag itself instead of a deprecated member. */
 const HOST_CSS_REPLACEMENTS = Object.freeze(['background', 'color', 'inline-size']);
-const EXPORT_DEPRECATION_KINDS = Object.freeze(['entry-point', 'type']);
+const NAMED_EXPORT_KINDS = Object.freeze(['type', 'function', 'constant', 'class']);
+const MODULE_CONTRACT_KINDS = Object.freeze(['window-event', 'root-attribute']);
+const EXPORT_DEPRECATION_KINDS = Object.freeze([
+  'entry-point', 'stylesheet', ...NAMED_EXPORT_KINDS, ...MODULE_CONTRACT_KINDS,
+]);
 const ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -579,8 +583,8 @@ function exportDeprecationKey(entry) {
 }
 
 function exportDeprecationLabel(entry) {
-  return entry?.kind === 'type'
-    ? `exportDeprecations type ${entry?.module}#${entry?.name}`
+  return [...NAMED_EXPORT_KINDS, ...MODULE_CONTRACT_KINDS].includes(entry?.kind)
+    ? `exportDeprecations ${entry.kind} ${entry?.module}#${entry?.name}`
     : `exportDeprecations ${entry?.kind} ${entry?.name}`;
 }
 
@@ -595,8 +599,8 @@ function exportTarget(value) {
  * Resolves one exact `package.json#exports` specifier to its TypeScript source (`./dist/X.js` is
  * built from `src/X.ts`), reporting why it cannot be a deprecation subject or replacement.
  */
-function exportSource(label, specifier, subject, { exportsMap, readSource }, findings) {
-  if (typeof specifier !== 'string' || !Object.hasOwn(exportsMap, specifier)) {
+function exportSource(label, specifier, subject, { exportsMap, readSource }, findings, stylesheet = false) {
+  if (typeof specifier !== 'string' || (specifier !== '.' && !specifier.startsWith('./')) || specifier.split('/').some(part => part === '..')) {
     findings.push(`${label}: ${subject} is not a package export`);
     return null;
   }
@@ -604,15 +608,33 @@ function exportSource(label, specifier, subject, { exportsMap, readSource }, fin
     findings.push(`${label}: ${subject} must name one exact export, not a pattern`);
     return null;
   }
-  const match = /^\.\/dist\/(.+)\.js$/.exec(exportTarget(exportsMap[specifier]) ?? '');
-  if (!match) {
-    findings.push(`${label}: ${subject} does not resolve to a built JavaScript module`);
+  let target;
+  if (Object.hasOwn(exportsMap, specifier)) target = exportTarget(exportsMap[specifier]);
+  else {
+    // Match Node's most-specific pattern first. A null target blocks broader patterns too.
+    const patterns = Object.keys(exportsMap).filter(key => key.includes('*')).sort((a, b) =>
+      b.indexOf('*') - a.indexOf('*') || b.length - a.length);
+    for (const pattern of patterns) {
+      const [prefix, suffix] = pattern.split('*');
+      if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix) || specifier.length < prefix.length + suffix.length) continue;
+      const capture = specifier.slice(prefix.length, suffix ? -suffix.length : undefined);
+      target = exportTarget(exportsMap[pattern])?.replaceAll('*', capture) ?? null;
+      break;
+    }
+  }
+  if (!target) {
+    findings.push(`${label}: ${subject} is not a package export`);
     return null;
   }
-  const sourcePath = `src/${match[1]}.ts`;
+  const match = (stylesheet ? /^\.\/dist\/(.+)\.css$/ : /^\.\/dist\/(.+)\.js$/).exec(target);
+  if (!match) {
+    findings.push(`${label}: ${subject} does not resolve to a built ${stylesheet ? 'CSS stylesheet' : 'JavaScript module'}`);
+    return null;
+  }
+  const sourcePath = `src/${match[1]}.${stylesheet ? 'css' : 'ts'}`;
   const source = readSource(sourcePath);
   if (typeof source !== 'string') {
-    findings.push(`${label}: ${subject} has no TypeScript source at ${sourcePath}`);
+    findings.push(`${label}: ${subject} has no ${stylesheet ? 'CSS' : 'TypeScript'} source at ${sourcePath}`);
     return null;
   }
   return { sourcePath, source };
@@ -654,34 +676,69 @@ function moduleExportsOrFinding(label, resolved, subject, findings) {
 }
 
 function validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings) {
-  exportSource(label, entry.name, entry.name, resolveContext, findings);
+  exportSource(label, entry.name, entry.name, resolveContext, findings, entry.kind === 'stylesheet');
   const replacement = entry.replacement;
   if (!namesReplacement(replacement)) return;
-  if (replacement.kind !== 'entry-point') {
-    findings.push(`${label}: replacement must be another entry point`);
+  if (replacement.kind !== entry.kind) {
+    findings.push(`${label}: replacement must be another ${entry.kind === 'stylesheet' ? 'stylesheet' : 'entry point'}`);
   } else if (deprecatedEntryPoints.has(replacement.name)) {
     findings.push(`${label}: replacement ${replacement.name} is itself deprecated`);
   } else {
-    exportSource(label, replacement.name, `replacement entry point ${replacement.name}`, resolveContext, findings);
+    exportSource(label, replacement.name, `replacement ${entry.kind === 'stylesheet' ? 'stylesheet' : 'entry point'} ${replacement.name}`, resolveContext, findings, entry.kind === 'stylesheet');
   }
 }
 
-function validateTypeDeprecation(label, entry, resolveContext, findings) {
+/** Global DOM contracts must occur as syntax in their owning module, never only in prose. */
+function validateModuleContractDeprecation(label, entry, resolveContext, findings) {
+  const verify = (contract, subject) => {
+    const pattern = contract.kind === 'window-event' ? /^lr-[a-z0-9]+(?:-[a-z0-9]+)*$/ : /^data-lr-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    if (!pattern.test(contract.name ?? '')) {
+      findings.push(`${label}: ${subject} has an invalid ${contract.kind} name`);
+      return;
+    }
+    const resolved = exportSource(label, contract.module, subject, resolveContext, findings);
+    if (!resolved) return;
+    const parsed = parseSync(resolved.sourcePath, resolved.source);
+    if (parsed.errors.length) {
+      findings.push(`${label}: ${subject} source ${resolved.sourcePath} does not parse`);
+      return;
+    }
+    let found = false;
+    const visit = node => {
+      if (!node || typeof node !== 'object' || found) return;
+      if ((node.type === 'Literal' || node.type === 'StringLiteral') && node.value === contract.name) found = true;
+      else for (const [key, value] of Object.entries(node)) {
+        if (key === 'comments') continue;
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (value && typeof value === 'object') visit(value);
+      }
+    };
+    visit(parsed.program);
+    if (!found) findings.push(`${label}: ${subject} is not declared or used in ${contract.module}`);
+  };
+  verify(entry, entry.name);
+  if (!namesReplacement(entry.replacement)) return;
+  if (entry.replacement.kind !== entry.kind) findings.push(`${label}: replacement must be another ${entry.kind}`);
+  else verify({ ...entry.replacement, module: entry.replacement.module ?? entry.module }, `replacement ${entry.replacement.name}`);
+}
+
+function validateNamedExportDeprecation(label, entry, resolveContext, findings) {
   const resolved = exportSource(label, entry.module, entry.module, resolveContext, findings);
   if (!resolved) return;
   const exportsByName = moduleExportsOrFinding(label, resolved, entry.module, findings);
   if (!exportsByName) return;
   const own = exportsByName.get(entry.name);
   if (!own) findings.push(`${label}: ${entry.module} does not export ${entry.name}`);
-  else if (!own.isType) findings.push(`${label}: ${entry.name} is not a type-only export`);
+  else if (entry.kind === 'type' && !own.isType) findings.push(`${label}: ${entry.name} is not a type-only export`);
+  else if (entry.kind !== 'type' && own.isType) findings.push(`${label}: ${entry.name} is not a runtime value export`);
   else if (!own.deprecated) {
     findings.push(`${label}: ${entry.name} has no @deprecated JSDoc directly above its export`);
   }
 
   const replacement = entry.replacement;
   if (!namesReplacement(replacement)) return;
-  if (replacement.kind !== 'type') {
-    findings.push(`${label}: replacement must be another type`);
+  if (!NAMED_EXPORT_KINDS.includes(replacement.kind)) {
+    findings.push(`${label}: replacement must name a type, function, constant or class export`);
     return;
   }
   const replacementModule = replacement.module ?? entry.module;
@@ -700,9 +757,11 @@ function validateTypeDeprecation(label, entry, resolveContext, findings) {
   }
   const target = replacementExports.get(replacement.name);
   if (!target) {
-    findings.push(`${label}: replacement type ${replacement.name} is not exported by ${replacementModule}`);
+    findings.push(`${label}: replacement ${entry.kind} ${replacement.name} is not exported by ${replacementModule}`);
   } else if (target.deprecated) {
-    findings.push(`${label}: replacement type ${replacement.name} is itself deprecated`);
+    findings.push(`${label}: replacement ${entry.kind} ${replacement.name} is itself deprecated`);
+  } else if (replacement.kind === 'type' ? !target.isType : target.isType) {
+    findings.push(`${label}: replacement ${replacement.name} is not a ${replacement.kind === 'type' ? 'type-only' : 'runtime value'} export`);
   }
 }
 
@@ -710,8 +769,10 @@ function validateTypeDeprecation(label, entry, resolveContext, findings) {
  * Validates `exportDeprecations`: package-level deprecations that no component declaration can
  * carry. An `entry-point` record deprecates one exact `package.json#exports` specifier (every
  * import of that path) in favour of another; a `type` record deprecates one type-only export of an
- * exact specifier, whose declaring source must carry `@deprecated` directly above that export so
- * editors strike it through. Both share the tag-scoped ledger's window and rationale rules.
+ * exact specifier; `function`, `constant` and `class` records cover named runtime exports. Exact specifiers
+ * may resolve through package patterns. Stylesheets and global DOM contracts share this ledger.
+ * Named exports carry `@deprecated` directly above the export for editor diagnostics. All kinds
+ * share the tag-scoped ledger's window and rationale rules.
  */
 function validateExportDeprecations(metadata, { packageJson, readSource }, findings) {
   const records = metadata?.exportDeprecations;
@@ -733,7 +794,7 @@ function validateExportDeprecations(metadata, { packageJson, readSource }, findi
     readSource,
   };
   const deprecatedEntryPoints = new Set(records
-    .filter((entry) => entry?.kind === 'entry-point')
+    .filter((entry) => entry?.kind === 'entry-point' || entry?.kind === 'stylesheet')
     .map((entry) => entry.name));
   const seen = new Set();
   for (const entry of records) {
@@ -745,14 +806,21 @@ function validateExportDeprecations(metadata, { packageJson, readSource }, findi
     }
     seen.add(key);
     if (!EXPORT_DEPRECATION_KINDS.includes(entry?.kind)) {
-      findings.push(`${label}: kind must be entry-point or type`);
+      findings.push(`${label}: kind must be ${EXPORT_DEPRECATION_KINDS.join(', ')}`);
       continue;
     }
     validateDeprecationWindow(label, entry, context, findings);
-    if (entry.kind === 'entry-point') {
+    if (entry.kind === 'entry-point' || entry.kind === 'stylesheet') {
       validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings);
+    } else if (MODULE_CONTRACT_KINDS.includes(entry.kind)) {
+      validateModuleContractDeprecation(label, entry, resolveContext, findings);
+      const replacement = entry.replacement;
+      if (replacement && records.some(record => record.kind === replacement.kind &&
+          record.module === (replacement.module ?? entry.module) && record.name === replacement.name)) {
+        findings.push(`${label}: replacement ${replacement.name} is itself deprecated`);
+      }
     } else {
-      validateTypeDeprecation(label, entry, resolveContext, findings);
+      validateNamedExportDeprecation(label, entry, resolveContext, findings);
     }
   }
 }
@@ -1008,11 +1076,12 @@ function manifestMetadataProjection(manifest) {
 
 /** Returns exact tag-level findings when a checked-in CEM no longer matches central metadata. */
 export function validateManifestMetadataProjection(metadata, manifest, { packageVersion } = {}) {
-  const expectedManifest = structuredClone(manifest);
+  const expandedManifest = expandManifestDeprecations(manifest);
+  const expectedManifest = structuredClone(expandedManifest);
   clearManifestMetadataProjection(expectedManifest);
   applyComponentMetadataToManifest(metadata, expectedManifest, { packageVersion });
   const expected = manifestMetadataProjection(expectedManifest);
-  const actual = manifestMetadataProjection(manifest);
+  const actual = manifestMetadataProjection(expandedManifest);
   const actualByTag = new Map(actual.map((entry) => [entry.tag, entry]));
   return expected
     .filter((entry) => !sameJson(entry, actualByTag.get(entry.tag)))

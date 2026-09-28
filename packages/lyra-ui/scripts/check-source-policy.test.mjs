@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import test from 'node:test';
 
 import {
   collectSourcePolicyFindings,
+  colocatedTestSource,
   findOpaqueReviewTokens,
   findBareGlobalIsNaNCalls,
   findUnboundAnnouncerTimerHosts,
@@ -379,5 +382,29 @@ test('strings-test-coverage ties each literal localize key to output evidence in
       2,
       'a string that merely spells an it() block cannot prove localized output coverage',
     );
+  }
+});
+
+
+test('colocated coverage includes behavior splits without borrowing another component tests', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'lyra-source-policy-'));
+  try {
+    const files = {
+      'panel.class.ts': 'export class Panel {}',
+      'panel.test.ts': 'const basicEvidence = true;',
+      'panel-interaction.test.ts': 'const keyboardEvidence = new KeyboardEvent("keydown");',
+      'panel.localization.test.ts': 'const stringsEvidence = element.strings;',
+      'panel-item.class.ts': 'export class PanelItem {}',
+      'panel-item.test.ts': 'const otherComponentEvidence = true;',
+      'panel-item-focus.test.ts': 'const otherFocusEvidence = true;',
+    };
+    for (const [name, source] of Object.entries(files)) writeFileSync(path.join(directory, name), source);
+    const source = colocatedTestSource(path.join(directory, 'panel.class.ts'));
+    assert.match(source, /basicEvidence/);
+    assert.match(source, /keyboardEvidence/);
+    assert.match(source, /stringsEvidence/);
+    assert.doesNotMatch(source, /otherComponentEvidence|otherFocusEvidence/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });

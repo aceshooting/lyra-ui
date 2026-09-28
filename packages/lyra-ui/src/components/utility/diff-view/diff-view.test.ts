@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
   expect,
@@ -20,6 +21,8 @@ function stubClipboard(target: Navigator, value: unknown): () => void {
     else Reflect.deleteProperty(target, "clipboard");
   };
 }
+
+expectLocaleFallback('ar', ['diffViewHiddenLines']);
 
 describe("lr-diff-view", () => {
   it("normalizes unsupported layout attributes and untyped property writes", async () => {

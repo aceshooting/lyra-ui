@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -21,7 +23,7 @@ import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 import {
-  normalizeReflectedOptionalSize,
+  normalizeSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -84,6 +86,8 @@ export interface LyraThreadListEventMap {
   'lr-group-toggle': CustomEvent<ThreadGroupToggleDetail>;
   /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
    *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
+  'lr-retry-request': CustomEvent<null>;
+  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
   'lr-retry': CustomEvent<null>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
@@ -335,7 +339,9 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   shadow boundary can observe it.
  * @event focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
  *   for the same reason as `blur`.
- * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
+ * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
+ *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
  * @csspart base - The root.
@@ -471,6 +477,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     unpinConversation: LYRA_DEFAULT_unpinConversation,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
@@ -479,6 +486,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override deprecatedAliases: LyraDeprecatedAliases = {
     showArchived: 'withArchived',
     renamable: ['withoutRename', invertAlias, invertAlias],
+    compact: ['size', (value) => value ? 's' : 'm', (value) => ['2xs', 'xs', 's'].includes(normalizeSize(value as LyraSize))],
   };
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
@@ -497,30 +505,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Shows the built-in search field. */
   @property({ type: Boolean, reflect: true }) searchable = false;
 
-  private _size?: LyraSize;
-
-  /** Density tier for the built-in search field, on the library's one size ladder, in either
-   *  spelling -- `2xs`/`xs`/`s`/`m`/`l`/`xl`, or Web Awesome's and Shoelace's
-   *  `small`/`medium`/`large`. Opt-in: with no size the field keeps the exact gutters, corner
-   *  radius and inherited text size it shipped with, so existing markup renders unchanged. A tier
-   *  gives it the row height, text size, gutters and corner radius an `<lr-input>` of that tier
-   *  has, so this sidebar's own filter box lines up with an adjacent themed search field instead
-   *  of sitting at one fixed size no consumer could reach. Only the field is tiered: the gutter
-   *  around it and the clear affordance keep their own sizes, because the clear button is a tap
-   *  target floored by the shared minimum target size rather than by the text scale -- both have
-   *  their own custom properties for a consumer that wants to move them too. Unsupported values
-   *  normalize to the omitted state and remove the attribute. */
-  @property({ reflect: true, converter: optionalSizeConverter })
-  get size(): LyraSize | undefined {
-    return this._size;
-  }
-  set size(next: LyraSize | undefined) {
-    const normalized = normalizeReflectedOptionalSize(this, next);
-    const old = this._size;
-    if (old === normalized) return;
-    this._size = normalized;
-    this.requestUpdate('size', old);
-  }
+  /** Shared size tier for the built-in search field and data-mode rows. Defaults to `m`.
+   * Explicit `small`/`medium`/`large` spellings remain accepted; invalid or omitted writes
+   * restore `m`. Slotted rows keep their own size. */
+  @property({ reflect: true }) size: LyraSize | undefined = 'm';
 
   /** Overrides the default case-insensitive `title` + `excerpt` substring match. */
   @property({ attribute: false }) filter?: (
@@ -653,10 +641,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   })
   renamable = true;
 
-  /** Data mode only: forwarded to every row `<lr-conversation-item>` as its dense `size="s"`,
-   *  tightening each row's padding and gaps in one place. Slotted mode is a deliberate no-op — this
-   *  component renders host-supplied items as-is, so the host sets `size` on its own items there, the same
-   *  division of responsibility slotted mode already has for every other row property. */
+  /** Compatibility density alias: true selects `size="s"`, false selects `size="m"`. The shared
+   * size applies to the built-in search field and data-mode rows; slotted rows retain their own size.
+   * @deprecated Use `size="s"`; removal not before 24.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Data mode only: pins the current date/custom group's header to the top of the scroll viewport
@@ -738,6 +725,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('size') && optionalSizeConverter.normalize(this.size) === undefined) this.size = 'm';
     if (
       changed.has('threads') ||
       changed.has('searchText') ||
@@ -1445,7 +1433,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         excerpt=${thread.excerpt ?? ''}
         .timestamp=${thread.timestamp}
         ?active=${thread.id === this.activeConversationId}
-        size=${this.compact ? 's' : 'm'}
+        size=${this.size ?? 'm'}
         .withoutRename=${this.withoutRename}
         @lr-select=${(e: Event) => {
           // conversation-item's own lr-select bubbles+composes with no detail (LyraElement.emit()'s
@@ -1662,8 +1650,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 errorHeading: this.errorHeading,
                 errorDescription: this.errorDescription,
                 onRetry: this.onErrorRetry,
-                emitRetry: (detail, init: { cancelable: true }) =>
-                  this.emit('lr-retry', detail, init),
+                emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
+                emitRetry: (detail, init: { cancelable: true }) => {
+                  const legacy = this.emit('lr-retry', detail, init);
+                  if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+                  return legacy;
+                },
               },
               'error',
               'lr-retry'

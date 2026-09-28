@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -80,7 +81,7 @@ import {
 } from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -1490,15 +1491,9 @@ export interface LyraChartEventMap {
   'lr-zoom': CustomEvent<{ zoomed: boolean }>;
   /** Canonical name for the legend-visibility veto point. */
   'lr-legend-visibility-change-request': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
-  /** Deprecated alias of `lr-legend-visibility-change-request`, kept firing unchanged for
-   *  back-compat; slated for removal in 21.0.0. */
-  'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
   'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
   /** Canonical name for the datum-visibility veto point. */
   'lr-datum-visibility-change-request': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
-  /** Deprecated alias of `lr-datum-visibility-change-request`, kept firing unchanged for
-   *  back-compat; slated for removal in 21.0.0. */
-  'lr-before-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
   'lr-datum-visibility-change': CustomEvent<LyraChartDatumVisibilityChangeDetail>;
   'lr-datum-activate': CustomEvent<
     LyraChartDatumActivateDetail<LyraCoreChartDatumKind>
@@ -1743,20 +1738,14 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   points its `value` is the same `LyraChartPoint`, including a safe primitive `id` when present.
  * @event lr-legend-visibility-change-request - Cancelable proposal emitted before a DOM legend
  *   toggle changes state. `detail` contains the target `datasetIndex`, its proposed `visible`
- *   value, and the complete canonical proposed `hiddenDatasets` snapshot. Fires before
- *   `lr-before-legend-visibility-change`, from the same gesture; either event may veto.
- * @event lr-before-legend-visibility-change - Deprecated cancelable alias of
- *   `lr-legend-visibility-change-request`, kept firing unchanged for back-compat; slated for
- *   removal in 21.0.0. Same detail.
+ *   value, and the complete canonical proposed `hiddenDatasets` snapshot. This request is the
+ *   sole veto point for the gesture.
  * @event lr-legend-visibility-change - Emitted after an accepted DOM legend toggle commits the
  *   same detail. Programmatic `hiddenDatasets` changes reconcile without either event.
  * @event lr-datum-visibility-change-request - Cancelable category visibility proposal in datum
  *   legend mode. `detail: { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
- *   Source category indexes apply to every dataset/ring. The complete detail is frozen. Fires
- *   before `lr-before-datum-visibility-change`, from the same gesture; either event may veto.
- * @event lr-before-datum-visibility-change - Deprecated cancelable alias of
- *   `lr-datum-visibility-change-request`, kept firing unchanged for back-compat; slated for
- *   removal in 21.0.0. Same frozen detail.
+ *   Source category indexes apply to every dataset/ring. The complete detail is frozen. This
+ *   request is the sole veto point for the gesture.
  * @event lr-datum-visibility-change - Emitted after an accepted category toggle commits the same
  *   frozen detail. Programmatic `hiddenDatums` assignments are silent.
  * @csspart base - The chart wrapper.
@@ -1910,19 +1899,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     resetZoom: LYRA_DEFAULT_resetZoom,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-legend-visibility-change-request',
-    'lr-before-legend-visibility-change',
     'lr-legend-visibility-change',
     'lr-datum-visibility-change-request',
-    'lr-before-datum-visibility-change',
     'lr-datum-visibility-change',
   ]);
 
@@ -4880,7 +4867,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         // `Chart#update()`. A CSS media query can't reach that
         // canvas-internal animation loop, so `prefersReducedMotion()` is
         // checked here instead and fed into `options.animation`.
-        animation: this.withoutAnimation || prefersReducedMotion(this.ownerWindow) ? false : undefined,
+        animation: this.withoutAnimation || prefersReducedMotion(this) ? false : undefined,
         interaction: { intersect: false, mode: effectiveType === 'scatter' ? 'nearest' : 'index', },
         onClick: (event: unknown, _elements: unknown, chart: RuntimeChart) =>
           this.handlePointClick(event, chart),
@@ -5555,14 +5542,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       legendVisibilityDetail(datasetIndex, visible, nextHidden),
       { cancelable: true }
     );
-    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
-    // still veto, exactly as one bound only to the canonical name can.
-    const deprecatedAlias = this.emit(
-      'lr-before-legend-visibility-change',
-      legendVisibilityDetail(datasetIndex, visible, nextHidden),
-      { cancelable: true }
-    );
-    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
+    if (proposed.defaultPrevented) return;
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
     // accepted user choice survives Chart.js reconstruction and can be persisted by a host.
     this.hiddenDatasets = nextHidden;
@@ -5584,10 +5564,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const next = visible ? hidden.filter((item) => item !== index) : [...hidden, index].sort((a, b) => a - b);
     const detail: LyraChartDatumVisibilityChangeDetail = { index, visible, hiddenDatums: next };
     const proposed = this.emit('lr-datum-visibility-change-request', detail, { cancelable: true });
-    // Deprecated alias -- dispatched unconditionally so a listener bound only to the old name can
-    // still veto, exactly as one bound only to the canonical name can.
-    const deprecatedAlias = this.emit('lr-before-datum-visibility-change', detail, { cancelable: true });
-    if (proposed.defaultPrevented || deprecatedAlias.defaultPrevented) return;
+    if (proposed.defaultPrevented) return;
     this.hiddenDatums = next;
     this.applyDatumVisibility();
     this.chart.update('none');

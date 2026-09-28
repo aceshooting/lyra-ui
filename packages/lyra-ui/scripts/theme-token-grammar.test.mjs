@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { concreteThemeCss } from './style-axes-model.mjs';
 
 import {
   grammar,
@@ -19,7 +20,7 @@ import {
 } from './theme-token-grammar.mjs';
 
 const themeSource = readFileSync(new URL('../src/theme/theme.ts', import.meta.url), 'utf8');
-const themeCss = readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8');
+const themeCss = concreteThemeCss(readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8'));
 
 const bootstrapStart = themeSource.indexOf('function applyStoredThemeBeforePaint(');
 const bootstrapEnd = themeSource.indexOf('\n}\n', bootstrapStart);

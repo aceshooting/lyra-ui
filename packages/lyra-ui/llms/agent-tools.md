@@ -425,13 +425,13 @@ title.
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolResultDialogCloseReason = 'api'):
 void` is the reasoned API dismissal;
 `close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
-closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
+closed), emits `lr-close` with `{ reason }`, and returns focus to whatever had it before
 the dialog opened. Built-in triggers call this with `'escape'`, `'backdrop'` when `lightDismiss` is
 enabled, or `'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
-**Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
+**Events:** `lr-close` (`detail: { reason: ToolResultDialogCloseReason }` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
 `lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
 `<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
@@ -555,9 +555,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
   `OptionFilter` convention).
-- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change` detail
+- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change-request` and `lr-change` detail
   shape.
-- `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail;
+- `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail.reason;
   `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss triggers, any other string is
   whatever a caller passes to `close()` directly.
 
@@ -594,14 +594,17 @@ void` performs the reasoned API dismissal;
 `close(reason: ToolSelectDialogCloseReason = 'api'): void` closes the dialog, emits `lr-close` with
 `reason`, and returns focus to whatever had it before the dialog opened.
 
-**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
+**Events:** `lr-change-request` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
 `preventDefault()` retains the current `selectedToolIds`/`useDefaults` values, and the built-in
 checkbox or switch never flips at all — the proposal is raised from that control's own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it writes its `checked` state, so a
 refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
-persists it, then assign the desired detail values after that work succeeds. `lr-close`
-(`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
+persists it, then assign the desired detail values after that work succeeds. After acceptance,
+noncancelable `lr-change` carries the same complete state, with the host properties already
+updated. A synchronous host replacement of the selection, defaults, or catalog takes precedence
+over the request; recursive requests are ignored. `lr-close`
+(`detail: { reason: ToolSelectDialogCloseReason }` — fired exactly once per dismissal, via Escape, a backdrop
 click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
 inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
 event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
@@ -610,7 +613,7 @@ re-dispatched when the internal search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate
-`lr-change` proposal.
+`lr-change-request` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -1024,7 +1027,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
   `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
 - `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected) — which
-  decision is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called
+  decision is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called
   `preventDefault()` on the now-cancelable event; the pending button shows `loading`, the other is
   `disabled` (Approve is also still `disabled` while an in-progress edit is invalid JSON,
   independent of `pendingAction`). Escape and an enabled backdrop dismissal are suppressed while
@@ -1040,30 +1043,33 @@ renders at the start of the action row, before Deny/Edit/Approve.
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
 and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
-**Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
+**Events:** `lr-approve-request` and `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
 Cancelable: a listener calling `preventDefault()` sets `pendingAction` to `'approve'` instead of
-closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail —
-`this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
-default, `event.detail` is `null`, not `undefined`. Cancelable, same `pendingAction` mechanism,
-setting `pendingAction` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
-(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
+closing; otherwise followed by `lr-close` with reason `'approve'`), `lr-deny-request` and `lr-deny`
+(`detail: null`, cancelable, with the same `pendingAction` mechanism,
+setting `pendingAction` to `'deny'`; otherwise followed by `lr-close` with reason `'deny'`), `lr-close`
+(`detail: { reason: ToolApprovalDialogCloseReason }` — fired exactly once per dismissal, via Escape, an opted-in
 backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
 dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
+`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
+follows its request with the same detail; preventing either spelling holds that decision pending.
+Subscribe to one spelling per action. `lr-close` remains the non-cancelable dismissal notification.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share
-the `lr-approve`/`lr-deny` event *names*, so the generated `HTMLElementEventMap['lr-approve']` is the
+the `lr-approve-request`/`lr-deny-request` event *names*, so the generated `HTMLElementEventMap['lr-approve-request']` is the
 union of both details and only the confirm bar's arm has the field: a listener bound to the shared
-name (`document.addEventListener('lr-approve', ...)`) must narrow on `event.target` before reaching
+name (`document.addEventListener('lr-approve-request', ...)`) must narrow on `event.target` before reaching
 for it, while one bound through `LyraConfirmBarEventMap`/`LyraToolApprovalDialogEventMap` already
 sees the right detail. Hold a decision open here with `preventDefault()` + `pendingAction`, then
 finalize with `close('approve'|'deny')` or bounce back by clearing `.pendingAction`.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
+
 
 **CSS parts:** `backdrop`, `panel`, `header`, `tool-name`, `body`, `args-view`, `args-editor`, `error`,
 `footer`, `deny-button`, `edit-button`, `approve-button`,
@@ -1097,8 +1103,8 @@ package, not an optional peer.
 <script type="module">
   const dialog = document.querySelector("lr-tool-approval-dialog");
   dialog.args = { to: "ops@example.com", subject: "Deploy finished" };
-  dialog.addEventListener("lr-approve", (e) => runTool(e.detail.args));
-  dialog.addEventListener("lr-deny", () => console.log("denied"));
+  dialog.addEventListener("lr-approve-request", (e) => runTool(e.detail.args));
+  dialog.addEventListener("lr-deny-request", () => console.log("denied"));
   dialog.addEventListener("lr-close", (e) => console.log("closed:", e.detail));
   dialog.open = true;
 </script>
@@ -1134,7 +1140,7 @@ shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
 
-- `lr-deny` has no detail payload: its `event.detail` is `null`, not `undefined`.
+- `lr-deny-request` has no detail payload: its `event.detail` is `null`, not `undefined`.
 - a consumer turning `readonly` on while an edit is already in progress automatically exits edit mode
   and discards the draft, so an unreachable "Cancel" affordance is never left stranded on screen.
 - reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
@@ -1156,7 +1162,7 @@ shared composed-tree focus traversal used by the other modal families.
   a raw `<button>`.
 - Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
   `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
-- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+- An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while
   its own async work is in flight — see `pendingAction` above. While `pendingAction` is set, Escape
   and an enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending
   decision leaves the dialog open until it clears `.pendingAction` or calls `close()` directly
@@ -1165,6 +1171,15 @@ shared composed-tree focus traversal used by the other modal families.
 ---
 
 ## `lr-tool-param-form`
+
+Its supported flat schema now additionally includes: `minLength`/`maxLength` (Unicode code points),
+`format: 'email' | 'uri' | 'date' | 'date-time'`, finite inclusive `minimum`/`maximum`, `enumNames`,
+string `oneOf: [{ const, title }]`, and `type:'array'` for multiple string-enum choices.
+Array items are `{ type:'string', enum:[...] }` or `{ anyOf:[{ const,title }] }`, bounded to 500
+choices. `minItems`/`maxItems` constrain selection counts; duplicate selections are invalid.
+Malformed constraints invalidate even absent optional fields. Defaults populate all supported
+shapes. Arbitrary nested objects/arrays/combinators, regex patterns, `$ref` and additionalProperties
+validation remain outside its scope. `lr-agent-question` rejects unknown keywords before rendering.
 
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
@@ -1178,40 +1193,49 @@ Choosing Boolean Unset keeps an explicit `undefined` value when a schema default
 that key or replacing the value with an absent key restores default materialization. Without a
 schema default, Unset removes the key.
 
-**Supported schema subset:** a _flat_ object whose properties use one primitive `type`
-(`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
-primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
-unions, `oneOf`/`anyOf`/`allOf`, `$ref`, string/numeric constraints, and schema-valued
-`additionalProperties` are not interpreted. An unsupported property type renders a visible fallback
-and makes the form invalid instead of being silently accepted. Schemas are bounded to 100 fields
-and 500 enum choices per field; exceeding either ceiling leaves only the bounded prefix mounted and
-fails the form closed with a localized form-wide error. A null, array, or other malformed property
-definition is a schema-shape error, never misreported as a value-serialization failure.
+**Supported schema subset:** a _flat_ object whose properties use string, number, integer, boolean,
+or bounded arrays of string-enum choices. String fields support `enum`/`enumNames`, titled `oneOf`
+choices, Unicode `minLength`/`maxLength`, and `email`, `uri`, `date`, or `date-time` formats;
+numeric fields support finite inclusive `minimum`/`maximum`; enum arrays support `items.enum` or
+titled `items.anyOf` plus `minItems`/`maxItems`. `required`, primitive `const`, and the
+`title`/`description`/`default` annotations are also supported. Free-form string inputs may forward
+native `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
+`enterKeyHint` hints. Nested objects, arbitrary arrays, type unions, `anyOf`/`allOf`, `$ref`, regex
+patterns, and schema-valued `additionalProperties` are not interpreted. An unsupported property
+type renders a visible fallback and makes the form invalid instead of being silently accepted.
+Schemas are bounded to 100 fields and 500 choices per field; exceeding either ceiling leaves only
+the bounded prefix mounted and fails the form closed with a localized form-wide error. A null,
+array, or other malformed property definition is a schema-shape error, never misreported as a
+value-serialization failure.
 
 **Exported types:**
 
-- `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
-  types this renderer understands
+- `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean' | 'array'` — the
+  supported leaf and string-enum-array property types
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
+- `ToolParamStringFormat = 'email' | 'uri' | 'date' | 'date-time'` — the supported string formats.
+- `ToolParamEnumOption` and `ToolParamEnumItems` — titled string constants for a single-select
+  `oneOf` or array `items.anyOf`, and the supported string-enum array item shape, respectively.
 - `ToolParamFormProperty { readonly type: ToolParamFormPropertyType; readonly enum?: readonly
-string[]; readonly description?: string; readonly title?: string; readonly default?: unknown;
-readonly const?: ToolParamFormPrimitive; readonly autocomplete?: string; readonly spellcheck?:
-boolean; readonly autocapitalize?: string; readonly autoCorrect?: string; readonly inputMode?:
-string; readonly enterKeyHint?: string }` — one `schema.properties`
-  entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
-  enforces one exact primitive value; `title` is the display label; `description` is helper text;
-  `default` pre-fills a field whenever `value` doesn't already have that key. For a `'string'`
-  (non-enum) or `'number'`/`'integer'` field, `const` also pre-fills the field (taking priority
-  over `default` when both are present) and renders its native control `readonly` — visible,
-  focusable and copyable, but not editable, and still submitted as the locked value. The
-  `'boolean'`/enum `<lr-select>` fields are unaffected: `const` there remains pure post-touch
-  validation, as before. For a free-form
-  string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
-  `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
-  `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
-- `FlatToolParamSchema { readonly type: 'object'; readonly properties:
-Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
-  (intentionally flat) schema shape this component can render.
+  string[]; readonly enumNames?: readonly string[]; readonly oneOf?: readonly ToolParamEnumOption[];
+  readonly items?: ToolParamEnumItems; readonly minLength?: number; readonly maxLength?: number;
+  readonly format?: ToolParamStringFormat; readonly minimum?: number; readonly maximum?: number;
+  readonly minItems?: number; readonly maxItems?: number; readonly description?: string;
+  readonly title?: string; readonly default?: unknown; readonly const?: ToolParamFormPrimitive;
+  readonly autocomplete?: string; readonly spellcheck?: boolean; readonly autocapitalize?: string;
+  readonly autoCorrect?: string; readonly inputMode?: string; readonly enterKeyHint?: string }` —
+  one `schema.properties` entry. `enum`/`enumNames` describe string select options; `oneOf` uses
+  titled constants, while array `items` uses `enum` or `anyOf` choices. `const` enforces one exact
+  primitive value. `title` is the display label, `description` helper text, and `default` pre-fills
+  a field when `value` has no corresponding key. String length limits count Unicode code points;
+  formats and inclusive numeric/selection bounds are validated. `const` locks string (non-enum),
+  number, and integer controls to its value, taking precedence over `default`; for boolean and enum
+  selects it is validated after the field is touched. For free-form text inputs, the native editing
+  hints are forwarded when supplied; `spellcheck` defaults to `true`.
+- `FlatToolParamSchema { readonly type: 'object'; readonly $schema?: string; readonly properties:
+  Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
+  intentionally flat schema shape this component can render; `$schema` identifies a dialect but
+  does not expand the supported keyword subset.
 - `ToolParamFormValue = Readonly<Record<string, unknown>>` — the clone-owned argument model.
 
 **Properties:**
@@ -1544,7 +1568,7 @@ configured height limit and scrolling.
 **Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
 `label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
 recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`
-(attribute `item-id`) — an opaque id round-tripped through `lr-vote`. Changing only `itemId` clears
+(attribute `item-id`) — an opaque id round-tripped through `lr-vote-request`. Changing only `itemId` clears
 the prior vote; assigning both `itemId` and a controlled `vote` in one update preserves the explicit
 vote regardless of property assignment order. `allowedVotes: readonly CompareVote[] = ['a', 'b',
 'tie', 'both-bad']` (attribute: false) is the positive list of choices to render, always projected
@@ -1552,14 +1576,17 @@ in that canonical order; repeated/foreign values do not create controls. The lis
 bounded, and frozen; reassign a new array after changing the allowed choices. `syncScroll: boolean =
 false` (attribute `sync-scroll`) links both panes'
 scroll position. `disabled: boolean = false` (reflected) disables every vote button and suppresses
-`lr-vote`.
+`lr-vote-request`.
 
 **Slots:** `a` (the first output — any content, a chat message, markdown, a viewer), `b` (the second
 output), and `prompt` (optional shared-input header above both panes).
 
-**Events:** `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
+**Events:** `lr-vote-request` and `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
 the prior vote.
+`lr-vote` is the deprecated cancelable alias, dispatched after `lr-vote-request` with the same
+detail. Either event can veto the vote change; subscribe to one spelling, not both.
+
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
 `prompt` slot is empty), `panes` (the row, or under 640px column, wrapping both panes), `pane-a`,
@@ -1788,7 +1815,7 @@ plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
 `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
-`lr-download` (`detail: { filename }`, cancelable — by
+`lr-download-request` and `lr-download` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -1797,6 +1824,10 @@ matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
+`lr-download` is the deprecated cancelable alias, dispatched after `lr-download-request` with the
+same filename detail. Either event can suppress the built-in download; it is not a completion
+notification. Subscribe to one spelling.
+
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
 `download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries
@@ -2123,8 +2154,7 @@ exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { collapsed: boolean
-}`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
 'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.
@@ -2230,7 +2260,7 @@ diameter in a running test row without requiring an override of `lr-spinner`'s t
 
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. Same `lr-approve`/`lr-deny` event shapes as the dialog, and the same
+focus. Same `lr-approve-request`/`lr-deny-request` event shapes as the dialog, and the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
@@ -2252,7 +2282,7 @@ is not a document heading by default; `1`–`6` also expose it to heading naviga
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically and
-emits no `lr-approve`/`lr-deny` of its own; `lr-decision-settled` still fires, because the status
+emits no `lr-approve-request`/`lr-deny-request` of its own; `lr-decision-settled` still fires, because the status
 really did render). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
@@ -2273,7 +2303,7 @@ container that already draws a border doesn't double it, and wins over the dense
 both are set. Before 9.0.0 the density knob alone did both jobs; a bar that relied on that now needs
 `size="s" frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
 `pendingAction: ApprovalAction | null = null` (attribute `pending-action`, reflected) — which action
-is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on
+is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
 `.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
 state. Deprecated alias: `pending` (use `pending-action`; removed in 23.0.0).
@@ -2318,10 +2348,13 @@ deliberately *not* affected: while a decision is awaiting resolution, focus stil
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
 
-**Events:** `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
-`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny` (`detail: { waitUntil }`, the
+**Events:** `lr-approve-request` and `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
+`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` and `lr-deny` (`detail: { waitUntil }`, the
 same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
+`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
+follows its request with the same detail, including `waitUntil`; either spelling can veto.
+Subscribe to one spelling per action to avoid handling the same proposal twice.
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
 listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,
@@ -2334,8 +2367,8 @@ then writing `pendingAction` and later `decision` by hand — still works unchan
 resolves the decision itself synchronously, by writing `decision` or `pendingAction` during the dispatch,
 wins outright over both: the bar applies no bookkeeping of its own, `waitUntil()`'s included.
 
-`waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve`/
-`lr-deny` names without it, so a listener bound to the shared name rather than to one component
+`waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve-request`/
+`lr-deny-request` names without it, so a listener bound to the shared name rather than to one component
 must narrow on `event.target` — see that component's Events section.
 
 `lr-decision-settled` fires after the decided `[part="status"]` has rendered and its live-region
@@ -2346,9 +2379,11 @@ promise chain and Lit's update queue interleave. A `decision` present in the ini
 announces and settles nothing — it never transitioned.
 
 **16.0.0 — breaking detail change.** `lr-deny`'s detail changed from `null` to `{ waitUntil }` and
-`lr-approve`'s from `{ args }` to `{ args, waitUntil }`. A listener that compared the whole detail
+`lr-approve`'s from `{ args }` to `{ args, waitUntil }`. The canonical request events use those same
+detail shapes. A listener that compared the whole detail
 object (`detail === null`, or a deep-equality check against `{ args }`) must read the fields it uses
 instead.
+
 
 **CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
 details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
@@ -2397,7 +2432,7 @@ repainting everything else that reads them.
   `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
-- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+- An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while
   its own async work is in flight — see `pendingAction` above. If that same listener resolves the
   decision itself synchronously (setting `.decision` or `.pendingAction` directly before returning),
   that wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the listener
@@ -2417,16 +2452,16 @@ repainting everything else that reads them.
 <script type="module">
   const bar = document.querySelector("lr-confirm-bar");
   bar.args = args;
-  bar.addEventListener("lr-approve", (e) => run(e.detail.args));
-  bar.addEventListener("lr-deny", () => cancel());
+  bar.addEventListener("lr-approve-request", (e) => run(e.detail.args));
+  bar.addEventListener("lr-deny-request", () => cancel());
 </script>
 ```
 
-An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
+An `lr-approve-request`/`lr-deny-request` listener that needs to await its own async work before finalizing calls
 `preventDefault()` and sets `.decision` (or clears `.pendingAction`) once it resolves:
 
 ```ts
-bar.addEventListener("lr-approve", (e) => {
+bar.addEventListener("lr-approve-request", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
     .then(() => {
@@ -2447,7 +2482,7 @@ found nothing yet:
 
 ```ts
 bar.returnFocusTo = () => document.querySelector('[data-action="delete"]');
-bar.addEventListener("lr-approve", (e) => {
+bar.addEventListener("lr-approve-request", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
     .then(() => {
@@ -2554,9 +2589,9 @@ download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` o
 the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
 sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL still renders the
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
-`lr-download` with the sanitized `src` and leaves the actual download to the host.
+non-cancelable `lr-download` with the sanitized `src`; the host owns the actual download.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
-`lr-download` event detail.
+`lr-download-request` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
@@ -2571,7 +2606,7 @@ since `null` is already a documented steady state meaning "the latest version"),
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
-`lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
+non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
@@ -2959,16 +2994,20 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
-with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
+with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request` and `lr-example-tool-approval-decide`
 (`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
 event is cancelable: calling `preventDefault()` propagates the veto to the nested
-`lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
+`lr-tool-approval-decide-request`, preserving its pending dialog and current edited arguments while the
 host resolves asynchronous validation. The component also contains and correlates other composed
 child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
 `lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
+`lr-example-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request
+with the same correlated detail. Preventing either spelling propagates the nested approval veto;
+subscribe to one spelling.
+
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
@@ -3055,7 +3094,7 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
 - `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
-  a listener has vetoed `lr-tool-approval-decide` and the timeline is holding the shared dialog for
+  a listener has vetoed `lr-tool-approval-decide-request` and the timeline is holding the shared dialog for
   host persistence; otherwise `null`
 
 **Methods:** `finalizePendingApproval(): void` closes a held dialog after the host has persisted and
@@ -3074,7 +3113,7 @@ data or exhausting the page.
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
 The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
+timeline boundary. `lr-tool-approval-decide-request` and `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when
@@ -3089,9 +3128,12 @@ A host may instead resolve the decision synchronously by reassigning `entries` (
 `finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
 `pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
 an entry that no longer needs a decision.
+`lr-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request with
+the same detail. Either spelling can hold the pending decision; subscribe to one spelling. It is
+not a completed-decision notification.
 
 ```ts
-timeline.addEventListener("lr-tool-approval-decide", async (event) => {
+timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
   event.preventDefault();
   try {
     await persistDecision(event.detail);
@@ -3102,6 +3144,7 @@ timeline.addEventListener("lr-tool-approval-decide", async (event) => {
   }
 });
 ```
+
 
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
@@ -3185,15 +3228,19 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
+**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` and `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
-`lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
+`lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
+`lr-approval-decision` is the deprecated cancelable alias, dispatched after the request with the
+same detail. Preventing either event keeps the nested decision pending; subscribe to one spelling.
+The selection and close events are non-cancelable notifications.
 
 Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
 selection and dialog state before another activation can use it; a request that disappears or is
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
 stale request.
+
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`, `limit` (localized notice shown when `requests`
@@ -3297,8 +3344,9 @@ import "@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js";
 
 Prompt-development workbench for ordered role messages, `{{variable}}` substitution, saved
 versions, resolved preview, and save/run intents. Message and variable edits emit a cancelable
-`lr-change` proposal carrying their complete next state before updating the component's current
-arrays; persistence and execution remain host-owned.
+`lr-change-request` proposal carrying their complete next state before updating the component's current
+arrays. Synchronous host replacement of either array takes precedence over the proposal, and
+recursive change requests are ignored. Persistence and execution remain host-owned.
 
 Variable values resolve recursively; undefined and cyclic placeholders remain literal within preview
 bounds. Each preview projection permits at most 64 nested variable resolutions, 10,000 placeholder
@@ -3309,7 +3357,7 @@ variables, editing and save/run payloads are unchanged.
 
 **Properties:** `messages: readonly PromptStudioMessage[] = []` and
 `variables: readonly PromptStudioVariable[] = []` are property-only editor state: user edits emit a
-cancelable `lr-change` before updating the current arrays, while the host remains responsible for
+cancelable `lr-change-request` before updating the current arrays, while the host remains responsible for
 persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
@@ -3335,14 +3383,16 @@ readonly PromptStudioMessage[]; variables?: readonly PromptStudioVariable[]; cre
 `PromptStudioState = { messages, variables }`; `PromptStudioWrap = 'hard' | 'soft' | 'off'`; and
 `PromptStudioMessageReorderDetail = { messages, messageId, fromIndex, toIndex }`.
 
-**Events:** cancelable `lr-change` (`{ messages, variables }`, the complete proposed next state,
-fired before it is applied — prevent it to keep the current state unchanged), `lr-run`, `lr-save`
+**Events:** cancelable `lr-change-request` (`{ messages, variables }`, the complete proposed next state,
+fired before it is applied — prevent it to keep the current state unchanged), noncancelable
+`lr-change` with the accepted complete state after both arrays have been updated, `lr-run`, `lr-save`
 (both carry complete messages/variables); `lr-version-select` (`{ version }`); and cancelable
 `lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
 updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
 current order; the listener may persist `detail.messages` and assign it back when ready. Deprecated
 alias: `lr-message-reorder` (use `lr-message-reorder-request`; removed in 23.0.0) — still fired right
-after it with an equal detail, and either event may veto. Plus `focus` and
+after it with an equal detail, and either event may veto. If both allow the move, the general
+`lr-change-request` follows; only its acceptance updates the arrays and emits `lr-change`. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
@@ -4195,4 +4245,312 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
   block.result = { hits: 3 };
   block.redactedFields = ['args.apiKey'];
 </script>
+```
+
+## `lr-change-review`
+
+Import `@aceshooting/lyra-ui/components/lr-change-review.js`. Experimental multi-file review of
+already-separated hunks. Bind `.files` to `ChangeReviewFile[]`: `{ id, path, previousPath?, hunks }`,
+where each hunk is `{ id, label?, before, after, decision?: 'pending' | 'keep' | 'discard' }`.
+Files and per-file hunks need nonblank, unique ids; malformed duplicates normalize first-wins.
+At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
+`lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
+
+`lr-change-decision` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
+`files`; there is no patch parser, filesystem access or optimistic decision update. `disabled`
+(default false) disables decision buttons; `readonly` (default false) hides them. File disclosures
+remain readable in both states. Optional `label` overrides the localized heading; a host
+`aria-label` names the internal group.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Named review group. |
+| `heading` | Review heading. |
+| `file` | One file disclosure. |
+| `file-header` | File disclosure summary. |
+| `previous-path` | Previous path for a renamed file. |
+| `hunk` | One change region. |
+| `hunk-header` | Hunk label and decision state. |
+| `status` | Localized current decision. |
+| `actions` | Hunk decision controls. |
+| `decision` | Keep or discard button. |
+| `empty` | Empty review message. |
+| `limit` | Render-limit notice. |
+
+
+**Events:** non-cancelable `lr-change-decision` (`detail: { fileId, hunkId, decision }`) reports a keep/discard action; the host applies it by replacing `files`.
+```js
+import '@aceshooting/lyra-ui/components/lr-change-review.js';
+const review = document.querySelector('lr-change-review');
+review.files = [{ id: 'config', path: 'config.ts', hunks: [
+  { id: 'timeout', before: 'timeout = 1000', after: 'timeout = 3000' }
+] }];
+review.addEventListener('lr-change-decision', ({ detail }) => {
+  review.files = review.files.map(file => file.id === detail.fileId
+    ? { ...file, hunks: file.hunks.map(hunk => hunk.id === detail.hunkId
+      ? { ...hunk, decision: detail.decision } : hunk) } : file);
+});
+```
+
+## `lr-agent-question`
+
+Import `@aceshooting/lyra-ui/components/lr-agent-question.js`. Experimental structured questions
+and MCP form-elicitation actions. Set `request-id`, `requester` (server/agent provenance), `message`,
+`.schema: FlatToolParamSchema`, and optional `.value: ToolParamFormValue`. `label` overrides the
+localized heading; `disabled` defaults false and `status` defaults `'pending'`.
+
+The component composes `lr-tool-param-form` with the flat MCP 2025-11-25 schema subset: strings,
+numbers/integers, booleans, titled or untitled single/multiple string-enum choices, defaults,
+required fields, Unicode string lengths, supported formats, numeric bounds and selection counts.
+Unknown keywords (including arbitrary nested schemas, `$ref` and regex patterns) visibly block
+acceptance. URL-mode elicitation and protocol transport remain application responsibilities.
+Malformed required-field entries and accessor-bearing schema data remain invalid; the form never
+silently treats them as optional. Unknown or accessor-bearing schemas visibly block acceptance.
+Validation callbacks are bound to the rendered request identity and cannot redirect a response to a
+replacement request.
+
+`lr-question-input` supplies `{ requestId, value }`; typing updates `value`. `lr-question-response`
+supplies `{ requestId, action: 'accept' | 'decline' | 'cancel', content? }`. Acceptance validates
+and returns only schema-declared fields. Decline/cancel omit content. A response immediately sets
+`status='submitted'` to prevent duplicates; set it back to `'pending'` after a failed send.
+Changing `requestId` resets draft and status, preserving explicit same-update property assignments.
+Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
+the composed parameter form owns field validation. Collection values and emitted details are owned.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Named question group. |
+| `heading` | Question heading. |
+| `message` | Caller-provided question text. |
+| `requester` | Requesting server or agent. |
+| `actions` | Response controls. |
+| `action` | One response button. |
+| `status` | Submitted-state message. |
+| `error` | Unsupported-schema explanation. |
+
+
+**Events:** non-cancelable `lr-question-input` (`detail: { requestId, value }`) reports draft edits. Non-cancelable `lr-question-response` (`detail: { requestId, action, content? }`) reports a response; accepted content contains validated fields, while decline/cancel omit `content`.
+```html
+<lr-agent-question request-id="contact" requester="Research server"
+  message="How should we contact you?"></lr-agent-question>
+```
+```js
+import '@aceshooting/lyra-ui/components/lr-agent-question.js';
+const question = document.querySelector('lr-agent-question');
+question.schema = { type: 'object', properties: {
+  email: { type: 'string', title: 'Email', format: 'email' }
+}, required: ['email'] };
+question.addEventListener('lr-question-response', event => {
+  // Map the correlation id and action/content to the application's transport.
+  console.log(event.detail);
+});
+```
+
+## `lr-permission-rules`
+
+`lr-permission-rules` presents an ordered, controlled set of host-defined permission rules. Each
+rule has a stable `id`, visible `label`, optional `description`, visible caller-supplied `scope`,
+and `decision: 'allow' | 'ask' | 'deny'`. The native select emits
+`lr-permission-rule-change` with `{ ruleId, decision }`; the component never evaluates policy or
+changes the supplied decision. Reassign a new `.rules` array after host updates. Blank identities
+are skipped, duplicate identities retain the first valid item, and at most 100 rows are mounted.
+`disabled` and `readonly` both prevent interaction. `label` names the visible group; host
+`aria-label` overrides the internal fieldset name.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Fieldset and permission-rule group. |
+| `legend` | Visible group label. |
+| `list` | Rendered rule rows. |
+| `rule` | One rule row. |
+| `rule-label` | Host-supplied rule label. |
+| `rule-copy` | Rule label and description text. |
+| `description` | Optional host-supplied description. |
+| `scope` | Localized scope label and supplied scope. |
+| `decision` | Native decision select. |
+| `empty` | Empty state. |
+| `limit` | Notice that more than 100 valid rules were supplied. |
+
+
+**Events:** non-cancelable `lr-permission-rule-change` (`detail: { ruleId, decision }`) requests a decision change; the host evaluates policy and updates the controlled collection.
+```ts
+import '@aceshooting/lyra-ui/components/lr-permission-rules.js';
+import type { PermissionRule } from '@aceshooting/lyra-ui/components/agent-tools/permission-rules/permission-rules.class.js';
+
+const rules: PermissionRule[] = [
+  { id: 'read', label: 'Read records', scope: 'records:read', decision: 'ask' },
+];
+```
+
+```html
+<lr-permission-rules></lr-permission-rules>
+```
+
+```ts
+element.addEventListener('lr-permission-rule-change', (event) => {
+  const { ruleId, decision } = (event as CustomEvent).detail;
+  // Validate/evaluate and apply the host's own policy, then reassign a new `rules` array.
+});
+```
+
+## `lr-permission-grant`
+
+`lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
+visible `label`, `description`, and caller-supplied `scope`. Its controlled `status` is `'pending'`,
+`'granted'`, or `'denied'`; only a pending request displays actions. The buttons emit
+`lr-permission-decision` with `{ requestId, decision }`, where decision is `'allow-once'`,
+`'allow-session'`, or `'deny'`. A missing/blank identity and `disabled` state gate every action.
+The host must validate the displayed scope, authorize the operation, persist any decision, and
+update `status`; this presentation component does none of those things itself. Host `aria-label`
+overrides the internal fieldset name.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Fieldset and permission-request group. |
+| `legend` | Visible request label. |
+| `description` | Host-supplied request description. |
+| `scope-label` | Localized scope label. |
+| `scope` | Host-supplied requested scope. |
+| `scope-row` | Scope label and value row. |
+| `status` | Localized controlled request status. |
+| `actions` | Decision buttons, shown only while pending. |
+| `decision` | One native decision button. |
+
+
+**Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.
+```ts
+import '@aceshooting/lyra-ui/components/lr-permission-grant.js';
+
+element.addEventListener('lr-permission-decision', (event) => {
+  const { requestId, decision } = (event as CustomEvent).detail;
+  // Validate the host-owned request and scope, then authorize and persist as appropriate.
+});
+```
+
+## `lr-connector-manager`
+
+`lr-connector-manager` displays host-owned connector records and emits explicit requests through
+`lr-connector-action` (`{ connectorId, action: 'connect' | 'disconnect' | 'retry' }`). A
+disconnected connector offers Connect, a connected connector offers Disconnect, an errored
+connector offers Retry, and a connecting connector has no available action. The component never
+reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
+that the host has already localized. Assign a new `.connectors` array after host updates; the
+component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows.
+`disabled` gates every action. Host `aria-label` names the internal group.
+
+**Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
+`null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
+remains empty.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Fieldset and connector group. |
+| `legend` | Visible component label. |
+| `list` | Connector rows. |
+| `connector` | One row, keyed by `data-connector-id`. |
+| `connector-controls` | Action area for a row. |
+| `connector-copy` | Connector name, kind and description. |
+| `name` | Host-supplied connector name. |
+| `kind` | Localized connector kind. |
+| `description` | Optional host-supplied description. |
+| `status` | Localized controlled connection status. |
+| `error` | Optional host-localized error text. |
+| `action` | Native action button. |
+| `empty` | Empty state. |
+| `limit` | Notice that more than 100 valid connectors were supplied. |
+
+
+**Events:** non-cancelable `lr-connector-action` (`detail: { connectorId, action }`) requests a connect, disconnect, or retry operation; the host owns the operation and updates `connectors`.
+```ts
+import '@aceshooting/lyra-ui/components/lr-connector-manager.js';
+import type { AgentConnector } from '@aceshooting/lyra-ui/components/agent-tools/connector-manager/connector-manager.class.js';
+
+const connectors: AgentConnector[] = [
+  { id: 'files', name: 'Project files', kind: 'mcp', status: 'disconnected' },
+];
+element.connectors = connectors;
+element.addEventListener('lr-connector-action', (event) => {
+  const { connectorId, action } = (event as CustomEvent).detail;
+  // Perform the approved host operation, then reassign connector status.
+});
+```
+
+## `lr-background-runs`
+
+`lr-background-runs` displays controlled run records with statuses `queued`, `running`,
+`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-open` (`{ runId }`); queued and
+running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
+request cancellation. The component does not poll, schedule timers, start runs, or change status.
+Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
+and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Fieldset and run group. |
+| `legend` | Visible component label. |
+| `list` | Run rows. |
+| `run` | One row, keyed by `data-run-id`. |
+| `run-copy` | Run label and description. |
+| `label` | Host-supplied run label. |
+| `description` | Optional host-supplied run description. |
+| `status` | Localized controlled status. |
+| `actions` | Open and optional cancel controls. |
+| `open` | Native open button. |
+| `cancel` | Cancel button, present only for queued or running runs. |
+| `empty` | Empty state. |
+| `limit` | Notice that more than 100 valid runs were supplied. |
+
+
+**Events:** non-cancelable `lr-run-open` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+```ts
+import '@aceshooting/lyra-ui/components/lr-background-runs.js';
+import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';
+
+const runs: BackgroundRun[] = [
+  { id: 'index', label: 'Index the project', status: 'running' },
+];
+element.runs = runs;
+element.addEventListener('lr-run-cancel', (event) => {
+  const { runId } = (event as CustomEvent).detail;
+  // Request cancellation from the host's run service and publish its new status.
+});
+```
+
+## `lr-budget-meter`
+
+`lr-budget-meter` presents host-supplied `used`, `limit`, and optional `unit` values. The visible
+text preserves the actual quantities while the fill clamps at the limit. A zero or invalid limit
+shows an unavailable state; usage above the limit shows an exceeded state. The component does not
+price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
+values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
+its own localized accessible name.
+
+**CSS parts:**
+
+| Part | Purpose |
+| --- | --- |
+| `base` | Component wrapper and semantic group. |
+| `label` | Visible meter label. |
+| `meter` | Progressbar, present only for a positive finite limit. |
+| `track` | Meter track. |
+| `fill` | Fill clamped at the limit. |
+| `percent` | Localized percentage text. |
+| `value` | Actual localized used and limit quantities. |
+| `unavailable` | State for a zero or invalid limit. |
+| `exceeded` | Localized over-budget state. |
+
+```html
+<lr-budget-meter used="72000" limit="100000" unit="tokens"></lr-budget-meter>
 ```

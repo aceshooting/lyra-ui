@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-code-block-core.js to register this component. */
 export * from './code-block-core.class.js';
 export { resolvedShikiLanguages, setShikiCoreEngine } from './shiki-types.js';
 export type {

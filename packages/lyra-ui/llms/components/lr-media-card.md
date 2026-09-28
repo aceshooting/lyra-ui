@@ -6,7 +6,7 @@
 - **Class** `LyraMediaCard`, also available unregistered from `@aceshooting/lyra-ui/components/media/media-card/media-card.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated event** `lr-before-media-download` since `21.1.0`; use event `addEventListener('lr-media-download-request', ...)`; removal not before `23.0.0` — Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning.
 - **Optional peers** none
 - **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below

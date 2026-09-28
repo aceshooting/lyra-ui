@@ -57,7 +57,7 @@ export const styles = css`
   }
   [part="base"]:not([aria-disabled="true"]):hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   /* Pressed travels further along hover's own axis: the same brand-quiet fill mixed toward
      --lr-color-mix-partner, which follows the text colour, so it deepens on a light theme and
@@ -71,7 +71,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-app-rail-item-active-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -88,7 +88,7 @@ export const styles = css`
      other element reading them. Unset, each falls back to the token used before. */
   [part="base"][aria-current="page"] {
     background: var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-item-current-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-item-current-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
     font-weight: var(
       --lr-app-rail-item-current-font-weight,
       var(--lr-font-weight-semibold)
@@ -252,7 +252,7 @@ export const styles = css`
   }
   [part="toggle"]:hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:active {
     background: var(
@@ -263,7 +263,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-app-rail-item-active-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -1,4 +1,5 @@
-import { expect, fixture, waitUntil } from '@open-wc/testing';
+import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
+import { fixtureCleanup, expect, fixture, waitUntil } from '@open-wc/testing';
 import { html, type TemplateResult } from 'lit';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 import '../components/overlays/overlay/popover.js';
@@ -15,6 +16,13 @@ import '../components/forms/color-picker/color-picker.js';
 import '../components/forms/input/time-input.js';
 import '../components/conversation/model-select/model-select.js';
 import '../components/conversation/voice-picker/voice-picker.js';
+
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
+before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+after(() => {
+  fixtureCleanup();
+  setFlagUrlResolver(null);
+});
 
 /**
  * The overlay-surface contract: ONE overlay token family every floating surface reads.

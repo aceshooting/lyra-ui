@@ -259,7 +259,7 @@ it('keeps heatmap data churn within the matrix budget', async () => {
 });
 
 it('keeps table row churn within the large-table budget', async () => {
-  const host = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Record<string, string>>;
+  const host = (await fixture(html`<lr-table aria-label="Item status"></lr-table>`)) as LyraTable<Record<string, string>>;
   const columns: TableColumn<Record<string, string>>[] = [
     { key: 'id', label: 'ID', sticky: 'start', cell: (row) => row['id'] },
     { key: 'name', label: 'Name', cell: (row) => row['name'] },

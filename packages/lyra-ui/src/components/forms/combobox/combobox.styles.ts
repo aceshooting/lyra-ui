@@ -473,7 +473,7 @@ export const styles = css`
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
-    transition-duration: var(--show-duration, var(--lr-transition-fast));
+    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-transition-fast)));
   }
   @media (prefers-reduced-motion: reduce) {
     [part="listbox"] {

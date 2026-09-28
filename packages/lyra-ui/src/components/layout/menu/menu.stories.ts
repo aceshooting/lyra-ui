@@ -46,6 +46,21 @@ export const StandaloneMappedMenu: Story = {
   `,
 };
 
+export const NarrowNestedSurfaces: Story = {
+  render: () => html`
+    <div style="inline-size: 9rem; max-inline-size: 100%;">
+      <lr-menu label="Report actions">
+        <lr-menu-item>Review the operational report</lr-menu-item>
+        <div slot="footer">
+          <lr-menu label="Additional report actions">
+            <lr-menu-item>Share with the support team</lr-menu-item>
+          </lr-menu>
+        </div>
+      </lr-menu>
+    </div>
+  `,
+};
+
 /** Disabled and loading items remain visible but are skipped by navigation and activation. */
 export const WithUnavailableItems: Story = {
   render: () => html`

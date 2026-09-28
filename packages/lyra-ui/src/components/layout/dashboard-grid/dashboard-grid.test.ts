@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { LitElement, type PropertyValues } from "lit";
@@ -61,6 +62,8 @@ function replaceCssEscape(
     else Reflect.deleteProperty(target, "escape");
   };
 }
+
+expectLocaleFallback('ar-EG', ['dashboardCellMoved', 'dashboardCellResized', 'dashboardGridLabel', 'noData']);
 
 it('defaults to an empty layout, 12 columns, 80px rows, 8px gap, and collision="reject"', async () => {
   const el = (await fixture(

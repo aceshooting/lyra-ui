@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import {
@@ -131,6 +132,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     'lr-after-collapse': Object.freeze(['item']),
     'lr-toggle-request': Object.freeze(['item']),
   });
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
     'lr-after-expand',

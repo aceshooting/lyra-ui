@@ -38,6 +38,16 @@ export const ShoelaceThemeHooks: Story = {
   `,
 };
 
+export const ContainerShape: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; max-inline-size: 28rem; --lr-theme-border-radius-container: 1.5rem">
+      <lr-card>The container shape input reaches this card.</lr-card>
+      <lr-card href="/details">Linked cards share the same outline and content clipping.</lr-card>
+      <lr-card style="--border-radius: 0.25rem">This card keeps its own corner radius.</lr-card>
+    </div>
+  `,
+};
+
 export const Filled: Story = {
   render: () => html`
     <lr-card appearance="filled" style="max-inline-size:20rem;"> A quiet-brand filled surface, no border. </lr-card>

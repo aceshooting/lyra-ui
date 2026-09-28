@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
@@ -130,6 +131,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     embeddingExplorerPointLimit: LYRA_DEFAULT_embeddingExplorerPointLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'points',

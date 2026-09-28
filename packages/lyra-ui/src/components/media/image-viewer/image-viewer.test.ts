@@ -11,9 +11,29 @@ import {
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
+import { expectLocaleFallback } from "../../../../test/expected-locale-fallbacks.js";
 import { sendKeys } from "@web/test-runner-commands";
 
 const PNG_SRC = "https://example.test/photo.png";
+
+expectLocaleFallback('ar-EG', [
+  'imageViewerLabel',
+  'imageViewerFitLabel',
+  'imageViewerFitContain',
+  'imageViewerFitWidth',
+  'imageViewerFitActual',
+  'imageViewerRotate',
+  'imageViewerAnnotate',
+  'zoomableFrameLabel',
+  'zoomControls',
+  'zoomOut',
+  'resetZoom',
+  'pdfViewerCurrentZoom',
+  'zoomIn',
+  'imageViewerHighlightsLabel',
+  'imageViewerUnlabeledHighlight',
+  'imageViewerFailedToLoad',
+]);
 
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(

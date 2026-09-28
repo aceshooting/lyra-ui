@@ -6,7 +6,7 @@
 - **Class** `LyraSequencePlayback`, also available unregistered from `@aceshooting/lyra-ui/components/media/sequence-playback/sequence-playback.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated property** `loop` / `loop` since `21.1.0`; use property `without-loop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below

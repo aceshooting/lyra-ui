@@ -31,7 +31,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
@@ -213,7 +213,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,

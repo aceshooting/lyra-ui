@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './memory-panel.js';
@@ -59,6 +60,20 @@ async function populated(): Promise<LyraMemoryPanel> {
   return el;
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'memoryPanelLabel',
+  'noData',
+  'memoryPanelShortTermHeading',
+  'memoryPanelLongTermHeading',
+  'memoryPanelForgetAll',
+  'removeWithContext',
+  'remove',
+  'memoryPanelConfirmForgetHeading',
+  'memoryPanelConfirmForgetBody',
+  'deny',
+  'approve',
+]);
 describe('lr-memory-panel', () => {
   it('renders lr-empty and no sections when both shortTerm and longTerm are empty', async () => {
     const el = (await fixture(

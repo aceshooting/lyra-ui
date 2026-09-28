@@ -60,6 +60,8 @@ const katexState = createMarkdownKatexState();
 
 export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-link-activate': CustomEvent<{ href: string }>;
+  /** @deprecated Use lr-link-activate. */
   'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
@@ -169,7 +171,8 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * anything that updates after first connect.
  *
  * @customElement lr-markdown
- * @event lr-link-click - Fired (and the click prevented) when a rendered
+ * @event lr-link-click - Deprecated compatibility alias of `lr-link-activate`, emitted afterward with the same detail.
+ * @event lr-link-activate - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href: string }`.
  *   Ordinary external links navigate normally
  *   (in `link-target`) and never fire this event.
@@ -340,7 +343,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
 
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
-   *  `lr-link-click` instead of navigating. Empty (the default) means
+   *  `lr-link-activate` instead of navigating. Empty (the default) means
    *  every link is treated as external. */
   @property({ attribute: 'internal-link-prefix' }) override internalLinkPrefix =
     '';

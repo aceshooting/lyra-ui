@@ -6,13 +6,23 @@ import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // The locale-collation fixture deliberately retains the unregistered English messages.
 expectLocaleFallback('de', [
-  'evalDatasetAddExample', 'evalDatasetColumnExpectedOutput', 'evalDatasetColumnInput',
-  'evalDatasetColumnTags', 'evalDatasetImportLabel', 'evalDatasetLabel', 'evalDatasetRemoveExample',
-  'evalDatasetTagFilterLabel', 'exportButtonLabel', 'exportFormatMenuLabel', 'fileInputDefaultLabel',
-  'tableFilterLabel', 'tableFilterPlaceholder',
+  'evalDatasetAddExample',
+  'evalDatasetColumnExpectedOutput',
+  'evalDatasetColumnInput',
+  'evalDatasetColumnTags',
+  'evalDatasetImportLabel',
+  'evalDatasetLabel',
+  'evalDatasetRemoveExample',
+  'evalDatasetTagFilterLabel',
+  'exportButtonLabel',
+  'exportFormatMenuLabel',
+  'fileInputDefaultLabel',
+  'tableFilterLabel',
+  'tableFilterPlaceholder',
 ]);
 
 function examples(): EvalExample[] {
@@ -368,23 +378,33 @@ it('does not emit an import request when every dropped file was rejected', async
 });
 
 it('suppresses the export-button built-in download and re-emits lr-export-request instead', async () => {
-  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
-  await el.updateComplete;
-  const exportButton = el.shadowRoot!.querySelector('lr-export-button')!;
-  let completed = false;
-  exportButton.addEventListener('lr-export-complete', () => (completed = true));
-  const listener = oneEvent(el, 'lr-export-request');
-  // The default `exportFormats` carries more than one entry, so the trigger opens a format menu
-  // rather than exporting directly -- open it, then pick the first (csv) menu item.
-  const trigger = exportButton.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
-  trigger.click();
-  await exportButton.updateComplete;
-  const csvItem = exportButton.shadowRoot!.querySelector<HTMLButtonElement>('[part="menu-item"]')!;
-  csvItem.click();
-  const ev = await listener;
-  expect(ev.detail).to.deep.equal({ format: 'csv' });
-  await new Promise((r) => setTimeout(r, 10));
-  expect(completed).to.be.false;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: 'lr-export-button', kind: 'event', name: 'lr-export' }],
+    async () => {
+      const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+      await el.updateComplete;
+      const exportButton = el.shadowRoot!.querySelector('lr-export-button')!;
+      let completed = false;
+      let leakedLegacyEvent = false;
+      exportButton.addEventListener('lr-export-complete', () => (completed = true));
+      el.addEventListener('lr-export', () => (leakedLegacyEvent = true));
+      const listener = oneEvent(el, 'lr-export-request');
+      // The default `exportFormats` carries more than one entry, so the trigger opens a format menu
+      // rather than exporting directly -- open it, then pick the first (csv) menu item.
+      const trigger = exportButton.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
+      trigger.click();
+      await exportButton.updateComplete;
+      const csvItem = exportButton.shadowRoot!.querySelector<HTMLButtonElement>('[part="menu-item"]')!;
+      csvItem.click();
+      const ev = await listener;
+      expect(ev.detail).to.deep.equal({ format: 'csv' });
+      expect(ev.target === el).to.be.true;
+      await new Promise((r) => setTimeout(r, 10));
+      expect(completed).to.be.false;
+      expect(leakedLegacyEvent).to.be.false;
+    },
+  );
+  expect(warnings).to.deep.equal([]);
 });
 
 it('renders one toggleable tag chip per distinct tag and filters the grid to an OR match of active tags', async () => {

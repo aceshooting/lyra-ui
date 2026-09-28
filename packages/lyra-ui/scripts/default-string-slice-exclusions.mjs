@@ -8,13 +8,6 @@
  * stale entry therefore fails closed instead of silently becoming permanent configuration.
  */
 export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
-  // 'popover' is picked up incidentally through this file's own transitive graph (independent of
-  // LyraElement/form-control-labels.js -- this component is not form-associated). The
-  // elapsed/token-count keys below it are this component's real, dynamically-looked-up keys.
-  'src/components/conversation/generation-metrics/generation-metrics.class.ts': Object.freeze([
-    'popover',
-  ]),
-
   // A local dynamic segment-key map makes the conservative fallback inspect transitive helpers.
   // These generic catalog-shaped literals come from those helpers, not from time-input lookups.
   'src/components/forms/input/time-input.class.ts': Object.freeze([

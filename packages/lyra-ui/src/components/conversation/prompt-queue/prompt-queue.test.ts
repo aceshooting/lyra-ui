@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from "@open-wc/testing";
 import type { DocumentRef } from "../../../ai/types.js";
 import "./prompt-queue.js";
@@ -13,6 +14,15 @@ const items: PromptQueueItem[] = [
   { id: "two", value: "Second follow-up" },
 ];
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar', [
+  'promptQueueLabel',
+  'moveUp',
+  'promptQueueActionLabel',
+  'moveDown',
+  'promptQueueSendNow',
+  'remove',
+]);
 it("renders an editable ordered queue", async () => {
   const el = (await fixture(
     html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`

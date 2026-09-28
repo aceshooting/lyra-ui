@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
   expect,
@@ -99,6 +100,21 @@ async function settledFixture(): Promise<LyraKnowledgeGraphExplorer> {
   return el;
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('tr', [
+  'graphExplorerLabel',
+  'graphExplorerSearchPlaceholder',
+  'fieldRequired',
+  'graphLegendLabel',
+  'loading',
+  'popover',
+  'graphDiagram',
+  'graphNode',
+  'graphItemAnnouncement',
+  'graphDataList',
+  'viewerSearchMatchCount',
+  'graphExplorerSearchResultsLabel',
+]);
 describe('lr-knowledge-graph-explorer', () => {
   it('defaults to empty data, no selection/pins/path, renderer="svg"', async () => {
     const el = (await fixture(
@@ -670,13 +686,13 @@ describe('lr-knowledge-graph-explorer', () => {
 
   it('types every documented bubbled child event in the explorer EventMap', () => {
     const events: [
-      LyraKnowledgeGraphExplorerEventMap['lr-node-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-node-activate'],
       LyraKnowledgeGraphExplorerEventMap['lr-link-click'],
       LyraKnowledgeGraphExplorerEventMap['lr-node-expand'],
       LyraKnowledgeGraphExplorerEventMap['lr-community-activate'],
       LyraKnowledgeGraphExplorerEventMap['lr-relation-activate']
     ] = [
-      new CustomEvent('lr-node-click', {
+      new CustomEvent('lr-node-activate', {
         detail: { nodeId: 'a', x: 1, y: 2 },
       }),
       new CustomEvent('lr-link-click', {
@@ -691,7 +707,7 @@ describe('lr-knowledge-graph-explorer', () => {
       }),
     ];
     expect(events.map((event) => event.type)).to.deep.equal([
-      'lr-node-click',
+      'lr-node-activate',
       'lr-link-click',
       'lr-node-expand',
       'lr-community-activate',
@@ -1265,7 +1281,7 @@ describe('lr-knowledge-graph-explorer', () => {
         activations += 1;
       };
       graphEl(el).dispatchEvent(
-        new CustomEvent('lr-node-click', {
+        new CustomEvent('lr-node-activate', {
           detail: { nodeId: 'marie', x: 0, y: 0 },
           bubbles: true,
           composed: true,
@@ -1685,11 +1701,11 @@ describe('lr-knowledge-graph-explorer', () => {
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const graph = graphEl(el);
-    // Simulates the real gesture order: lr-graph's own lr-node-click fires first (setting the
+    // Simulates the real gesture order: lr-graph's own lr-node-activate fires first (setting the
     // pending node id), then the native click that bubbles out of it -- both dispatched
     // synchronously so the native click consumes pendingNodeId before the queued microtask does.
     graph.dispatchEvent(
-      new CustomEvent('lr-node-click', {
+      new CustomEvent('lr-node-activate', {
         detail: { nodeId: 'marie', x: 0, y: 0 },
       })
     );
@@ -1726,7 +1742,7 @@ describe('lr-knowledge-graph-explorer', () => {
     // Dispatched straight on the <lr-graph> host itself (not on a rendered node circle inside its
     // shadow root), so `event.composedPath()` never contains a `[part="node"]` element.
     graph.dispatchEvent(
-      new CustomEvent('lr-node-click', {
+      new CustomEvent('lr-node-activate', {
         detail: { nodeId: 'marie', x: 0, y: 0 },
       })
     );
@@ -1750,7 +1766,7 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.selectedNodeId).to.equal('marie');
   });
 
-  it('a native click on the graph with no prior lr-node-click leaves the popover untouched (no pending node id)', async () => {
+  it('a native click on the graph with no prior lr-node-activate leaves the popover untouched (no pending node id)', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
@@ -1834,7 +1850,7 @@ describe('lr-knowledge-graph-explorer', () => {
     ]);
   });
 
-  it('ignores an lr-node-click from the composed graph when its id is no longer in the data', async () => {
+  it('ignores an lr-node-activate from the composed graph when its id is no longer in the data', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
@@ -1849,7 +1865,7 @@ describe('lr-knowledge-graph-explorer', () => {
     });
 
     graphEl(el).dispatchEvent(
-      new CustomEvent('lr-node-click', {
+      new CustomEvent('lr-node-activate', {
         detail: { nodeId: 'removed-node', x: 12, y: 34 },
       })
     );
@@ -2111,11 +2127,11 @@ describe('lr-knowledge-graph-explorer', () => {
     let childCommits = 0;
     let wrapperCommits = 0;
     el.addEventListener(
-      'lr-before-visibility-change',
+      'lr-visibility-change-request',
       () => (leakedProposals += 1)
     );
     legend.addEventListener(
-      'lr-before-visibility-change',
+      'lr-visibility-change-request',
       () => (childProposals += 1)
     );
     legend.addEventListener('lr-visibility-change', () => (childCommits += 1));
@@ -2145,10 +2161,7 @@ describe('lr-knowledge-graph-explorer', () => {
     ) as LyraGraphLegend;
     const item =
       legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
-    const proposalNames = [
-      'lr-visibility-change-request',
-      'lr-before-visibility-change',
-    ];
+    const proposalNames = ['lr-visibility-change-request'];
     const leaked: string[] = [];
     const onHost = (event: Event): void => {
       leaked.push(`host:${event.type}`);

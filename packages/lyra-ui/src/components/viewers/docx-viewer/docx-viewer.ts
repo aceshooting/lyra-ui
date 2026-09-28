@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-docx-viewer.js to register this component. */
 export * from './docx-loader.js';
 export * from './docx-viewer.class.js';
 

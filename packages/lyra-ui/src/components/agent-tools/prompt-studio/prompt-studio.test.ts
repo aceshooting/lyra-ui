@@ -621,6 +621,7 @@ it('emits a cancelable reorder request before applying an immutable next message
   const emitted: string[] = [];
   el.addEventListener('lr-message-reorder-request', () => emitted.push('lr-message-reorder-request'));
   el.addEventListener('lr-message-reorder', () => emitted.push('lr-message-reorder'));
+  el.addEventListener('lr-change-request', () => emitted.push('lr-change-request'));
   el.addEventListener('lr-change', () => emitted.push('lr-change'));
   const reorderPending = oneEvent(el, 'lr-message-reorder-request');
   const changePending = oneEvent(el, 'lr-change');
@@ -643,7 +644,7 @@ it('emits a cancelable reorder request before applying an immutable next message
     'user',
     'assistant',
   ]);
-  expect(emitted).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder', 'lr-change']);
+  expect(emitted).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder', 'lr-change-request', 'lr-change']);
 });
 
 it('honors a prevented message reorder without mutating state or emitting lr-change', async () => {
@@ -665,15 +666,15 @@ it('honors a prevented message reorder without mutating state or emitting lr-cha
   expect(original.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
 });
 
-it('emits a cancelable lr-change before mutating state, honoring a prevented edit', async () => {
+it('emits a cancelable lr-change-request before mutating state, honoring a prevented edit', async () => {
   const original = messages.map((message) => ({ ...message }));
   const el = (await fixture(html`<lr-prompt-studio .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
   const accepted = el.messages;
   let changeCount = 0;
-  el.addEventListener('lr-change', (event) => {
+  el.addEventListener('lr-change-request', (event) => {
     changeCount++;
     expect(event.cancelable).to.be.true;
-    expect(el.messages, 'messages must still be the accepted pre-edit snapshot while lr-change is pending').to.equal(accepted);
+    expect(el.messages, 'messages must still be the accepted pre-edit snapshot while lr-change-request is pending').to.equal(accepted);
     event.preventDefault();
   });
 
@@ -866,4 +867,87 @@ describe('lr-prompt-studio heading-level', () => {
     await el.updateComplete;
     expect(heading(el).localName).to.equal('h2');
   });
+});
+
+
+it('notifies accepted prompt state only after its cancelable request', async () => {
+  const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio .messages=${messages}></lr-prompt-studio>`);
+  const seen: string[] = [];
+  el.addEventListener('lr-change-request', (event) => {
+    seen.push('request');
+    expect(event.cancelable).to.equal(true);
+    expect(el.messages[0]!.content).to.equal(messages[0]!.content);
+    expect(Object.isFrozen((event as CustomEvent).detail.messages)).to.equal(true);
+  });
+  el.addEventListener('lr-change', (event) => {
+    seen.push('change');
+    expect(event.cancelable).to.equal(false);
+    expect(el.messages[0]!.content).to.equal('Accepted text');
+    event.preventDefault();
+    expect(event.defaultPrevented).to.equal(false);
+  });
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  textarea.value = 'Accepted text';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(seen).to.deep.equal(['request', 'change']);
+});
+
+it('does not overwrite host prompt state or recurse during a change request', async () => {
+  const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio .messages=${messages}></lr-prompt-studio>`);
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  let requests = 0;
+  let changes = 0;
+  el.addEventListener('lr-change-request', () => {
+    requests++;
+    if (requests === 1) textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    el.messages = [{ id: 'host', role: 'user', content: 'Host replacement' }];
+  });
+  el.addEventListener('lr-change', () => changes++);
+  textarea.value = 'Proposed text';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(requests).to.equal(1);
+  expect(changes).to.equal(0);
+  expect(el.messages.map(message => message.content)).to.deep.equal(['Host replacement']);
+});
+
+
+it('restores every native prompt field after a veto without an accepted notification', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio .messages=${messages} .variables=${[{ name: 'audience', value: 'developers' }]}></lr-prompt-studio>
+  `);
+  let changes = 0;
+  let requests = 0;
+  el.addEventListener('lr-change-request', event => { requests++; event.preventDefault(); });
+  el.addEventListener('lr-change', () => changes++);
+  const fields = [...el.shadowRoot!.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    '[part="message-role"], [part="message-content"], [part="variable"] input',
+  )];
+  for (const field of fields) {
+    const accepted = field.value;
+    field.value = field.localName === 'select' ? 'tool' : 'Rejected';
+    field.dispatchEvent(new Event(field.localName === 'select' ? 'change' : 'input', { bubbles: true }));
+    await el.updateComplete;
+    expect(field.value).to.equal(accepted);
+  }
+  expect(requests).to.equal(fields.length);
+  expect(changes).to.equal(0);
+});
+
+it('preserves host replacement during a reorder request and prevents recursive moves', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>
+  `);
+  const move = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="move-message-down"]')!;
+  let requests = 0;
+  let changes = 0;
+  el.addEventListener('lr-message-reorder-request', () => {
+    requests++;
+    if (requests === 1) move.click();
+    el.messages = [{ id: 'host', role: 'system', content: 'Replacement' }];
+  });
+  el.addEventListener('lr-change', () => changes++);
+  move.click();
+  expect(requests).to.equal(1);
+  expect(changes).to.equal(0);
+  expect(el.messages.map(message => message.id)).to.deep.equal(['host']);
 });

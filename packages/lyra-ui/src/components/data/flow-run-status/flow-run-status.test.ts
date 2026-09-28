@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import '../flow-canvas/flow-canvas.js';
 import '../flow-minimap/flow-minimap.js';
@@ -20,6 +21,8 @@ const nodes: FlowNode[] = [
   { id: 'fetch', position: { x: 0, y: 0 }, data: { label: 'Fetch data' } },
   { id: 'summarize', position: { x: 200, y: 0 }, data: { label: 'Summarize' } },
 ];
+
+expectLocaleFallback('ar', ['flowRunStatusLabel', 'flowRunSummary', 'statusRunning', 'statusSuccess']);
 
 it('defaults to an empty decorations object, withoutSummary false, empty for/label', async () => {
   const el = (await fixture(html`<lr-flow-run-status></lr-flow-run-status>`)) as LyraFlowRunStatus;

@@ -6,7 +6,7 @@
 - **Class** `LyraJsonSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated css-property** `--lr-schema-viewer-error-bg` since `21.1.0`; use css-property `--lr-json-schema-viewer-error-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-schema-viewer-error-border` since `21.1.0`; use css-property `--lr-json-schema-viewer-error-border`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-schema-viewer-info-bg` since `21.1.0`; use css-property `--lr-json-schema-viewer-info-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.

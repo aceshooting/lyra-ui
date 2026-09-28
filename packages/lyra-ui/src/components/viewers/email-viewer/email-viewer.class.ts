@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -250,6 +251,7 @@ function immutableAttachmentBlob(content: Uint8Array, mimeType: string): Blob {
 }
 
 class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-attachment-open',
     'lr-text-select',

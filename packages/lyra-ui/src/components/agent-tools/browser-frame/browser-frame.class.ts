@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -15,7 +16,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
@@ -132,11 +133,11 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['pings']);
 

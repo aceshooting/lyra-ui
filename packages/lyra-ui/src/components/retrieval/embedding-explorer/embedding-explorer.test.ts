@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -26,6 +27,11 @@ const isWebKit =
   /Safari\//.test(navigator.userAgent) &&
   !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'embeddingExplorerLabel',
+  'embeddingExplorerPoint',
+]);
 describe('lr-embedding-explorer', () => {
   it('renders one focusable SVG point per finite coordinate', async () => {
     const el = (await fixture(

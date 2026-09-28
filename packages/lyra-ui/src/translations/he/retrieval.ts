@@ -5,6 +5,18 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'התקדמות המחקר',
+  researchProgressEmpty: 'אין שלבי מחקר זמינים.',
+  researchProgressLimit: 'מציג את {count} שלבי המחקר הראשונים.',
+  researchProgressStatusPending: 'בהמתנה',
+  researchProgressStatusRunning: 'בתהליך',
+  researchProgressStatusCompleted: 'הושלם',
+  researchProgressStatusFailed: 'נכשל',
+  researchProgressSources: {
+    one: '{count} מקור',
+    two: '{count} מקורות',
+    other: '{count} מקורות',
+  },
   graphLegendLabel: 'מקרא הגרף',
   entityChipWithType: '{label}, {type}',
   showMore: 'הצג עוד',

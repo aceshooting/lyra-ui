@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './archive-viewer/archive-viewer.js';
 import './docx-viewer/docx-viewer.js';
@@ -13,6 +14,8 @@ interface LocaleSearchViewer extends HTMLElement {
   updateComplete: Promise<boolean>;
   search(query: string): Promise<number>;
 }
+
+expectLocaleFallback('tr', ['documentPreviewEmpty', 'documentPreviewTypeDocument', 'ebookViewerNextChapter', 'ebookViewerPreviousChapter', 'ebookViewerRegionLabel', 'loading', 'loadingDocument', 'notebookViewerLabel', 'pdfViewerLabel', 'pptxViewerFidelityNotice', 'pptxViewerLabel', 'viewerSearchNoMatches', 'xmlViewerLabel']);
 
 describe('viewer locale-sensitive search state', () => {
   const cases: Array<{

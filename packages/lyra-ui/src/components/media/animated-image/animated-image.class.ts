@@ -1,3 +1,4 @@
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -167,7 +168,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   @state() private hasError = false;
 
   private _playing = false;
-  private mediaQuery?: MediaQueryList;
+  private stopMotionWatch?: () => void;
   /**
    * Each connection starts from state, not from an observable transition. Keep this armed until
    * the first connected update commits so a property write made while detached cannot emit merely
@@ -195,8 +196,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectionEventBaselinePending = true;
-    this.mediaQuery = this.ownerWindow?.matchMedia?.('(prefers-reduced-motion: reduce)');
-    this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    this.stopMotionWatch = observeReducedMotion(this, this.onMotionPreferenceChange);
     // A preference change while detached cannot deliver an event to this instance. Re-run the
     // same arbitration on every connection so `playing` never reflects the stale pre-detach
     // preference after a reparent/reinsert.
@@ -205,13 +205,13 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   override disconnectedCallback(): void {
     this.connectionEventBaselinePending = true;
-    this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
-    this.mediaQuery = undefined;
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
     super.disconnectedCallback();
   }
 
   private onMotionPreferenceChange = (): void => {
-    // Picks up a live OS-level preference change while already connected --
+    // Picks up a live scoped or OS-level preference change while already connected --
     // recomputed in willUpdate() below, not read directly off this event.
     this.requestUpdate();
   };
@@ -234,7 +234,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     }
 
     const nextPlaying = this.play && !(
-      !this.ignoreReducedMotion && prefersReducedMotion(this.ownerWindow)
+      !this.ignoreReducedMotion && prefersReducedMotion(this)
     );
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
@@ -339,7 +339,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     // local so the two never drift out of sync with each other.
     const frozen = this.hasLoaded && !this.playing;
     const showControls = this.hasLoaded && !this.hasError;
-    const disabled = !this.ignoreReducedMotion && prefersReducedMotion(this.ownerWindow);
+    const disabled = !this.ignoreReducedMotion && prefersReducedMotion(this);
 
     return html`
       <div part="base">

@@ -86,3 +86,15 @@ export const Reorderable: Story = {
     ></lr-prompt-studio>
   `,
 };
+
+
+export const ReadOnlyProposal: Story = {
+  name: 'Reject proposed edits',
+  render: () => html`
+    <p>Edits require approval. The current prompt stays unchanged when the request is rejected.</p>
+    <lr-prompt-studio
+      .messages=${messages}
+      @lr-change-request=${(event: Event) => event.preventDefault()}
+    ></lr-prompt-studio>
+  `,
+};

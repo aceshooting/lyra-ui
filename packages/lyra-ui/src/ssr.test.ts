@@ -77,9 +77,18 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const values = Object.values(LYRA_SSR_STATIC_SAFETY);
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
-    expect(staticSafeCount).to.equal(227);
+    expect(staticSafeCount).to.equal(235);
     expect(hydrationRequiredCount).to.equal(51);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
+  });
+
+  it('classifies host-owned agent state with complete server-rendered content as static-safe', () => {
+    for (const name of [
+      'lr-agent-question', 'lr-background-runs', 'lr-budget-meter', 'lr-change-review',
+      'lr-connector-manager', 'lr-permission-grant', 'lr-permission-rules', 'lr-research-progress',
+    ]) {
+      expect(getLyraSsrStaticSafety(name), name).to.equal('static-safe');
+    }
   });
 
   it('classifies the disclosure component lr-details as static-safe', () => {

@@ -32,6 +32,74 @@ fails on either an undocumented runtime token or metadata with no implementation
 first, regenerate, then make the runtime implementation agree. Generated files are never edited by
 hand.
 
+## Portable look definitions
+
+Authored look inputs live in `packages/lyra-ui/tokens/looks/<id>.json`. The style and design-token
+generators validate them with the same look schema and CSS-value grammar before emitting artifacts.
+A definition contains an `id` and a `tokens` map of `--lr-theme-*` inputs. Values are CSS strings or
+sparse `{ light, dark }` pairs; an omitted or `null` branch uses the base value for that mode.
+Surface-treatment inputs and cross-axis references are rejected. The filename must match the id,
+and `lyra` is reserved for the canonical base.
+
+`design-tokens.json` exposes the portable definitions at
+`$extensions['com.aceshooting.lyra.looks']`:
+
+```json
+{
+  "schemaVersion": 1,
+  "base": "lyra",
+  "definitions": {
+    "lyra": { "id": "lyra", "tokens": {} },
+    "example": { "id": "example", "tokens": { "--lr-theme-border-radius-container": "1rem" } }
+  }
+}
+```
+
+The shipped entries are `lyra`, `material` and `shadcn`; `example` above illustrates the shape.
+Each `definitions[id]` can be passed to `defineLyraLook()` and then to `setLyraStyle({ look })` or
+`lyraLookCss()`. Omitted inputs are not expanded into copied defaults. The empty Lyra definition
+selects the canonical base already described by the ordinary DTCG token tree, avoiding a second copy
+of that inventory. Compatibility-only fixed-stylesheet ownership metadata is not exported.
+Consumers should reject unsupported extension versions and revalidate definitions before applying
+edited or imported data. No component or runtime module imports this JSON artifact; tools and
+applications load it explicitly when they need interchange data.
+
+## Optional token presets
+
+`packages/lyra-ui/tokens/options/{shape,typography,elevation}.json` owns the optional preset maps.
+The structural schema is `tokens/option-presets.schema.json`; `generate-option-presets.mjs` also
+validates every value with the shared look grammar, restricts inputs to their option's category and
+rejects mode pairs without a runtime resolver. Generate the modules with:
+
+```bash
+pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-option-presets.mjs
+```
+
+The generated `theme/options/*.js` subpaths export frozen maps with type-only imports. Consumers
+spread selected maps into `overrides`; these choices do not add new style axes or replace a look.
+Shape preserves explicit pill/circle geometry, typography references local fonts without downloads,
+and elevation changes existing shadow roles without changing surface colors or stacking contexts.
+
+Design-token generation validates the same sources and exposes their plain maps at
+`$extensions['com.aceshooting.lyra.options']`, with `schemaVersion: 1` and a `presets` object keyed by
+`shape`, `typography` and `elevation`. Importers check the extension version, then validate edited
+maps before applying them. Generated artifacts preserve sparse mode branches and never expand a
+preset into unrelated look inputs.
+
+## Accessibility preferences
+
+`preferences.css` and the optional `theme/preferences.js` helper expose independent scoped
+contrast (`system`/`more`) and motion (`system`/`reduce`) preferences through `data-lr-contrast` and
+`data-lr-motion`. These are inherited accessibility choices, not additional look axes or persisted
+fields in a style record. Shared component tokens consume private inherited switches so a nested
+look resolves its own foreground and timing values. A local `system` boundary restores OS-driven
+behavior; operating-system reduction remains a floor.
+
+The helper supports ownership-safe apply/reset, an SSR attribute object, and effective-state
+queries without importing Lit, presets, fonts, or chart engines. Long-running motion components
+share ref-counted root/media listeners; one-shot animation and scrolling queries do not import the
+observation layer. Existing component and animation-utility motion opt-outs remain explicit.
+
 ## Value-named size compatibility
 
 The 89 legacy `--lr-size-<value>` names are frozen: the family may shrink through an intentional

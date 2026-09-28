@@ -150,9 +150,9 @@ export const styles = css`
         var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: lr-span-waterfall-stripe
+    animation: var(--_lr-motion-animation, lr-span-waterfall-stripe
       var(--lr-span-waterfall-stripe-speed, var(--lr-duration-ambient)) linear
-      infinite;
+      infinite);
   }
   [part="bar"][data-tone="neutral"] {
     background: transparent;

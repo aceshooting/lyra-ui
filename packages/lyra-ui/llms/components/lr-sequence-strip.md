@@ -6,7 +6,9 @@
 - **Class** `LyraSequenceStrip`, also available unregistered from `@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Deprecated attribute** `accessible-label` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
 - **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -33,9 +35,9 @@ so the consumer updates `selectedIndex` when it accepts that activation. Setting
 additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
 mapping is readable without visiting each cell.
 
-A standard host `aria-label` names the host itself and is not copied verbatim to the internal
-list; `accessible-label` remains the list-specific override and otherwise the generated
-category-count summary names it. When an
+A standard host `aria-label` names the internal list and wins by presence, including empty.
+The deprecated `accessible-label` fallback applies only when the host name is absent; otherwise
+the generated category-count summary names it. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
@@ -82,9 +84,9 @@ readonly color, readonly label? }`; `color`
   internal `id`. Both collection properties are cloned and frozen at assignment,
   bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
   ids are omitted and duplicates use the first valid entry, so identity is deterministic
-- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
-  `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
-  summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
+- `accessibleLabel?: string` (attribute `accessible-label`, deprecated; removal not before
+  24.0.0) — compatibility fallback below the host `aria-label` or native `ariaLabel` property.
+  When both are absent, the list receives a localized per-category count summary.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item

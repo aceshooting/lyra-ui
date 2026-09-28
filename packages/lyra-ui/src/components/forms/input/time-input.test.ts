@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import {
   hoverUntilMatched,
@@ -43,6 +44,10 @@ const paste = (target: Element, value: string): Event => {
   target.dispatchEvent(event);
   return event;
 };
+
+expectLocaleFallback('ar-EG', ['fieldRequired', 'timeInputEmptySegment', 'timeInputHour', 'timeInputInvalid', 'timeInputLabel', 'timeInputMinMessage', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
+expectLocaleFallback('de-DE', ['fieldRequired', 'timeInputHour', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
+expectLocaleFallback('ja-JP', ['fieldRequired', 'timeInputEmptySegment', 'timeInputHour', 'timeInputInvalid', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
 
 describe('lr-time-input segmented field', () => {
   it('contains a throwing shadow-root activeElement getter while blurring', async () => {

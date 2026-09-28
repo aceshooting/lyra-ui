@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-27 on the version-bumped 21.1.0 release tree (CHANGELOG section and release metadata included): 9,118,643 packed bytes, 4,189 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling. 2026-09-28: 21.1.0 ships 4,193 files; the maintainer approved raising the measured entrypoint remainder to 1,101 (the rename-ledger CLI, chart bidi isolation, the slotted top-layer overlay controller, and the theme-token length and theme-observation modules), keeping the next-component headroom. 2026-09-28: 21.2.0 re-measured at 9,348,799 packed and 38,651,210 unpacked bytes; the unpacked ceiling now passes the pre-8 baseline under a maintainer-approved baseline exception (deprecated-alias metadata, reversed in 23.0.0; trimming is on the roadmap).",
+  "$comment": "Hard npm tarball ceilings measured after release metadata generation. Required public artifacts and explicit reviewed exceptions are validated independently of artifact hygiene.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -17,7 +17,7 @@
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
       "approvedOn": "2026-09-28",
-      "reason": "Re-measured for 21.2.0: 9348799 packed and 38651210 unpacked bytes. The growth is the metadata of the roughly 340 deprecated aliases that keep every harmonized Lyra-only name working until 23.0.0 (manifest, editor data, framework declarations, the lyra-v21 migration contract and generated references). The maintainer approved raising the ceilings to pass and scheduled trimming this metadata on the roadmap; it reverses when 23.0.0 removes the aliases.",
+      "reason": "Required compatibility metadata for deprecated aliases exceeds the baseline until its scheduled removal; reviewed byte measurements and ceilings are recorded in this policy.",
       "approvedMaximumPackedBytes": 9382799
     }
   },
@@ -31,7 +31,7 @@
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
       "approvedOn": "2026-09-28",
-      "reason": "Re-measured for 21.2.0: 9348799 packed and 38651210 unpacked bytes. The growth is the metadata of the roughly 340 deprecated aliases that keep every harmonized Lyra-only name working until 23.0.0 (manifest, editor data, framework declarations, the lyra-v21 migration contract and generated references). The maintainer approved raising the ceilings to pass and scheduled trimming this metadata on the roadmap; it reverses when 23.0.0 removes the aliases.",
+      "reason": "Required compatibility metadata for deprecated aliases exceeds the baseline until its scheduled removal; reviewed byte measurements and ceilings are recorded in this policy.",
       "approvedMaximumUnpackedBytes": 38791210
     }
   },

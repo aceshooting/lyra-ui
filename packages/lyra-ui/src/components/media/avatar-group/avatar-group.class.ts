@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -117,6 +118,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     showMoreCount: LYRA_DEFAULT_showMoreCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-overflow-activate',
@@ -148,7 +150,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   /** Shared size default for the badge and avatars that omit their own `size`. */
-  @property({ reflect: true }) size: LyraSize = 'medium';
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** `'circle'` (the default), `'rounded'`, or `'square'`. Also provides the default to assigned
    * avatars that omit their own `shape`. */
@@ -198,7 +200,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
       this.size !== 'medium' &&
       this.size !== 'large'
     )
-      this.size = 'medium';
+      this.size = 'm';
     if (
       changed.has('shape') &&
       this.shape !== 'circle' &&

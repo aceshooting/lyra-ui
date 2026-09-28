@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-tool-result-dialog.js to register this component. */
 export * from './tool-result-dialog.class.js';
 import { LyraToolResultDialog } from './tool-result-dialog.class.js';
 import { defineElement } from '../../../internal/prefix.js';

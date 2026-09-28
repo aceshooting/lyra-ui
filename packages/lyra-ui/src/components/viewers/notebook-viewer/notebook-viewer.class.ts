@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
@@ -516,6 +517,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     notebookViewerUnsupportedVersion: LYRA_DEFAULT_notebookViewerUnsupportedVersion,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'notebook',

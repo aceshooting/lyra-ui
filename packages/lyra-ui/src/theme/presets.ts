@@ -1,3 +1,4 @@
+import { warnDeprecatedUsage } from '../internal/dev-warning.js';
 import { GEMSTONES } from './gemstones-data.js';
 import {
   accentsEqual,
@@ -11,7 +12,9 @@ import {
   type LyraThemeTokenValue,
 } from './theme.js';
 
-/** A named, reusable application theme choice. */
+/** A named, reusable application theme choice.
+ * @deprecated Use LyraLook for a named token definition, or LyraStyleChoices for a combination of independent choices.
+ */
 export interface LyraThemePreset {
   /** Stable lowercase identifier reflected to `data-lr-theme-preset`. */
   readonly id: string;
@@ -19,7 +22,9 @@ export interface LyraThemePreset {
   readonly theme: Readonly<Partial<LyraTheme>>;
 }
 
-/** Detail emitted on `window` after a preset is applied. */
+/** Detail emitted on `window` after a preset is applied.
+ * @deprecated Use LyraStyleChangeDetail from theme.js and listen for lr-style-change.
+ */
 export interface LyraThemePresetChangeDetail {
   /** Applied preset id. */
   readonly id: string;
@@ -92,26 +97,15 @@ function validatePresetTokens(tokens: unknown): LyraThemeTokens | null {
     }
     result[name] = Object.freeze({ light, dark });
   }
+  const lookKey = Symbol.for('@aceshooting/lyra-ui.look.v1');
+  const look = Object.getOwnPropertyDescriptor(tokens, lookKey)?.value;
+  if (typeof look === 'string' && look.length <= 64 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(look)) {
+    Object.defineProperty(result, lookKey, { value: look });
+  }
   return Object.freeze(result) as LyraThemeTokens;
 }
 
-/**
- * Validates and freezes an application-owned preset. The id, the closed mode vocabulary, the
- * accent value shape and the whole token map are checked here; accent and surface colour syntax is
- * still validated by the production runtime when the preset is applied.
- *
- * `tokens` is a validated map of `--lr-theme-*` inputs, each a CSS value or a `{ light, dark }`
- * pair. It is checked against the same DOM-free grammar the runtime and the no-flash bootstrap
- * apply (names, value characters, allowed functions, balanced parentheses and quotes, at most 512
- * entries), and any violation throws `TypeError`, so a map accepted here always survives runtime
- * normalization unchanged. The stored copy is trimmed and deep-frozen, with both `light` and
- * `dark` on every per-mode entry. A token map is a look: an independent axis from `mode`, `accent`
- * and `surface`, so a preset that omits those fields leaves them as they are, and the built-in
- * presets, which never mention `tokens`, leave a look in place. Every field still goes through the
- * production path: OS following, contrast validation, persistence, canvas invalidation, and
- * no-flash boot.
- */
-export function defineLyraThemePreset<const Preset extends LyraThemePreset>(
+function normalizePreset<const Preset extends LyraThemePreset>(
   preset: Preset,
 ): Readonly<Preset> {
   if (typeof preset?.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(preset.id)) {
@@ -144,30 +138,57 @@ export function defineLyraThemePreset<const Preset extends LyraThemePreset>(
   return Object.freeze({ ...preset, theme }) as Readonly<Preset>;
 }
 
-/** Built-in semantic and gemstone-accent choices. */
+/**
+ * Validates and freezes an application-owned preset. The id, the closed mode vocabulary, the
+ * accent value shape and the whole token map are checked here; accent and surface colour syntax is
+ * still validated by the production runtime when the preset is applied.
+ *
+ * `tokens` is a validated map of `--lr-theme-*` inputs, each a CSS value or a `{ light, dark }`
+ * pair. It is checked against the same DOM-free grammar the runtime and the no-flash bootstrap
+ * apply (names, value characters, allowed functions, balanced parentheses and quotes, at most 512
+ * entries), and any violation throws `TypeError`, so a map accepted here always survives runtime
+ * normalization unchanged. The stored copy is trimmed and deep-frozen, with both `light` and
+ * `dark` on every per-mode entry. A token map is a look: an independent axis from `mode`, `accent`
+ * and `surface`, so a preset that omits those fields leaves them as they are, and the built-in
+ * presets, which never mention `tokens`, leave a look in place. Every field still goes through the
+ * production path: OS following, contrast validation, persistence, canvas invalidation, and
+ * no-flash boot.
+ * @deprecated Use defineLyraLook for token definitions and LyraStyleChoices for combined choices; review field semantics.
+ */
+export function defineLyraThemePreset<const Preset extends LyraThemePreset>(
+  preset: Preset,
+): Readonly<Preset> {
+  warnDeprecatedUsage('./theme/presets.js', 'function', 'defineLyraThemePreset', 'defineLyraLook for tokens and independent style choices');
+  return normalizePreset(preset);
+}
+
+/** Built-in semantic and gemstone-accent choices.
+ * @deprecated Pass independent mode and accent choices to setLyraStyle from theme.js.
+ */
 export const LYRA_THEME_PRESETS = Object.freeze({
-  system: defineLyraThemePreset({ id: 'system', theme: { mode: 'auto', accent: null } }),
-  light: defineLyraThemePreset({ id: 'light', theme: { mode: 'light', accent: null } }),
-  dark: defineLyraThemePreset({ id: 'dark', theme: { mode: 'dark', accent: null } }),
-  unset: defineLyraThemePreset({ id: 'unset', theme: { mode: 'unset', accent: null } }),
-  emerald: defineLyraThemePreset({
+  system: normalizePreset({ id: 'system', theme: { mode: 'auto', accent: null } }),
+  light: normalizePreset({ id: 'light', theme: { mode: 'light', accent: null } }),
+  dark: normalizePreset({ id: 'dark', theme: { mode: 'dark', accent: null } }),
+  unset: normalizePreset({ id: 'unset', theme: { mode: 'unset', accent: null } }),
+  emerald: normalizePreset({
     id: 'emerald',
     theme: { mode: 'auto', accent: GEMSTONES.emerald.fill },
   }),
-  ruby: defineLyraThemePreset({
+  ruby: normalizePreset({
     id: 'ruby',
     theme: { mode: 'auto', accent: GEMSTONES.ruby.fill },
   }),
-  amethyst: defineLyraThemePreset({
+  amethyst: normalizePreset({
     id: 'amethyst',
     theme: { mode: 'auto', accent: GEMSTONES.amethyst.fill },
   }),
-  sapphire: defineLyraThemePreset({
+  sapphire: normalizePreset({
     id: 'sapphire',
     theme: { mode: 'auto', accent: GEMSTONES.sapphire.fill },
   }),
 });
 
+/** @deprecated Use LyraStyleChoices from theme.js; select mode and accent independently. */
 export type LyraThemePresetName = keyof typeof LYRA_THEME_PRESETS;
 
 /**
@@ -175,10 +196,12 @@ export type LyraThemePresetName = keyof typeof LYRA_THEME_PRESETS;
  * `lr-theme-preset-change` event are published only when runtime normalization accepts every
  * explicitly requested field; otherwise `lr-theme-change` remains the truthful notification for
  * the normalized state and no exact named-preset identity is claimed.
+ * @deprecated Use setLyraStyle from theme.js; review mode, surface, tokens and accent semantics.
  */
 export function applyLyraThemePreset(
   presetOrName: LyraThemePresetName | Readonly<LyraThemePreset>,
 ): void {
+  warnDeprecatedUsage('./theme/presets.js', 'function', 'applyLyraThemePreset', 'setLyraStyle from theme.js');
   const preset = typeof presetOrName === 'string'
     ? Object.prototype.hasOwnProperty.call(LYRA_THEME_PRESETS, presetOrName)
       ? LYRA_THEME_PRESETS[presetOrName as LyraThemePresetName]
@@ -186,7 +209,7 @@ export function applyLyraThemePreset(
     : presetOrName;
   if (!preset) throw new TypeError(`Unknown Lyra theme preset: ${String(presetOrName)}`);
   // Revalidate external objects even when callers bypass defineLyraThemePreset().
-  const normalized = defineLyraThemePreset(preset);
+  const normalized = normalizePreset(preset);
   setLyraTheme(normalized.theme);
   const applied = Object.freeze({ ...getLyraTheme() });
   // Read via a widened alias: a built-in preset's theme infers an ultra-narrow literal type that
@@ -199,7 +222,7 @@ export function applyLyraThemePreset(
     && (requested.tokens === undefined || tokensEqual(requested.tokens, applied.tokens));
   if (!matchesApplied) return;
 
-  document.documentElement.dataset['lrThemePreset'] = normalized.id;
+  document.documentElement.setAttribute('data-lr-theme-preset', normalized.id);
   const detail: LyraThemePresetChangeDetail = Object.freeze({
     id: normalized.id,
     theme: applied,

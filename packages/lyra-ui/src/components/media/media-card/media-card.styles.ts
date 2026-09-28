@@ -16,7 +16,7 @@ export const styles = css`
     box-sizing: border-box;
     max-inline-size: 100%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-container);
     /* The RESTING frame's own hook, matching the pressed state's existing --lr-media-card-active-bg
        -- the default tier a card actually sits at all day was the only one with no lever, so
        retinting one attachment card meant a ::part(base) rule or an app-wide --lr-color-surface

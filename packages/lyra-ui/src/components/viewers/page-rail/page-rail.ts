@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-page-rail.js to register this component. */
 export * from './page-rail.class.js';
 import { LyraPageRail } from './page-rail.class.js';
 import { defineElement } from '../../../internal/prefix.js';

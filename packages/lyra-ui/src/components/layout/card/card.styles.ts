@@ -13,9 +13,9 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     /* Single source for the Shoelace-compatible radius hook -- every rule below reads THIS
-       instead of repeating var(--border-radius, var(--lr-radius)) inline, so there is exactly one
+       instead of repeating var(--border-radius, var(--lr-radius-container)) inline, so there is exactly one
        fallback chain to change instead of several textually-identical copies that can drift. */
-    --_lr-card-radius: var(--border-radius, var(--lr-radius));
+    --_lr-card-radius: var(--border-radius, var(--lr-radius-container));
   }
   [part="base"] {
     position: relative;
@@ -31,7 +31,7 @@ export const styles = css`
        reflected as an attribute, so that selector would miss exactly the cards this hook is for;
        accent, which adds a stripe without restating a surface, inherits it for the same reason.
        Mirrors lr-details's --lr-details-outlined-bg. */
-    background: var(--lr-card-outlined-bg, var(--lr-color-surface));
+    background: var(--lr-card-outlined-bg, var(--lr-color-surface-container-low));
     /* Fills the host's allocated block-size (a stretch-aligned grid row) so a short card's border
        and background reach the row's full height instead of shrink-wrapping. Matches lyra-stat,
        word-cloud and context-meter; card.class.ts advertises clickable grid tiles. box-sizing

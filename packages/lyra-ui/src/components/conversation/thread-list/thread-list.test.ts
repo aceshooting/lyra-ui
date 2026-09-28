@@ -1,3 +1,5 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { nothing } from "lit";
 import { sendKeys } from "@web/test-runner-commands";
@@ -117,6 +119,13 @@ const threads = [
   },
 ];
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('tr-u-nu-arab', [
+  'threadListLabel',
+  'searchThreads',
+  'rename',
+  'clear',
+]);
 it("defaults to slotted mode and emits only a host-owned lr-query-change for search", async () => {
   const el = (await fixture(
     html`<lr-thread-list searchable
@@ -4378,7 +4387,7 @@ describe("error state", () => {
     expect(failed.getAttribute("description")).to.equal("Check your connection and retry.");
   });
 
-  it("emits a cancelable lr-retry and only clears `error` when the default action runs", async () => {
+  it("emits a cancelable lr-retry-request and only clears `error` when the default action runs", async () => {
     const el = (await fixture(
       html`<lr-thread-list error .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
@@ -4392,12 +4401,12 @@ describe("error state", () => {
       received = event as CustomEvent;
       event.preventDefault();
     };
-    el.addEventListener("lr-retry", vetoListener);
+    el.addEventListener("lr-retry-request", vetoListener);
     retryButton.click();
     expect(received?.cancelable).to.equal(true);
     expect(received?.defaultPrevented).to.equal(true);
     expect(el.error, "a vetoed retry must not clear error").to.equal(true);
-    el.removeEventListener("lr-retry", vetoListener);
+    el.removeEventListener("lr-retry-request", vetoListener);
 
     retryButton.click();
     expect(el.error, "the default action clears error").to.equal(false);
@@ -4847,3 +4856,23 @@ describe("row-action overlays escape the virtual viewport", () => {
     }
   });
 });
+
+it('uses size m by default and forwards explicit size tiers to data rows', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`);
+  expect(el.size).to.equal('m');
+  el.size = 'l';
+  await el.updateComplete;
+  await nextFrame();
+  const rows = dataRows(el);
+  expect(rows.length).to.be.greaterThan(0);
+  expect(rows.map(row => row.size)).to.deep.equal(rows.map(() => 'l'));
+  el.compact = true;
+  await el.updateComplete;
+  expect(el.size).to.equal('s');
+  el.size = 'm';
+  await el.updateComplete;
+  expect(el.compact).to.equal(false);
+});
+
+expectDeprecatedUsage('lr-thread-list', 'attribute', 'compact');
+expectDeprecatedUsage('lr-thread-list', 'property', 'compact');

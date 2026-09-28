@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -18,7 +19,7 @@ import {
 } from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -70,7 +71,7 @@ function isDenseSize(size: LyraSize): boolean {
 
 export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ filePath: string }>;
-  'lr-toggle': CustomEvent<{ collapsed: boolean }>;
+  'lr-toggle': CustomEvent<{ expanded: boolean; collapsed: boolean }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -91,7 +92,7 @@ export interface LyraCommitCardEventMap {
  *
  * @customElement lr-commit-card
  * @event lr-file-select - `detail: { filePath }` — a file row was activated.
- * @event lr-toggle - `detail: { collapsed }` — the file-list fold changed.
+ * @event lr-toggle - `detail: { expanded, collapsed }` — the file-list fold changed.
  * @event lr-copy - `detail: { ok: true, text }` — the full-hash clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
@@ -124,7 +125,7 @@ export interface LyraCommitCardEventMap {
  * @cssprop [--lr-commit-card-background=transparent] - Deprecated alias of `--lr-commit-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-commit-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
- * @cssprop [--lr-commit-card-radius=var(--lr-radius)] - Corner radius of the outer card.
+ * @cssprop [--lr-commit-card-radius=var(--lr-radius-container)] - Corner radius of the outer card.
  *   `frame="plain"` still squares the corners.
  * @status stable
  * @since 4.0.0
@@ -155,13 +156,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
 
@@ -333,7 +334,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   private toggleFiles = (): void => {
     this.filesExpanded = !this.filesExpanded;
-    this.emit('lr-toggle', { collapsed: !this.filesExpanded });
+    this.emit('lr-toggle', { expanded: this.filesExpanded, collapsed: !this.filesExpanded });
   };
 
   override render(): TemplateResult {

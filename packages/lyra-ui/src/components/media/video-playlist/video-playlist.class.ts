@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -213,6 +214,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     videoPlaylistUntitled: LYRA_DEFAULT_videoPlaylistUntitled,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-video-change',

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-retrieval-results.js to register this component. */
 export * from './retrieval-results.class.js';
 import { LyraRetrievalResults } from './retrieval-results.class.js';
 import { defineElement } from '../../../internal/prefix.js';

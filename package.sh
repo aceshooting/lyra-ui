@@ -13,7 +13,7 @@
 # The skill deliberately does NOT ship llms-full.txt: it is the same content concatenated into one
 # multi-megabyte file, and an agent reading a single component should pay for one component, not the
 # whole catalog. references/components/<tag>.md is addressed directly from the tag name. The package
-# changelog is trimmed to its newest three majors (trimStandaloneChangelog in
+# changelog is trimmed to its current major (trimStandaloneChangelog in
 # scripts/skill-reference-context.mjs) instead of copied whole, and standalone-only link rewrites
 # remove promises that would require bundling llms-full.txt.
 set -euo pipefail
@@ -51,6 +51,7 @@ mkdir -p "${REFERENCES_DIR}"
 for file in index.md shared.md tokens.md peers.md migration.md; do
   cp "${LLMS_DIR}/${file}" "${REFERENCES_DIR}/${file}"
 done
+cp -r "${LLMS_DIR}/shared" "${REFERENCES_DIR}/shared"
 cp -r "${LLMS_DIR}/components" "${REFERENCES_DIR}/components"
 node "${ROOT_DIR}/scripts/skill-reference-context.mjs" "${REFERENCES_DIR}" \
   "${ROOT_DIR}/packages/lyra-ui/CHANGELOG.md"

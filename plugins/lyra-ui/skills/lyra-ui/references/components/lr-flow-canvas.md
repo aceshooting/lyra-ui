@@ -6,7 +6,7 @@
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated property** `locked` / `locked` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 29 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -121,7 +121,7 @@ effective `readonly` state (as the snapshot's `locked` key), `orientation`, `lay
 sorted even when public inputs are invalid or reversed.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
-}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { nodeId,
+}`), `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),

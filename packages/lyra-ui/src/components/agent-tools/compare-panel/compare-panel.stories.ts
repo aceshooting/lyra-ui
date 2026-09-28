@@ -69,7 +69,7 @@ export const WithVoteLogging: Story = {
     <div style="display:flex; flex-direction:column; gap:1rem; max-width:44rem">
       <lr-compare-panel
         item-id="pair-4"
-        @lr-vote=${(e: CustomEvent<{ choice: CompareVote; itemId: string }>) => console.log('vote', e.detail)}
+        @lr-vote-request=${(e: CustomEvent<{ choice: CompareVote; itemId: string }>) => console.log('vote', e.detail)}
       >
         <p slot="a">Answer A.</p>
         <p slot="b">Answer B.</p>

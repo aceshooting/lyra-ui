@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-av-player.js to register this component. */
 export * from './av-player.class.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { html } from 'lit';

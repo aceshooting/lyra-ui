@@ -6,7 +6,7 @@
 - **Class** `LyraDropZone`, also available unregistered from `@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -30,10 +30,9 @@ reimplemented.
 
 - `disabled: boolean = false` (reflected) — disables drag/drop handling entirely; the wrapped
   content keeps its own interactivity
-- `multiple: boolean = true` (reflected) — accepts more than one file per drop and enables
-  recursive folder-drop traversal, same contract as `lr-file-input`'s `multiple`. Defaults to `true`
-  (unlike `lr-file-input`'s `false`): a region wrapper's typical use expects more than one file, and
-  there is no native single-file picker here to keep in sync.
+- `multiple: boolean = false` (reflected) — opts into more than one file per drop and recursive
+  folder-drop traversal, matching `lr-file-input`. Explicit `multiple="false"` remains false;
+  removal restores single-file mode. Set `multiple` to preserve the former batch default.
 - `accept: string = ''` — identical native-`accept`-style parsing to `lr-file-input`'s `accept`, via
   the same shared `matchesAccept()`
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:

@@ -483,14 +483,17 @@ contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
-`error` state (see `error` above); `lr-retry` (`detail: null`, cancelable) — the built-in
+`error` state (see `error` above); `lr-retry-request` and `lr-retry` (`detail: null`, cancelable) — the built-in
 `[part='retry-button']` was activated, only rendered while `error` is set; the default action
 clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
-composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry` are cancelable. Structured
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, `lr-retry-request`, and `lr-retry` are cancelable. Structured
 details and their owned collections are frozen. The toolbar search and active column-filter inputs
 re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
 preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
 crossing the shadow boundary.
+`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
+null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
+alias is not before 24.0.0.
 
 **Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
 leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the
@@ -557,7 +560,14 @@ localized loading text to that shared polite sink, including repeated loading cy
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
 `--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
-`--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
+`--transition-duration`. Defaults resolve through Lyra design tokens. The optional
+`--lr-theme-table-row-height` supplies a minimum alongside the grid's existing size-specific
+baseline. Density scales that baseline and minimum together; it never makes every size share one
+fixed row height. `--row-height` and `--header-row-height` remain explicit component overrides,
+subject to a 24px minimum and the active density's target floor. Virtual-row estimates read the
+same resolved height as the CSS, and measured content may make individual rows taller.
+`--lr-theme-border-radius-container` changes the outer frame while control corners keep their own
+radius; `--border-radius` continues to override both. Set `--max-height: none` to
 render every row instead of a virtual window. `--border-color` (default `var(--lr-color-border)`)
 paints the control boundaries (search, buttons, page size) and, unless the separate grid-line hook
 is set, the grid lines too. `--lr-data-grid-line-color` (default
@@ -645,7 +655,7 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 
 **TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
 parameter for the row-key type. `K` types `rowKey`'s return value,
-`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`rowKeys`, so
+`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`selectedRowKeys`, so
 `LyraTable<Row, number>` reads `event.detail.rowKey` as `number` with no cast. It defaults to the
 `string | number` union, so an untyped element and an existing `LyraTable<Row>` annotation compile
 unchanged.
@@ -724,7 +734,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
-  _commit_ is vetoable — see `lr-column-resize` under Events.
+  _commit_ is vetoable — see `lr-column-resize-request` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
   inline style outranks any stylesheet rule in the cascade regardless of specificity, while the heat
   tint is painted by a shadow-stylesheet rule. So a `cellStyle` returning
@@ -1075,33 +1085,30 @@ resolves to; under the default `expansionMode: 'none'` the table does not mutate
 while under a self-managed mode the write has already landed when it fires, and `'single'` fires it
 once more — with `expanded: false`, immediately ahead of the accepted one — for the row it closed to
 make room, unless that row is out of view), and
-`lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
+`lr-selection-change` (frozen readonly `detail: { selectedRowKeys }`, not cancelable) when selection is
 enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
 an existing multi-row selection down to one key (skipped on the very first render, since an
 already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
 live transition), `lr-filter-change`
-(frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
+(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
-keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
-pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
-the width committed at drag-end (and only when that width actually differs from the pre-drag one).
-A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
-cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
-emission reverts the column to its pre-gesture width (or removes the override entirely if the column
-had never been resized) — unless the listener also applied a width of its own during that same
-synchronous dispatch, which stands rather than being rolled back over, so a listener may refuse the
-proposed width and resolve the resize its own way in one step. Calling `preventDefault()` on a
-mid-drag step does nothing, by design — a veto is a decision
-about the final width, not about every pixel the pointer passes through.
+keyboard resize step. These notifications are non-cancelable. A final pointer width or keyboard step
+first proposes `lr-column-resize-request` with the same detail. Preventing the request preserves the
+previous accepted width; a pointer drag's live preview is discarded. A request listener that applies
+its own width keeps that value. Existing code that prevented `lr-column-resize` must move its veto
+handler to `lr-column-resize-request`.
 The internal filter input's composed native `input`/`change` events are contained; only
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
 contained while an accepted edit publishes `lr-cell-edit`. Internal filter/cell-editor native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events (the native ones
-are neither). `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
+are neither). `lr-retry-request` and `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
 `error` is set. **Cancelable**: the default action clears `error`; calling `preventDefault()` leaves
 it set, for a consumer that owns its own retry timing (e.g. it wants to keep the banner up until a
 fresh load has actually started, or failed again immediately).
+`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
+null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
+alias is not before 24.0.0.
 
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
@@ -1163,7 +1170,13 @@ re-exported inner parts still are).
   with a desktop page and contain itself in a 320px panel. The default remains `'self'`. Named
   `scrollMode` rather than `scroll` because a `scroll` property would shadow `Element.prototype.scroll()`
 
-**Themeable custom properties:** `--lr-table-cell-color` (default `inherit`),
+**Themeable custom properties:** `--lr-table-row-height` is an optional minimum for header, body
+and footer rows. It wins over `--lr-theme-table-row-height`, whose value follows density; the
+24px and active density target floors still apply. Both are unset by default, so content and padding
+continue to determine row height. Cell content can always grow a row beyond the minimum.
+`--lr-table-row-min-height` is the shared theme-supplied minimum used when
+`--lr-table-row-height` is unset; an explicit table-level `--lr-table-row-height` takes precedence.
+`--lr-table-cell-color` (default `inherit`),
 `--lr-table-cell-link-color` (default `var(--lr-color-brand)`) and
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
@@ -1224,7 +1237,7 @@ declaration to retheme every internal scroll container in the library, including
   id="t"
   sort-key="name"
   sort-dir="asc"
-  accessible-label="Items"
+  aria-label="Items"
 ></lr-table>
 <script type="module">
   const t = document.getElementById("t");
@@ -1277,11 +1290,10 @@ declaration to retheme every internal scroll container in the library, including
   assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- `accessibleLabel?: string` (attribute `accessible-label`) — a typed accessible name for the
-  `<table role="grid">`. Omitting it reads back `undefined`; a plain `aria-label` HTML attribute on
-  the host is then forwarded instead (read via `this.getAttribute('aria-label')` at render time). An
-  explicitly empty string is a real override — it renders `aria-label=""` rather than falling back to
-  the host attribute. Consumer-supplied text, so neither is run through `this.localize()`.
+- A host `aria-label` (or native `ariaLabel` property) names the internal `<table role="grid">`.
+  Presence wins, including an explicitly empty string. `accessibleLabel?: string` (attribute
+  `accessible-label`) remains a deprecated fallback, with removal not before 24.0.0; an explicit
+  empty fallback stays empty when the host name is absent. Caller text bypasses localization.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
@@ -2622,9 +2634,9 @@ so the consumer updates `selectedIndex` when it accepts that activation. Setting
 additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
 mapping is readable without visiting each cell.
 
-A standard host `aria-label` names the host itself and is not copied verbatim to the internal
-list; `accessible-label` remains the list-specific override and otherwise the generated
-category-count summary names it. When an
+A standard host `aria-label` names the internal list and wins by presence, including empty.
+The deprecated `accessible-label` fallback applies only when the host name is absent; otherwise
+the generated category-count summary names it. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
@@ -2671,9 +2683,9 @@ readonly color, readonly label? }`; `color`
   internal `id`. Both collection properties are cloned and frozen at assignment,
   bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
   ids are omitted and duplicates use the first valid entry, so identity is deterministic
-- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
-  `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
-  summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
+- `accessibleLabel?: string` (attribute `accessible-label`, deprecated; removal not before
+  24.0.0) — compatibility fallback below the host `aria-label` or native `ariaLabel` property.
+  When both are absent, the list receives a localized per-category count summary.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item
@@ -3064,7 +3076,9 @@ from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for inden
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks). The selected-row background is also the base its hover/press mixes from, and each
+fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
+`--lr-tree-selected-color` overrides all three states. The selected-row background is also the
+base its hover/press mixes from, and each
 checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
@@ -3244,7 +3258,7 @@ effective `readonly` state (as the snapshot's `locked` key), `orientation`, `lay
 sorted even when public inputs are invalid or reversed.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
-}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { nodeId,
+}`), `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -3703,7 +3717,7 @@ boolean }[]`. `value` is an _absolute_
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
   `disabled`, when set, marks that band non-actionable while `interactive` is set: its control
   renders genuinely disabled (no tab stop, no hover/press affordance) and activating it emits no
-  `lr-segment-activate`.
+  `lr-segment-activate-request`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
 - `shape: ContextMeterShape = 'bar'` (`'bar' | 'ring'`, reflected) — the v9 geometry name;
@@ -3731,7 +3745,7 @@ boolean }[]`. `value` is an _absolute_
   ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
   effect while `withLegend` is unset.
 - `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
-  becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
+  becomes a real `<button>` emitting the cancelable `lr-segment-activate-request`; the ring's arcs carry
   `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
   native button. In this mode, and only in this mode, `[part="legend"]` drops `aria-hidden` so the
   rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
@@ -3744,21 +3758,26 @@ boolean }[]`. `value` is an _absolute_
   `aria-pressed="true"` plus a `segment-selected`/`legend-item-selected` part token on both the band
   and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
   `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
-  itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is how a consumer
-  that owns the selection takes control; assigning the property directly always wins either way. A
+  itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is how a consumer
+  that owns the selection takes control. Without a veto, the default toggle uses the latest selection,
+  including any synchronous host assignment. A
   non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
 meter owner, which retains its generated aggregate summary.
 
-**Events:** `lr-segment-activate` — a band or its legend row was activated while `interactive` is
+**Events:** `lr-segment-activate-request` — a band or its legend row was activated while `interactive` is
 set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
 library event. **Cancelable, and a real veto point**: the default action is this component toggling
 `index` in its own `selectedIndices`, so `preventDefault()` keeps the current selection and hands
 that state entirely to the consumer. Never emitted in the default presentational mode. Because the
 event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
-own handler sees the pre-activation value.
+own handler sees the pre-activation value. The deprecated cancelable `lr-segment-activate` alias fires
+after the request and before that write, with the same detail. Either event can veto; vetoing only
+the legacy alias issues a development warning. Reentrant activation during dispatch is ignored.
+Replacing the segment collection, disabling interaction, or disconnecting during dispatch cancels
+the default write.
 
 **Slots:** none.
 
@@ -3777,7 +3796,7 @@ compose: `segment-empty` / `legend-item-empty` on a band whose `value` is 0, and
 empty pair is DERIVED and carries no built-in treatment — it is the hook for your own "nothing in
 this bucket" styling, and a zero band stays actionable. The disabled pair is DECLARED: that control
 renders genuinely disabled (no tab stop, no hover or press affordance) and activating it emits no
-`lr-segment-activate`. Inertness is never inferred from a zero value, because a zero band is
+`lr-segment-activate-request`. Inertness is never inferred from a zero value, because a zero band is
 legitimately clickable in a budget meter
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its
@@ -4173,15 +4192,19 @@ table. Omitted localizes the table's own `tableLoadFailed` default.
 `errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
 the nested table.
 
-**Events:** `lr-filter-change` emits a fresh frozen readonly
-`{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
-`{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`;
-`lr-open` emits frozen readonly `{ documentId }`; and `lr-retry` (`detail: null`, cancelable) — the
-nested table's built-in retry button was activated, only rendered while `error` is set; the default
-action clears `error`, `preventDefault()` leaves it set. This component intercepts the nested
-table's own `lr-retry` and re-proposes its own, so the outer `error` property never drifts out of
-sync with the table's internal state.
+**Events:**
+
+- `lr-filter-change` — non-cancelable; fresh frozen readonly `{ searchTerm, tags, matchCount }`.
+- `lr-sort-request` — cancelable; proposes frozen readonly `{ phase: 'request', sortKey, sortDir }`.
+- `lr-sort` — non-cancelable; an accepted sort commits the same fields with `phase: 'commit'`.
+- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
+- `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
+- `lr-retry-request` and `lr-retry` — cancelable, `detail: null`; the nested table's built-in retry
+  button was activated, only rendered while `error` is set. The library contains the child's request
+  and compatibility alias, then emits its own canonical `lr-retry-request` followed by the deprecated
+  `lr-retry` alias. Preventing either parent event leaves both library and table errors set;
+  otherwise the default clears them. Subscribe to one spelling. The alias is a veto point, not a
+  completion notification, and its removal is not before 24.0.0.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.
@@ -4268,17 +4291,11 @@ The matching request/accepted pair reuses one frozen payload: `{ query }` for ru
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. Each request also fires a **deprecated** `lr-before-query-run` /
-`lr-before-query-save` / `lr-before-query-load` / `lr-before-query-delete` alias immediately after
-its canonical `-request` counterpart, from the same gesture with the same frozen detail; either
-event may veto. The aliases are slated for removal in 21.0.0 — migrate listeners to the
-`lr-query-*-request` names. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and
-those twelve phased action events (four requests, four deprecated aliases, four accepted
-notifications).
+id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and the
+eight phased action events (four requests and four accepted notifications).
 
-Migration note: veto save in `lr-query-save-request` (or its deprecated `lr-before-query-save`
-alias), not `lr-query-save`; the existing `lr-query-*` action events are accepted, non-cancelable
-notifications. **Slots:** `actions`,
+Migration note: veto save in `lr-query-save-request`, not `lr-query-save`; the existing
+`lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
 `label`, `hint`, `error`. **CSS
 parts:** `base`, `form-control-label` (`label` remains as a compatibility alias on the same node),
 `hint`, `error` (the three form-control chrome parts every

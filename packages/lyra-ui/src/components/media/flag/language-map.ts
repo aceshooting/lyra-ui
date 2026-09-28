@@ -101,6 +101,8 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
   ms: 'my',
   uk: 'ua',
   kk: 'kz',
+  // Some Intl.Locale/ICU builds canonicalize `pnb` to `lah`; both forms should resolve consistently.
+  lah: 'pk',
   ro: 'ro',
   hu: 'hu',
   bg: 'bg',
@@ -114,7 +116,35 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
   ur: 'pk',
   bn: 'bd',
   ta: 'in',
+  am: 'et',
+  bho: 'in',
+  gu: 'in',
+  ha: 'ng',
+  ig: 'ng',
+  jv: 'id',
+  kn: 'in',
+  ln: 'cd',
+  ml: 'in',
+  mr: 'in',
+  my: 'mm',
+  ne: 'np',
+  om: 'et',
+  or: 'in',
+  pa: 'in',
+  pcm: 'ng',
+  pnb: 'pk',
+  ps: 'af',
+  sd: 'pk',
+  su: 'id',
+  sw: 'tz',
+  te: 'in',
+  tl: 'ph',
+  uz: 'uz',
+  yo: 'ng',
+  zu: 'za',
   ca: 'es',
+  lb: 'lu',
+  fil: 'ph',
 };
 
 function mappedCountry(language: string): string | undefined {
@@ -138,7 +168,8 @@ function scriptImpliedRegion(locale: Intl.Locale): string | undefined {
 }
 
 /**
- * Resolve a BCP-47-ish language tag to a flag country code.
+ * Resolve a BCP-47-ish language tag to a flag country code. Numeric regions have no derived
+ * country flag; provide an explicit country on the flag component when an application needs one.
  * A region subtag wins (`en-US` → `us`); otherwise the base language is mapped. The region subtag
  * isn't always in the second position -- a script subtag (e.g. `zh-Hant-TW`, ISO 15924, always 4
  * letters) can sit between the base language and the region, so every subtag after the base is
@@ -159,6 +190,8 @@ export function languageToCountry(language: string): string | undefined {
   if (!normalized) return undefined;
   try {
     const locale = new Intl.Locale(normalized);
+    // Numeric regions can name multiple countries (for example Latin America); no flag represents them.
+    if (locale.region && /^\d{3}$/.test(locale.region)) return undefined;
     if (locale.region && ALPHA2_RE.test(locale.region)) return locale.region.toLowerCase();
     const mapped = mappedCountry(locale.language.toLowerCase());
     return mapped === undefined ? undefined : (scriptImpliedRegion(locale) ?? mapped);
@@ -175,6 +208,7 @@ export function languageToCountry(language: string): string | undefined {
     // A singleton starts a Unicode extension or private-use sequence. Tokens after it are not
     // language-script-region fields (`en-u-ca-gregory` and `en-x-ca` must not become Canada).
     if (part.length === 1) break;
+    if (/^\d{3}$/.test(part)) return undefined;
     if (ALPHA2_RE.test(part)) return part;
   }
   return mappedCountry(base);

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-dialog.js to register this component. */
 export * from './dialog.class.js';
 // The lean icon-button entry: the close control slots this component's own close glyph, so it must
 // not drag lr-icon (and its unreachable sanitizer chunk) into a consumer's graph.

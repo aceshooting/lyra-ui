@@ -1,8 +1,18 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './ingestion-queue.js';
 import type { IngestionQueueItem, LyraIngestionQueue } from './ingestion-queue.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('fr', [
+  'ingestionQueueLabel',
+  'ingestionRetryWithContext',
+  'retry',
+  'ingestionStageQueued',
+  'ingestionCancelWithContext',
+  'cancel',
+]);
 it('admits a newly failed record with nonstring error before formatting its announcement', async () => {
   const el = await fixture<LyraIngestionQueue>(html`<lr-ingestion-queue></lr-ingestion-queue>`);
   (el as unknown as { items: unknown }).items = [{ id: 'a', document: { id: 'a', name: 'Document' }, stage: 'failed', error: 42 }];

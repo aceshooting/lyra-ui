@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,6 +55,36 @@ function changelogVersions(contents) {
   );
 }
 
+function addArchivedVersions(released, repoRoot, findings) {
+  if (released.size === 0) return;
+  const currentMajor = Math.max(...[...released].map((version) => Number(version.split('.')[0])));
+  const archiveDirectory = path.join(repoRoot, 'docs/changelog');
+  if (!existsSync(archiveDirectory)) return;
+  // The archiver's v<major>.md files are the history index. Unrelated Markdown and paths outside
+  // this directory cannot establish a release, and an old-major archive cannot admit a future one.
+  for (const entry of readdirSync(archiveDirectory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    const match = /^v(0|[1-9]\d*)\.md$/.exec(entry.name);
+    if (!match) continue;
+    const label = `docs/changelog/${entry.name}`;
+    const major = Number(match[1]);
+    if (!entry.isFile()) {
+      findings.push(`${label} must be a regular release archive file`);
+      continue;
+    }
+    if (!Number.isSafeInteger(major) || major >= currentMajor) {
+      findings.push(`${label} must archive a major older than current major ${currentMajor}`);
+      continue;
+    }
+    const versions = changelogVersions(readFileSync(path.join(archiveDirectory, entry.name), 'utf8'));
+    if (versions.size === 0) findings.push(`${label} contains zero release-version headings`);
+    for (const version of versions) {
+      if (Number(version.split('.')[0]) !== major) {
+        findings.push(`${label} contains release ${version} outside archive major ${major}`);
+      } else released.add(version);
+    }
+  }
+}
+
 /**
  * Finds release-version annotations that promise an API was "new in" a version with no matching
  * changelog release heading.
@@ -66,6 +96,7 @@ export function checkDocVersionReferences(
   const changelogFile = path.join(packageDir, 'CHANGELOG.md');
   const released = changelogVersions(readFileSync(changelogFile, 'utf8'));
   const findings = [];
+  addArchivedVersions(released, repoRoot, findings);
   const files = scannedDocumentation(packageDir, repoRoot);
   let referencesChecked = 0;
   const versionReference = /\bnew\s+in\s+v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\b/gi;
@@ -91,7 +122,7 @@ export function checkDocVersionReferences(
         else high = middle;
       }
       findings.push(
-        `${relative}:${low + 1} cites new in ${version}, but CHANGELOG.md has no ${version} heading`,
+        `${relative}:${low + 1} cites new in ${version}, but release history has no ${version} heading`,
       );
     }
   }
@@ -112,12 +143,12 @@ export function checkDocVersionReferences(
 if (isMainModule(import.meta.url)) {
   const { findings, filesChecked, referencesChecked } = checkDocVersionReferences();
   if (findings.length > 0) {
-    console.error('Documentation cites release versions absent from CHANGELOG.md:');
+    console.error('Documentation release references or changelog archives are invalid:');
     for (const finding of findings) console.error(`  - ${finding}`);
     process.exitCode = 1;
   } else {
     console.log(
-      `documentation new-in versions all resolve to CHANGELOG.md releases `
+      `documentation new-in versions all resolve to current or archived releases `
       + `(${referencesChecked} references across ${filesChecked} files).`,
     );
   }

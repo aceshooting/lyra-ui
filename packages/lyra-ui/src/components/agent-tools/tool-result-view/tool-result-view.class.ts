@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -98,6 +99,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // each definition object itself live (unfrozen, still the caller's own reference), which is
   // exactly what the class doc's "Definition records are cloned and frozen; their callback
   // identities are retained" contract rules out.
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'registry',
   ]);

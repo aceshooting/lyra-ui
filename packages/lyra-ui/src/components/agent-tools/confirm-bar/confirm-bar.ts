@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-confirm-bar.js to register this component. */
 export * from './confirm-bar.class.js';
 import { LyraConfirmBar } from './confirm-bar.class.js';
 import { defineElement } from '../../../internal/prefix.js';

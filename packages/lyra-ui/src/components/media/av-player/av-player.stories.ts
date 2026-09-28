@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './av-player.js';
+import '../../../surfaces/glass.css';
 import type { LyraAvCue, LyraAvPlayer } from './av-player.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
@@ -132,4 +133,9 @@ export const ThemedActiveStates: Story = {
       active-highlight-id="h1"
     ></lr-av-player>
   `,
+};
+
+export const ClearControls: Story = {
+  render: () => html`<lr-av-player controls-surface="clear" src=${VIDEO_SRC} mime-type="video/mp4" name="Clear controls"></lr-av-player>`,
+  parameters: { docs: { description: { story: 'Load surfaces/glass.css for the player-owned gradient scrim and clear playback-rate controls. Native video controls remain browser-owned.' } } },
 };

@@ -187,7 +187,7 @@ export const InteractiveFilter: Story = {
       description: {
         story:
           'Opt into `interactive` and every band, plus every legend row, becomes a real button ' +
-          'emitting the cancelable `lr-segment-activate`. Selection is toggled by the component ' +
+          'emitting the cancelable `lr-segment-activate-request`. Selection is toggled by the component ' +
           'itself unless a listener calls `preventDefault()`, and both surfaces carry explicit ' +
           '`aria-pressed`, so a filter toggle can be reported as on or off.',
       },
@@ -211,7 +211,7 @@ export const InteractiveFilter: Story = {
     const meter = canvasElement.querySelector('lr-context-meter')!;
     const output = canvasElement.querySelector('#context-meter-activation')!;
     withSegments(meter, CONTEXT_SEGMENTS);
-    meter.addEventListener('lr-segment-activate', (event) => {
+    meter.addEventListener('lr-segment-activate-request', (event) => {
       const { label, value } = (event as CustomEvent<{ label: string; value: number }>).detail;
       output.textContent = `Activated ${label} (${value.toLocaleString()}).`;
     });
@@ -228,7 +228,7 @@ export const FilterWithEmptyAndDisabledBands: Story = {
           '`segment-empty`/`legend-item-empty` part tokens and stays actionable, so the consumer ' +
           'decides what an empty bucket means. A `segments` entry that sets `disabled` renders as a ' +
           'genuinely disabled control: no tab stop, no hover affordance, and no ' +
-          '`lr-segment-activate`. Here the empty bucket is also marked disabled, which is the ' +
+          '`lr-segment-activate-request`. Here the empty bucket is also marked disabled, which is the ' +
           'usual choice when filtering to it would only show an empty table.',
       },
     },

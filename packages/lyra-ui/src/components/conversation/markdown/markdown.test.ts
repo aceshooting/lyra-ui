@@ -620,7 +620,7 @@ it('defaults link-target to "_blank"', async () => {
   );
 });
 
-it("intercepts a click on a link whose href matches internal-link-prefix and fires lr-link-click with the click prevented", async () => {
+it("intercepts a click on a link whose href matches internal-link-prefix and fires lr-link-activate with the click prevented", async () => {
   const el = (await fixture(
     html`<lr-markdown internal-link-prefix="/docs/"></lr-markdown>`
   )) as LyraMarkdown;
@@ -629,13 +629,15 @@ it("intercepts a click on a link whose href matches internal-link-prefix and fir
   await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
   const a = el.shadowRoot!.querySelector("a")!;
 
-  const listener = oneEvent(el, "lr-link-click");
+  const listener = oneEvent(el, "lr-link-activate");
+  const legacy = oneEvent(el, 'lr-link-click');
   withNavigationBlocked(() => a.click());
   const { detail } = await listener;
   expect(detail).to.deep.equal({ href: "/docs/setup" });
+  expect((await legacy).detail).to.deep.equal(detail);
 });
 
-it("does not fire lr-link-click for an ordinary external link", async () => {
+it("does not fire lr-link-activate for an ordinary external link", async () => {
   const el = (await fixture(
     html`<lr-markdown internal-link-prefix="/docs/"></lr-markdown>`
   )) as LyraMarkdown;
@@ -645,7 +647,7 @@ it("does not fire lr-link-click for an ordinary external link", async () => {
   const a = el.shadowRoot!.querySelector("a")!;
 
   let fired = false;
-  el.addEventListener("lr-link-click", () => (fired = true));
+  el.addEventListener("lr-link-activate", () => (fired = true));
   withNavigationBlocked(() => a.click());
   // No event to await — give the (synchronous) click handler a turn, then assert it never fired.
   await el.updateComplete;
@@ -660,7 +662,7 @@ it("does not intercept any link when internal-link-prefix is unset", async () =>
   const a = el.shadowRoot!.querySelector("a")!;
 
   let fired = false;
-  el.addEventListener("lr-link-click", () => (fired = true));
+  el.addEventListener("lr-link-activate", () => (fired = true));
   withNavigationBlocked(() => a.click());
   await el.updateComplete;
   expect(fired).to.be.false;
@@ -2879,7 +2881,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
 
     let highlightFired = false;
     el.addEventListener("lr-highlight-activate", () => (highlightFired = true));
-    const listener = oneEvent(el, "lr-link-click");
+    const listener = oneEvent(el, "lr-link-activate");
     withNavigationBlocked(() =>
       (el.shadowRoot!.querySelector("a") as HTMLElement).click()
     );
@@ -2910,7 +2912,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       order.push("highlight");
       details.push((event as CustomEvent).detail);
     });
-    el.addEventListener("lr-link-click", (event) => {
+    el.addEventListener("lr-link-activate", (event) => {
       order.push("link");
       details.push((event as CustomEvent).detail);
     });
@@ -2967,7 +2969,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     el.addEventListener("lr-highlight-activate", (event) =>
       events.push((event as CustomEvent).detail)
     );
-    el.addEventListener("lr-link-click", (event) =>
+    el.addEventListener("lr-link-activate", (event) =>
       events.push((event as CustomEvent).detail)
     );
 

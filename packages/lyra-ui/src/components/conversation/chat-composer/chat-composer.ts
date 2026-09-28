@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-chat-composer.js to register this component. */
 export * from './chat-composer.class.js';
 import { LyraChatComposer } from './chat-composer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

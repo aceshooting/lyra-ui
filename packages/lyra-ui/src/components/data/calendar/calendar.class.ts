@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -216,6 +217,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     calendarPreviousMonth: LYRA_DEFAULT_calendarPreviousMonth,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['events']);
   /** Each `CalendarEvent` is caller-owned data (often correlated back to a caller-side record via

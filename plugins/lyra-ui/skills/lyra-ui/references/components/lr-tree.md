@@ -6,7 +6,7 @@
 - **Class** `LyraTree`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -292,7 +292,9 @@ from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for inden
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
 `--lr-tree-checkbox-indeterminate-bg`, and `--lr-tree-checkbox-indeterminate-color` independently
 theme the two multiple-selection checkbox states (brand border/background and on-brand glyph
-fallbacks). The selected-row background is also the base its hover/press mixes from, and each
+fallbacks). Selected rows use brand text at rest and on-quiet text while hovered or pressed;
+`--lr-tree-selected-color` overrides all three states. The selected-row background is also the
+base its hover/press mixes from, and each
 checkbox border token also paints that state's border under the pointer; and paired
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
 `--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each

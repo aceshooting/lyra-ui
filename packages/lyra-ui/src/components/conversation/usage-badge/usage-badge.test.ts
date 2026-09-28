@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./usage-badge.js";
 import type { LyraUsageBadge } from "./usage-badge.js";
@@ -9,6 +10,12 @@ import { focusAfterPointer, focusByKeyboard } from "../../../../test/wtr-focus.j
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-usage-badge', 'compact');
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar', [
+  'usageBadgeLabel',
+  'durationSeconds',
+  'usageBadgeLatencyLabel',
+]);
 it("defaults to no tokensIn/tokensOut/costText/latencyMs/summary, abbreviate=false", async () => {
   const el = (await fixture(
     html`<lr-usage-badge></lr-usage-badge>`

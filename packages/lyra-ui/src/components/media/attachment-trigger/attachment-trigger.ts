@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-attachment-trigger.js to register this component. */
 export * from './attachment-trigger.class.js';
 import { LyraAttachmentTrigger } from './attachment-trigger.class.js';
 import { defineElement } from '../../../internal/prefix.js';

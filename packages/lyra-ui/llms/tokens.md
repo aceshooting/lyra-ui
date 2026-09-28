@@ -66,16 +66,16 @@ the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border
 `-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
 normally from an ancestor.
 
-## Direct theme-backed tokens (271)
+## Direct theme-backed tokens (288)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
 | `--lr-border-width-medium` | `--lr-theme-border-width-medium` | `2px` | — |
 | `--lr-border-width-thick` | `--lr-theme-border-width-thick` | `3px` | — |
 | `--lr-border-width-thin` | `--lr-theme-border-width-thin` | `1px` | — |
-| `--lr-color-border` | `--lr-theme-color-surface-border` | `#8a8a90` | dark: `var(--lr-theme-color-surface-border, #6b6b74)`<br>forcedColors: `ButtonText` |
-| `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#4b5563` | dark: `var(--lr-theme-color-border-strong, #c4c9d1)` |
-| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `var(--lr-color-border)` | dark: `var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))`<br>forcedColors: `ButtonText` |
+| `--lr-color-border` | `--lr-theme-color-surface-border` | `#8a8a90` | dark: `var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)))`<br>forcedColors: `ButtonText` |
+| `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#4b5563` | dark: `var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)))` |
+| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `var(--lr-color-border)` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)))`<br>forcedColors: `ButtonText` |
 | `--lr-color-brand-border-loud` | `--lr-theme-color-brand-border-loud` | `var(--lr-ramp-brand-40)` | dark: `var(--lr-theme-color-brand-border-loud, var(--lr-ramp-brand-70))` |
 | `--lr-color-brand-border-normal` | `--lr-theme-color-brand-border-normal` | `var(--lr-ramp-brand-60)` | dark: `var(--lr-theme-color-brand-border-normal, var(--lr-ramp-brand-60))` |
 | `--lr-color-brand-border-quiet` | `--lr-theme-color-brand-border-quiet` | `var(--lr-ramp-brand-80)` | dark: `var(--lr-theme-color-brand-border-quiet, var(--lr-ramp-brand-30))` |
@@ -93,6 +93,12 @@ normally from an ancestor.
 | `--lr-color-chart-6` | `--lr-theme-color-chart-6` | `#935e7c` | dark: `var(--lr-theme-color-chart-6, #9b6b90)`<br>forcedColors: `CanvasText` |
 | `--lr-color-chart-7` | `--lr-theme-color-chart-7` | `#de6906` | dark: `var(--lr-theme-color-chart-7, #db3a29)`<br>forcedColors: `Highlight` |
 | `--lr-color-chart-8` | `--lr-theme-color-chart-8` | `#8f81d3` | dark: `var(--lr-theme-color-chart-8, #555de3)`<br>forcedColors: `LinkText` |
+| `--lr-color-chart-diverging-1` | `--lr-theme-color-chart-diverging-1` | `#92400e` | dark: `var(--lr-theme-color-chart-diverging-1, #fbbf24)`<br>forcedColors: `CanvasText` |
+| `--lr-color-chart-diverging-2` | `--lr-theme-color-chart-diverging-2` | `#f3f4f6` | dark: `var(--lr-theme-color-chart-diverging-2, #374151)`<br>forcedColors: `Canvas` |
+| `--lr-color-chart-diverging-3` | `--lr-theme-color-chart-diverging-3` | `#1e40af` | dark: `var(--lr-theme-color-chart-diverging-3, #93c5fd)`<br>forcedColors: `Highlight` |
+| `--lr-color-chart-sequential-1` | `--lr-theme-color-chart-sequential-1` | `#dbeafe` | dark: `var(--lr-theme-color-chart-sequential-1, #172554)`<br>forcedColors: `CanvasText` |
+| `--lr-color-chart-sequential-2` | `--lr-theme-color-chart-sequential-2` | `#3b82f6` | dark: `var(--lr-theme-color-chart-sequential-2, #3b82f6)`<br>forcedColors: `Canvas` |
+| `--lr-color-chart-sequential-3` | `--lr-theme-color-chart-sequential-3` | `#1e3a8a` | dark: `var(--lr-theme-color-chart-sequential-3, #bfdbfe)`<br>forcedColors: `Highlight` |
 | `--lr-color-danger-border-loud` | `--lr-theme-color-danger-border-loud` | `var(--lr-ramp-danger-40)` | dark: `var(--lr-theme-color-danger-border-loud, var(--lr-ramp-danger-70))` |
 | `--lr-color-danger-border-normal` | `--lr-theme-color-danger-border-normal` | `var(--lr-ramp-danger-60)` | dark: `var(--lr-theme-color-danger-border-normal, var(--lr-ramp-danger-60))` |
 | `--lr-color-danger-border-quiet` | `--lr-theme-color-danger-border-quiet` | `var(--lr-ramp-danger-80)` | dark: `var(--lr-theme-color-danger-border-quiet, var(--lr-ramp-danger-30))` |
@@ -129,10 +135,15 @@ normally from an ancestor.
 | `--lr-color-success-on-normal` | `--lr-theme-color-success-on-normal` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-success-on-normal, var(--lr-ramp-neutral-95))` |
 | `--lr-color-success-on-quiet` | `--lr-theme-color-success-on-quiet` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-success-on-quiet, var(--lr-ramp-neutral-95))` |
 | `--lr-color-surface` | `--lr-theme-color-surface-default` | `#fff` | dark: `var(--lr-theme-color-surface-default, #1a1a1a)`<br>forcedColors: `Canvas` |
+| `--lr-color-surface-container` | `--lr-theme-color-surface-container` | `var(--lr-color-surface-raised)` | forcedColors: `Canvas` |
+| `--lr-color-surface-container-high` | `--lr-theme-color-surface-container-high` | `var(--lr-color-surface-overlay)` | forcedColors: `Canvas` |
+| `--lr-color-surface-container-highest` | `--lr-theme-color-surface-container-highest` | `var(--lr-color-surface-overlay)` | forcedColors: `Canvas` |
+| `--lr-color-surface-container-low` | `--lr-theme-color-surface-container-low` | `var(--lr-color-surface)` | forcedColors: `Canvas` |
+| `--lr-color-surface-container-lowest` | `--lr-theme-color-surface-container-lowest` | `var(--lr-color-surface)` | forcedColors: `Canvas` |
 | `--lr-color-surface-overlay` | `--lr-theme-color-surface-overlay` | `var(--lr-color-surface)` | dark: `var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2))` |
 | `--lr-color-surface-raised` | `--lr-theme-color-surface-raised` | `#f6f8fa` | dark: `var(--lr-theme-color-surface-raised, #22272e)`<br>forcedColors: `Canvas` |
 | `--lr-color-text` | `--lr-theme-color-text-normal` | `#1a1a1a` | dark: `var(--lr-theme-color-text-normal, #f2f2f2)`<br>forcedColors: `CanvasText` |
-| `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#6b7280` | dark: `var(--lr-theme-color-text-quiet, #9aa1ac)`<br>forcedColors: `CanvasText` |
+| `--lr-color-text-quiet` | `--lr-theme-color-text-quiet` | `#6b7280` | dark: `var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)))`<br>forcedColors: `CanvasText` |
 | `--lr-color-warning-border-loud` | `--lr-theme-color-warning-border-loud` | `var(--lr-ramp-warning-40)` | dark: `var(--lr-theme-color-warning-border-loud, var(--lr-ramp-warning-70))` |
 | `--lr-color-warning-border-normal` | `--lr-theme-color-warning-border-normal` | `var(--lr-ramp-warning-60)` | dark: `var(--lr-theme-color-warning-border-normal, var(--lr-ramp-warning-60))` |
 | `--lr-color-warning-border-quiet` | `--lr-theme-color-warning-border-quiet` | `var(--lr-ramp-warning-80)` | dark: `var(--lr-theme-color-warning-border-quiet, var(--lr-ramp-warning-30))` |
@@ -153,6 +164,7 @@ normally from an ancestor.
 | `--lr-focus-ring-offset` | `--lr-theme-focus-ring-offset` | `2px` | — |
 | `--lr-focus-ring-width` | `--lr-theme-focus-ring-width` | `2px` | — |
 | `--lr-font` | `--lr-theme-font-family-body` | `system-ui, sans-serif` | — |
+| `--lr-font-heading` | `--lr-theme-font-family-heading` | `inherit` | — |
 | `--lr-font-mono` | `--lr-theme-font-family-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | — |
 | `--lr-font-size-2xl` | `--lr-theme-font-size-2xl` | `1.75rem` | — |
 | `--lr-font-size-2xs` | `--lr-theme-font-size-2xs` | `0.625rem` | — |
@@ -191,6 +203,7 @@ normally from an ancestor.
 | `--lr-layer-modal` | `--lr-theme-z-index-modal` | `1000` | — |
 | `--lr-layer-popover` | `--lr-theme-z-index-popover` | `1000` | — |
 | `--lr-layer-toast` | `--lr-theme-z-index-toast` | `9999` | — |
+| `--lr-line-break` | `--lr-theme-line-break` | `inherit` | — |
 | `--lr-line-height-1-4` | `--lr-theme-line-height-1-4` | `1.4` | — |
 | `--lr-line-height-compact` | `--lr-theme-line-height-compact` | `1.25` | — |
 | `--lr-line-height-loose` | `--lr-theme-line-height-loose` | `1.6` | — |
@@ -202,6 +215,8 @@ normally from an ancestor.
 | `--lr-otp-input-segment-size` | `--lr-theme-otp-input-segment-size` | `2.5em` | — |
 | `--lr-popover-viewport-clamp` | `--lr-theme-popover-viewport-clamp` | `92vw` | — |
 | `--lr-radius` | `--lr-theme-border-radius-m` | `0.375rem` | — |
+| `--lr-radius-button` | `--lr-theme-border-radius-button` | `var(--lr-form-control-radius, var(--lr-radius))` | — |
+| `--lr-radius-container` | `--lr-theme-border-radius-container` | `var(--lr-radius)` | — |
 | `--lr-radius-pill` | `--lr-theme-border-radius-pill` | `999px` | — |
 | `--lr-radius-xs` | `--lr-theme-border-radius-xs` | `2px` | — |
 | `--lr-scroll-fade-size` | `--lr-theme-scroll-fade-size` | `2rem` | — |
@@ -306,6 +321,7 @@ normally from an ancestor.
 | `--lr-space-m` | `--lr-theme-space-m` | `0.75rem` | — |
 | `--lr-space-s` | `--lr-theme-space-s` | `0.5rem` | — |
 | `--lr-space-xs` | `--lr-theme-space-xs` | `0.25rem` | — |
+| `--lr-table-row-min-height` | `--lr-theme-table-row-height` | `0px` | — |
 | `--lr-terminal-bg-black` | `--lr-theme-terminal-bg-black` | `#868686` | dark: `var(--lr-theme-terminal-bg-black, #292929)` |
 | `--lr-terminal-bg-blue` | `--lr-theme-terminal-bg-blue` | `#88a6d4` | dark: `var(--lr-theme-terminal-bg-blue, #324e76)` |
 | `--lr-terminal-bg-bright-black` | `--lr-theme-terminal-bg-bright-black` | `#9e9e9e` | dark: `var(--lr-theme-terminal-bg-bright-black, #3d3d3d)` |
@@ -341,6 +357,7 @@ normally from an ancestor.
 | `--lr-transition-ambient` | `--lr-theme-transition-slow` | `var(--lr-duration-ambient) var(--lr-easing-emphasized)` | reducedMotion: `0.001ms linear` |
 | `--lr-transition-base` | `--lr-theme-transition-normal` | `var(--lr-duration-base) var(--lr-easing-standard)` | reducedMotion: `0.001ms linear` |
 | `--lr-transition-fast` | `--lr-theme-transition-fast` | `var(--lr-duration-fast) var(--lr-easing-standard)` | reducedMotion: `0.001ms linear` |
+| `--lr-word-break` | `--lr-theme-word-break` | `inherit` | — |
 
 ## Derived and fixed tokens (77)
 

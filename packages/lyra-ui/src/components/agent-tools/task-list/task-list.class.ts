@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   svg,
@@ -22,7 +23,7 @@ import { styles } from './task-list.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -251,7 +252,6 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
@@ -266,6 +266,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 

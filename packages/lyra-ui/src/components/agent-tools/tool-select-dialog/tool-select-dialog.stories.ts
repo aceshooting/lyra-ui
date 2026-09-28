@@ -215,9 +215,9 @@ export const Events: Story = {
             out.textContent = `lr-change: selectedToolIds=[${e.detail.selectedToolIds.join(', ')}] useDefaults=${e.detail.useDefaults}`;
           }
         }}
-        @lr-close=${(e: CustomEvent<string>) => {
+        @lr-close=${(e: CustomEvent<{ reason: string }>) => {
           const out = document.getElementById('tool-select-dialog-close-log');
-          if (out) out.textContent = `lr-close: ${e.detail}`;
+          if (out) out.textContent = `lr-close: ${e.detail.reason}`;
         }}
       ></lr-tool-select-dialog>
       <p id="tool-select-dialog-log">No change yet.</p>
@@ -234,7 +234,7 @@ export const CancelableChange: Story = {
         .open=${context.viewMode !== 'docs'}
         .tools=${TOOLS}
         .selectedToolIds=${['web_search']}
-        @lr-change=${(event: CustomEvent<ToolSelectionChangeDetail>) => {
+        @lr-change-request=${(event: CustomEvent<ToolSelectionChangeDetail>) => {
           event.preventDefault();
           const dialog = event.currentTarget as LyraToolSelectDialog;
           const status = dialog.parentElement?.querySelector('[data-veto-status]');

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-dashboard-grid.js to register this component. */
 export * from './dashboard-grid.class.js';
 export * from './layout.js';
 import { LyraDashboardGrid } from './dashboard-grid.class.js';

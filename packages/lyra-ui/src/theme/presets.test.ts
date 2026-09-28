@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { expect, oneEvent } from '@open-wc/testing';
 import { getLyraTheme, setLyraTheme } from './theme.js';
 import {
@@ -6,6 +7,12 @@ import {
   defineLyraThemePreset,
 } from './presets.js';
 import { LYRA_SHADCN_THEME_PRESET } from './presets/shadcn.js';
+
+expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
+expectDeprecatedUsage('./theme.js', 'function', 'getLyraTheme');
+expectDeprecatedUsage('./theme/presets.js', 'function', 'applyLyraThemePreset');
+
+expectDeprecatedUsage('./theme/presets.js', 'function', 'defineLyraThemePreset');
 
 describe('theme presets', () => {
   afterEach(() => {
@@ -163,10 +170,8 @@ async function presetGrammar(): Promise<PresetGrammarFixture> {
 const inlineValue = (name: string): string => document.documentElement.style.getPropertyValue(name);
 
 function ownedNames(): string[] {
-  const list = (document.documentElement as unknown as Record<symbol, unknown>)[
-    Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1')
-  ];
-  return Array.isArray(list) ? list.map(String) : [];
+  const owned = (document.documentElement as unknown as Record<symbol, { properties?: Map<string, unknown> }>)[Symbol.for('@aceshooting/lyra-ui.style-ownership.v1')];
+  return [...(owned?.properties?.keys() ?? [])].filter(name => name.startsWith('--lr-theme-') && name !== '--lr-theme-accent').sort();
 }
 
 describe('theme presets with token maps', () => {

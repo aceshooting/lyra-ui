@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
 import "./generation-metrics.js";
 import type { LyraGenerationMetrics } from "./generation-metrics.js";
@@ -40,6 +41,13 @@ function parseElapsedSeconds(text: string): number {
   throw new Error(`Unrecognized elapsed format: "${text}"`);
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', [
+  'generationStatusElapsedSeconds',
+  'generationStatusTokensCount',
+  'generationStatusThroughput',
+  'stopGenerating',
+]);
 it("defaults to idle with no optional segments and no Stop action", async () => {
   const el = (await fixture(
     html`<lr-generation-metrics></lr-generation-metrics>`

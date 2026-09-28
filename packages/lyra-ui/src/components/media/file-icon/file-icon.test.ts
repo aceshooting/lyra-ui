@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './file-icon.js';
 import type { LyraFileIcon } from './file-icon.js';
@@ -46,6 +47,9 @@ function measureTokenFit(el: LyraFileIcon): { token: HTMLElement; textRect: DOMR
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-file-icon', 'size');
+
+expectLocaleFallback('ar-EG', ['fileSizeUnitMb', 'fileTypePdf', 'fileTypeWithSize']);
+expectLocaleFallback('tr', ['fileTypeFile']);
 
 describe('file type metadata', () => {
   it('covers every presentation category', () => {

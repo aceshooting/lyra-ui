@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
@@ -58,6 +59,8 @@ class SnapshotViewer extends StubViewer {
     }));
   }
 }
+
+expectLocaleFallback('ar-EG', ['fileTypeFile', 'pageRailLabel', 'pageRailPage']);
 
 describe('lr-page-rail', () => {
   it('defaults to page-count 0, page 1, thumb-width 96', async () => {

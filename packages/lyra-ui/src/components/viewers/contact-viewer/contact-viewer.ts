@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-contact-viewer.js to register this component. */
 export * from './contact-viewer.class.js';
 export * from './vcard.js';
 import { LyraContactViewer } from './contact-viewer.class.js';

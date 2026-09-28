@@ -69,8 +69,8 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "color",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-color-surface-border, #8a8a90)",
-          "dark": "var(--lr-theme-color-surface-border, #6b6b74)",
+          "light": "var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)))",
+          "dark": "var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)))",
           "forcedColors": "ButtonText"
         }
       },
@@ -79,8 +79,8 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "color",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-color-border-strong, #4b5563)",
-          "dark": "var(--lr-theme-color-border-strong, #c4c9d1)"
+          "light": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)))",
+          "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)))"
         }
       },
       {
@@ -88,8 +88,8 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "color",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
-          "dark": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+          "light": "var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)))",
+          "dark": "var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)))",
           "forcedColors": "ButtonText"
         }
       },
@@ -270,6 +270,66 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
           "light": "var(--lr-theme-color-chart-8, #8f81d3)",
           "dark": "var(--lr-theme-color-chart-8, #555de3)",
           "forcedColors": "LinkText"
+        }
+      },
+      {
+        "name": "--lr-color-chart-diverging-1",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-diverging-1, #92400e)",
+          "dark": "var(--lr-theme-color-chart-diverging-1, #fbbf24)",
+          "forcedColors": "CanvasText"
+        }
+      },
+      {
+        "name": "--lr-color-chart-diverging-2",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-diverging-2, #f3f4f6)",
+          "dark": "var(--lr-theme-color-chart-diverging-2, #374151)",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-chart-diverging-3",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-diverging-3, #1e40af)",
+          "dark": "var(--lr-theme-color-chart-diverging-3, #93c5fd)",
+          "forcedColors": "Highlight"
+        }
+      },
+      {
+        "name": "--lr-color-chart-sequential-1",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-sequential-1, #dbeafe)",
+          "dark": "var(--lr-theme-color-chart-sequential-1, #172554)",
+          "forcedColors": "CanvasText"
+        }
+      },
+      {
+        "name": "--lr-color-chart-sequential-2",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-sequential-2, #3b82f6)",
+          "dark": "var(--lr-theme-color-chart-sequential-2, #3b82f6)",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-chart-sequential-3",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-chart-sequential-3, #1e3a8a)",
+          "dark": "var(--lr-theme-color-chart-sequential-3, #bfdbfe)",
+          "forcedColors": "Highlight"
         }
       },
       {
@@ -683,6 +743,51 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-color-surface-container",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-container, var(--lr-color-surface-raised))",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-surface-container-high",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-container-high, var(--lr-color-surface-overlay))",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-surface-container-highest",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-container-highest, var(--lr-color-surface-overlay))",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-surface-container-low",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-container-low, var(--lr-color-surface))",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
+        "name": "--lr-color-surface-container-lowest",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-surface-container-lowest, var(--lr-color-surface))",
+          "forcedColors": "Canvas"
+        }
+      },
+      {
         "name": "--lr-color-surface-overlay",
         "type": "color",
         "scope": "shared",
@@ -716,8 +821,8 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "color",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-color-text-quiet, #6b7280)",
-          "dark": "var(--lr-theme-color-text-quiet, #9aa1ac)",
+          "light": "var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)))",
+          "dark": "var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)))",
           "forcedColors": "CanvasText"
         }
       },
@@ -1791,6 +1896,60 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-theme-color-chart-diverging-1",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#92400e",
+          "dark": "#fbbf24"
+        }
+      },
+      {
+        "name": "--lr-theme-color-chart-diverging-2",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#f3f4f6",
+          "dark": "#374151"
+        }
+      },
+      {
+        "name": "--lr-theme-color-chart-diverging-3",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#1e40af",
+          "dark": "#93c5fd"
+        }
+      },
+      {
+        "name": "--lr-theme-color-chart-sequential-1",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#dbeafe",
+          "dark": "#172554"
+        }
+      },
+      {
+        "name": "--lr-theme-color-chart-sequential-2",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#3b82f6",
+          "dark": "#3b82f6"
+        }
+      },
+      {
+        "name": "--lr-theme-color-chart-sequential-3",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#1e3a8a",
+          "dark": "#bfdbfe"
+        }
+      },
+      {
         "name": "--lr-theme-color-danger-border-loud",
         "type": "color",
         "scope": "theme-input",
@@ -2117,7 +2276,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "theme-input",
         "values": {
           "light": "#8a8a90",
-          "dark": "#6b6b74"
+          "dark": "#787881"
         }
       },
       {
@@ -2884,7 +3043,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "color",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-color-focus, var(--lr-color-brand))",
+          "light": "var(--_lr-glass-qualified-focus-ring-color, var(--lr-theme-color-focus, var(--lr-color-brand)))",
           "forcedColors": "Highlight"
         }
       },
@@ -2901,7 +3060,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "dimension",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-focus-ring-width, 2px)"
+          "light": "max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px))"
         }
       },
       {
@@ -3016,6 +3175,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-table-row-min-height",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-table-row-height, 0px)"
+        }
+      },
+      {
         "name": "--lr-theme-popover-viewport-clamp",
         "type": "dimension",
         "scope": "theme-input",
@@ -3054,7 +3221,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-duration-slow, 1.8s)",
+          "light": "var(--_lr-motion-duration, var(--lr-theme-duration-slow, 1.8s))",
           "reducedMotion": "0.001ms"
         }
       },
@@ -3063,7 +3230,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-duration-normal, 180ms)",
+          "light": "var(--_lr-motion-duration, var(--lr-theme-duration-normal, 180ms))",
           "reducedMotion": "0.001ms"
         }
       },
@@ -3072,7 +3239,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-duration-fast, 120ms)",
+          "light": "var(--_lr-motion-duration, var(--lr-theme-duration-fast, 120ms))",
           "reducedMotion": "0.001ms"
         }
       },
@@ -3081,7 +3248,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-duration-icon, 1s)",
+          "light": "var(--_lr-motion-duration, var(--lr-theme-duration-icon, 1s))",
           "reducedMotion": "0.001ms"
         }
       },
@@ -3090,7 +3257,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "dimension",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-easing-emphasized, ease-in-out)",
+          "light": "var(--_lr-motion-easing, var(--lr-theme-easing-emphasized, ease-in-out))",
           "reducedMotion": "linear"
         }
       },
@@ -3107,7 +3274,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "string",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-easing-standard, ease-out)",
+          "light": "var(--_lr-motion-easing, var(--lr-theme-easing-standard, ease-out))",
           "reducedMotion": "linear"
         }
       },
@@ -3196,7 +3363,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized))",
+          "light": "var(--_lr-motion-transition, var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized)))",
           "reducedMotion": "0.001ms linear"
         }
       },
@@ -3205,7 +3372,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard))",
+          "light": "var(--_lr-motion-transition, var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard)))",
           "reducedMotion": "0.001ms linear"
         }
       },
@@ -3214,7 +3381,7 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "type": "duration",
         "scope": "shared",
         "values": {
-          "light": "var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard))",
+          "light": "var(--_lr-motion-transition, var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard)))",
           "reducedMotion": "0.001ms linear"
         }
       },
@@ -3274,6 +3441,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-border-radius-m, 0.375rem)"
+        }
+      },
+      {
+        "name": "--lr-radius-button",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-border-radius-button, var(--lr-form-control-radius, var(--lr-radius)))"
+        }
+      },
+      {
+        "name": "--lr-radius-container",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-border-radius-container, var(--lr-radius))"
         }
       },
       {
@@ -4889,6 +5072,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-font-heading",
+        "type": "fontFamily",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-font-family-heading, inherit)"
+        }
+      },
+      {
         "name": "--lr-font-mono",
         "type": "string",
         "scope": "shared",
@@ -5006,6 +5197,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-font-weight-semibold, 600)"
+        }
+      },
+      {
+        "name": "--lr-line-break",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-line-break, inherit)"
         }
       },
       {
@@ -5185,6 +5384,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-theme-line-break",
+        "type": "string",
+        "scope": "theme-input",
+        "values": {
+          "light": "initial"
+        }
+      },
+      {
         "name": "--lr-theme-line-height-1-4",
         "type": "number",
         "scope": "theme-input",
@@ -5230,6 +5437,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "theme-input",
         "values": {
           "light": "1.3"
+        }
+      },
+      {
+        "name": "--lr-theme-word-break",
+        "type": "string",
+        "scope": "theme-input",
+        "values": {
+          "light": "initial"
+        }
+      },
+      {
+        "name": "--lr-word-break",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-word-break, inherit)"
         }
       }
     ]

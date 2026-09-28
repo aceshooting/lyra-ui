@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { property, state } from 'lit/decorators.js';
@@ -155,6 +156,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   // a listener cannot mutate the group's own bookkeeping through them. `option` is the exception
   // the snapshot boundary keeps by identity -- naming which checkbox is toggling is the whole
   // point of that field, and a detached copy of it would name nothing.
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-checkbox-group-toggle-request',
   ]);

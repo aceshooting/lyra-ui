@@ -342,7 +342,7 @@ export function getAnimation(
   // sit in a document whose media state differs from the top-level window's.
   if (
     respectReducedMotion !== false &&
-    prefersReducedMotion(element.ownerDocument?.defaultView)
+    prefersReducedMotion(element)
   ) {
     resolvedOptions.delay = 0;
     resolvedOptions.duration = 0;

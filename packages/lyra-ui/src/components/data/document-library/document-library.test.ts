@@ -1,3 +1,5 @@
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -59,6 +61,8 @@ function findCheckbox(table: HTMLElement, rowIndex: number): HTMLElement {
     "lr-checkbox"
   )!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 }
+
+expectLocaleFallback('de-DE', ['documentLibraryClearSelection', 'documentLibraryFreshnessColumn', 'documentLibraryLabel', 'documentLibraryNameColumn', 'documentLibraryNoMatchesHeading', 'documentLibraryOwnerColumn', 'documentLibrarySearchPlaceholder', 'documentLibrarySelectAll', 'documentLibrarySelectColumn', 'documentLibrarySelectDocument', 'documentLibrarySelectedCount', 'documentLibraryTagsColumn', 'documentLibraryTypeColumn', 'documentLibraryUpdatedColumn', 'documentLibraryVersionColumn', 'fieldRequired', 'fileTypeFile', 'next', 'paginationLabel', 'paginationPage', 'previous', 'tableFilterLabel', 'tableFilterPlaceholder']);
 
 it("renders every document as a grid row, sorted by name ascending by default (unsorted input)", async () => {
   const el = (await fixture(
@@ -1126,7 +1130,7 @@ describe("error state", () => {
     ).to.equal(true);
   });
 
-  it("re-proposes its own cancelable lr-retry, clearing error only when the default action runs", async () => {
+  it("re-proposes its own cancelable lr-retry-request, clearing error only when the default action runs", async () => {
     const el = (await fixture(
       html`<lr-document-library error .documents=${docs}></lr-document-library>`
     )) as LyraDocumentLibrary;
@@ -1143,7 +1147,7 @@ describe("error state", () => {
       received = event as CustomEvent;
       event.preventDefault();
     };
-    el.addEventListener("lr-retry", vetoListener);
+    el.addEventListener("lr-retry-request", vetoListener);
     retryButton.click();
     expect(received?.cancelable).to.equal(true);
     expect(received?.defaultPrevented).to.equal(true);
@@ -1152,7 +1156,7 @@ describe("error state", () => {
       table.error,
       "a vetoed retry must not clear the nested table error either"
     ).to.equal(true);
-    el.removeEventListener("lr-retry", vetoListener);
+    el.removeEventListener("lr-retry-request", vetoListener);
 
     retryButton.click();
     await el.updateComplete;
@@ -1345,5 +1349,97 @@ describe("lr-document-library contains the composed lr-checkbox's lr-checkbox-to
     expect(selectionChanges).to.equal(0);
     expect(el.selectedDocumentIds).to.deep.equal([]);
     expect(rowCheckbox.checked).to.equal(false);
+  });
+});
+
+
+describe('document-library retry request compatibility boundary', () => {
+  for (const veto of ['canonical', 'alias', 'none'] as const) {
+    it(`preserves ${veto} veto semantics without exposing child retry events`, async () => {
+      const el = await fixture<LyraDocumentLibrary>(html`<lr-document-library error></lr-document-library>`);
+      const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+        error: boolean;
+        updateComplete: Promise<unknown>;
+      };
+      await table.updateComplete;
+      const events: string[] = [];
+      const childAliases: Event[] = [];
+      const childRequests: Event[] = [];
+      table.addEventListener('lr-retry-request', event => childRequests.push(event));
+      table.addEventListener('lr-retry', event => childAliases.push(event));
+      for (const type of ['lr-retry-request', 'lr-retry']) {
+        el.addEventListener(type, event => {
+          events.push(event.type);
+          expect(event.composedPath()[0] === el, 'only parent-owned events escape').to.equal(true);
+          expect(event.cancelable).to.equal(true);
+          expect((event as CustomEvent).detail).to.equal(null);
+          expect(el.error, 'dispatch precedes the outer commit').to.equal(true);
+          expect(table.error, 'dispatch precedes the nested commit').to.equal(true);
+          if (type === (veto === 'canonical' ? 'lr-retry-request' : veto === 'alias' ? 'lr-retry' : '')) {
+            event.preventDefault();
+          }
+        });
+      }
+      const warnings = await captureDeprecationWarnings([
+        { tag: 'lr-document-library', kind: 'event', name: 'lr-retry' },
+        { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
+      ], async () => {
+        table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+        await el.updateComplete;
+        await table.updateComplete;
+      });
+      expect(events).to.deep.equal(['lr-retry-request', 'lr-retry']);
+      expect(childRequests).to.have.length(1);
+      expect(childRequests[0]!.defaultPrevented).to.equal(veto !== 'none');
+      expect(childAliases).to.have.length(1);
+      expect(childAliases[0]!.defaultPrevented, 'containment must not veto the child legacy alias').to.equal(false);
+      expect(el.error).to.equal(veto !== 'none');
+      expect(table.error).to.equal(veto !== 'none');
+      expect(warnings.map(warning => warning.key)).to.deep.equal(veto === 'alias'
+        ? ['lyra-deprecated:lr-document-library:event:lr-retry'] : []);
+      if (veto === 'alias') expect(warnings[0]!.message).to.contain('lr-retry-request');
+    });
+  }
+});
+
+
+describe('document-library retry reentry', () => {
+  it('cancels a nested child retry before an outer veto and releases the guard for the next attempt', async () => {
+    const el = await fixture<LyraDocumentLibrary>(html`<lr-document-library error></lr-document-library>`);
+    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+      error: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    await table.updateComplete;
+    const button = table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!;
+    const events: string[] = [];
+    const childRequests: Event[] = [];
+    table.addEventListener('lr-retry-request', event => childRequests.push(event));
+    el.addEventListener('lr-retry-request', () => events.push('request'));
+    el.addEventListener('lr-retry', () => events.push('alias'));
+    el.addEventListener('lr-retry-request', event => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      event.preventDefault();
+    }, { once: true });
+    const warnings = await captureDeprecationWarnings([
+      { tag: 'lr-document-library', kind: 'event', name: 'lr-retry' },
+      { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
+    ], async () => {
+      button.click();
+      await el.updateComplete;
+      await table.updateComplete;
+      expect(events).to.deep.equal(['request', 'alias']);
+      expect(childRequests).to.have.length(2);
+      expect(childRequests.every(event => event.defaultPrevented)).to.equal(true);
+      expect(el.error).to.equal(true);
+      expect(table.error).to.equal(true);
+      button.click();
+      await el.updateComplete;
+      await table.updateComplete;
+      expect(events).to.deep.equal(['request', 'alias', 'request', 'alias']);
+      expect(el.error).to.equal(false);
+      expect(table.error).to.equal(false);
+    });
+    expect(warnings).to.have.length(0);
   });
 });

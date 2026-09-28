@@ -152,8 +152,8 @@ describe('app rail sidebar toggle and trigger', () => {
       el.toggle(); el.setAttribute('storage-key', 'sidebar-detached'); el.setAttribute('persist', 'preferred-mode');
       const wrapper = await fixture<HTMLDivElement>(html`<div></div>`); wrapper.append(el); await el.updateComplete;
       expect(el.mode).to.equal('icon-only'); mobile(el); await el.updateComplete;
-      const veto = (event: Event) => event.preventDefault(); el.addEventListener('lr-toggle', veto); el.toggle(); await el.updateComplete; expect(el.open).to.equal(false);
-      el.removeEventListener('lr-toggle', veto); el.toggle(); await el.updateComplete; expect(el.open).to.equal(true);
+      const veto = (event: Event) => event.preventDefault(); el.addEventListener('lr-toggle-request', veto); el.toggle(); await el.updateComplete; expect(el.open).to.equal(false);
+      el.removeEventListener('lr-toggle-request', veto); el.toggle(); await el.updateComplete; expect(el.open).to.equal(true);
       el.toggle(); await el.updateComplete; expect(el.open).to.equal(false);
       let count = 0; el.addEventListener('lr-toggle', () => { count++; }); el.remove(); el.toggle(); expect(count).to.equal(0);
     } finally { if (previous === null) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey, previous); }
@@ -249,7 +249,7 @@ describe('app rail sidebar hotkey', () => {
     const el = await fixture<LyraAppRail>(html`<lr-app-rail hotkey="ctrl+b"><button id="first">First</button></lr-app-rail>`);
     mobile(el); await el.updateComplete; press(); await el.updateComplete; expect(el.open).to.equal(true); expect(document.activeElement?.id).to.equal('first');
     await expect(el).to.be.accessible(); press(); await el.updateComplete; expect(el.open).to.equal(false);
-    el.addEventListener('lr-toggle', event => event.preventDefault()); press(); await el.updateComplete; expect(el.open).to.equal(false);
+    el.addEventListener('lr-toggle-request', event => event.preventDefault()); press(); await el.updateComplete; expect(el.open).to.equal(false);
   });
 });
 

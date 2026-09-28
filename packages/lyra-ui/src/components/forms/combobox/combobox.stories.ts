@@ -845,7 +845,7 @@ export const OutOfListValueDuringAsyncLoad: Story = {
 };
 
 export const SourceFailureAndRefresh: Story = {
-  parameters: { docs: { description: { story: 'A rejected `source` renders the library’s shared failed-load state inside the listbox — the same `<lr-empty>` shape `<lr-table>` uses — with a `retry-button`, instead of a silently empty list. It also emits a non-cancelable `lr-source-error` carrying the raw rejection plus the query that call was made with, while the rendered copy stays localized and never leaks the raw error. Retry goes through the cancelable `lr-retry` and then calls the public `refresh()`, which re-runs the current query without changing the source’s identity; called while the listbox is closed it queues for the next open.' } } },
+  parameters: { docs: { description: { story: 'A rejected `source` renders the library’s shared failed-load state inside the listbox — the same `<lr-empty>` shape `<lr-table>` uses — with a `retry-button`, instead of a silently empty list. It also emits a non-cancelable `lr-source-error` carrying the raw rejection plus the query that call was made with, while the rendered copy stays localized and never leaks the raw error. Retry goes through the cancelable `lr-retry-request` and then calls the public `refresh()`, which re-runs the current query without changing the source’s identity; called while the listbox is closed it queues for the next open.' } } },
   render: () => {
     let failNext = true;
     return html`

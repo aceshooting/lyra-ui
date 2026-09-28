@@ -54,7 +54,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node packages/lyra-ui/scripts/lint-ci-shard.mjs --shard "${{ matrix.shard }}/3"
@@ -93,7 +93,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:workflows
@@ -120,6 +120,13 @@ jobs:
       - run: git diff --exit-code -- packages/lyra-ui/src/all.ts packages/lyra-ui/src/ssr/all.ts packages/lyra-ui/src/components/lr-*.ts packages/lyra-ui/src/internal/root-registration-allowlist.ts packages/lyra-ui/package.json
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
+      - run: pnpm --filter @aceshooting/lyra-ui run framework-types
+      - run: git diff --exit-code -- packages/lyra-ui/src/framework-types.ts packages/lyra-ui/src/custom-elements-jsx.ts packages/lyra-ui/src/vue.ts packages/lyra-ui/src/svelte.ts
+      - run: pnpm --filter @aceshooting/lyra-ui run registration-graph
+      - run: pnpm --filter @aceshooting/lyra-ui run scoped-definitions
+      - run: git diff --exit-code -- packages/lyra-ui/registrations.json packages/lyra-ui/src/internal/scoped-definitions.generated.ts
+      - run: pnpm --filter @aceshooting/lyra-ui run locale-manifest
+      - run: git diff --exit-code -- packages/lyra-ui/locales.json packages/lyra-ui/src/internal/locale-loaders.generated.ts
       - run: pnpm --filter @aceshooting/lyra-ui run generate-editor-data
       - run: git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
       - run: pnpm readme:check
@@ -144,7 +151,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
@@ -234,7 +241,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -290,7 +297,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -349,7 +356,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -386,7 +393,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Explicit artifact names and destinations make a missing or misrouted shard fail before
@@ -529,7 +536,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22.23.2
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -557,7 +564,7 @@ jobs:
       - run: pnpm check:packed-consumer:contracts
       # Four floor/current compatibility profiles pack this exact built tree and install it through
       # strict pnpm and npm consumers. Keep the expensive consumer matrix in the primary Node 22
-      # path; the explicit Node 20 contract lane below remains intentionally profile-free. The
+      # path. The
       # profile runner launches Chromium to exercise each packed consumer, so provision its matching
       # browser explicitly in this otherwise non-container job.
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
@@ -580,7 +587,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # pnpm pack runs the complete prepack chain and produces the exact published bytes. Explicit
@@ -598,7 +605,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -658,7 +665,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # docs:build only needs the already-committed custom-elements.json (via manifest:check), not
@@ -720,7 +727,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -761,7 +768,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -804,11 +811,11 @@ jobs:
           exit "$failed"
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): the manifest's 109 stories now produce 313
+  # packages/lyra-ui/visual-baselines/README.md): the manifest's 111 stories now produce 321
   # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
-  # 117 compared with retained baselines and 196 as explicit ephemeral semantic/pixel evidence; all
+  # 114 compared with retained baselines and 207 as explicit ephemeral semantic/pixel evidence; all
   # capture or console errors remain blocking. The axis-level capture inventory is sorted and
-  # round-robin partitioned into three deterministic shards (105/104/104 captures) so the historical
+  # round-robin partitioned into three deterministic shards (107/107/107 captures) so the historical
   # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
     name: visual-regression / shard ${{ matrix.shard }}/3
@@ -860,7 +867,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -904,22 +911,10 @@ jobs:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }} / shard ${{ matrix.shard_index }}/${{ matrix.shard_total }}
     strategy:
       fail-fast: false
-      # 11 legs total (down from 20 -- see docs/agents/ci-and-gates.md). Measured per-leg wall
-      # time on the prior 20-leg matrix showed most Node 22 shards spending roughly half their
-      # ~50-110s runtime on fixed per-job overhead (checkout/install/browser setup) rather than
-      # test execution, since the then-26-file test:platform suite was split too finely. Halving
-      # chromium/firefox and collapsing chrome/edge/safari-Node22 to one shard each keeps every
-      # leg's worst case comfortably under the workflow's other long poles while cutting total
-      # billed runner-minutes; max-parallel no longer needs to chase the 20-runner cap.
-      max-parallel: 11
+      # The supported Node floor uses nine browser/shard legs.
+      max-parallel: 9
       matrix:
         include:
-          - browser: firefox
-            node-version: 20
-            shard_index: 1
-            shard_total: 1
-            install_browser: firefox
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
           - browser: chromium
             node-version: 22
             shard_index: 1
@@ -969,19 +964,13 @@ jobs:
             install_browser: firefox
             container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
           - browser: safari
-            node-version: 20
-            shard_index: 1
-            shard_total: 1
-            install_browser: webkit
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
-          - browser: safari
             node-version: 22
             shard_index: 1
             shard_total: 1
             install_browser: webkit
             container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
     runs-on: ubuntu-latest
-    # 9 of 11 legs run in the official Playwright image, which ships the browser binaries and
+    # 7 of 9 legs run in the official Playwright image, which ships the browser binaries and
     # every OS-level dependency -- no apt, no browser download. Only the branded chrome/msedge
     # legs stay on the VM, because that image deliberately carries no Google Chrome or Microsoft
     # Edge; those two get bounded, retried apt instead (see the step below).
@@ -995,20 +984,6 @@ jobs:
       # Container legs run as root against a pwuser-owned /github/home, which Firefox refuses to
       # launch under; the VM legs keep the runner's own home. See the note on the other jobs.
       HOME: ${{ matrix.container != '' && '/root' || '/home/runner' }}
-      # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
-      # (imports node:sqlite) under Node 20. The Node 20 leg below installs a
-      # compatible pnpm 10 instead, but pnpm has its own Corepack-like
-      # "manage package manager versions" self-enforcement: any pnpm binary
-      # run from this repo root notices the packageManager mismatch and
-      # silently re-execs itself as the packageManager-pinned pnpm 11,
-      # reintroducing the crash. This config disables that self-management,
-      # but it only covers simple invocations -- `pnpm -r`/`pnpm pack`
-      # (workspace-graph-resolving commands, used by `pnpm build` and by
-      # check:packed-consumer's internal `pnpm pack`) re-exec into pnpm 11
-      # and crash regardless of this setting. Kept as defense in depth
-      # (harmless on the Node 22 leg); the step below removes the mismatch
-      # itself, which is what actually protects those commands.
-      npm_config_manage_package_manager_versions: "false"
     steps:
       # No font step here: this job's container is selected per matrix leg as a bare
       # string, which cannot carry the -v mount the other container jobs use to borrow the
@@ -1018,25 +993,10 @@ jobs:
       # mapping-form container (and its VM legs need another home).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          # pnpm/action-setup hard-errors if `version` is given and differs
-          # from packageManager, so point it at an alternate file with a
-          # Node-20-compatible pnpm version for that leg instead of
-          # overriding `version` directly.
-          package_json_file: ${{ matrix.node-version == 20 && '.github/ci-pnpm10.json' || 'package.json' }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
-      - name: Match packageManager to the installed Node-20-compatible pnpm
-        if: ${{ matrix.node-version == 20 }}
-        run: |
-          node -e "
-            const fs = require('node:fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.packageManager = JSON.parse(fs.readFileSync('.github/ci-pnpm10.json', 'utf8')).packageManager;
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
       - run: pnpm install --frozen-lockfile
       - name: Bound apt so a degraded mirror cannot hang the leg
         if: matrix.container == ''
@@ -1090,9 +1050,3 @@ jobs:
           WTR_SHARD_TOTAL: ${{ matrix.shard_total }}
           WTR_STRICT_CONSOLE: "1"
         run: pnpm --filter @aceshooting/lyra-ui test:platform-shard
-      # The package supports Node 20. Exercise the real tarball/install/import/type/style bundle
-      # matrix once at that floor. ATTW resolves declarations with its bundled TypeScript rather
-      # than the active Node runtime, so the exhaustive Node-22 ATTW matrix above is sufficient.
-      - name: Run packed consumer at the supported Node floor
-        if: ${{ matrix.browser == 'firefox' && matrix.node-version == 20 && matrix.shard_index == 1 }}
-        run: pnpm build && pnpm check:packed-consumer:contracts

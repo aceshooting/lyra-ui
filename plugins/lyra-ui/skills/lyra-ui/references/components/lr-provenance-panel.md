@@ -6,7 +6,7 @@
 - **Class** `LyraProvenancePanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/provenance-panel/provenance-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below

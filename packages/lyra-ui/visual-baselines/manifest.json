@@ -716,7 +716,23 @@
     },
     {
       "id": "theming-shadcn--gemstone-accent",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The runtime custom-accent loud fill now meets 4.5:1 against its quiet fill and built-in reference surfaces because it also paints accent text. In light/RTL shadcn emerald, #34d399 becomes #1a6a4d and the on-loud foreground changes from black to white; primary and checked controls, brand text/border, and streaming accents follow it. Neutral secondary controls and layout are unchanged; dark matches its historical capture. Historical baselines are retained. These corrected pixels await human visual review, with no baseline promotion."
+    },
+    {
+      "id": "localization-pseudo-locales--expanded",
+      "profile": "narrow-responsive",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Synthetic locale expansion and bidirectional coverage; captures await visual review before baseline promotion.",
+      "narrowProbe": "viewport-fit"
+    },
+    {
+      "id": "localization-pseudo-locales--bidirectional",
+      "profile": "narrow-responsive",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Synthetic locale expansion and bidirectional coverage; captures await visual review before baseline promotion.",
+      "narrowProbe": "viewport-fit"
     }
   ],
   "tagCoverage": {
@@ -818,7 +834,9 @@
       "ingestion-queue--default"
     ],
     "lr-input": [
-      "input--default"
+      "input--default",
+      "localization-pseudo-locales--expanded",
+      "localization-pseudo-locales--bidirectional"
     ],
     "lr-json-viewer": [
       "jsonviewer--default"
@@ -963,7 +981,9 @@
     ],
     "lr-textarea": [
       "textarea--default",
-      "textarea--narrow-long-rtl"
+      "textarea--narrow-long-rtl",
+      "localization-pseudo-locales--expanded",
+      "localization-pseudo-locales--bidirectional"
     ],
     "lr-thread-list": [
       "threadlist--default"
@@ -1009,7 +1029,13 @@
     ],
     "lr-button": [
       "theming-shadcn--shadcn",
-      "theming-shadcn--gemstone-accent"
+      "theming-shadcn--gemstone-accent",
+      "localization-pseudo-locales--expanded",
+      "localization-pseudo-locales--bidirectional"
+    ],
+    "lr-locale-picker": [
+      "localization-pseudo-locales--expanded",
+      "localization-pseudo-locales--bidirectional"
     ]
   },
   "untaggedStories": {
@@ -1036,14 +1062,15 @@
       "baseCommit": "f9998fd0a9180ca8f641ba9ca871b71d29d3f4fc",
       "dirty": true
     },
-    "humanVisualReview": true
+    "humanVisualReview": false
   },
   "baselineReview": {
-    "status": "complete",
-    "reviewer": "aceshooting",
-    "reviewedAt": "2026-09-27",
+    "status": "pending-human-review",
+    "reviewer": null,
+    "reviewedAt": null,
     "knownLimitations": [
-      "Human review for this change covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.",
+      "The current custom-accent contrast correction changes the light/RTL gemstone-accent pixels. Historical review does not approve these new captures; human review remains pending and no baseline was promoted.",
+      "Historical human review on 2026-09-27 covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.",
       "The three theming-shadcn--shadcn baselines were re-captured on 2026-09-27 on the CI-equivalent Linux host after the first capture rendered with a locally installed Inter/Geist font that CI does not have (the story's look sets its own font stack over the harness pin); the maintainer approved the re-capture of the already-reviewed story.",
       "The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.",
       "Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.",

@@ -5,6 +5,14 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Forskningsförlopp',
+  researchProgressEmpty: 'Det finns inga tillgängliga forskningssteg.',
+  researchProgressLimit: 'Visar de första {count} forskningsstegen.',
+  researchProgressStatusPending: 'Väntar',
+  researchProgressStatusRunning: 'Pågår',
+  researchProgressStatusCompleted: 'Slutfört',
+  researchProgressStatusFailed: 'Misslyckades',
+  researchProgressSources: { one: '{count} källa', other: '{count} källor' },
   graphLegendLabel: 'Grafens teckenförklaring',
   entityChipWithType: '{label}, {type}',
   showMore: 'Visa mer',

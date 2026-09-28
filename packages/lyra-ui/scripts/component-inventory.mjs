@@ -192,88 +192,8 @@ const CANCELABILITY_RANK = new Map([
   ['always', 2],
 ]);
 
-export const LOCAL_MIGRATION_ORIGINS = ['lyra-v7'];
-
-export const LOCAL_MIGRATION_PROFILES = [
-  {
-    origin: 'lyra-v7',
-    tag: 'lr-popup',
-    defaults: [
-      {
-        memberKind: 'attribute',
-        member: 'strategy',
-        action: 'insert-if-absent',
-        value: 'fixed',
-      },
-      {
-        memberKind: 'attribute',
-        member: 'placement',
-        action: 'insert-if-absent',
-        value: 'bottom-start',
-      },
-      {
-        memberKind: 'attribute',
-        member: 'distance',
-        action: 'insert-if-absent',
-        value: 4,
-      },
-      {
-        memberKind: 'attribute',
-        member: 'flip',
-        action: 'insert-if-absent',
-        value: true,
-      },
-      {
-        memberKind: 'attribute',
-        member: 'shift',
-        action: 'insert-if-absent',
-        value: true,
-      },
-    ],
-  },
-  {
-    origin: 'lyra-v7',
-    tag: 'lr-popover',
-    defaults: [
-      {
-        memberKind: 'attribute',
-        member: 'placement',
-        action: 'insert-if-absent',
-        value: 'bottom-start',
-      },
-      {
-        memberKind: 'attribute',
-        member: 'distance',
-        action: 'insert-if-absent',
-        value: 4,
-      },
-      {
-        memberKind: 'attribute',
-        member: 'without-arrow',
-        action: 'insert-if-absent',
-        value: true,
-      },
-    ],
-  },
-  {
-    origin: 'lyra-v7',
-    tag: 'lr-tooltip',
-    defaults: [
-      {
-        memberKind: 'attribute',
-        member: 'distance',
-        action: 'insert-if-absent',
-        value: 6,
-      },
-      {
-        memberKind: 'attribute',
-        member: 'without-arrow',
-        action: 'insert-if-absent',
-        value: true,
-      },
-    ],
-  },
-];
+export const LOCAL_MIGRATION_ORIGINS = [];
+export const LOCAL_MIGRATION_PROFILES = [];
 
 // These manifest attributes do not represent component-specific migration work. `dir`, `lang`,
 // `role`, `tabindex`, and `title` are HTMLElement-wide passthrough attributes in both libraries;
@@ -774,7 +694,7 @@ function normalizeAttributes(declaration, publicFields, ecosystem) {
         type: textOf(attribute.parsedType || attribute.type || field?.type),
         reflects: field?.reflects === true,
         inferred: attribute.inferred === true || (ecosystem === 'shoelace' && declared.length === 0),
-        deprecated: attribute.deprecation || attribute.deprecated || field?.deprecation || field?.deprecated || null,
+        deprecated: attribute.deprecation ?? attribute.deprecated ?? field?.deprecation ?? field?.deprecated ?? null,
         hasDefault: hasOwn(attribute, 'default') || Boolean(field && hasOwn(field, 'default')),
       };
       if (normalized.hasDefault) normalized.default = canonicalDefault(hasOwn(attribute, 'default') ? attribute.default : field.default);

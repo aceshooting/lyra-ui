@@ -1,3 +1,6 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
+expectDeprecatedUsage('lr-export-button', 'event', 'lr-export');
+
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './export-button.js';
 import type {
@@ -1898,4 +1901,22 @@ describe('trigger -bg custom properties and their deprecated -background aliases
       expect(getComputedStyle(trigger(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
     });
   }
+});
+
+it('requests an export before collecting rows and retains the legacy veto event', async () => {
+  const el = await fixture<LyraExportButton>(html`<lr-export-button></lr-export-button>`);
+  let collections = 0;
+  el.getRows = () => { collections++; return rows; };
+  const order: string[] = [];
+  el.addEventListener('lr-export-request', (event) => {
+    order.push('request');
+    expect(collections).to.equal(0);
+    expect(event.detail).to.deep.equal({ format: 'csv' });
+    event.preventDefault();
+  });
+  el.addEventListener('lr-export', () => order.push('legacy'));
+  el.addEventListener('lr-export-complete', () => order.push('complete'));
+  el.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
+  expect(order).to.deep.equal(['request', 'legacy']);
+  expect(collections).to.equal(0);
 });

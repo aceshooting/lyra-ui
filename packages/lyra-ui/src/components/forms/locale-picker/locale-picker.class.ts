@@ -1,3 +1,5 @@
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -46,7 +48,7 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -141,6 +143,7 @@ export interface LyraLocaleChangeDetail {
 
 export interface LyraLocalePickerEventMap {
   'lr-invalid': CustomEvent<null>;
+  'lr-change-request': CustomEvent<LyraLocaleChangeDetail>;
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -173,11 +176,11 @@ export interface LyraLocalePickerEventMap {
  * locale catalog is realistically dozens of rows, not thousands, so `<lr-combobox>`'s filterable
  * model would be more surface than the job needs.
  *
- * Selecting a row sets `value` and emits a cancelable `lr-change` — if a listener doesn't call
+ * Selecting a row emits a cancelable `lr-change-request` before setting `value` — if a listener doesn't call
  * `event.preventDefault()`, the component applies the pick itself via `setLyraLocale()`. A host
  * that wants to intercept the pick (e.g. persist it to a profile first) calls
- * `event.preventDefault()`; `value` still updates so the trigger reflects the pick, but the
- * page-level locale is untouched until the host calls `setLyraLocale()` itself.
+ * `event.preventDefault()`; the value, popup, and page-level locale then remain unchanged.
+ * Accepted selections emit a non-cancelable `lr-change` after applying the locale.
  *
  * Does not touch `document.documentElement.lang`/`dir` — applying a picked locale's writing
  * direction to the page is left to the host, which already has everything it needs from
@@ -193,9 +196,10 @@ export interface LyraLocalePickerEventMap {
  * Removed label/hint/error-text content is safely omitted without changing null property readback.
  *
  * @customElement lr-locale-picker
- * @event lr-change - The selection changed. `detail: { value, previousValue, direction }`, where
- *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Cancelable —
- *   `event.preventDefault()` stops the automatic `setLyraLocale()` call without reverting `value`.
+ * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
+ * @event lr-change - Non-cancelable notification after locale selection commits. The selection changed. `detail: { value, previousValue, direction }`, where
+ *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Veto through
+ *   `lr-change-request`; preventing this notification does not reverse the commit.
  * @event blur - Native `FocusEvent` relayed from the internal trigger button.
  * @event focus - Native `FocusEvent` relayed from the internal trigger button.
  * @event lr-invalid - The locale picker failed a validity check; cancelable. Calling
@@ -222,6 +226,8 @@ export interface LyraLocalePickerEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @csspart load-status - Optional locale loading or failure status.
+ * @csspart load-retry - Retry a failed optional locale load.
  * @cssprop --lr-locale-picker-trigger-padding - Trigger padding shorthand, scaled by `size`.
  * @cssprop [--lr-locale-picker-trigger-min-height=var(--lr-form-control-height)] - Trigger
  *   block-size floor. Reads the shared form-control height ladder, so retuning
@@ -259,7 +265,7 @@ export interface LyraLocalePickerEventMap {
  * retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the listbox. Unlike a floating panel's decorative edge, it defaults to
@@ -289,8 +295,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
     localePickerLabel: LYRA_DEFAULT_localePickerLabel,
     localePickerRequired: LYRA_DEFAULT_localePickerRequired,
+    retry: LYRA_DEFAULT_retry,
+    statusError: LYRA_DEFAULT_statusError,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -314,6 +323,20 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     name: { reflect: true, noAccessor: true },
   };
 
+  private _localeLoader?: LyraLocaleLoader;
+  /** Optional catalog loader. Selection waits for it before changing the value or page locale.
+   * Import loadLyraLocale from the optional locale-loader.js entry to load built-in catalogs.
+   * Unset preserves synchronous selection. Failures keep the previous value and offer retry. */
+  @property({ attribute: false })
+  get localeLoader(): LyraLocaleLoader | undefined { return this._localeLoader; }
+  set localeLoader(next: LyraLocaleLoader | undefined) {
+    const previous = this._localeLoader;
+    if (previous === next) return;
+    this.cancelLocaleLoad();
+    this._localeLoader = next;
+    this.requestUpdate('localeLoader', previous);
+  }
+
   /** The offered locale list. `undefined` (the default) auto-discovers every locale registered via
    *  `registerLyraLocale()` (plus `'en'`) through `getRegisteredLyraLocales()`, kept live via
    *  `subscribeLyraLocaleRegistry()`. Any explicit array overrides the auto-discovered list
@@ -323,6 +346,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property({ attribute: false })
   get locales(): LyraLocaleCatalog | undefined { return this._locales; }
   set locales(next: LyraLocaleCatalog | undefined) {
+    this.cancelLocaleLoad();
     const previous = this._locales;
     this._locales = next === undefined ? undefined : snapshotLocaleCatalog(next);
     this.requestUpdate('locales', previous);
@@ -529,6 +553,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.cancelLocaleLoad();
+    this.loadAnnouncements?.release();
+    this.loadAnnouncements = undefined;
     this.closeSettleToken++;
     this.listboxHidden = true;
     this.releaseExternalDescription();
@@ -549,6 +576,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.cancelLocaleLoad();
+    this.loadAnnouncements?.release();
+    this.loadAnnouncements = undefined;
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
@@ -590,6 +620,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this._value;
   }
   set value(next: string) {
+    this.cancelLocaleLoad();
+    this.valueWriteVersion++;
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
     this._value = next ?? '';
@@ -632,6 +664,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this._disabled;
   }
   set disabled(next: boolean) {
+    if (next) this.cancelLocaleLoad();
     const old = this._disabled;
     this._disabled = Boolean(next);
     // Reflected before the recomputation below, because `internals.willValidate` answers from the
@@ -764,6 +797,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.value = typeof state === 'string' ? state : '';
   }
   formDisabledCallback(disabled: boolean): void {
+    if (disabled) this.cancelLocaleLoad();
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`, so
@@ -994,21 +1028,79 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     }
   }
 
-  /** Commits `tag`: sets `value`, closes the popup, then emits a cancelable `lr-change` --
-   *  applying `setLyraLocale(tag)` itself only when the listener doesn't veto it. Unconditional
-   *  on every explicit pick (no reselect-guard), mirroring `<lr-model-select>`'s identical
-   *  `commitValue()` -- the closest sibling precedent for this event shape. */
-  private commit(tag: string): void {
-    const previousValue = this._value;
-    this.value = tag;
-    this.hide();
-    const event = this.emit(
-      'lr-change',
-      { value: tag, previousValue, direction: getLyraLocaleDirection(tag) },
-      { cancelable: true },
-    );
-    if (!event.defaultPrevented) setLyraLocale(tag);
+  private commitDispatching = false;
+  private valueWriteVersion = 0;
+  private loadGeneration = 0;
+  private loadAnnouncements?: AnnouncementSink;
+  @state() private loadingTag?: string;
+  @state() private loadFailureTag?: string;
+
+  private cancelLocaleLoad(): void {
+    this.loadAnnouncements?.release();
+    this.loadAnnouncements = undefined;
+    this.loadGeneration++;
+    this.loadingTag = undefined;
+    this.loadFailureTag = undefined;
   }
+
+  private announceLoad(key: 'loading' | 'statusError'): void {
+    this.loadAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.loadAnnouncements.announce(key === 'loading' ? this.localize('loading') : this.localize('statusError'));
+  }
+
+  /** Requests a selection before loading or updating the control and the global locale. */
+  private commit(tag: string): void {
+    if (this.commitDispatching || this.liveDisabled || !this.entryFor(tag)) return;
+    this.commitDispatching = true;
+    try {
+      const previousValue = this._value;
+      const version = this.valueWriteVersion;
+      const loader = this.localeLoader;
+      const generation = this.loadGeneration;
+      const detail = Object.freeze({ value: tag, previousValue, direction: getLyraLocaleDirection(tag) });
+      const request = this.emit('lr-change-request', detail, { cancelable: true });
+      if (request.defaultPrevented || this.liveDisabled || this.valueWriteVersion !== version ||
+          this.loadGeneration !== generation || this.localeLoader !== loader || !this.entryFor(tag)) return;
+      const commitValue = () => {
+        this.value = tag;
+        this.hide();
+        setLyraLocale(tag);
+        this.emit('lr-change', Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) }));
+      };
+      if (loader === undefined) {
+        commitValue();
+        return;
+      }
+      this.cancelLocaleLoad();
+      const operation = this.loadGeneration;
+      const ownerDocument = this.ownerDocument;
+      this.loadingTag = tag;
+      this.announceLoad('loading');
+      const ownsSelection = () => this.isConnected && this.ownerDocument === ownerDocument &&
+        this.loadGeneration === operation && this.valueWriteVersion === version &&
+        this.localeLoader === loader && !this.liveDisabled && this.entryFor(tag) !== undefined;
+      void Promise.resolve().then(() => {
+        if (!ownsSelection()) return;
+        return loader(tag);
+      }).then(() => {
+        if (ownsSelection()) commitValue();
+      }, () => {
+        if (!ownsSelection()) return;
+        this.loadingTag = undefined;
+        this.loadFailureTag = tag;
+        this.announceLoad('statusError');
+      });
+    } finally {
+      this.commitDispatching = false;
+    }
+  }
+
+  private retryLocaleLoad = (): void => {
+    const restoreFocus = this.shadowRoot?.activeElement?.getAttribute('part') === 'load-retry';
+    if (this.loadFailureTag !== undefined) this.commit(this.loadFailureTag);
+    if (restoreFocus && this.loadFailureTag === undefined && this.isConnected &&
+        this.shadowRoot?.activeElement?.getAttribute('part') === 'load-retry') this.focus();
+  };
 
   private onTriggerClick = (): void => {
     if (this.liveDisabled) return;
@@ -1221,7 +1313,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
     const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
-    const describedBy = this.localDescriptionIds = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '']
+    const describedBy = this.localDescriptionIds = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '', this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '']
       .filter(Boolean)
       .join(' ');
     return html`
@@ -1236,6 +1328,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           type="button"
           role="combobox"
           aria-haspopup="listbox"
+          aria-busy=${this.loadingTag !== undefined ? 'true' : 'false'}
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
@@ -1267,6 +1360,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         >
           ${this.renderRows(rows, activeId)}
         </div>
+        ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
+          <div id="locale-picker-load-status" part="load-status">
+            ${this.loadingTag !== undefined ? this.localize('loading') : this.localize('statusError')}
+            ${this.loadFailureTag !== undefined ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLocaleLoad}>${this.localize('retry')}</button>` : nothing}
+          </div>` : nothing}
         <div id="locale-picker-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>

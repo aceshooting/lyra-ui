@@ -1,3 +1,5 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -123,7 +125,7 @@ interface ActionTabIndexLease {
  *   avoidance. Unitless pixels, `px`, `rem`, `em`, and CSS length math are resolved live;
  *   percentages have no placement basis. Invalid values fall back to the default and negative
  *   values clamp to `0`.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the toolbar.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  * colour, on the toolbar.
@@ -146,6 +148,11 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     selectionToolbarLabel: LYRA_DEFAULT_selectionToolbarLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part="toolbar"]');
+  }  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['anchor', 'actions']);
 
@@ -1047,6 +1054,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       @blur=${this.containNativeEvent}
       @keydown=${this.onToolbarKeyDown}
     >
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
       ${repeat(
         this.effectiveActions,
         (action) => action,

@@ -265,7 +265,11 @@ export async function deriveRegistrationGraph(inventory, { packageDir = defaultP
       const registers = [
         ...new Set([alias.tag, ...component.directComponents, ...component.transitiveComponents]),
       ].sort((left, right) => left.localeCompare(right));
-      const distModule = publishedSpecifierFor(alias.registrationModule);
+      assertPublished(alias.exportPath);
+      const legacySpecifier = publishedSpecifierFor(alias.registrationModule);
+      const distModule = packageJson.exports?.[legacySpecifier] !== undefined
+        ? legacySpecifier
+        : alias.exportPath;
       assertPublished(distModule);
       const localeKeys = await localeKeysForRegisters(registers);
       return {
@@ -320,8 +324,9 @@ export function renderRegistrationGraph(entries, integrations = []) {
       + 'alias, so they carry no `tag`. For every row, `registers` lists every <lr-*> tag that '
       + 'importing `entry` defines as a side effect, direct or transitive (e.g. lr-table.js also '
       + 'registers lr-empty/lr-pagination/lr-skeleton/lr-spinner); `distModule` is that '
-      + 'registration module\'s own published deep specifier (equal to `entry` for an integration '
-      + 'bridge); `localeKeys` lists every LyraMessageKey the registered tags can reach, from the '
+      + 'retained published deep specifier, or `entry` when no separate deep route is exported '
+      + '(also equal to `entry` for an integration bridge); `localeKeys` lists every LyraMessageKey '
+      + 'the registered tags can reach, from the '
       + 'same reachability analysis generate-default-string-slices.mjs uses for the tree-shakeable '
       + 'locale slices. `integrations`, `distModule` and `localeKeys` are additive to schema '
       + 'version 1. Run `pnpm run registration-graph` (scripts/generate-registration-graph.mjs) to '

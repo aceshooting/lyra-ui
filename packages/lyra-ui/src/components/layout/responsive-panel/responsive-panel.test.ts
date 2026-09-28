@@ -441,7 +441,7 @@ it('closes on backdrop click and emits lr-close with reason "backdrop"', async (
   const event = await listener;
 
   expect(el.open).to.be.false;
-  expect(event.detail).to.equal("backdrop");
+  expect(event.detail).to.deep.equal({ reason: "backdrop" });
 });
 
 it('closes on Escape and emits lr-close with reason "escape"', async () => {
@@ -453,7 +453,7 @@ it('closes on Escape and emits lr-close with reason "escape"', async () => {
   const event = await listener;
 
   expect(el.open).to.be.false;
-  expect(event.detail).to.equal("escape");
+  expect(event.detail).to.deep.equal({ reason: "escape" });
 });
 
 it("does not respond to Escape while inline (no document keydown trap is wired up)", async () => {
@@ -479,10 +479,10 @@ it('close() fires lr-close with reason "api" in the inline presentation too (doc
   const event = await listener;
 
   expect(el.open).to.be.false;
-  expect(event.detail).to.equal("api");
+  expect(event.detail).to.deep.equal({ reason: "api" });
 });
 
-it("makes lr-close a cancelable pre-mutation veto for close(), Escape, and backdrop dismissal", async () => {
+it("makes lr-close-request a cancelable pre-mutation veto for close(), Escape, and backdrop dismissal", async () => {
   const opener = document.createElement("button");
   opener.textContent = "Open responsive panel";
   document.body.appendChild(opener);
@@ -503,10 +503,10 @@ it("makes lr-close a cancelable pre-mutation veto for close(), Escape, and backd
     openAttributeDuringEvent: boolean;
     scrollLockDuringEvent: string;
   }> = [];
-  el.addEventListener("lr-close", (event) => {
-    const closeEvent = event as CustomEvent<string>;
+  el.addEventListener("lr-close-request", (event) => {
+    const closeEvent = event as CustomEvent<{ reason: string }>;
     closeEvents.push({
-      reason: closeEvent.detail,
+      reason: closeEvent.detail.reason,
       cancelable: closeEvent.cancelable,
       openDuringEvent: el.open,
       openAttributeDuringEvent: el.hasAttribute("open"),
@@ -553,7 +553,7 @@ it("makes lr-close a cancelable pre-mutation veto for close(), Escape, and backd
   opener.remove();
 });
 
-it("runs overlay cleanup and focus return after an allowed pre-mutation lr-close event", async () => {
+it("runs overlay cleanup and focus return after an allowed pre-mutation lr-close-request event", async () => {
   const opener = document.createElement("button");
   opener.textContent = "Open responsive panel";
   document.body.appendChild(opener);
@@ -568,10 +568,10 @@ it("runs overlay cleanup and focus return after an allowed pre-mutation lr-close
   await el.updateComplete;
 
   let openDuringEvent = false;
-  el.addEventListener("lr-close", () => {
+  el.addEventListener("lr-close-request", () => {
     openDuringEvent = el.open;
   });
-  const listener = oneEvent(el, "lr-close");
+  const listener = oneEvent(el, "lr-close-request");
   el.close();
   const event = await listener;
   await el.updateComplete;

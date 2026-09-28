@@ -6,7 +6,7 @@
 - **Class** `LyraToolCallChip`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below

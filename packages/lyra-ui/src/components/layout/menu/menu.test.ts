@@ -1189,7 +1189,8 @@ it('keeps the shipped 20rem/10rem width pair when nothing is set (unset regressi
     resolvedInShadow(el, 'var(--lr-size-20rem)'),
     'the default paint stays exactly where it shipped'
   );
-  expect(getComputedStyle(el).minInlineSize).to.equal(
+  el.style.setProperty('--lr-menu-max-inline-size', '0px');
+  expect(getComputedStyle(el).inlineSize).to.equal(
     resolvedInShadow(el, 'var(--lr-size-10rem)')
   );
 });
@@ -1225,6 +1226,47 @@ it('needs --lr-menu-min-inline-size to go below the 10rem floor', async () => {
   );
   el.style.setProperty('--lr-menu-min-inline-size', '4rem');
   expect(getComputedStyle(el).inlineSize).to.equal(resolvedInShadow(el, '6rem'));
+});
+
+it('keeps nested standalone menus inside narrow allocation at 200% text with text spacing', async () => {
+  const previous = document.documentElement.style.fontSize;
+  document.documentElement.style.fontSize = '32px';
+  try {
+    for (const direction of ['ltr', 'rtl']) {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div dir=${direction} style="inline-size: 288px; line-height: 1.5; letter-spacing: .12em; word-spacing: .16em">
+          <lr-menu label="Reports">
+            <lr-menu-item>Review the complete operational report</lr-menu-item>
+            <div slot="footer">
+              <lr-menu label="Additional actions">
+                <lr-menu-item>Share with the international support team</lr-menu-item>
+              </lr-menu>
+            </div>
+          </lr-menu>
+        </div>
+      `);
+      const menus = [...wrapper.querySelectorAll<LyraMenu>('lr-menu')];
+      await settle(...menus);
+      const outer = menus[0]!;
+      const inner = menus[1]!;
+      expect(outer.getBoundingClientRect().width).to.be.at.most(wrapper.clientWidth);
+      expect(inner.getBoundingClientRect().width).to.be.at.most(inner.parentElement!.clientWidth);
+      expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    }
+  } finally {
+    document.documentElement.style.fontSize = previous;
+  }
+});
+
+it('keeps the default submenu minimum inside the positioned available width', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('none');
+  await settle(menu, child);
+  const surface = submenuSurface(child);
+  surface.style.setProperty('--lr-positioner-available-inline-size', '96px');
+  expect(surface.getBoundingClientRect().width).to.be.at.most(96);
 });
 
 it('keeps the viewport clamp outside the hook, so no value can defeat it', async () => {

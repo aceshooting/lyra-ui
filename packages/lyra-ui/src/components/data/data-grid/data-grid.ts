@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-data-grid.js to register this component. */
 export * from './data-grid.class.js';
 import { LyraDataGrid } from './data-grid.class.js';
 import { defineElement } from '../../../internal/prefix.js';

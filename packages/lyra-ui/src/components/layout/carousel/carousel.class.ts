@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import {
@@ -240,11 +242,20 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   get slides(): number {
     return this._slides;
   }
-  /** Accessible name used when the host has no `aria-label`; omitted falls back to the localized
-   *  `carouselLabel` default. An explicitly empty `accessible-label` is used as-is. In markup, name
-   *  the carousel with the host `aria-label`: the `accessible-label` attribute is deprecated
-   *  (removal not before 23.0.0) and logs a one-time development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  private legacyAccessibleLabel: string | undefined = undefined;
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string | undefined {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string | undefined) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
     | null = null;
@@ -258,7 +269,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private timer?: number;
   private timerWindow?: Window;
   private reduceMotion = false;
-  private mediaQuery?: MediaQueryList;
+  private stopMotionWatch?: () => void;
   private visibilityDocument?: Document;
   private readonly snapshots = new Map<HTMLElement, SlideSnapshot>();
   private readonly appliedSnapshots = new WeakMap<
@@ -340,19 +351,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.currentSlide = finiteInteger(Number(this.getAttribute('current-slide') ?? 0), 0);
     }
     super.connectedCallback();
-    const view = this.ownerDocument.defaultView;
     this.announcementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
     this.announcementsArmed = false;
     this.manualPending = false;
-    this.mediaQuery =
-      typeof view?.matchMedia === 'function'
-        ? view.matchMedia('(prefers-reduced-motion: reduce)')
-        : undefined;
-    this.reduceMotion = this.mediaQuery?.matches ?? false;
-    this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    this.reduceMotion = prefersReducedMotion(this);
+    this.stopMotionWatch = observeReducedMotion(this, this.onMotionPreferenceChange);
     this.visibilityDocument = this.ownerDocument;
     this.visibilityDocument.addEventListener(
       'visibilitychange',
@@ -382,11 +388,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.focusInteracting = false;
     this.hasAlignedOnce = false;
     this.clearAlignment();
-    this.mediaQuery?.removeEventListener(
-      'change',
-      this.onMotionPreferenceChange
-    );
-    this.mediaQuery = undefined;
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
     this.visibilityDocument?.removeEventListener(
       'visibilitychange',
       this.onVisibilityChange
@@ -555,8 +558,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.requestUpdate('pagination', old);
   }
 
-  private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
-    this.reduceMotion = event.matches;
+  private onMotionPreferenceChange = (reduced: boolean): void => {
+    this.reduceMotion = reduced;
     this.restartAutoplay();
     this.requestUpdate();
   };

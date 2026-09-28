@@ -198,6 +198,7 @@ Actions:
 | `RENAME_TARGET_SHARED_REVIEW` | The new name is already exposed by a component that did not rename onto it, so moving the site would widen it. This applies to owner-bound listeners too. |
 | `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or custom-property declaration of a name that components renamed onto. It is emitted when the site does not prove an owner that already exposes the name. |
 | `POLARITY_REVIEW` | An inverted boolean is bound, assigned or selected, or is set statically where the framework may assign a property (JSX, Vue, Svelte, untagged template strings). |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release. Review its replacement, nested targets and existing canonical handlers together. |
 | `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed. It is never rewritten away. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag, default slot, or listed slotted element without a mechanical replacement. |
 | `RENAME_CONFLICT_REVIEW` | The rewrite would bind one name twice on an element (Lit throws, Vue and Svelte refuse to compile, TSX reports TS17001), or the element already binds the new name. |
@@ -253,7 +254,33 @@ The file is `packages/lyra-ui/scripts/fixtures/lyra-renames.json`, schema 1, wit
 | `reviews` | `tag`, `kind` (any record kind), `name`; `""` is the default slot | required | report with the record's replacement |
 | `defaults` | `tag`, `attribute`, `value` (string, number, `true`) | — | insert where the attribute and its renamed counterpart are both absent |
 | `detailChanges` | `tag`, `event` (Lyra 22 name), one-line `summary` | — | report listeners |
+| `retiredEvents` (optional) | `tag`, `event` (removed name), `replacement` (current event), one-line `summary` | published policy history, not a current deprecation | report listeners and strings; never rewrite listener reach |
+| `propertyChanges` (optional) | `tag`, `property`, one-line `summary` | — | report assignments whose accepted values or behavior change without a rename |
 | `slotContent` | `tag`, `slot`, exactly one of `report` or `allow` (element names), `summary` | — | report matching direct children |
+
+`retiredEvents` may also be omitted by older profiles and runtime projections. Its entries apply
+from the profile's target major. They describe aliases that are already absent, so reports never
+promise a remaining compatibility window. The current inventory must omit the old event on its
+owner and expose its nondeprecated replacement. The coverage gate checks every entry against
+`scripts/fixtures/retired-event-history.json`, a bounded snapshot of the published policy records
+and release metadata digest. It rejects missing reports, changed replacements, unsupported
+historical claims, and removals before the published policy floor or before one whole later major.
+Current deprecation records remain reserved for aliases that still exist.
+
+The Lyra 21 profile covers nine such events retained in 21.2.0 after deprecation in 19.0.1
+(removal floor 21.0.0): eight `lr-before-*` veto aliases on box-plot, chart, graph-legend and
+graph-query-builder, plus command-palette's `lr-open` lifecycle alias. Move veto logic to the
+canonical `*-request` event. For the palette use `lr-show`; preserve unrelated `lr-open` item
+activation listeners on document-library and source-card. Reports leave source unchanged because
+nested components, global listeners, custom dispatches, and existing canonical registrations can
+make even a spelling replacement change which events a handler receives or how often it runs.
+
+`propertyChanges` may be omitted by older profiles and published runtime projections. Like detail
+changes, it applies from the profile's target major. It reports `PROPERTY_CHANGE_REVIEW` at property
+bindings and assignments without guessing how to rewrite runtime values. For example,
+`lr-app-rail-group.headingLevel` now accepts the shared string vocabulary: a numeric property
+assignment needs review, while the HTML `heading-level="3"` spelling remains valid. These changes
+do not create deprecation notices for a surviving property name.
 
 **Validation.** The ledger is shape-checked by the published CLI too, and entry-checked against the
 inventory in the repository.

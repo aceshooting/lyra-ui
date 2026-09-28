@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './reorder-item.js';
@@ -204,3 +205,5 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
     expect(labelledText(el, 'move-up-button')).to.equal('Move up Assigned');
   });
 });
+
+expectDeprecatedUsage('lr-reorder-item', 'property', 'accessibleLabel');

@@ -6,7 +6,8 @@
 - **Class** `LyraContextMeter`, also available unregistered from `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Deprecated event** `lr-segment-activate` since `unreleased`; use event `addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -32,7 +33,7 @@ boolean }[]`. `value` is an _absolute_
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
   `disabled`, when set, marks that band non-actionable while `interactive` is set: its control
   renders genuinely disabled (no tab stop, no hover/press affordance) and activating it emits no
-  `lr-segment-activate`.
+  `lr-segment-activate-request`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
 - `shape: ContextMeterShape = 'bar'` (`'bar' | 'ring'`, reflected) — the v9 geometry name;
@@ -60,7 +61,7 @@ boolean }[]`. `value` is an _absolute_
   ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
   effect while `withLegend` is unset.
 - `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
-  becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
+  becomes a real `<button>` emitting the cancelable `lr-segment-activate-request`; the ring's arcs carry
   `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
   native button. In this mode, and only in this mode, `[part="legend"]` drops `aria-hidden` so the
   rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
@@ -73,21 +74,26 @@ boolean }[]`. `value` is an _absolute_
   `aria-pressed="true"` plus a `segment-selected`/`legend-item-selected` part token on both the band
   and its legend row; every other control renders `aria-pressed="false"`. Meaningful only while
   `interactive` is set. Uncontrolled by default: an activation nobody vetoes toggles the index here
-  itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is how a consumer
-  that owns the selection takes control; assigning the property directly always wins either way. A
+  itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is how a consumer
+  that owns the selection takes control. Without a veto, the default toggle uses the latest selection,
+  including any synchronous host assignment. A
   non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
 using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
 meter owner, which retains its generated aggregate summary.
 
-**Events:** `lr-segment-activate` — a band or its legend row was activated while `interactive` is
+**Events:** `lr-segment-activate-request` — a band or its legend row was activated while `interactive` is
 set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
 library event. **Cancelable, and a real veto point**: the default action is this component toggling
 `index` in its own `selectedIndices`, so `preventDefault()` keeps the current selection and hands
 that state entirely to the consumer. Never emitted in the default presentational mode. Because the
 event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
-own handler sees the pre-activation value.
+own handler sees the pre-activation value. The deprecated cancelable `lr-segment-activate` alias fires
+after the request and before that write, with the same detail. Either event can veto; vetoing only
+the legacy alias issues a development warning. Reentrant activation during dispatch is ignored.
+Replacing the segment collection, disabling interaction, or disconnecting during dispatch cancels
+the default write.
 
 **Slots:** none.
 
@@ -106,7 +112,7 @@ compose: `segment-empty` / `legend-item-empty` on a band whose `value` is 0, and
 empty pair is DERIVED and carries no built-in treatment — it is the hook for your own "nothing in
 this bucket" styling, and a zero band stays actionable. The disabled pair is DECLARED: that control
 renders genuinely disabled (no tab stop, no hover or press affordance) and activating it emits no
-`lr-segment-activate`. Inertness is never inferred from a zero value, because a zero band is
+`lr-segment-activate-request`. Inertness is never inferred from a zero value, because a zero band is
 legitimately clickable in a budget meter
 
 **Themeable custom properties:** `--lr-context-meter-segment-color` is set per segment when its

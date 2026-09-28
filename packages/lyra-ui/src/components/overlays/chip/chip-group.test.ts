@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './chip-group.js';
@@ -42,6 +43,8 @@ async function settleChipGroup(el: LyraChipGroup): Promise<void> {
 function focusedChipPart(chip: HTMLElement): string | null {
   return chip.shadowRoot?.activeElement?.getAttribute('part') ?? null;
 }
+
+expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreCount']);
 
 it('lets a consumer ::part(overflow-indicator) override win while expanded', async () => {
   const style = document.createElement('style');

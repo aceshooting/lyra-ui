@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -48,14 +49,14 @@ export interface ToolSelectDialogTool {
  *  built-in case-insensitive name/description substring match entirely. */
 export type ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean;
 
-/** The proposed state carried by the cancelable `lr-change` event. */
+/** The state carried by `lr-change-request` and the accepted `lr-change` notification. */
 export interface ToolSelectionChangeDetail {
   readonly selectedToolIds: readonly string[];
   readonly useDefaults: boolean;
 }
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lr-close` event detail
+ * Reason the dialog was dismissed, forwarded as `lr-close` detail.reason
  * -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
  * `'backdrop'` come from the dialog's own built-in dismiss triggers (the latter only while
  * `lightDismiss` is enabled); any
@@ -64,9 +65,15 @@ export interface ToolSelectionChangeDetail {
  */
 export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | (string & Record<never, never>);
 
+/** The accepted dismissal reason. */
+export interface LyraToolSelectDialogCloseDetail {
+  reason: ToolSelectDialogCloseReason;
+}
+
 export interface LyraToolSelectDialogEventMap {
+  'lr-change-request': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
-  'lr-close': CustomEvent<ToolSelectDialogCloseReason>;
+  'lr-close': CustomEvent<LyraToolSelectDialogCloseDetail>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -283,24 +290,26 @@ interface ToolProjection {
  * catalog. Both canonical projections inspect at most their first 10,000 input positions. Within
  * that prefix, a repeated tool id's first valid admitted occurrence wins; selected ids retain
  * their first nonblank occurrence. Selected ids absent from `tools` remain in that canonical
- * selection and in `lr-change` proposals, preserving independently managed selection state.
+ * selection and in `lr-change-request` proposals, preserving independently managed selection state.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  * Native/prefixed input and change events from the composed checkbox and switch controls stop at
  * this dialog's boundary, as do their own `lr-checkbox-toggle-request`/`lr-switch-toggle-request`
- * proposals; consumers receive only the aggregate `lr-change` proposal above.
+ * proposals; consumers receive only the aggregate `lr-change-request` proposal above.
  *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
  * Changes already apply live via `lr-change`, so this is optional.
- * @event lr-change - A proposed enabled-tool selection or `useDefaults` toggle.
+ * @event lr-change-request - A proposed enabled-tool selection or `useDefaults` toggle.
  * `detail: { selectedToolIds: string[], useDefaults: boolean }`, with `selectedToolIds` from the
  * canonical first-10,000-input-position selection. Cancelable; preventing it preserves both
  * properties, and the built-in checkbox or switch never flips at all -- the proposal is raised
  * from that control's own `lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it
  * writes its `checked` state, so a refused change shows no flip-and-snap-back.
- * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
+ * @event lr-change - Noncancelable notification after an accepted selection or defaults change.
+ * Carries the same complete selection detail as `lr-change-request`.
+ * @event lr-close - `detail: { reason: ToolSelectDialogCloseReason }`. Fired exactly once per dismissal,
  * via Escape, an opted-in backdrop click, or a `close()` call. The name is not dialog-scoped in
  * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
  * `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
@@ -382,11 +391,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     useDefaultTools: LYRA_DEFAULT_useDefaultTools,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selectedToolIds']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-change-request',
     'lr-change',
   ]);
 
@@ -531,7 +542,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lr-close` detail — built-in
+   * opened. `reason` is forwarded as `lr-close` detail.reason — built-in
    * triggers pass `'escape'`/`'backdrop'` (the latter only when `lightDismiss` is enabled); a
    * consumer's own close affordance (e.g. a footer Done button) should call this directly with its own
    * reason string, so every dismissal path funnels through the same event
@@ -540,7 +551,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   close(reason: ToolSelectDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit('lr-close', reason);
+    this.emit('lr-close', { reason });
   }
 
   /** Opens the dialog. No-op when already open. */
@@ -558,13 +569,27 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.overlay?.dismissBackdrop();
   };
 
-  private emitChange(next: ToolSelectionChangeDetail): boolean {
-    const event = this.emit(
-      'lr-change',
-      { selectedToolIds: [...next.selectedToolIds], useDefaults: next.useDefaults },
-      { cancelable: true },
-    );
-    return !event.defaultPrevented;
+  private changeRequestPending = false;
+
+  private requestChange(next: ToolSelectionChangeDetail): boolean {
+    if (this.changeRequestPending) return false;
+    const selected = this.selectedToolIds;
+    const defaults = this.useDefaults;
+    const tools = this.tools;
+    this.changeRequestPending = true;
+    try {
+      const event = this.emit(
+        'lr-change-request',
+        { selectedToolIds: [...next.selectedToolIds], useDefaults: next.useDefaults },
+        { cancelable: true },
+      );
+      // A listener may replace the catalog or selection synchronously. Its accepted state owns
+      // the next render; do not overwrite it with the proposal computed from the previous state.
+      return !event.defaultPrevented && this.selectedToolIds === selected &&
+        this.useDefaults === defaults && this.tools === tools;
+    } finally {
+      this.changeRequestPending = false;
+    }
   }
 
   private onSearchInput = (e: Event): void => {
@@ -597,11 +622,12 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       selectedToolIds: this.canonicalSelectedToolIds,
       useDefaults: e.detail.checked,
     };
-    if (!this.emitChange(next)) {
+    if (!this.requestChange(next)) {
       e.preventDefault();
       return;
     }
     this.useDefaults = next.useDefaults;
+    this.emit('lr-change', next);
   };
 
   /** Same request/veto path as {@link onDefaultsToggleRequest}, for one tool row's checkbox. */
@@ -630,7 +656,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       selectedToolIds,
       useDefaults: this.useDefaults,
     };
-    if (!this.emitChange(next)) {
+    if (!this.requestChange(next)) {
       e.preventDefault();
       return;
     }
@@ -640,6 +666,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     // accepted, already-bounded proposal so the second toggle extends rather than replaces it.
     this.canonicalSelectedToolIdsCache = next.selectedToolIds;
     this.canonicalSelectedToolIdsSource = this.selectedToolIds;
+    this.emit('lr-change', next);
   }
 
   private categoryId(category: ToolCategoryKey): string {

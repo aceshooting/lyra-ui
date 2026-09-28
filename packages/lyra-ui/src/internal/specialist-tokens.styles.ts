@@ -18,6 +18,12 @@ const lightSpecialistTokens = css`
     --lr-color-chart-7: var(--lr-theme-color-chart-7, #de6906);
     --lr-color-chart-8: var(--lr-theme-color-chart-8, #8f81d3);
     /* chart fallback ramp: end */
+    --lr-color-chart-sequential-1: var(--lr-theme-color-chart-sequential-1, #dbeafe);
+    --lr-color-chart-sequential-2: var(--lr-theme-color-chart-sequential-2, #3b82f6);
+    --lr-color-chart-sequential-3: var(--lr-theme-color-chart-sequential-3, #1e3a8a);
+    --lr-color-chart-diverging-1: var(--lr-theme-color-chart-diverging-1, #92400e);
+    --lr-color-chart-diverging-2: var(--lr-theme-color-chart-diverging-2, #f3f4f6);
+    --lr-color-chart-diverging-3: var(--lr-theme-color-chart-diverging-3, #1e40af);
     --lr-graph-cat-1: var(--lr-theme-graph-cat-1, #8250df);
     --lr-graph-cat-2: var(--lr-theme-graph-cat-2, #bf3989);
     --lr-graph-cat-3: var(--lr-theme-graph-cat-3, #0a7d91);
@@ -73,6 +79,12 @@ const darkSpecialistTokens = css`
     --lr-color-chart-7: var(--lr-theme-color-chart-7, #db3a29);
     --lr-color-chart-8: var(--lr-theme-color-chart-8, #555de3);
     /* chart fallback ramp: end */
+    --lr-color-chart-sequential-1: var(--lr-theme-color-chart-sequential-1, #172554);
+    --lr-color-chart-sequential-2: var(--lr-theme-color-chart-sequential-2, #3b82f6);
+    --lr-color-chart-sequential-3: var(--lr-theme-color-chart-sequential-3, #bfdbfe);
+    --lr-color-chart-diverging-1: var(--lr-theme-color-chart-diverging-1, #fbbf24);
+    --lr-color-chart-diverging-2: var(--lr-theme-color-chart-diverging-2, #374151);
+    --lr-color-chart-diverging-3: var(--lr-theme-color-chart-diverging-3, #93c5fd);
     --lr-graph-cat-1: var(--lr-theme-graph-cat-1, #b58cff);
     --lr-graph-cat-2: var(--lr-theme-graph-cat-2, #ff7ab2);
     --lr-graph-cat-3: var(--lr-theme-graph-cat-3, #4fd1c5);
@@ -134,6 +146,12 @@ const forcedColorSpecialistTokens = css`
     --lr-color-chart-6: CanvasText;
     --lr-color-chart-7: Highlight;
     --lr-color-chart-8: LinkText;
+    --lr-color-chart-sequential-1: CanvasText;
+    --lr-color-chart-sequential-2: Canvas;
+    --lr-color-chart-sequential-3: Highlight;
+    --lr-color-chart-diverging-1: CanvasText;
+    --lr-color-chart-diverging-2: Canvas;
+    --lr-color-chart-diverging-3: Highlight;
     --lr-graph-cat-1: Highlight;
     --lr-graph-cat-2: LinkText;
     --lr-graph-cat-3: CanvasText;

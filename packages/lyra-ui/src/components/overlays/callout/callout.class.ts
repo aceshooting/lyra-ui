@@ -44,8 +44,14 @@ export type CalloutVariant = LyraVariant;
 export type CalloutAppearance = LyraAppearance;
 /** The library's one size ladder, in either spelling. */
 export type CalloutSize = LyraSize;
+/** A dismissal requested by the callout close button. */
+export interface LyraCalloutCloseDetail {
+  reason: 'close-button';
+}
+
 export interface LyraCalloutEventMap {
-  'lr-close': CustomEvent<null>;
+  'lr-close-request': CustomEvent<LyraCalloutCloseDetail>;
+  'lr-close': CustomEvent<LyraCalloutCloseDetail>;
 }
 
 const CALLOUT_VARIANT = literalSetConverter<CalloutVariant>(
@@ -147,7 +153,8 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @slot - Message content.
  * @slot heading - Optional rich heading content; its wrapper owns the configured heading level.
  * @slot icon - Optional icon.
- * @event lr-close - The close action was accepted. Cancelable before the callout hides.
+ * @event lr-close-request - Cancelable proposal before hiding; detail is `{ reason: 'close-button' }`.
+ * @event lr-close - Non-cancelable notification after hiding; detail is `{ reason: 'close-button' }`.
  *   The name is not dialog-scoped: a callout nested inside `<lr-dialog>` has its `lr-close`
  *   observed by any listener bound on the dialog too, since library events bubble and are
  *   composed. See `<lr-dialog>`'s own `lr-close` docs for the full list of emitters and the
@@ -331,11 +338,20 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   open = true;
-  /** Accessible context for the callout, used only when the host has no `aria-label`: it names
-   *  the grouped panel and prefixes announced updates. In markup, use the host `aria-label`; the
-   *  `accessible-label` attribute spelling is deprecated (removal not before 23.0.0) and logs a
-   *  one-time development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private legacyAccessibleLabel: string = '';
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
   /** The host `aria-label`: names the grouped panel and prefixes announced updates, winning by
    *  presence over `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
@@ -602,10 +618,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       this,
       nearestExternalFocusTarget(this)
     );
-    const event = this.emit('lr-close', null, { cancelable: true });
+    const event = this.emit('lr-close-request', { reason: 'close-button' }, { cancelable: true });
     if (!event.defaultPrevented) {
       if (repair) applyComposedFocusRepair(repair);
       this.open = false;
+      this.emit('lr-close', { reason: 'close-button' });
     }
   };
   override render(): TemplateResult {

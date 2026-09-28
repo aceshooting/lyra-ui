@@ -45,6 +45,10 @@ const inventory = {
   ],
 };
 
+const exportDeprecations = [
+  { kind: 'entry-point', name: './components/forms/alpha/alpha.js' },
+  { kind: 'entry-point', name: './components/forms' },
+];
 const helperModules = ['src/components/charts/beta/public-helper.ts'];
 const approvedPureHelperContracts = [
   {
@@ -433,7 +437,18 @@ assert.deepEqual(
   }
 }
 
-const derived = deriveExplicitComponentExports(inventory, { helperModules });
+const historicalMetadata = JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-metadata.json'), 'utf8'));
+const historicalInventory = JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'));
+const historicalExports = deriveExplicitComponentExports(historicalInventory, { exportDeprecations: historicalMetadata.exportDeprecations });
+for (const entry of historicalMetadata.exportDeprecations) {
+  if (entry.kind !== 'entry-point' || !entry.name.startsWith('./components/')) continue;
+  assert.ok(historicalExports[entry.name], `historical component route must remain available: ${entry.name}`);
+}
+
+const derived = deriveExplicitComponentExports(inventory, { helperModules, exportDeprecations });
+assert.equal(derived['./components/charts/beta/beta.js'], undefined, 'new components must not gain a deprecated registration route');
+assert.equal(derived['./components/charts'], './dist/components/charts/index.js', 'registration-free family barrels remain public');
+assert.equal(derived['./components/charts/beta/beta.class.js'], './dist/components/charts/beta/beta.class.js');
 assert.deepEqual(Object.keys(derived), [...Object.keys(derived)].sort());
 assert.equal(
   derived['./components/forms/alpha/alpha.class.js'],
@@ -443,9 +458,9 @@ assert.equal(
   derived['./components/forms/alpha/alpha.js'],
   './dist/components/forms/alpha/alpha.js'
 );
-assert.equal(
+assert.deepEqual(
   derived['./components/lr-alpha.js'],
-  './dist/components/lr-alpha.js'
+  { types: './dist/components/forms/alpha/alpha.d.ts', default: './dist/components/lr-alpha.js' }
 );
 assert.equal(derived['./components/forms'], './dist/components/forms/index.js');
 assert.equal(
@@ -516,7 +531,7 @@ assert.equal(closed['./utilities/*'], null);
 assert.equal(closed['./utilities'], './dist/utilities/index.js');
 assert.equal(closed['./utilities/defined.js'], './dist/utilities/defined.js');
 assert.equal(closed['./localization.js'], './dist/localization.js');
-assert.equal(closed['./components/lr-beta.js'], './dist/components/lr-beta.js');
+assert.deepEqual(closed['./components/lr-beta.js'], { types: './dist/components/charts/beta/beta.d.ts', default: './dist/components/lr-beta.js' });
 assert.deepEqual(
   closed['.'],
   { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
@@ -551,6 +566,7 @@ const write = (relativePath, contents = 'export {};\n') => {
 };
 
 try {
+  write('scripts/fixtures/component-metadata.json', JSON.stringify({ exportDeprecations }));
   write(
     'scripts/fixtures/component-inventory.json',
     `${JSON.stringify(inventory, null, 2)}\n`

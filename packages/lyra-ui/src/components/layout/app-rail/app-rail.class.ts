@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
   html,
   nothing,
@@ -100,7 +101,7 @@ export interface LyraAppRailToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
   /** Whether the mobile overlay is (or, on a cancelable proposal, would be) open. */
-  expanded?: boolean;
+  expanded: boolean;
 }
 
 export interface LyraAppRailResizeDetail {
@@ -129,6 +130,7 @@ export function computeAppRailMode(
 
 export interface LyraAppRailEventMap {
   'lr-mode-change': CustomEvent<LyraAppRailModeChangeDetail>;
+  'lr-toggle-request': CustomEvent<LyraAppRailToggleDetail>;
   'lr-toggle': CustomEvent<LyraAppRailToggleDetail>;
   'lr-rail-resize-request': CustomEvent<LyraAppRailResizeDetail>;
   'lr-rail-resize': CustomEvent<LyraAppRailResizeDetail>;
@@ -187,15 +189,11 @@ export interface LyraAppRailEventMap {
  *   already in effect, nor when the first mount's settled mode never left the constructor default
  *   (the ordinary default-mode mount stays silent).
  *   `detail: LyraAppRailModeChangeDetail`.
- * @event lr-toggle - The mobile overlay is opening or closing — via the
- *   built-in toggle button, Escape, a backdrop click, a nav-item click while
- *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
- *   Not fired when a consumer sets `open` directly (mirrors `<lr-dialog>`'s
- *   `open`/`close()` split). `detail: LyraAppRailToggleDetail`. Conditionally cancelable: every
- *   interactive trigger can be vetoed, but the forced mode-change close always applies
- *   (vetoing it would leave `open` stuck `true` in a mode where it's
- *   meaningless) -- call `preventDefault()` to keep the overlay as it is. `expanded` is the
- *   proposed overlay state; the deprecated `open` key carries the same value.
+ * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
+ *   Detail includes `expanded` and the compatibility `open` key. Direct property writes and
+ *   forced responsive closes do not propose an interactive change.
+ * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
+ *   Detail includes the resulting `expanded` state and the compatibility `open` key.
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
  *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidth` unchanged. Not fired
  *   when a consumer sets `railWidth` directly. `detail: LyraAppRailResizeDetail`.
@@ -389,6 +387,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part="base"], [part="panel"]');
+  }
   /** Both are host state this component writes itself -- `mode` is the derived effective mode
    *  (authors set `preferred-mode`), `dragging` tracks a live resize gesture. Neither is settable
    *  from markup, so neither is observed; declaring them keeps the rail from reporting its own
@@ -1058,7 +1060,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (changed.has('open') || changed.has('mode')) {
       const next = this._mode === 'mobile' && this.open;
       if (next !== this.overlayActive) {
-        if (this.hasUpdated && this._mode === 'mobile' && !prefersReducedMotion(this.ownerDocument.defaultView)) {
+        if (this.hasUpdated && this._mode === 'mobile' && !prefersReducedMotion(this)) {
           this.baseEl?.toggleAttribute('data-sliding', true);
         }
         this.overlayActive = next;
@@ -1532,11 +1534,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     const mode = this._mode;
     const open = this.open;
-    const event = this.emit('lr-toggle', { open: next, expanded: next }, { cancelable: true });
+    const event = this.emit('lr-toggle-request', { open: next, expanded: next }, { cancelable: true });
     // A listener can synchronously take ownership of mode or open while the
     // proposal is dispatching. Do not overwrite that state after it returns.
     if (event.defaultPrevented || this._mode !== mode || this.open !== open) return;
     this.open = next;
+    this.emit('lr-toggle', { open: next, expanded: next });
   }
 
   private onToggleClick = (e: MouseEvent): void => {
@@ -1810,6 +1813,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         @transitionend=${this.onPanelTransition}
         @transitioncancel=${this.onPanelTransition}
       >
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
         <div part="header" ?hidden=${!this.hasHeaderSlot && !showCollapse}>
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
           ${showCollapse

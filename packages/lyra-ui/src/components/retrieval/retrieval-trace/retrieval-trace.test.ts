@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./retrieval-trace.js";
 import { LyraRetrievalTrace } from "./retrieval-trace.js";
@@ -52,6 +53,28 @@ const STAGES: RetrievalStage[] = [
   { id: "filter", kind: "filter", startMs: 160, endMs: 170, status: "running" },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'retrievalStageQueryRewrite',
+  'retrievalStageEmbed',
+  'retrievalStageRetrieve',
+  'retrievalStageRerank',
+  'retrievalStageFilter',
+  'retrievalTraceEvidenceToggle',
+  'spanWaterfall',
+  'durationMilliseconds',
+  'spanKindLlm',
+  'statusSuccess',
+  'accessibleLabelSeparator',
+  'spanKindEmbedding',
+  'spanKindRetriever',
+  'spanKindTool',
+  'statusRunning',
+  'chunkInspectorLabel',
+  'sourcePageSuffix',
+  'chunkScore',
+  'scoreTierHigh',
+]);
 describe("lr-retrieval-trace", () => {
   it("renders one bar per stage through the internal lr-span-waterfall, sorted by startMs", async () => {
     const el = (await fixture(

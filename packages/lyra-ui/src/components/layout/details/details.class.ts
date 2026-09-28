@@ -28,7 +28,7 @@ export interface LyraDetailsToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
   /** Whether the disclosure is now open. */
-  expanded?: boolean;
+  expanded: boolean;
   source: LyraDetailsToggleSource;
 }
 
@@ -139,7 +139,7 @@ export interface LyraDetailsEventMap {
  *   padding, independently tunable from the summary's own padding. Same fallback chain as
  *   `--lr-details-summary-padding-block`.
  * @cssprop [--lr-details-gap=var(--lr-space-s)] - Gap between summary content and its icon.
- * @cssprop [--lr-details-radius=var(--lr-radius)] - Disclosure surface corner radius.
+ * @cssprop [--lr-details-radius=var(--lr-radius-container)] - Disclosure surface corner radius.
  * @cssprop [--lr-details-outlined-bg=var(--lr-color-surface)] - Outlined surface background.
  * @cssprop [--lr-details-outlined-border-color=var(--lr-color-border)] - Outlined border color.
  * @cssprop [--lr-details-filled-bg=var(--lr-color-brand-quiet)] - Filled surface background.

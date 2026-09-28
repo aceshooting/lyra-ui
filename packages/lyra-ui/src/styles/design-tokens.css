@@ -32,6 +32,12 @@
     --lr-theme-color-chart-6: #935e7c;
     --lr-theme-color-chart-7: #de6906;
     --lr-theme-color-chart-8: #8f81d3;
+    --lr-theme-color-chart-diverging-1: #92400e;
+    --lr-theme-color-chart-diverging-2: #f3f4f6;
+    --lr-theme-color-chart-diverging-3: #1e40af;
+    --lr-theme-color-chart-sequential-1: #dbeafe;
+    --lr-theme-color-chart-sequential-2: #3b82f6;
+    --lr-theme-color-chart-sequential-3: #1e3a8a;
     --lr-theme-color-danger-border-loud: #890415;
     --lr-theme-color-danger-border-normal: #dc3e41;
     --lr-theme-color-danger-border-quiet: #ffa099;
@@ -124,6 +130,7 @@
     --lr-theme-graph-cat-8: #c9d1d9;
     --lr-theme-hover-brightness: 1.08;
     --lr-theme-icon-button-size: 2.5rem;
+    --lr-theme-line-break: initial;
     --lr-theme-line-height-1-4: 1.4;
     --lr-theme-line-height-compact: 1.25;
     --lr-theme-line-height-loose: 1.6;
@@ -271,6 +278,7 @@
     --lr-theme-transition-fast: 120ms ease-out;
     --lr-theme-transition-normal: 180ms ease-out;
     --lr-theme-transition-slow: 1.8s ease-in-out;
+    --lr-theme-word-break: initial;
     --lr-theme-z-index-base: 0;
     --lr-theme-z-index-content: 1;
     --lr-theme-z-index-dropdown: 900;
@@ -305,6 +313,12 @@
     --lr-theme-color-chart-6: #9b6b90;
     --lr-theme-color-chart-7: #db3a29;
     --lr-theme-color-chart-8: #555de3;
+    --lr-theme-color-chart-diverging-1: #fbbf24;
+    --lr-theme-color-chart-diverging-2: #374151;
+    --lr-theme-color-chart-diverging-3: #93c5fd;
+    --lr-theme-color-chart-sequential-1: #172554;
+    --lr-theme-color-chart-sequential-2: #3b82f6;
+    --lr-theme-color-chart-sequential-3: #bfdbfe;
     --lr-theme-color-danger-border-loud: #f86b66;
     --lr-theme-color-danger-border-normal: #dc3e41;
     --lr-theme-color-danger-border-quiet: #5c010a;
@@ -341,7 +355,7 @@
     --lr-theme-color-success-on-loud: #000001;
     --lr-theme-color-success-on-normal: #edeef1;
     --lr-theme-color-success-on-quiet: #edeef1;
-    --lr-theme-color-surface-border: #6b6b74;
+    --lr-theme-color-surface-border: #787881;
     --lr-theme-color-surface-default: #1a1a1a;
     --lr-theme-color-surface-overlay: #2b3038;
     --lr-theme-color-surface-raised: #22272e;
@@ -397,6 +411,7 @@
     --lr-theme-graph-cat-8: #e4e7eb;
     --lr-theme-hover-brightness: 1.08;
     --lr-theme-icon-button-size: 2.5rem;
+    --lr-theme-line-break: initial;
     --lr-theme-line-height-1-4: 1.4;
     --lr-theme-line-height-compact: 1.25;
     --lr-theme-line-height-loose: 1.6;
@@ -544,6 +559,7 @@
     --lr-theme-transition-fast: 120ms ease-out;
     --lr-theme-transition-normal: 180ms ease-out;
     --lr-theme-transition-slow: 1.8s ease-in-out;
+    --lr-theme-word-break: initial;
     --lr-theme-z-index-base: 0;
     --lr-theme-z-index-content: 1;
     --lr-theme-z-index-dropdown: 900;

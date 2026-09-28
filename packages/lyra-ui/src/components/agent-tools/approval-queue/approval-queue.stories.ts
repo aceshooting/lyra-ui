@@ -65,3 +65,9 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const HeldDecision: Story = {
+  parameters: { docs: { description: { story: 'Prevent lr-approval-decision-request while the host persists the decision. The selected dialog remains pending; update requests with the settled status when persistence completes.' } } },
+  render: () => html`<lr-approval-queue .requests=${requests}
+    @lr-approval-decision-request=${(event: Event) => event.preventDefault()}></lr-approval-queue>`,
+};

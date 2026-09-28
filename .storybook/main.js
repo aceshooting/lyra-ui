@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import remarkGfm from 'remark-gfm';
@@ -86,6 +87,22 @@ const config = {
     // read at build time from the same `llms/components/<tag>.md` files `check:llms-artifacts`
     // resolves. See .storybook/component-imports.js.
     viteConfig.plugins.push(componentImportsPlugin());
+    // Storybook consumes source classes directly, including on a clean checkout without dist.
+    // Resolve diagnostics to the matching source condition while package consumers use imports.
+    let sourceDiagnosticCondition = 'production';
+    viteConfig.plugins.push({
+      name: 'lyra-source-diagnostic-condition',
+      enforce: 'pre',
+      configResolved(config) {
+        sourceDiagnosticCondition = config.command === 'serve' ? 'development' : 'production';
+      },
+      resolveId(source) {
+        const module = source === '#lyra-dev-warning' ? 'dev-warning' :
+          source === '#lyra-dev-attributes' ? 'dev-mode-attribute-warning' : undefined;
+        if (!module) return;
+        return fileURLToPath(new URL(`../packages/lyra-ui/src/internal/${module}.${sourceDiagnosticCondition}.ts`, import.meta.url));
+      },
+    });
     viteConfig.plugins.push(tailwindcss());
     viteConfig.build = viteConfig.build ?? {};
     // Vite's default 500kB warning fires on chunks that are already correctly

@@ -1,3 +1,4 @@
+import { canonicalizeLocaleTag } from './locale-tag.js';
 import { devWarnOnce } from './dev-mode-attribute-warning.js';
 import { getPluralRules } from './intl-cache.js';
 import type {
@@ -33,6 +34,7 @@ interface HostLocaleSubscription {
 }
 
 const MAX_LOCALE_CANDIDATES = 64;
+const MAX_LOCALE_PARENT_DEPTH = 32;
 const MAX_LOCALE_SUBTAGS = 32;
 const MAX_LOCALE_TAG_LENGTH = 255;
 const MAX_LOCALE_CACHE_ENTRIES = 128;
@@ -42,6 +44,7 @@ const LEGACY_LOCALE_PATTERN = /^[a-z0-9]{1,32}(?:-[a-z0-9]{1,32})*$/;
 const locales = new Map<string, LocaleCatalog>();
 const localePublicTags = new Map<string, string>();
 const localeMeta = new Map<string, LyraLocaleMeta>();
+const localeParents = new Map<string, string>();
 const wellFormedLocales = new Set<string>();
 // Synthetic diagnostic catalogs are selected only by their exact locale tag. They must not become
 // reverse regional fallbacks for the ordinary base language merely because their module was
@@ -108,7 +111,7 @@ function localeIdentity(locale: string): LocaleIdentity {
   let publicTag = normalized.toLowerCase();
   let wellFormed = false;
   try {
-    const canonical = Intl.getCanonicalLocales(normalized)[0];
+    const canonical = canonicalizeLocaleTag(normalized);
     if (canonical) {
       publicTag = canonical;
       wellFormed = true;
@@ -285,12 +288,22 @@ function localeCandidates(locale: string): string[] {
     const separator = normalized.indexOf('-');
     if (separator > 0) candidates.push(normalized.slice(0, separator));
   }
-  if (!candidates.includes('en')) candidates.push('en');
-  const frozen = Object.freeze([...candidates]);
+  const expanded: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    let current: string | undefined = candidate;
+    while (current && !seen.has(current) && expanded.length < MAX_LOCALE_CANDIDATES - 1) {
+      seen.add(current);
+      expanded.push(current);
+      current = localeParents.get(current);
+    }
+  }
+  if (!seen.has('en')) expanded.push('en');
+  const frozen = Object.freeze(expanded);
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
     cacheBounded(localeCandidateCache, normalized, frozen);
   }
-  return candidates;
+  return [...frozen];
 }
 
 /**
@@ -599,21 +612,32 @@ function registerLocale(
   locale: string,
   strings: LyraLocaleStrings,
   meta: LyraLocaleMeta | undefined,
-  exactOnly: boolean
+  exactOnly: boolean,
+  parentKey?: string
 ): void {
   const identity = storedLocaleIdentity(locale, true);
   const key = identity.lookupKey;
   const incomingStrings = snapshotCatalog(strings);
   const incomingMeta = snapshotLocaleMeta(meta);
+  // Snapshot proxy traps may reenter registration, so validate against the final graph only
+  // after all caller-owned values have been read and immediately before the first mutation.
+  if (parentKey !== undefined) validateLocaleParent(key, parentKey);
   const isNewLocale = !locales.has(key);
   const candidateTopologyChanged =
     isNewLocale ||
+    (parentKey !== undefined && localeParents.get(key) !== parentKey) ||
     (exactOnly && !exactOnlyLocales.has(key)) ||
     (identity.wellFormed && !wellFormedLocales.has(key));
+  const previouslyAffectedActive = candidateTopologyChanged && activeLocale !== '' &&
+    localeUsesCatalog(activeLocale, key);
+  const previouslyAffectedHosts = new Set(candidateTopologyChanged
+    ? liveHostLocaleSubscriptions().filter(({ host }) => localeUsesCatalog(inheritedLocale(host), key)).map(({ host }) => host)
+    : []);
   // Exact-only is an identity of the registered locale tag, not of one catalog write. A later
   // public registration may extend a pseudo catalog, but must never turn that tag into a reverse
   // fallback for its ordinary base language.
   if (exactOnly) exactOnlyLocales.add(key);
+  if (parentKey !== undefined) localeParents.set(key, parentKey);
   if (identity.wellFormed) wellFormedLocales.add(key);
   locales.set(key, mergeCatalogs(locales.get(key), incomingStrings));
   localePublicTags.set(key, identity.publicTag);
@@ -633,9 +657,9 @@ function registerLocale(
   }
 
   const activeSnapshot =
-    activeLocale && localeUsesCatalog(activeLocale, key) ? [...listeners] : [];
+    previouslyAffectedActive || (activeLocale && localeUsesCatalog(activeLocale, key)) ? [...listeners] : [];
   const hostSnapshot = liveHostLocaleSubscriptions()
-    .filter(({ host }) => localeUsesCatalog(inheritedLocale(host), key))
+    .filter(({ host }) => previouslyAffectedHosts.has(host) || localeUsesCatalog(inheritedLocale(host), key))
     .map(
       ({ host }) =>
         () =>
@@ -654,6 +678,38 @@ export function registerLyraLocale(
   meta?: LyraLocaleMeta
 ): void {
   registerLocale(locale, strings, meta, false);
+}
+
+function validateLocaleParent(childKey: string, parentKey: string): void {
+  for (const origin of new Set([childKey, ...localeParents.keys()])) {
+    const visited = new Set<string>();
+    let current: string | undefined = origin;
+    let depth = 0;
+    while (current) {
+      if (visited.has(current)) throw new TypeError('Locale parent relationships must not contain cycles.');
+      visited.add(current);
+      current = current === childKey ? parentKey : localeParents.get(current);
+      if (current && ++depth > MAX_LOCALE_PARENT_DEPTH)
+        throw new TypeError('Locale parent chains must not exceed 32 edges.');
+    }
+  }
+}
+
+/**
+ * Register only a regional catalog's authored differences and its explicit parent locale.
+ * Parent messages and direction are resolved live, including parents registered later. Ordinary
+ * registerLyraLocale() calls may extend this catalog without discarding its parent relationship.
+ * Delta catalogs never become reverse regional fallbacks for a different locale. Invalid parent
+ * cycles or chains deeper than 32 edges throw before any catalog or relationship is changed.
+ */
+export function registerLyraLocaleDelta(
+  locale: string,
+  parent: string,
+  strings: LyraLocaleStrings,
+  meta?: LyraLocaleMeta
+): void {
+  const parentKey = storedLocaleIdentity(parent, true).lookupKey;
+  registerLocale(locale, strings, meta, true, parentKey);
 }
 
 /**

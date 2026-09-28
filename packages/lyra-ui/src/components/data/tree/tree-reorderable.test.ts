@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
@@ -19,6 +20,8 @@ function deepActiveElement(root: Document | ShadowRoot = document): Element | nu
   const active = root.activeElement;
   return active?.shadowRoot?.activeElement ? deepActiveElement(active.shadowRoot) : active;
 }
+
+expectLocaleFallback('ar-u-nu-arab', ['noData', 'treeNodeMoved']);
 
 describe('reorderable', () => {
   const reorderData: LyraTreeNodeData[] = [

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js to register this component. */
 export * from './rag-eval-dashboard.class.js';
 import { LyraRagEvalDashboard } from './rag-eval-dashboard.class.js';
 import { defineElement } from '../../../internal/prefix.js';

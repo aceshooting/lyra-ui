@@ -4,7 +4,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { tag } from '../../../internal/prefix.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -21,7 +21,7 @@ export interface LyraAppRailGroupToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
   /** Whether the group's content is (or, on the request, would be) shown. */
-  expanded?: boolean;
+  expanded: boolean;
 }
 
 export interface LyraAppRailGroupEventMap {
@@ -134,12 +134,8 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   /** The group's heading text. The `heading` slot replaces it when populated. */
   @property() heading = '';
 
-  /** The `aria-level` the heading landmark reports. A rail sits at a different depth in every
-   *  page that embeds it, so the level is settable rather than baked into a fixed `<h3>`.
-   *  Clamped to the 1-6 range a heading can actually carry, and rounded; a non-finite value falls
-   *  back to the default.
-   *  @default 3 */
-  @property({ type: Number, attribute: 'heading-level' }) headingLevel = 3;
+  /** Heading semantic level. `none` keeps the title visible without a heading landmark. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
 
   /** Opts in the built-in collapse control. `false` (the default) renders the heading as inert
    *  text, exactly as a plain section title. `collapsed` still governs whether the content
@@ -196,8 +192,8 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   private readonly headingId = nextId('app-rail-group-heading');
   private readonly contentId = nextId('app-rail-group-content');
 
-  private get safeHeadingLevel(): number {
-    return Math.round(finiteRange(this.headingLevel, 3, 1, 6));
+  private get safeHeadingLevel() {
+    return resolveHeadingLevel(this.headingLevel);
   }
 
   override connectedCallback(): void {
@@ -328,8 +324,8 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
           <div
             part="heading"
             id=${this.headingId}
-            role="heading"
-            aria-level=${this.safeHeadingLevel}
+            role=${this.safeHeadingLevel ? 'heading' : nothing}
+            aria-level=${this.safeHeadingLevel ?? nothing}
           >
             ${this.collapsible
               ? html`<button

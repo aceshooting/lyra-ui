@@ -91,8 +91,7 @@ export const styles = css`
        --lr-locale-picker-trigger-hover-border-color is set, so both channels ease; without this the
        trigger snaps while lr-button/lr-copy-button/lr-icon-button ease. No local reduced-motion
        override needed -- tokens.styles.ts's shared reduced-motion block already flattens
-       --lr-transition-fast to 0.001ms and applies a blanket transition-duration: 0.001ms across the
-       whole shadow tree under prefers-reduced-motion. */
+       --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
     transition:
       background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
@@ -237,8 +236,7 @@ export const styles = css`
     /* Hover/active/data-active below only ever repaint background, so background-color is all
        this needs; without it this option's fill snaps while lr-button/lr-copy-button/
        lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
-       reduced-motion block already flattens --lr-transition-fast to 0.001ms and applies a blanket
-       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
+       reduced-motion block already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   [part='option']:hover {
@@ -299,6 +297,43 @@ export const styles = css`
   [part='option-tag'] {
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
+  }
+
+  [part='load-status'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    margin-block-start: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  [part='load-retry'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-button);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
+  }
+  [part='load-retry']:where(:hover:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-hover));
+  }
+  [part='load-retry']:where(:active:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
+  }
+  [part='load-retry']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='load-retry']:where(:disabled) { cursor: default; opacity: var(--lr-opacity-disabled); }
+  @media (prefers-reduced-motion: reduce) {
+    [part='load-retry'] { transition: none; }
   }
 
   [part='hint'] {

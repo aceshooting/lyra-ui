@@ -5,9 +5,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
-expectLocaleFallback('de-DE', [
-  'noData', 'trendOf',
-]);
+expectLocaleFallback('de-DE', ['noData', 'trendOf']);
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sparkline', 'values');

@@ -6,7 +6,7 @@
 - **Class** `LyraDiffView`, also available unregistered from `@aceshooting/lyra-ui/components/utility/diff-view/diff-view.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecated css-property** `--lr-diff-view-add-background` since `21.1.0`; use css-property `--lr-diff-view-add-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-diff-view-fold-background` since `21.1.0`; use css-property `--lr-diff-view-fold-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-diff-view-highlight-accent-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.

@@ -84,7 +84,9 @@ function isPolicyDefinitionLine(file, line) {
 
 function containsExplanatoryCommitHash(file, line) {
   const relative = normalizedPath(file);
-  if (path.posix.basename(relative).toLowerCase() === 'changelog.md' && CHANGELOG_COMMIT_PREFIX.test(line)) {
+  const isChangelog = path.posix.basename(relative).toLowerCase() === 'changelog.md'
+    || /^docs\/changelog\/v[1-9]\d*\.md$/.test(relative);
+  if (isChangelog && CHANGELOG_COMMIT_PREFIX.test(line)) {
     return false;
   }
   if (STRUCTURED_COMMIT_METADATA.test(line)) return false;

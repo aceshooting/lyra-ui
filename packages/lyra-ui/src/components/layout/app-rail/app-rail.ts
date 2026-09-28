@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-app-rail.js to register this component. */
 export * from './app-rail.class.js';
 import { LyraAppRail } from './app-rail.class.js';
 import { defineElement } from '../../../internal/prefix.js';

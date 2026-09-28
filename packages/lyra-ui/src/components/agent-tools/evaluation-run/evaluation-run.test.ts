@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './evaluation-run.js';
 import type { LyraEvalRun, EvalExampleResult } from './evaluation-run.js';
@@ -10,9 +11,16 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // The locale-formatting fixture deliberately retains the unregistered English messages.
 expectLocaleFallback('ar-EG', [
-  'evaluationRunExampleLabel', 'evaluationRunFailedCount', 'evaluationRunLabel',
-  'evaluationRunProgressLabel', 'evaluationRunProgressSummary', 'evaluationRunRunningCount',
-  'progress', 'statusError', 'statusRunning', 'statusSuccess',
+  'evaluationRunExampleLabel',
+  'evaluationRunFailedCount',
+  'evaluationRunLabel',
+  'evaluationRunProgressLabel',
+  'evaluationRunProgressSummary',
+  'evaluationRunRunningCount',
+  'progress',
+  'statusError',
+  'statusRunning',
+  'statusSuccess',
 ]);
 
 const examples: EvalExampleResult[] = [
@@ -358,15 +366,15 @@ it('correlates a nested grounding-summary claim selection with its example id', 
   expect((await selected).detail).to.deep.equal({ exampleId: 'ex-1', claim });
 });
 
-it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide', async () => {
+it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide-request', async () => {
   const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const timeline = row.querySelector('[part="tool-trace"]') as HTMLElement;
 
-  const firing = oneEvent(el, 'lr-example-tool-approval-decide');
+  const firing = oneEvent(el, 'lr-example-tool-approval-decide-request');
   timeline.dispatchEvent(
-    new CustomEvent('lr-tool-approval-decide', {
+    new CustomEvent('lr-tool-approval-decide-request', {
       detail: { invocationId: 'call-1', approved: true, args: { query: 'refund policy' } },
       bubbles: true,
       composed: true,
@@ -499,7 +507,7 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
   expect(dialog.open).to.be.true;
 
   let wrapperCancelable = false;
-  el.addEventListener('lr-example-tool-approval-decide', (event) => {
+  el.addEventListener('lr-example-tool-approval-decide-request', (event) => {
     wrapperCancelable = event.cancelable;
     event.preventDefault();
   }, { once: true });
@@ -685,4 +693,40 @@ it('caps rendered example rows at the render ceiling and shows a localized limit
 it('renders no limit notice when examples stays within the render ceiling', async () => {
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
+
+expectDeprecatedUsage('lr-eval-run', 'event', 'lr-example-tool-approval-decide');
+
+it('retains the deprecated lr-example-tool-approval-decide veto alias', async () => {
+  const pendingTrace: ToolTimelineEntry[] = [
+    {
+      id: 'call-pending',
+      name: 'search',
+      args: { query: 'refund policy' },
+      status: 'pending',
+      needsApproval: true,
+    },
+  ];
+  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
+  const row = await expandExample(el);
+  const timeline = row.querySelector<LyraToolTimeline>('[part="tool-trace"]')!;
+  const chip = timeline.shadowRoot!.querySelector('lr-tool-call-chip')!;
+
+  chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
+  await timeline.updateComplete;
+  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  expect(dialog.open).to.be.true;
+
+  let wrapperCancelable = false;
+  el.addEventListener('lr-example-tool-approval-decide', (event) => {
+    wrapperCancelable = event.cancelable;
+    event.preventDefault();
+  }, { once: true });
+  dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await dialog.updateComplete;
+
+  expect(wrapperCancelable).to.be.true;
+  expect(dialog.open).to.be.true;
+  expect(dialog.pendingAction).to.equal('approve');
 });

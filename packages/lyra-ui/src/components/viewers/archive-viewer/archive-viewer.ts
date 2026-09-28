@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-archive-viewer.js to register this component. */
 export * from './archive-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../layout/virtual-list/virtual-list.js';

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './graph-legend.js';
@@ -31,6 +32,10 @@ const types = [
   },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-EG', [
+  'graphLegendLabel',
+]);
 it('defaults to empty types/counts/hiddenTypes, withoutInteraction=false, empty label', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
@@ -152,7 +157,7 @@ it('emits a frozen cancelable proposal before assigning, announcing, and posting
   let postSawAnnouncement = false;
   let proposals = 0;
   let commits = 0;
-  el.addEventListener('lr-before-visibility-change', (event) => {
+  el.addEventListener('lr-visibility-change-request', (event) => {
     proposals += 1;
     preEvent = event as CustomEvent<{ hiddenTypes: string[] }>;
     preSawCurrentState = el.hiddenTypes.length === 0 && sinkTexts().length === announcementsBefore;
@@ -199,7 +204,7 @@ it('lets only a canceled proposal veto the child mutation, announcement, and pos
   const announcementsBefore = sinkTexts().length;
   let proposals = 0;
   let commits = 0;
-  el.addEventListener('lr-before-visibility-change', (event) => {
+  el.addEventListener('lr-visibility-change-request', (event) => {
     proposals += 1;
     event.preventDefault();
   });
@@ -215,29 +220,25 @@ it('lets only a canceled proposal veto the child mutation, announcement, and pos
   expect(button.getAttribute('aria-pressed')).to.equal('true');
 });
 
-it('fires the canonical lr-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+it('fires one canonical visibility request and no removed before-alias', async () => {
   const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
   const requests: CustomEvent<{ hiddenTypes: string[] }>[] = [];
-  const deprecatedAliases: CustomEvent<{ hiddenTypes: string[] }>[] = [];
+  let removedAliasEvents = 0;
   let commits = 0;
   el.addEventListener('lr-visibility-change-request', (event) => {
     requests.push(event as CustomEvent<{ hiddenTypes: string[] }>);
   });
-  el.addEventListener('lr-before-visibility-change', (event) => {
-    deprecatedAliases.push(event as CustomEvent<{ hiddenTypes: string[] }>);
-  });
+  el.addEventListener('lr-before-visibility-change', () => removedAliasEvents++);
   el.addEventListener('lr-visibility-change', () => commits += 1);
 
   button.click();
   await el.updateComplete;
 
   expect(requests.length).to.equal(1);
-  expect(deprecatedAliases.length).to.equal(1);
+  expect(removedAliasEvents).to.equal(0);
   expect(requests[0]?.detail.hiddenTypes).to.deep.equal(['person']);
-  expect(deprecatedAliases[0]?.detail.hiddenTypes).to.deep.equal(['person']);
   expect(requests[0]?.cancelable).to.equal(true);
-  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
   expect(commits).to.equal(1);
 });
 
@@ -255,18 +256,23 @@ it('vetoes the visibility toggle when only the canonical -request name is cancel
   expect(el.hiddenTypes).to.deep.equal([]);
 });
 
-it('vetoes the visibility toggle when only the deprecated lr-before-visibility-change alias is canceled', async () => {
+it('does not dispatch the removed visibility veto alias or let its listener veto', async () => {
   const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  let removedAliasEvents = 0;
   let commits = 0;
-  el.addEventListener('lr-before-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-before-visibility-change', (event) => {
+    removedAliasEvents++;
+    event.preventDefault();
+  });
   el.addEventListener('lr-visibility-change', () => commits += 1);
 
   button.click();
   await el.updateComplete;
 
-  expect(commits).to.equal(0);
-  expect(el.hiddenTypes).to.deep.equal([]);
+  expect(removedAliasEvents).to.equal(0);
+  expect(commits).to.equal(1);
+  expect(el.hiddenTypes).to.deep.equal(['person']);
 });
 
 it('uses the same proposal and commit sequence for native pointer and keyboard activation', async () => {
@@ -274,7 +280,7 @@ it('uses the same proposal and commit sequence for native pointer and keyboard a
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
   const proposals: string[][] = [];
   const commits: string[][] = [];
-  el.addEventListener('lr-before-visibility-change', (event) => {
+  el.addEventListener('lr-visibility-change-request', (event) => {
     proposals.push([...(event as CustomEvent<{ hiddenTypes: string[] }>).detail.hiddenTypes]);
   });
   el.addEventListener('lr-visibility-change', (event) => {

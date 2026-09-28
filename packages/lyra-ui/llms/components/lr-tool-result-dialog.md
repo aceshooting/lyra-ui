@@ -6,7 +6,7 @@
 - **Class** `LyraToolResultDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-dialog/tool-result-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-maximize-change` since `21.1.0`; use event `addEventListener('lr-maximize-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -50,13 +50,13 @@ title.
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolResultDialogCloseReason = 'api'):
 void` is the reasoned API dismissal;
 `close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
-closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
+closed), emits `lr-close` with `{ reason }`, and returns focus to whatever had it before
 the dialog opened. Built-in triggers call this with `'escape'`, `'backdrop'` when `lightDismiss` is
 enabled, or `'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
-**Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
+**Events:** `lr-close` (`detail: { reason: ToolResultDialogCloseReason }` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
 `lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
 `<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see

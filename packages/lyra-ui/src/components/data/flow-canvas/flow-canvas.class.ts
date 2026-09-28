@@ -10,6 +10,7 @@ import {
 } from '../../../internal/announcer.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
@@ -87,7 +88,7 @@ export interface LyraFlowCanvasEventMap {
   'lr-node-activate': CustomEvent<Readonly<{ nodeId: string }>>;
   'lr-edge-activate': CustomEvent<Readonly<{ edgeId: string; source: string; target: string }>>;
   'lr-selection-change': CustomEvent<
-    Readonly<{ nodeIds: readonly string[]; edgeIds: readonly string[] }>
+    Readonly<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }>
   >;
   'lr-node-move': CustomEvent<Readonly<{
     readonly nodeId: string;
@@ -189,7 +190,7 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @slot bottom-end - Floating end-side content in the wrapping bottom overlay rail (e.g. `lr-flow-minimap`).
  * @event lr-node-activate - `detail: { nodeId }`.
  * @event lr-edge-activate - `detail: { edgeId, source, target }`.
- * @event lr-selection-change - `detail: { nodeIds, edgeIds }`.
+ * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`.
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
  * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
  * @event lr-node-add - `detail: { type, position }`.
@@ -567,9 +568,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private companionCallbacks = new Set<(snapshot: FlowStructureSnapshot) => void>();
   private companionRaf: OwnedAnimationFrame | null = null;
+  private stopMotionWatch?: () => void;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.stopMotionWatch = observeReducedMotion(this, () => this.requestUpdate());
     const ownerWindow = this.ownerDocument.defaultView;
     this.connectedWindow = ownerWindow ?? undefined;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
@@ -592,6 +595,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopMotionWatch?.();
+    this.stopMotionWatch = undefined;
     this.resetAuthoredCardObserver();
     this.restoreAuthoredCardSlots();
     this.hasConnectedLayoutBaseline = false;
@@ -1841,8 +1846,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.emit(
       'lr-selection-change',
       Object.freeze({
-        nodeIds: Object.freeze([...this.selectedNodeIds]),
-        edgeIds: Object.freeze([...this.selectedEdgeIds]),
+        selectedNodeIds: Object.freeze([...this.selectedNodeIds]),
+        selectedEdgeIds: Object.freeze([...this.selectedEdgeIds]),
       }),
     );
     const selected = kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedEdgeIds.includes(id);
@@ -1856,7 +1861,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.selectedEdgeIds = [];
     this.emit(
       'lr-selection-change',
-      Object.freeze({ nodeIds: Object.freeze([]), edgeIds: Object.freeze([]) }),
+      Object.freeze({ selectedNodeIds: Object.freeze([]), selectedEdgeIds: Object.freeze([]) }),
     );
     this.announcer.announce(this.localize('flowSelectionCleared'));
   }
@@ -2483,7 +2488,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const resolvedById = new Map(this.nodes.map((n) => [n.id, this.resolvedNode(n)]));
     const items: SVGTemplateResult[] = [];
     const ownerWindow = this.ownerDocument?.defaultView;
-    const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+    const reducedMotion = !ownerWindow || prefersReducedMotion(this);
     const counterMirrorLabels =
       this.orientation === 'horizontal' && !!this.ownerDocument?.defaultView && isRtl(this);
     for (const edge of this.edges) {

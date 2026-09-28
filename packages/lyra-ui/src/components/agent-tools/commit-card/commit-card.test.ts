@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
 import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
@@ -11,6 +12,12 @@ async function settleClipboard(el: LyraCommitCard): Promise<void> {
   await el.updateComplete;
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'commitCardLabel',
+  'commitCardDiffSummary',
+  'commitCardHideFiles',
+]);
 describe('lr-commit-card', () => {
   it('defaults to filesExpanded=false (files start collapsed) and withoutCopyButton=false', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
@@ -372,8 +379,8 @@ describe('lr-commit-card', () => {
     const toggle = el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement;
     const listener = oneEvent(el, 'lr-toggle');
     toggle.click();
-    const event = (await listener) as CustomEvent<{ collapsed: boolean }>;
-    expect(event.detail).to.deep.equal({ collapsed: false });
+    const event = (await listener) as CustomEvent<{ expanded: boolean; collapsed: boolean }>;
+    expect(event.detail).to.deep.equal({ expanded: true, collapsed: false });
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(1);
   });

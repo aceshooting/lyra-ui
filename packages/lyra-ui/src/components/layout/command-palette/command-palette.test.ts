@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { sendKeys } from '@web/test-runner-commands';
 import {
   fixture,
@@ -10,6 +11,8 @@ import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../.
 import "./command-palette.js";
 import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
+
+expectLocaleFallback('tr', ['clear', 'commandPaletteLabel', 'commandPalettePlaceholder', 'commandPaletteResults']);
 
 it("provides hover feedback for enabled command rows", () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -1420,18 +1423,6 @@ it("does not schedule a Lit update from the initial row-pitch measurement", asyn
   expect(scheduled, JSON.stringify(scheduled)).to.have.length(0);
 });
 
-it("emits a cancelable lr-open before mutating open, and skips the mutation when it is vetoed", async () => {
-  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
-  const seen: boolean[] = [];
-  el.addEventListener("lr-open", (event) => {
-    seen.push(el.open);
-    event.preventDefault();
-  });
-  el.openPalette();
-  expect(seen, "open must still be false while lr-open is being dispatched").to.deep.equal([false]);
-  expect(el.open, "a defaultPrevented lr-open must not open the palette").to.be.false;
-});
-
 it("emits a cancelable lr-show before mutating open, and skips the mutation when it is vetoed", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   const seen: boolean[] = [];
@@ -1444,47 +1435,46 @@ it("emits a cancelable lr-show before mutating open, and skips the mutation when
   expect(el.open, "a defaultPrevented lr-show must not open the palette").to.be.false;
 });
 
-it("fires both lr-show and the deprecated lr-open alias with identical null detail when opening", async () => {
+it("fires lr-show once and does not emit the removed lr-open alias", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   const seen: string[] = [];
-  el.addEventListener("lr-show", (event) => seen.push(`show:${String((event as CustomEvent).detail)}`));
-  el.addEventListener("lr-open", (event) => seen.push(`open:${String((event as CustomEvent).detail)}`));
+  let removedAliasEvents = 0;
+  el.addEventListener("lr-show", (event) => seen.push(String((event as CustomEvent).detail)));
+  el.addEventListener("lr-open", () => removedAliasEvents++);
   el.openPalette();
-  expect(seen, "lr-show must fire before the deprecated lr-open alias, both with a null detail").to.deep.equal([
-    "show:null",
-    "open:null",
-  ]);
+  expect(seen).to.deep.equal(["null"]);
+  expect(removedAliasEvents).to.equal(0);
   expect(el.open).to.be.true;
 });
 
-it("vetoes opening when only lr-show is prevented, even though the deprecated lr-open alias is not", async () => {
+it("vetoes opening through the canonical lr-show request", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  let removedAliasEvents = 0;
+  el.addEventListener("lr-open", () => removedAliasEvents++);
   el.addEventListener("lr-show", (event) => event.preventDefault());
   el.openPalette();
-  expect(
-    el.open,
-    "a defaultPrevented lr-show must veto the open even though lr-open was not prevented",
-  ).to.be.false;
+  expect(el.open).to.be.false;
+  expect(removedAliasEvents).to.equal(0);
 });
 
-it("emits a cancelable lr-close before mutating open, and skips the mutation when it is vetoed", async () => {
+it("emits a cancelable lr-close-request before mutating open, and skips the mutation when it is vetoed", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();
   await el.updateComplete;
   const seen: boolean[] = [];
-  el.addEventListener("lr-close", (event) => {
+  el.addEventListener("lr-close-request", (event) => {
     seen.push(el.open);
     event.preventDefault();
   });
   el.close();
-  expect(seen, "open must still be true while lr-close is being dispatched").to.deep.equal([true]);
-  expect(el.open, "a defaultPrevented lr-close must not close the palette").to.be.true;
+  expect(seen, "open must still be true while lr-close-request is being dispatched").to.deep.equal([true]);
+  expect(el.open, "a defaultPrevented lr-close-request must not close the palette").to.be.true;
 });
 
 it("routes direct IDL and attribute writes through the same synchronous lifecycle", async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
   const order: string[] = [];
-  el.addEventListener("lr-open", () => order.push(`open:${el.open}`));
+  el.addEventListener("lr-show", () => order.push(`open:${el.open}`));
   el.addEventListener("lr-close", () => order.push(`close:${el.open}`));
 
   el.open = true;
@@ -1493,7 +1483,7 @@ it("routes direct IDL and attribute writes through the same synchronous lifecycl
   await el.updateComplete;
 
   el.removeAttribute("open");
-  expect(order).to.deep.equal(["open:false", "close:true"]);
+  expect(order).to.deep.equal(["open:false", "close:false"]);
   expect(el.open).to.be.false;
 });
 
@@ -1506,7 +1496,7 @@ it("restores a vetoed reflected attribute write and avoids opening side effects"
       ]}
     ></lr-command-palette>
   `)) as LyraCommandPalette;
-  el.addEventListener("lr-open", (event) => event.preventDefault(), { once: true });
+  el.addEventListener("lr-show", (event) => event.preventDefault(), { once: true });
 
   el.setAttribute("open", "");
   await el.updateComplete;
@@ -1691,7 +1681,7 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
     // The click that ends the press selects the command and closes the palette, taking the row
     // being asserted on with it -- vetoing the close keeps the row mounted so the released state
     // is observable at all.
-    el.addEventListener("lr-close", (event) => event.preventDefault());
+    el.addEventListener("lr-close-request", (event) => event.preventDefault());
     const row = el.shadowRoot!.querySelector(
       '[part="command"][data-active="true"]'
     ) as HTMLElement;

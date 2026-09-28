@@ -1,3 +1,4 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -137,6 +138,8 @@ function projectExportFormat(value: unknown): LyraExportFormatOption | undefined
 }
 
 export interface LyraExportButtonEventMap {
+  'lr-export-request': CustomEvent<{ readonly format: string }>;
+  /** @deprecated Use `lr-export-request`; removal not before 24.0.0. */
   'lr-export': CustomEvent<{ readonly format: string }>;
   'lr-export-complete': CustomEvent<{ readonly format: LyraExportFormat }>;
   'lr-export-error': CustomEvent<{ readonly format: LyraExportFormat; readonly error: unknown }>;
@@ -151,17 +154,20 @@ export interface LyraExportButtonEventMap {
  * ids are omitted before menu state, focus reconciliation, or export events; the first wins.
  *
  * Data reaches a built-in CSV/JSON download two ways, both resolved at download time rather than
- * at assignment time: the eager `rows` property (read after the cancelable `lr-export` event, so a
- * listener may assign it from inside its own handler) and the lazy `getRows` callback, which
+ * at assignment time: the eager `rows` property (read after the cancelable `lr-export-request` and
+ * its legacy alias, so a listener may assign it from inside its own handler) and the lazy `getRows`
+ * callback, which
  * replaces `rows` for that download and lets a consumer export a collection it already holds --
  * an `<lr-table>`'s `viewRows`, for instance -- without materializing a second copy here.
  *
  * @customElement lr-export-button
- * @event lr-export - `detail: { format }`, cancelable — call `preventDefault()`
+ * @event lr-export-request - `detail: { format }`, cancelable — call `preventDefault()`
  *   to substitute the built-in client-side download with a server-generated one. A listener that
  *   lets the built-in download proceed may still supply its data from inside the handler: the rows
  *   are read *after* this dispatch, so assigning `.rows` here is honoured, and a `getRows`
  *   callback is consulted at the same point.
+ * @event lr-export - Deprecated cancelable veto alias fired after `lr-export-request` with equal detail.
+ *   Either event may veto. Use `lr-export-request`; removal not before 24.0.0.
  * @event lr-export-complete - Fired after a non-cancelled download completes.
  * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
  *   downloaded. `detail: { format, error }`. The same failure is also announced through the
@@ -180,7 +186,7 @@ export interface LyraExportButtonEventMap {
  * @csspart menu-item - A single format option inside the menu.
  * @csspart format-label - A format option's primary label.
  * @csspart format-description - A custom format option's optional secondary text.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the menu popup.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  * colour, on the menu popup.
@@ -593,7 +599,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (token !== this.menuHideToken || this.open) return;
     const menu = this.menuEl;
     const view = this.ownerDocument.defaultView;
-    if (menu && view && !prefersReducedMotion(view)) {
+    if (menu && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(menu);
       const durationMs =
         maxCssTransitionTime(computed.transitionDuration) +
@@ -852,8 +858,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     // attempt reaches the try block below.
     this.exportFailed = false;
     const format = this.formatId(formatOption);
+    const request = this.emit('lr-export-request', Object.freeze({ format }), { cancelable: true });
     const ev = this.emit('lr-export', Object.freeze({ format }), { cancelable: true });
-    if (ev.defaultPrevented) return;
+    if (ev.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-export', 'lr-export-request');
+    if (request.defaultPrevented || ev.defaultPrevented) return;
 
     if (format !== 'csv' && format !== 'json') {
       // Custom formats are intentionally handler-only: Lyra owns the menu and

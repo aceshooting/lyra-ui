@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-knowledge-graph-explorer.js to register this component. */
 export * from './knowledge-graph-explorer.class.js';
 import { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

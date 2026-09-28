@@ -352,3 +352,18 @@ export const AutofocusAndLifecycle: Story = {
     </div>
   `,
 };
+
+export const ReasonedDismissal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Open dialog</button>
+      <lr-dialog
+        label="Dismissal events"
+        @lr-close-request=${(event: CustomEvent<{ reason: string }>) => console.info('Dismissal requested', event.detail.reason)}
+        @lr-close=${(event: CustomEvent<{ reason: string }>) => console.info('Dismissal accepted', event.detail.reason)}
+      >
+        Escape or the close button proposes dismissal before notifying listeners that it closed.
+      </lr-dialog>
+    </div>
+  `,
+};

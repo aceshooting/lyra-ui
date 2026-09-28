@@ -6,7 +6,7 @@
 - **Class** `LyraChatMessage`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated property** `actionsPosition` / `actions-position` since `21.1.0`; use property `actions-placement`; removal not before `23.0.0` — One name per concept across the library.
 - **Deprecated property** `attachmentsPosition` / `attachments-position` since `21.1.0`; use property `attachments-placement`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none

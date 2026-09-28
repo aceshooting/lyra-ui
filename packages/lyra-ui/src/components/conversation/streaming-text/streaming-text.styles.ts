@@ -29,7 +29,7 @@ export const styles = css`
     border-radius: var(--lr-inline-cursor-width, var(--lr-size-0-125rem));
     /* Ambient, infinite "still alive" indicator, not a discrete state flip -- same reasoning and
        same token as lr-typing-indicator's own cursor variant. */
-    animation: lr-streaming-text-cursor-blink var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-streaming-text-cursor-blink var(--lr-transition-ambient) infinite);
   }
 
   /* Two adjacent stops (49% / 50%) either side of an instant flip, same shape as

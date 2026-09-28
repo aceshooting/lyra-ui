@@ -380,7 +380,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the picker panel.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the picker panel. Unlike a floating panel's decorative edge, it defaults to

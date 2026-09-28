@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
@@ -218,6 +219,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     timelineClusterCount: LYRA_DEFAULT_timelineClusterCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-cluster-activate',

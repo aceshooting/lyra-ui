@@ -74,11 +74,24 @@ const baseTokens = css`
   :host {
     --lr-color-surface: var(--lr-theme-color-surface-default, #fff);
     --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #f6f8fa);
+    --lr-color-surface-container-lowest: var(--lr-theme-color-surface-container-lowest, var(--lr-color-surface));
+    --lr-color-surface-container-low: var(--lr-theme-color-surface-container-low, var(--lr-color-surface));
+    --lr-color-surface-container: var(--lr-theme-color-surface-container, var(--lr-color-surface-raised));
+    --lr-color-surface-container-high: var(--lr-theme-color-surface-container-high, var(--lr-color-surface-overlay));
+    --lr-color-surface-container-highest: var(--lr-theme-color-surface-container-highest, var(--lr-color-surface-overlay));
     --lr-color-text: var(--lr-theme-color-text-normal, #1a1a1a);
-    --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #6b7280);
-    --lr-color-border: var(--lr-theme-color-surface-border, #8a8a90);
-    --lr-color-border-strong: var(--lr-theme-color-border-strong, #4b5563);
-    --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
+    --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280));
+    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)));
+    --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)));
+    --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)));
+    --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));
+    --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-brand: var(--lr-color-brand-fill-loud);
     --lr-color-brand-quiet: var(--lr-color-brand-fill-quiet);
     --lr-color-success: var(--lr-color-success-fill-loud);
@@ -125,6 +138,8 @@ const baseTokens = css`
     --lr-line-height-1-4: var(--lr-theme-line-height-1-4, 1.4);
     --lr-line-height-normal: var(--lr-theme-line-height-normal, 1.5);
     --lr-line-height-loose: var(--lr-theme-line-height-loose, 1.6);
+    --lr-line-break: var(--lr-theme-line-break, inherit);
+    --lr-word-break: var(--lr-theme-word-break, inherit);
     --lr-border-width-thin: var(--lr-theme-border-width-thin, 1px);
     --lr-border-width-medium: var(--lr-theme-border-width-medium, 2px);
     --lr-border-width-thick: var(--lr-theme-border-width-thick, 3px);
@@ -233,6 +248,9 @@ const baseTokens = css`
     --lr-size-8em: var(--lr-theme-size-8em, 8em);
     --lr-size-8rem: var(--lr-theme-size-8rem, 8rem);
     --lr-radius: var(--lr-theme-border-radius-m, 0.375rem);
+    --lr-radius-button: var(--lr-theme-border-radius-button, var(--lr-form-control-radius, var(--lr-radius)));
+    --lr-radius-container: var(--lr-theme-border-radius-container, var(--lr-radius));
+    --lr-table-row-min-height: var(--lr-theme-table-row-height, 0px);
     /* Elevation. One shadow token used to serve 39 stylesheets, so a tooltip, a slider thumb and a
        full-screen dialog all cast the same shadow -- elevation carried no information at all. Five
        steps now, with the shadow COLOUR itself tokenized: it used to be a baked-in
@@ -246,6 +264,7 @@ const baseTokens = css`
     --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 12px 32px rgb(var(--lr-shadow-color) / 0.22));
     --lr-shadow: var(--lr-shadow-m);
     --lr-font: var(--lr-theme-font-family-body, system-ui, sans-serif);
+    --lr-font-heading: var(--lr-theme-font-family-heading, inherit);
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
        reads from these instead of hand-rolling its own duration/easing, so the
@@ -261,18 +280,18 @@ const baseTokens = css`
        stylesheets shipped exactly that. Reach for a --lr-duration-x plus a
        --lr-easing-x in an animation:; the compound tokens below remain for
        transition:. */
-    --lr-duration-fast: var(--lr-theme-duration-fast, 120ms);
-    --lr-duration-base: var(--lr-theme-duration-normal, 180ms);
-    --lr-duration-ambient: var(--lr-theme-duration-slow, 1.8s);
-    --lr-duration-icon: var(--lr-theme-duration-icon, 1s);
+    --lr-duration-fast: var(--_lr-motion-duration, var(--lr-theme-duration-fast, 120ms));
+    --lr-duration-base: var(--_lr-motion-duration, var(--lr-theme-duration-normal, 180ms));
+    --lr-duration-ambient: var(--_lr-motion-duration, var(--lr-theme-duration-slow, 1.8s));
+    --lr-duration-icon: var(--_lr-motion-duration, var(--lr-theme-duration-icon, 1s));
     --lr-otp-input-segment-size: var(--lr-theme-otp-input-segment-size, 2.5em);
-    --lr-easing-standard: var(--lr-theme-easing-standard, ease-out);
-    --lr-easing-emphasized: var(--lr-theme-easing-emphasized, ease-in-out);
+    --lr-easing-standard: var(--_lr-motion-easing, var(--lr-theme-easing-standard, ease-out));
+    --lr-easing-emphasized: var(--_lr-motion-easing, var(--lr-theme-easing-emphasized, ease-in-out));
     --lr-easing-linear: var(--lr-theme-easing-linear, linear);
 
-    --lr-transition-fast: var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard));
-    --lr-transition-base: var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard));
-    --lr-transition-ambient: var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized));
+    --lr-transition-fast: var(--_lr-motion-transition, var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard)));
+    --lr-transition-base: var(--_lr-motion-transition, var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard)));
+    --lr-transition-ambient: var(--_lr-motion-transition, var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized)));
 
     /* The one pointer-interaction transition. Ninety-odd rules across the library had each
        re-typed the same three-property list against --lr-transition-fast, so "what does a
@@ -324,8 +343,10 @@ const baseTokens = css`
        hand-expanding every site (and silently dropping the style keyword, which yields
        an outline that renders in some engines and not others). Offset stays separate
        because outline-offset is its own property, not part of the outline shorthand. */
-    --lr-focus-ring-width: var(--lr-theme-focus-ring-width, 2px);
-    --lr-focus-ring-color: var(--lr-theme-color-focus, var(--lr-color-brand));
+    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
+    --_lr-glass-original-focus-ring-color: var(--lr-theme-color-focus, var(--lr-color-brand));
+    --_lr-glass-qualified-focus-ring-color: color-mix(in srgb, var(--lr-theme-color-focus, var(--lr-color-brand)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--lr-theme-color-focus, var(--lr-color-brand)));
     --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
     --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
 
@@ -339,8 +360,14 @@ const baseTokens = css`
     --lr-icon-button-size: var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem));
 
     font-family: var(--lr-font);
+    line-break: var(--lr-line-break);
+    word-break: var(--lr-word-break);
     color: var(--lr-color-text);
     box-sizing: border-box;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6, [role='heading'], [part~='heading']) {
+    font-family: var(--lr-font-heading);
   }
 
   /* Safe-area environment variables are physical. Mirror the logical aliases
@@ -412,10 +439,16 @@ const darkTokens = css`
       --lr-color-surface: var(--lr-theme-color-surface-default, #1a1a1a);
       --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #22272e);
       --lr-color-text: var(--lr-theme-color-text-normal, #f2f2f2);
-      --lr-color-text-quiet: var(--lr-theme-color-text-quiet, #9aa1ac);
-      --lr-color-border: var(--lr-theme-color-surface-border, #6b6b74);
-      --lr-color-border-strong: var(--lr-theme-color-border-strong, #c4c9d1);
-      --lr-color-border-subtle: var(--lr-theme-color-surface-border-subtle, var(--lr-color-border));
+      --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac));
+    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)));
+      --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)));
+      --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)));
+      --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
          near-black, so an open dialog reads as a scrim with text floating on it and no panel at
          all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
@@ -437,6 +470,15 @@ const darkTokens = css`
 `;
 
 const auxTokens = css`
+  /* Private inherited switches avoid capturing an ancestor's look-specific color. */
+  @media (prefers-contrast: more) {
+    :host {
+      --_lr-preference-quiet-color: currentColor;
+      --_lr-preference-control-color: currentColor;
+      --_lr-preference-focus-min: 3px;
+    }
+  }
+
   /* Reduced motion is centralized so components using either the shared
      transition tokens or a component animation get the same behavior. The
      tiny non-zero duration keeps animationend/transitionend contracts from
@@ -455,17 +497,16 @@ const auxTokens = css`
       --lr-transition-base: 0.001ms linear;
       --lr-transition-ambient: 0.001ms linear;
     }
-    /* Deliberately NOT !important. It used to be, which meant no consumer could override it and
-       no component could opt out -- including the rare case where motion *is* the information (a
-       progress indicator's only affordance). Zeroing the duration tokens above already flattens
-       every component that reads them, which is all of them; this blanket rule is the safety net
-       for a stray hardcoded duration, and a safety net should not outrank the author. */
+    /* Components keep their declared transition properties and consume the shortened duration
+       tokens above. Do not set transition-duration on every descendant: otherwise an unanimated
+       slot acquires a transition for every property, including inherited font size. WebKit can
+       then retain stale rem sizes in its assigned shadow content after a theme or text-size change.
+       Animation fallbacks remain overridable for components whose motion conveys information. */
     :host *,
     :host *::before,
     :host *::after {
       animation-duration: 0.001ms;
       animation-iteration-count: 1;
-      transition-duration: 0.001ms;
       scroll-behavior: auto;
     }
   }
@@ -507,6 +548,11 @@ const auxTokens = css`
 const forcedColorTokens = css`
       --lr-color-surface: Canvas;
       --lr-color-surface-raised: Canvas;
+      --lr-color-surface-container-lowest: Canvas;
+      --lr-color-surface-container-low: Canvas;
+      --lr-color-surface-container: Canvas;
+      --lr-color-surface-container-high: Canvas;
+      --lr-color-surface-container-highest: Canvas;
       --lr-color-text: CanvasText;
       --lr-color-text-quiet: CanvasText;
       --lr-color-border: ButtonText;

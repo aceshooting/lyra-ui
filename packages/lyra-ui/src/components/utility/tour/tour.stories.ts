@@ -78,7 +78,7 @@ export const Default: Story = {
           <button id=${ids.filters}>Filters</button>
           <button id=${ids.create}>Create</button>
         </div>
-        <lr-tour .steps=${productTourSteps(ids)}></lr-tour>
+        <lr-tour .steps=${productTourSteps(ids)} @lr-tour-end-request=${(event: CustomEvent) => console.log(event.detail.reason)}></lr-tour>
       </div>
     `;
   },

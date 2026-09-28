@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
   html,
   nothing,
@@ -49,7 +50,7 @@ import {
   resolveOverlayAnchor,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
-import { styles } from './overlay.styles.js';
+import { styles, glassPopoverStyles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
@@ -228,7 +229,7 @@ export interface LyraPopoverEventMap {
  * @cssprop [--arrow-size=var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
  * arrow square.
  * @cssprop --lr-overlay-arrow-size - Retained Lyra fallback for `--arrow-size`.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  *   read by the popup and by its arrow. One declaration on any ancestor retints every overlay in
  *   that subtree without touching the page, card and control surfaces behind them.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
@@ -260,8 +261,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
-  // Optional so a subclass whose own `arrow` is not the deprecated alias (`<lr-dropdown>`) can opt out.
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part~="popup"]');
+  }
+  static override styles = [LyraElement.styles, styles, glassPopoverStyles];
   protected static override deprecatedAliases: LyraDeprecatedAliases | undefined = {
     arrow: ['withoutArrow', invertAlias, invertAlias],
   };
@@ -1681,6 +1685,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         ?data-hidden=${!this.open || !this.anchorPositioned} ?data-has-arrow=${this.rendersArrow}
         @mouseenter=${this.onPopupPointerEnter} @mouseleave=${this.onPopupPointerLeave}
         @click=${this.onPopupClick}>
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
         <div part=${this.contentPartNames}>${this.renderPopupContent()}</div>
         ${this.rendersArrow
           ? html`<span part=${this.arrowPartNames + ' arrow-' + this.resolvedSide}></span>`

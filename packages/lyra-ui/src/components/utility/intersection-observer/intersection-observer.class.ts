@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -112,6 +113,7 @@ function observerEntries(entries: readonly IntersectionObserverEntry[]): readonl
  */
 export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-intersection',

@@ -136,7 +136,7 @@ export const styles = css`
     block-size: var(--lr-size-0-375rem);
     border-radius: 50%;
     background: currentColor;
-    animation: lr-thinking-panel-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-thinking-panel-pulse var(--lr-transition-ambient) infinite);
   }
   @keyframes lr-thinking-panel-pulse {
     0%,

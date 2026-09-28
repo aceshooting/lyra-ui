@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -124,7 +125,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   'lr-hidden-types-change': CustomEvent<
     LyraEventDetailSnapshot<{ hiddenTypes: string[] }>
   >;
+  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
+  /** @deprecated Use lr-node-activate. */
   'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  /** @deprecated Use lr-edge-activate and its edgeId detail field. */
   'lr-link-click': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
@@ -216,8 +221,10 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   Direct host assignments do not emit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
- * @event lr-node-click - Bubbles straight through from the composed `lr-graph`, unmodified.
- * @event lr-link-click - Bubbles straight through from the composed `lr-graph`, unmodified.
+ * @event lr-node-activate - Bubbles unchanged from the composed graph with `{ nodeId, x, y }`.
+ * @event lr-edge-activate - Bubbles unchanged from the composed graph with `{ sourceNodeId, targetNodeId, edgeId? }`.
+ * @event lr-node-click - Deprecated: use `lr-node-activate`. Bubbles straight through from the composed `lr-graph`, unmodified.
+ * @event lr-link-click - Deprecated: use `lr-edge-activate` and `edgeId`. Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
  *   same event name/detail shape from either source) -- this component never appends neighbors
  *   itself, only forwards the request; a host fetches/generates the expansion and assigns updated
@@ -268,6 +275,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
@@ -890,10 +898,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes });
   };
 
-  /** The composed legend owns its cancellable proposal, both the canonical
-   * `lr-visibility-change-request` and its deprecated `lr-before-visibility-change` alias. Contain
-   * both names without changing whether its listeners accepted the proposal, so the child can still
-   * assign, announce, and send its existing post event. */
+  /** The composed legend owns its cancellable proposal. Contain the canonical request without
+   * changing whether its listeners accepted it, so the child can still assign, announce, and send
+   * its existing post event. */
   private onVisibilityChangeProposal = (event: Event): void => {
     event.stopPropagation();
   };
@@ -1100,7 +1107,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
             .types=${model.nodeTypes}
             .hiddenTypes=${hiddenTypes}
             @lr-visibility-change-request=${this.onVisibilityChangeProposal}
-            @lr-before-visibility-change=${this.onVisibilityChangeProposal}
             @lr-visibility-change=${this.onVisibilityChange}
           ></lr-graph-legend>
         </div>
@@ -1180,7 +1186,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           node-labels=${this.nodeLabels ?? nothing}
           width=${typeof this.width === 'string' ? this.width : finiteRange(this.width, 800, 1)}
           height=${typeof this.height === 'string' ? this.height : finiteRange(this.height, 600, 1)}
-          @lr-node-click=${this.onGraphNodeClick}
+          @lr-node-activate=${this.onGraphNodeClick}
           @click=${this.onGraphNativeClick}
           @lr-node-enter=${this.onGraphNodeEnter}
           @lr-node-leave=${this.onGraphNodeLeave}

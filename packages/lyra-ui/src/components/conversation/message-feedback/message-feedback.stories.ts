@@ -42,14 +42,14 @@ export const AsyncPersistenceHold: Story = {
     docs: {
       description: {
         story:
-          'This listener prevents `lr-feedback-submit`, placing the component in its reflected pending state without closing or announcing success. A real host retains the frozen detail’s `submissionId` and calls `finalizePendingSubmit(submissionId)` after persistence succeeds or `revertPendingSubmit(submissionId)` after it fails.',
+          'This listener prevents `lr-feedback-submit-request`, placing the component in its reflected pending state without closing or announcing success. A real host retains the frozen detail’s `submissionId` and calls `finalizePendingSubmit(submissionId)` after persistence succeeds or `revertPendingSubmit(submissionId)` after it fails.',
       },
     },
   },
   render: () => html`
     <lr-message-feedback
       .detail=${{ reasons: reasonsForStory, commentable: true }}
-      @lr-feedback-submit=${(event: Event) => event.preventDefault()}
+      @lr-feedback-submit-request=${(event: Event) => event.preventDefault()}
     ></lr-message-feedback>
   `,
 };

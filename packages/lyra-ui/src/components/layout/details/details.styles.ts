@@ -30,7 +30,7 @@ export const styles = css`
        (WCAG 2.2 SC 1.4.11) -- the same classification as lr-thinking-panel's card edge. */
     border: var(--lr-border-width-thin) solid
       var(--lr-details-outlined-border-color, var(--lr-color-border));
-    border-radius: var(--lr-details-radius, var(--lr-radius));
+    border-radius: var(--lr-details-radius, var(--lr-radius-container));
     background: var(--lr-details-outlined-bg, var(--lr-color-surface));
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -146,7 +146,7 @@ export const styles = css`
   }
   :host([open]) .icon-fallback {
     transform: rotate(-90deg);
-    transition-duration: var(--show-duration, var(--lr-duration-base));
+    transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-base)));
   }
   .icon-fallback svg {
     inline-size: var(--lr-size-1rem);

@@ -8,19 +8,25 @@
 
 import type { LyraActivityFeedEventMap } from '../components/agent-tools/activity-feed/activity-feed.class.js';
 import type { LyraAgentEvalDashboardEventMap } from '../components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js';
+import type { LyraAgentQuestionEventMap } from '../components/agent-tools/agent-question/agent-question.class.js';
 import type { LyraAgentRunEventMap } from '../components/agent-tools/agent-run/agent-run.class.js';
 import type { LyraAgentTraceEventMap } from '../components/agent-tools/agent-trace/agent-trace.class.js';
 import type { LyraApprovalQueueEventMap } from '../components/agent-tools/approval-queue/approval-queue.class.js';
 import type { LyraArtifactPanelEventMap } from '../components/agent-tools/artifact-panel/artifact-panel.class.js';
+import type { LyraBackgroundRunsEventMap } from '../components/agent-tools/background-runs/background-runs.class.js';
 import type { LyraBrowserFrameEventMap } from '../components/agent-tools/browser-frame/browser-frame.class.js';
+import type { LyraChangeReviewEventMap } from '../components/agent-tools/change-review/change-review.class.js';
 import type { LyraCommitCardEventMap } from '../components/agent-tools/commit-card/commit-card.class.js';
 import type { LyraComparePanelEventMap } from '../components/agent-tools/compare-panel/compare-panel.class.js';
 import type { LyraConfirmBarEventMap } from '../components/agent-tools/confirm-bar/confirm-bar.class.js';
+import type { LyraConnectorManagerEventMap } from '../components/agent-tools/connector-manager/connector-manager.class.js';
 import type { LyraContextInspectorEventMap } from '../components/agent-tools/context-inspector/context-inspector.class.js';
 import type { LyraEvalDatasetEventMap } from '../components/agent-tools/eval-dataset/eval-dataset.class.js';
 import type { LyraEvalResultEventMap } from '../components/agent-tools/eval-result/eval-result.class.js';
 import type { LyraEvalRunEventMap } from '../components/agent-tools/evaluation-run/evaluation-run.class.js';
 import type { LyraMcpAppEventMap } from '../components/agent-tools/mcp-app/mcp-app.class.js';
+import type { LyraPermissionGrantEventMap } from '../components/agent-tools/permission-grant/permission-grant.class.js';
+import type { LyraPermissionRulesEventMap } from '../components/agent-tools/permission-rules/permission-rules.class.js';
 import type { LyraPromptStudioEventMap } from '../components/agent-tools/prompt-studio/prompt-studio.class.js';
 import type { LyraJsonSchemaViewerEventMap } from '../components/agent-tools/schema-viewer/schema-viewer.class.js';
 import type { LyraSpanWaterfallEventMap } from '../components/agent-tools/span-waterfall/span-waterfall.class.js';
@@ -256,6 +262,7 @@ export interface LyraTagEventTypes {
   'lr-accordion': LyraAccordionEventMap;
   'lr-activity-feed': LyraActivityFeedEventMap;
   'lr-agent-eval-dashboard': LyraAgentEvalDashboardEventMap;
+  'lr-agent-question': LyraAgentQuestionEventMap;
   'lr-agent-run': LyraAgentRunEventMap;
   'lr-agent-trace': LyraAgentTraceEventMap;
   'lr-agent-workspace': LyraAgentWorkspaceEventMap;
@@ -273,6 +280,7 @@ export interface LyraTagEventTypes {
   'lr-av-player': LyraAvPlayerEventMap;
   'lr-avatar': LyraAvatarEventMap;
   'lr-avatar-group': LyraAvatarGroupEventMap;
+  'lr-background-runs': LyraBackgroundRunsEventMap;
   'lr-bar-chart': LyraChartEventMap;
   'lr-box-plot': LyraBoxPlotEventMap;
   'lr-branch-picker': LyraBranchPickerEventMap;
@@ -284,6 +292,7 @@ export interface LyraTagEventTypes {
   'lr-callout': LyraCalloutEventMap;
   'lr-card': LyraCardEventMap;
   'lr-carousel': LyraCarouselEventMap;
+  'lr-change-review': LyraChangeReviewEventMap;
   'lr-chart': LyraChartEventMap;
   'lr-chat-composer': LyraChatComposerEventMap;
   'lr-chat-message': LyraChatMessageEventMap;
@@ -307,6 +316,7 @@ export interface LyraTagEventTypes {
   'lr-compare-panel': LyraComparePanelEventMap;
   'lr-condition-builder': LyraConditionBuilderEventMap;
   'lr-confirm-bar': LyraConfirmBarEventMap;
+  'lr-connector-manager': LyraConnectorManagerEventMap;
   'lr-contact-viewer': LyraContactViewerEventMap;
   'lr-context-inspector': LyraContextInspectorEventMap;
   'lr-context-menu': LyraContextMenuEventMap;
@@ -412,6 +422,8 @@ export interface LyraTagEventTypes {
   'lr-pan-zoom': LyraPanZoomEventMap;
   'lr-path-strip': LyraPathStripEventMap;
   'lr-pdf-viewer': LyraPdfViewerEventMap;
+  'lr-permission-grant': LyraPermissionGrantEventMap;
+  'lr-permission-rules': LyraPermissionRulesEventMap;
   'lr-phone-input': LyraPhoneInputEventMap;
   'lr-pie-chart': LyraChartEventMap;
   'lr-polar-area-chart': LyraChartEventMap;
@@ -518,16 +530,16 @@ export const LYRA_EVENT_CANCELABLE: {
 } = {
   'lr-accordion': { 'lr-collapse': true, 'lr-expand': true, 'lr-toggle-request': true },
   'lr-alert': { 'lr-hide': true, 'lr-show': true },
-  'lr-app-rail': { 'lr-rail-resize-request': true, 'lr-toggle': true },
+  'lr-app-rail': { 'lr-rail-resize-request': true, 'lr-toggle-request': true },
   'lr-app-rail-group': { 'lr-toggle-request': true },
   'lr-app-rail-item': { 'lr-toggle-request': true },
-  'lr-approval-queue': { 'lr-approval-decision': true },
-  'lr-bar-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
-  'lr-box-plot': { 'lr-before-legend-visibility-change': true, 'lr-legend-visibility-change-request': true },
-  'lr-bubble-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-approval-queue': { 'lr-approval-decision': true, 'lr-approval-decision-request': true },
+  'lr-bar-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-box-plot': { 'lr-legend-visibility-change-request': true },
+  'lr-bubble-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-button': { 'lr-invalid': true },
-  'lr-callout': { 'lr-close': true },
-  'lr-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-callout': { 'lr-close-request': true },
+  'lr-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-chat-composer': { 'lr-invalid': true },
   'lr-chat-message': { 'lr-toggle-request': true },
   'lr-checkbox': { 'lr-checkbox-toggle-request': true, 'lr-invalid': true },
@@ -537,87 +549,87 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-code-block-core': { 'lr-toggle-request': true },
   'lr-code-editor': { 'lr-invalid': true },
   'lr-color-picker': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
-  'lr-combobox': { 'lr-create': true, 'lr-hide': true, 'lr-invalid': true, 'lr-retry': true, 'lr-show': true },
-  'lr-command-palette': { 'lr-close': true, 'lr-open': true, 'lr-show': true },
-  'lr-compare-panel': { 'lr-vote': true },
-  'lr-confirm-bar': { 'lr-approve': true, 'lr-deny': true },
+  'lr-combobox': { 'lr-create': true, 'lr-hide': true, 'lr-invalid': true, 'lr-retry': true, 'lr-retry-request': true, 'lr-show': true },
+  'lr-command-palette': { 'lr-close-request': true, 'lr-show': true },
+  'lr-compare-panel': { 'lr-vote': true, 'lr-vote-request': true },
+  'lr-confirm-bar': { 'lr-approve': true, 'lr-approve-request': true, 'lr-deny': true, 'lr-deny-request': true },
   'lr-context-inspector': { 'lr-export': true },
   'lr-context-menu': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
-  'lr-context-meter': { 'lr-segment-activate': true },
-  'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry': true, 'lr-sort-request': true },
+  'lr-context-meter': { 'lr-segment-activate': true, 'lr-segment-activate-request': true },
+  'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry': true, 'lr-retry-request': true, 'lr-sort-request': true },
   'lr-date-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-details': { 'lr-hide': true, 'lr-show': true },
-  'lr-dialog': { 'lr-close': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },
+  'lr-dialog': { 'lr-close-request': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },
   'lr-dock-panel': { 'lr-collapse-request': true, 'lr-resize-request': true },
-  'lr-document-library': { 'lr-retry': true, 'lr-sort-request': true },
-  'lr-doughnut-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
-  'lr-drawer': { 'lr-close': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },
+  'lr-document-library': { 'lr-retry': true, 'lr-retry-request': true, 'lr-sort-request': true },
+  'lr-doughnut-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-drawer': { 'lr-close-request': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },
   'lr-dropdown': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
   'lr-dropdown-item': { 'lr-menu-item-change': true, 'lr-menu-item-change-request': true },
   'lr-emoji-picker': { 'lr-invalid': true },
-  'lr-eval-run': { 'lr-example-tool-approval-decide': true },
-  'lr-export-button': { 'lr-export': true, 'lr-hide': true, 'lr-show': true },
+  'lr-eval-run': { 'lr-example-tool-approval-decide': true, 'lr-example-tool-approval-decide-request': true },
+  'lr-export-button': { 'lr-export': true, 'lr-export-request': true, 'lr-hide': true, 'lr-show': true },
   'lr-file-input': { 'lr-invalid': true },
-  'lr-graph-legend': { 'lr-before-visibility-change': true, 'lr-visibility-change-request': true },
-  'lr-graph-query-builder': { 'lr-before-query-delete': true, 'lr-before-query-load': true, 'lr-before-query-run': true, 'lr-before-query-save': true, 'lr-invalid': true, 'lr-query-delete-request': true, 'lr-query-load-request': true, 'lr-query-run-request': true, 'lr-query-save-request': true },
-  'lr-histogram': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-graph-legend': { 'lr-visibility-change-request': true },
+  'lr-graph-query-builder': { 'lr-invalid': true, 'lr-query-delete-request': true, 'lr-query-load-request': true, 'lr-query-run-request': true, 'lr-query-save-request': true },
+  'lr-histogram': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-input': { 'lr-invalid': true },
-  'lr-knowledge-base': { 'lr-retry': true },
+  'lr-knowledge-base': { 'lr-retry': true, 'lr-retry-request': true },
   'lr-known-date': { 'lr-invalid': true },
-  'lr-lightbox': { 'lr-hide': true, 'lr-lightbox-close': true, 'lr-show': true },
-  'lr-line-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
-  'lr-locale-picker': { 'lr-change': true, 'lr-invalid': true },
+  'lr-lightbox': { 'lr-close-request': true, 'lr-hide': true, 'lr-lightbox-close': true, 'lr-show': true },
+  'lr-line-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-locale-picker': { 'lr-change-request': true, 'lr-invalid': true },
   'lr-map': { 'lr-map-legend-panel-toggle': true, 'lr-map-legend-panel-toggle-request': true, 'lr-map-legend-toggle': true, 'lr-map-legend-toggle-request': true },
   'lr-media-card': { 'lr-before-media-download': true, 'lr-media-download-request': true },
   'lr-menu': { 'lr-select': true },
   'lr-menu-item': { 'lr-menu-item-change': true, 'lr-menu-item-change-request': true },
   'lr-menubar': { 'lr-select': true },
-  'lr-message-actions': { 'lr-feedback-submit': true },
-  'lr-message-feedback': { 'lr-feedback-submit': true },
+  'lr-message-actions': { 'lr-feedback-submit': true, 'lr-feedback-submit-request': true },
+  'lr-message-feedback': { 'lr-feedback-submit': true, 'lr-feedback-submit-request': true },
   'lr-model-select': { 'lr-invalid': true },
-  'lr-multi-split': { 'lr-resize-request': true, 'lr-toggle': true },
+  'lr-multi-split': { 'lr-resize-request': true, 'lr-toggle-request': true },
   'lr-native-time-input': { 'lr-invalid': true },
   'lr-number-input': { 'lr-invalid': true },
   'lr-otp-input': { 'lr-complete': true, 'lr-invalid': true },
   'lr-page': { 'lr-nav-toggle': true, 'lr-nav-toggle-request': true },
   'lr-pagination': { 'lr-before-page-change': true },
   'lr-phone-input': { 'lr-invalid': true },
-  'lr-pie-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
-  'lr-polar-area-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-pie-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-polar-area-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-popover': { 'lr-hide': true, 'lr-show': true },
   'lr-prompt-input': { 'lr-attachment-preview-request': true },
-  'lr-prompt-studio': { 'lr-change': true, 'lr-message-reorder': true, 'lr-message-reorder-request': true },
-  'lr-radar-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-prompt-studio': { 'lr-change-request': true, 'lr-message-reorder': true, 'lr-message-reorder-request': true },
+  'lr-radar-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-radio': { 'lr-invalid': true },
   'lr-radio-button': { 'lr-invalid': true },
   'lr-radio-group': { 'lr-invalid': true },
   'lr-rating': { 'lr-invalid': true },
   'lr-reorder-list': { 'lr-reorder': true, 'lr-reorder-request': true },
-  'lr-responsive-panel': { 'lr-close': true },
+  'lr-responsive-panel': { 'lr-close-request': true },
   'lr-rubric-form': { 'lr-invalid': true },
-  'lr-scatter-chart': { 'lr-before-datum-visibility-change': true, 'lr-before-legend-visibility-change': true, 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
+  'lr-scatter-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-select': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-slider': { 'lr-invalid': true },
   'lr-split-panel': { 'lr-reposition-request': true },
   'lr-switch': { 'lr-invalid': true, 'lr-switch-toggle-request': true },
-  'lr-table': { 'lr-column-resize': true, 'lr-retry': true, 'lr-row-expand-request': true, 'lr-sort-request': true },
-  'lr-terminal': { 'lr-download': true },
+  'lr-table': { 'lr-column-resize-request': true, 'lr-retry': true, 'lr-retry-request': true, 'lr-row-expand-request': true, 'lr-sort-request': true },
+  'lr-terminal': { 'lr-download': true, 'lr-download-request': true },
   'lr-textarea': { 'lr-invalid': true },
   'lr-thinking-panel': { 'lr-toggle-request': true },
-  'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry': true },
+  'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry': true, 'lr-retry-request': true },
   'lr-time-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-time-range': { 'lr-invalid': true },
   'lr-toast-item': { 'lr-hide': true, 'lr-show': true },
   'lr-toggle': { 'lr-toggle-toggle-request': true },
   'lr-toggle-group': { 'lr-toggle-group-toggle-request': true },
   'lr-token-input': { 'lr-add': true, 'lr-invalid': true, 'lr-remove': true, 'lr-token-add-request': true, 'lr-token-edit': true, 'lr-token-edit-request': true, 'lr-token-remove-request': true },
-  'lr-tool-approval-dialog': { 'lr-approve': true, 'lr-deny': true },
+  'lr-tool-approval-dialog': { 'lr-approve': true, 'lr-approve-request': true, 'lr-deny': true, 'lr-deny-request': true },
   'lr-tool-param-form': { 'lr-invalid': true },
   'lr-tool-result-dialog': { 'lr-maximize-change': true, 'lr-maximize-change-request': true },
-  'lr-tool-select-dialog': { 'lr-change': true },
-  'lr-tool-timeline': { 'lr-tool-approval-decide': true },
+  'lr-tool-select-dialog': { 'lr-change-request': true },
+  'lr-tool-timeline': { 'lr-tool-approval-decide': true, 'lr-tool-approval-decide-request': true },
   'lr-tooltip': { 'lr-hide': true, 'lr-show': true },
-  'lr-tour': { 'lr-tour-end': true, 'lr-tour-step-change': true, 'lr-tour-step-change-request': true },
+  'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change': true, 'lr-tour-step-change-request': true },
   'lr-voice-picker': { 'lr-invalid': true, 'lr-preview-request': true },
   'lr-widget': { 'lr-collapse-request': true, 'lr-fullscreen-request': true, 'lr-view-request': true },
 };

@@ -93,6 +93,13 @@ export const Empty: Story = {
 };
 
 export const LoadFailed: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Listen for lr-retry-request to start a new load. Call preventDefault() to keep the error visible while the host controls retry timing. The deprecated lr-retry veto alias remains supported until removal no earlier than 24.0.0.',
+      },
+    },
+  },
   name: 'Load failed (error)',
   render: () => html`<lr-knowledge-base
     style="max-width:56rem"

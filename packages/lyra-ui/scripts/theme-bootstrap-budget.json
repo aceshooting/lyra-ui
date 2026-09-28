@@ -1,7 +1,7 @@
 {
-  "$comment": "Size ceiling for the exact lyraThemeBootstrap string read from the built dist/theme/theme.js (the bytes consumers inline and that dist/theme/theme-bootstrap.js ships verbatim), measured with Node zlib level 9. Enforced by `pnpm run check:theme-bootstrap` (scripts/generate-theme-bootstrap.mjs --check, chained into build) and by scripts/theme-bootstrap-build-check.test.mjs. It lives here rather than in bundle-budgets.json because check-bundle-size.mjs re-minifies what it measures, so it never sees the verbatim shipped string. Each ceiling is the reviewed measurement + 2%, rounded up; raising one needs a reviewed re-measurement. 2026-09-25: reviewed after the bootstrap learned to restore validated --lr-theme-* token maps and apply the contrast floor before first paint.",
-  "reviewedRawBytes": 12035,
-  "reviewedGzipBytes": 3980,
-  "maxRawBytes": 12276,
-  "maxGzipBytes": 4060
+  "$comment": "Ceilings for the exact shipped lyraThemeBootstrap string, measured raw and with gzip level 9. Reviewed v2 style restoration includes mode branches, reversible ownership and packed token membership after removing duplicate setup and compacting serialized function locals. The build enforces reviewed measurements plus 2% rounded-up headroom; bundle re-minification is deliberately excluded.",
+  "reviewedRawBytes": 16872,
+  "reviewedGzipBytes": 6088,
+  "maxRawBytes": 17210,
+  "maxGzipBytes": 6210
 }

@@ -1,0 +1,34 @@
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
+@layer lr-theme-preset.surface {
+  :root, :host {
+    --_lr-media-clear-scrim-start: 0.78;
+    --_lr-media-clear-scrim-end: 0.92;
+    --_lr-media-clear-fill: rgb(255 255 255 / 0.08);
+    --_lr-media-clear-text: #ffffff;
+  }
+  [data-lr-surface='glass'] {
+    --_lr-surface-installed: 1;
+    --_lr-surface-enabled: 1;
+    --_lr-surface-content: '';
+    --_lr-surface-isolation: isolate;
+    --_lr-surface-min-opacity: 0.9;
+    --_lr-surface-maximum-blur: 16px;
+    --_lr-surface-foreground-weight: 55.00000000000001%;
+    --_lr-surface-child-filter: none;
+    --_lr-surface-child-opacity: 1;
+    --lr-theme-surface-opacity: 0.9;
+    --lr-theme-surface-blur: 12px;
+    --lr-theme-surface-saturation: 1.1;
+    --lr-theme-surface-highlight: rgb(255 255 255 / 0.12);
+  }
+  [data-lr-surface='solid'] {
+    --_lr-surface-installed: 1;
+    --_lr-surface-enabled: initial;
+    --_lr-surface-maximum-blur: initial;
+    --_lr-surface-content: none;
+    --_lr-surface-isolation: auto;
+    --_lr-surface-child-filter: initial;
+    --_lr-surface-child-opacity: initial;
+  }
+}

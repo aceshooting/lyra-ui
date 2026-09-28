@@ -6,7 +6,9 @@
 - **Class** `LyraToolApprovalDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Deprecated event** `lr-approve` since `unreleased`; use event `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated event** `lr-deny` since `unreleased`; use event `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Deprecated property** `pending` / `pending` since `21.1.0`; use property `pending-action`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
@@ -63,7 +65,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
   `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
 - `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected) — which
-  decision is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called
+  decision is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called
   `preventDefault()` on the now-cancelable event; the pending button shows `loading`, the other is
   `disabled` (Approve is also still `disabled` while an in-progress edit is invalid JSON,
   independent of `pendingAction`). Escape and an enabled backdrop dismissal are suppressed while
@@ -79,30 +81,33 @@ renders at the start of the action row, before Deny/Edit/Approve.
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
 and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
-**Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
+**Events:** `lr-approve-request` and `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
 Cancelable: a listener calling `preventDefault()` sets `pendingAction` to `'approve'` instead of
-closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail —
-`this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
-default, `event.detail` is `null`, not `undefined`. Cancelable, same `pendingAction` mechanism,
-setting `pendingAction` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
-(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
+closing; otherwise followed by `lr-close` with reason `'approve'`), `lr-deny-request` and `lr-deny`
+(`detail: null`, cancelable, with the same `pendingAction` mechanism,
+setting `pendingAction` to `'deny'`; otherwise followed by `lr-close` with reason `'deny'`), `lr-close`
+(`detail: { reason: ToolApprovalDialogCloseReason }` — fired exactly once per dismissal, via Escape, an opted-in
 backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
 dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
+`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
+follows its request with the same detail; preventing either spelling holds that decision pending.
+Subscribe to one spelling per action. `lr-close` remains the non-cancelable dismissal notification.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share
-the `lr-approve`/`lr-deny` event *names*, so the generated `HTMLElementEventMap['lr-approve']` is the
+the `lr-approve-request`/`lr-deny-request` event *names*, so the generated `HTMLElementEventMap['lr-approve-request']` is the
 union of both details and only the confirm bar's arm has the field: a listener bound to the shared
-name (`document.addEventListener('lr-approve', ...)`) must narrow on `event.target` before reaching
+name (`document.addEventListener('lr-approve-request', ...)`) must narrow on `event.target` before reaching
 for it, while one bound through `LyraConfirmBarEventMap`/`LyraToolApprovalDialogEventMap` already
 sees the right detail. Hold a decision open here with `preventDefault()` + `pendingAction`, then
 finalize with `close('approve'|'deny')` or bounce back by clearing `.pendingAction`.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
+
 
 **CSS parts:** `backdrop`, `panel`, `header`, `tool-name`, `body`, `args-view`, `args-editor`, `error`,
 `footer`, `deny-button`, `edit-button`, `approve-button`,
@@ -136,8 +141,8 @@ package, not an optional peer.
 <script type="module">
   const dialog = document.querySelector("lr-tool-approval-dialog");
   dialog.args = { to: "ops@example.com", subject: "Deploy finished" };
-  dialog.addEventListener("lr-approve", (e) => runTool(e.detail.args));
-  dialog.addEventListener("lr-deny", () => console.log("denied"));
+  dialog.addEventListener("lr-approve-request", (e) => runTool(e.detail.args));
+  dialog.addEventListener("lr-deny-request", () => console.log("denied"));
   dialog.addEventListener("lr-close", (e) => console.log("closed:", e.detail));
   dialog.open = true;
 </script>
@@ -173,7 +178,7 @@ shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
 
-- `lr-deny` has no detail payload: its `event.detail` is `null`, not `undefined`.
+- `lr-deny-request` has no detail payload: its `event.detail` is `null`, not `undefined`.
 - a consumer turning `readonly` on while an edit is already in progress automatically exits edit mode
   and discards the draft, so an unreachable "Cancel" affordance is never left stranded on screen.
 - reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
@@ -195,7 +200,7 @@ shared composed-tree focus traversal used by the other modal families.
   a raw `<button>`.
 - Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
   `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
-- An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
+- An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while
   its own async work is in flight — see `pendingAction` above. While `pendingAction` is set, Escape
   and an enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending
   decision leaves the dialog open until it clears `.pendingAction` or calls `close()` directly

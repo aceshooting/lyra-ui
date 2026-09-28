@@ -1,9 +1,16 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './checkpoint.js';
 import type { LyraCheckpoint } from './checkpoint.js';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', [
+  'checkpointLabel',
+  'checkpointRestoreWithContext',
+  'checkpointRestore',
+]);
 it('defaults to checkpointId="", label="", withoutRestore=false, withoutRestoreConfirmation=false, restoring=false', async () => {
   const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
   expect(el.checkpointId).to.equal('');

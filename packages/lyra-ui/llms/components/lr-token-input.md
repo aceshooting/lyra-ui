@@ -6,7 +6,7 @@
 - **Class** `LyraTokenInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated event** `lr-add` since `21.1.0`; use event `addEventListener('lr-token-add-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Deprecated event** `lr-remove` since `21.1.0`; use event `addEventListener('lr-token-remove-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Deprecated event** `lr-token-edit` since `21.1.0`; use event `addEventListener('lr-token-edit-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.

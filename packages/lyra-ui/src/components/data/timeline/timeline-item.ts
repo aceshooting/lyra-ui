@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-timeline-item.js to register this component. */
 export * from './timeline-item.class.js';
 import { LyraTimelineItem } from './timeline-item.class.js';
 import { defineElement } from '../../../internal/prefix.js';

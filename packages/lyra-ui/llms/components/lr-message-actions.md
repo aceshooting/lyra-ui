@@ -6,7 +6,8 @@
 - **Class** `LyraMessageActions`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-actions/message-actions.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
+- **Deprecated event** `lr-feedback-submit` since `unreleased`; use event `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated part** `edit-button__control` since `21.1.0`; use part `::part(edit-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `regenerate-button__control` since `21.1.0`; use part `::part(regenerate-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
@@ -67,15 +68,15 @@ frozen `detail: { ok: true, text }`, emitted only after the embedded `lr-copy-bu
 write fulfills (bubbles/composed already, not re-emitted). A failed write surfaces generic
 `lr-error` (`detail: null`) plus `lr-copy-error` with frozen
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
-`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded, thumbs-only
+`lr-feedback-change`/`lr-feedback-submit-request` — bubble unchanged from the embedded, thumbs-only
 `lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
-pass to either settlement method. A colliding event from an
+pass to either settlement method. Its deprecated cancelable `lr-feedback-submit` compatibility
+alias also bubbles unchanged and retains the same detail and cancellation behavior. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
 Composite toolbar providers must expose nonblank action ids that are unique within that provider;
 invalid actions and later duplicates are omitted before roving focus ownership.
-
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
 navigation. A standalone `lr-toggle` (pin, read aloud) is a `LyraToolbarActionProvider` and joins the

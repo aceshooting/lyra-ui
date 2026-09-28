@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-markdown.js to register this component. */
 export * from './markdown.class.js';
 export { loadMarkdownDeps as preloadMarkdown } from './markdown-loader.js';
 export type { LyraMarkedParser } from './markdown-loader.js';

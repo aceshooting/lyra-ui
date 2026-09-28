@@ -409,7 +409,10 @@ it('recreates its shared target observer in the adopted owner realm', async () =
     private relevant = false;
     constructor(_callback: MutationCallback) {}
     observe(target: Node, options?: MutationObserverInit): void {
-      if (target === frameDocument && options?.childList && options.subtree) {
+      if (
+        target === frameDocument && options?.childList && options.subtree &&
+        options.attributeFilter?.includes('id')
+      ) {
         this.relevant = true;
         rootObservations += 1;
       }

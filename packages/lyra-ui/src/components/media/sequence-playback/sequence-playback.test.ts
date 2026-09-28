@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
@@ -16,6 +17,8 @@ const LOOP: readonly DeprecatedUsage[] = [
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sequence-playback', 'index');
 expectStaleAttribute('lr-sequence-playback', 'length');
+
+expectLocaleFallback('ar-EG', ['play', 'playbackPosition', 'playbackStepPosition']);
 
 it('registers only the explicit sequence-playback identity and removes the generic v8 surface', async () => {
   expect(customElements.get('lr-sequence-playback')).to.equal(LyraSequencePlayback);

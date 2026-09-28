@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
@@ -21,6 +22,8 @@ const WORDS = [
   { text: 'beta', weight: 5 },
   { text: 'gamma', weight: 1 },
 ];
+
+expectLocaleFallback('de-DE', ['wordCloud', 'wordCloudWord']);
 
 it('checks typography tokens after an out-of-band theme invalidation', async () => {
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);

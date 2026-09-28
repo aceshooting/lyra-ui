@@ -1185,10 +1185,9 @@ reimplemented.
 
 - `disabled: boolean = false` (reflected) — disables drag/drop handling entirely; the wrapped
   content keeps its own interactivity
-- `multiple: boolean = true` (reflected) — accepts more than one file per drop and enables
-  recursive folder-drop traversal, same contract as `lr-file-input`'s `multiple`. Defaults to `true`
-  (unlike `lr-file-input`'s `false`): a region wrapper's typical use expects more than one file, and
-  there is no native single-file picker here to keep in sync.
+- `multiple: boolean = false` (reflected) — opts into more than one file per drop and recursive
+  folder-drop traversal, matching `lr-file-input`. Explicit `multiple="false"` remains false;
+  removal restores single-file mode. Set `multiple` to preserve the former batch default.
 - `accept: string = ''` — identical native-`accept`-style parsing to `lr-file-input`'s `accept`, via
   the same shared `matchesAccept()`
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check), `maxFiles:
@@ -2319,8 +2318,8 @@ capability as a row.
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
   means "any file type").
-- `multiple: boolean = true` (reflected) — forwarded to the hidden file input's own `multiple`
-  attribute.
+- `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
+  opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
 - `accessibleLabel?: string` (attribute `accessible-label`, deprecated) — overrides either trigger shape's localized
   accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the
@@ -2452,7 +2451,7 @@ values restore the image or fallback name.
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
-- `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
+- `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
 'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
   matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes
@@ -2735,7 +2734,7 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
-- `size: LyraSize = 'medium'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
+- `size: LyraSize = 'm'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
 - `shape: LyraAvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`.
 - `variant: LyraVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
 'danger'`.
@@ -2866,11 +2865,11 @@ detail.
 
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
 cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
-`lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
-'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
-closing on every path, including a consumer's own `close()` call), followed after a successful
-closed render by `lr-after-hide`. Removal while open emits the settled non-vetoable
-hide/close/after-hide order with reason `'unmount'`. `lr-index-change` (`detail: { index }`, fired
+cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`; accepted dismissal
+sets `open = false` and emits non-cancelable `lr-close` with the same reason object. The deprecated
+`lr-lightbox-close` remains a string-detail, cancelable compatibility event between the proposal
+and state change. Use `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
+`lr-after-hide` follows the closed render. Removal while open reports reason `unmount`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
@@ -3085,6 +3084,14 @@ element that read them. Unset, each falls back to the token its rule used before
 
 ## `lr-av-player`
 
+`controls-surface="regular"` (default) keeps the owned playback-rate toolbar's ordinary surface.
+`controls-surface="clear"` opts that toolbar into a white foreground over its own dark gradient
+scrim. Load `@aceshooting/lyra-ui/surfaces/glass.css` for its translucent recipe; without it the
+scrim remains opaque. This option never changes browser-owned native media controls. Increased
+contrast and reduced-transparency preferences make the treatment opaque; forced colours use
+system colours. The `LyraAvControlsSurface` type is `'regular' | 'clear'`.
+
+
 An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
 in, no in-component decoding), and playback-rate control. Owns recorded-media transcript sync —
@@ -3118,6 +3125,9 @@ consumer supplies `cues` directly.
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected),
 `volume: number = 1` (attribute `volume`, reflected; normalized to `0..1`),
+`controlsSurface: LyraAvControlsSurface = 'regular'` (attribute `controls-surface`, reflected) —
+selects the owned playback-rate toolbar treatment; `'clear'` uses a white foreground and dark
+gradient scrim, while browser-owned native media controls are unchanged,
 `rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
 `cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
 (attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
@@ -4011,3 +4021,8 @@ These named interfaces and helper signatures are available to typed integrations
     muted: boolean;
     playbackRate: number;
   }`
+
+Numeric language regions (for example `es-419` and `en-001`) do not derive a single country flag.
+Use the locale's visible label, or explicitly choose a `country` when the application needs a
+particular country. Representative language mappings also include `lb` (Luxembourgish) and `fil`
+(Filipino); these mappings do not imply that a Lyra translation catalog is installed.

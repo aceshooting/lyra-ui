@@ -6,7 +6,7 @@
 - **Class** `LyraToolCallBlock`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated css-property** `--lr-tool-call-block-background` since `21.1.0`; use css-property `--lr-tool-call-block-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `error` / `error` since `21.1.0`; use property `error-text`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none

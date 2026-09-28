@@ -6,7 +6,7 @@
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated css-property** `--lr-button-active-background` since `21.1.0`; use css-property `--lr-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-button-hover-background` since `21.1.0`; use css-property `--lr-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-button-quiet-text` since `21.1.0`; use css-property `--lr-button-quiet-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
@@ -263,8 +263,9 @@ press reads as more than a hover. Deprecated aliases: `--lr-button-hover-backgro
 instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
 `--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by
-default**, falling back to whatever colour/border the active `appearance` already paints at rest —
-every appearance's current hover paint is unchanged until one is set.
+default**. Chromatic `plain` text moves toward body text during hover/press to retain contrast
+against the moving fill; the other appearances keep their resting text colour. The hover colour
+override also applies while pressed, and the border fallback remains the resting border colour.
 `appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
 colour mix) and renders with no border at any state, so `--lr-button-hover-border` has no visible
 effect there. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,

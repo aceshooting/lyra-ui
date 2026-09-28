@@ -526,7 +526,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
         | HTMLElement
         | undefined;
       target?.scrollIntoView({
-        behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+        behavior: prefersReducedMotion(this)
           ? 'auto'
           : 'smooth',
         block: 'nearest',
@@ -559,7 +559,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       | HTMLElement
       | undefined;
     target?.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+      behavior: prefersReducedMotion(this)
         ? 'auto'
         : 'smooth',
       block: 'nearest',

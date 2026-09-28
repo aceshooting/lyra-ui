@@ -26,7 +26,7 @@ export const styles = css`
     --_lr-button-font-size: var(--lr-form-control-font-size);
     --_lr-button-min-height: var(--lr-button-size-m, var(--_lr-button-size-m));
     --_lr-button-gap: var(--lr-form-control-gap);
-    --_lr-button-radius: var(--lr-form-control-radius);
+    --_lr-button-radius: var(--lr-radius-button);
     /* Relative to the button's own font-size, so the with-caret chevron tracks every tier without a
        per-tier rule -- as lr-attachment-trigger's expand-icon does. */
     --_lr-button-caret-size: var(--lr-size-0-75em);
@@ -34,7 +34,8 @@ export const styles = css`
        row, so no :host([variant='...']) block is needed -- there were five before 8.0.0. "filled"
        reads the QUIET tier, "accent" the LOUD one; they used to share one loud token per chromatic
        variant (identical rendering) while neutral's "filled" was the page surface, i.e. no fill. */
-    --_lr-button-accent: var(--lr-color-fill-loud);
+    --_lr-button-glass-accent: color-mix(in srgb, var(--lr-color-fill-loud), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-button-accent: var(--_lr-button-glass-accent, var(--lr-color-fill-loud));
     --_lr-button-fill: var(--lr-color-fill-quiet);
     --_lr-button-on-fill: var(--lr-color-on-quiet);
     --_lr-button-border: var(--lr-color-border-normal);
@@ -123,6 +124,12 @@ export const styles = css`
     --_lr-button-resolved-color: var(--lr-button-accent, var(--_lr-button-accent));
     --_lr-button-resolved-border: transparent;
   }
+  /* Chromatic plain text moves toward body text faster than its pointer fill, preserving
+     contrast as the fill approaches the foreground. Neutral already uses body text. */
+  :host([appearance="plain"][variant]:not([variant="neutral"])) {
+    --_lr-button-hover-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-hover))));
+    --_lr-button-active-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-active))));
+  }
   :host([appearance="quiet"]) {
     --_lr-button-resolved-color: var(
       --lr-button-quiet-color,
@@ -133,7 +140,7 @@ export const styles = css`
       var(--_lr-button-quiet-border)
     );
   }
-  /* The one place a variant still needs naming. The four chromatic variants use their loud fill as
+  /* The four chromatic variants use their loud fill as
      the chrome-less foreground -- brand text on the surface IS the brand colour. Neutral's loud
      fill is a mid grey built for LIGHT text; as dark-on-surface text it washes out every plain,
      outlined and link button and collapses the plain/quiet gap, so neutral keeps the body text
@@ -266,12 +273,10 @@ export const styles = css`
       --lr-button-hover-bg,
       var(--lr-button-hover-background, var(--_lr-button-hover-background))
     );
-    /* Unset, these fall back to --_lr-button-resolved-color/-border -- the SAME colour/border-colour
-       the active appearance already paints at rest (see the :host block above) -- so exposing the
-       two hooks changes no appearance's current hover paint. appearance="link" sets its own hover
-       color at higher specificity (its color-mix formula), so this never touches it; its border is
-       already zeroed to 0, so a resolved border-colour here stays invisible there too. */
-    color: var(--lr-button-hover-color, var(--_lr-button-resolved-color));
+    /* Plain chromatic text has a qualified pointer foreground; the remaining appearances
+       retain their resting foreground. The public hover hook also owns the pressed state.
+       Link keeps its own higher-specificity colour-mix rule. */
+    color: var(--lr-button-hover-color, var(--_lr-button-hover-color, var(--_lr-button-resolved-color)));
     border-color: var(--lr-button-hover-border, var(--_lr-button-resolved-border));
   }
   [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
@@ -279,6 +284,7 @@ export const styles = css`
       --lr-button-active-bg,
       var(--lr-button-active-background, var(--_lr-button-active-background))
     );
+    color: var(--lr-button-hover-color, var(--_lr-button-active-color, var(--_lr-button-resolved-color)));
     transform: scale(var(--lr-button-active-scale, 0.9875));
   }
   @media (prefers-reduced-motion: reduce) {
@@ -479,8 +485,8 @@ export const styles = css`
     inset: 0;
     align-items: center;
     justify-content: center;
-    animation: lr-button-spin
-      var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite;
+    animation: var(--_lr-motion-animation, lr-button-spin
+      var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite);
   }
   :host([loading]) [part~="start"],
   :host([loading]) [part="label"],
@@ -495,7 +501,7 @@ export const styles = css`
   }
   @media (prefers-reduced-motion: reduce) {
     [part="spinner"] {
-      animation-duration: 0.001ms;
+      animation-duration: var(--_lr-motion-duration, 0.001ms);
       animation-iteration-count: 1;
     }
   }

@@ -1,8 +1,13 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import './confirm-bar.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
+
+// One test intentionally exercises a late waitUntil() call and its documented no-op diagnostic.
+expectDevWarning('lyra-confirm-bar-wait-until-after-dispatch');
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { nextHostUpdateOpportunity } from '../../../internal/focus-navigation.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
@@ -44,7 +49,7 @@ it('renders repeated heading placeholders and does not append a tool omitted by 
 it('moves focus to status before a pending decision is finalized externally', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
-  el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
   approve.click();
   await el.updateComplete;
   approve.focus();
@@ -140,11 +145,11 @@ it('stops the nested json-viewer\'s lr-copy (and sibling clipboard/search events
   }
 });
 
-it('lr-approve carries args as-is; lr-deny carries only the resolver; both set decision and remove the buttons', async () => {
+it('lr-approve-request carries args as-is; lr-deny-request carries only the resolver; both set decision and remove the buttons', async () => {
   const approveEl = (await fixture(
     html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`,
   )) as LyraConfirmBar;
-  const approvePromise = oneEvent(approveEl, 'lr-approve');
+  const approvePromise = oneEvent(approveEl, 'lr-approve-request');
   (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
   const approveDetail = (await approvePromise).detail as { args: unknown; waitUntil: unknown };
   expect(approveDetail.args, 'args reach the listener unedited').to.deep.equal({ x: 1 });
@@ -155,12 +160,12 @@ it('lr-approve carries args as-is; lr-deny carries only the resolver; both set d
   expect((approveEl.shadowRoot!.querySelector('[part="deny-button"]')) == null).to.be.true;
 
   const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-  const denyPromise = oneEvent(denyEl, 'lr-deny');
+  const denyPromise = oneEvent(denyEl, 'lr-deny-request');
   (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
-  // lr-deny still carries no data of its own -- `waitUntil` is the resolver every decision event
+  // lr-deny-request still carries no data of its own -- `waitUntil` is the resolver every decision event
   // carries, not a denial payload -- so a listener reading the detail for deny-specific information
   // finds nothing, exactly as it did when the detail was null and exactly as
-  // lr-tool-approval-dialog's own lr-deny still behaves.
+  // lr-tool-approval-dialog's own lr-deny-request still behaves.
   const denyDetail = (await denyPromise).detail as { waitUntil: unknown };
   expect(Object.keys(denyDetail)).to.deep.equal(['waitUntil']);
   expect(typeof denyDetail.waitUntil).to.equal('function');
@@ -206,8 +211,8 @@ it('a host-set decision renders identically but emits nothing itself', async () 
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   let approveFired = false;
   let denyFired = false;
-  el.addEventListener('lr-approve', () => (approveFired = true));
-  el.addEventListener('lr-deny', () => (denyFired = true));
+  el.addEventListener('lr-approve-request', () => (approveFired = true));
+  el.addEventListener('lr-deny-request', () => (denyFired = true));
   el.decision = 'approved';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('Approved');
@@ -442,11 +447,11 @@ describe('size and frame', () => {
     expect(part(el, 'status').getBoundingClientRect().width).to.be.greaterThan(0);
   });
 
-  it('fires lr-approve/lr-deny identically', async () => {
+  it('fires lr-approve-request/lr-deny-request identically', async () => {
     const approveEl = (await fixture(
       html`<lr-confirm-bar size="s" .args=${{ x: 1 }}></lr-confirm-bar>`,
     )) as LyraConfirmBar;
-    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    const approvePromise = oneEvent(approveEl, 'lr-approve-request');
     (part(approveEl, 'approve-button') as LyraButton).click();
     const approveDetail = (await approvePromise).detail as { args: unknown; waitUntil: unknown };
     expect(approveDetail.args).to.deep.equal({ x: 1 });
@@ -455,7 +460,7 @@ describe('size and frame', () => {
     expect(approveEl.decision).to.equal('approved');
 
     const denyEl = (await fixture(html`<lr-confirm-bar size="s"></lr-confirm-bar>`)) as LyraConfirmBar;
-    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    const denyPromise = oneEvent(denyEl, 'lr-deny-request');
     (part(denyEl, 'deny-button') as LyraButton).click();
     const denyDetail = (await denyPromise).detail as { waitUntil: unknown };
     expect(Object.keys(denyDetail)).to.deep.equal(['waitUntil']);
@@ -565,7 +570,7 @@ describe('focus-on-mount and escape-denies', () => {
       html`<lr-confirm-bar escape-denies tool-name="run_shell"></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const denyPromise = oneEvent(el, 'lr-deny');
+    const denyPromise = oneEvent(el, 'lr-deny-request');
     base.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
     );
@@ -591,7 +596,7 @@ describe('focus-on-mount and escape-denies', () => {
       bubbledToWrapper = true;
     });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    const denyPromise = oneEvent(el, 'lr-deny');
+    const denyPromise = oneEvent(el, 'lr-deny-request');
     base.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }),
     );
@@ -611,7 +616,7 @@ describe('focus-on-mount and escape-denies', () => {
     });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let denyFired = false;
-    el.addEventListener('lr-deny', () => {
+    el.addEventListener('lr-deny-request', () => {
       denyFired = true;
     });
     base.dispatchEvent(
@@ -629,7 +634,7 @@ describe('focus-on-mount and escape-denies', () => {
     )) as LyraConfirmBar;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     let denyFired = false;
-    el.addEventListener('lr-deny', () => {
+    el.addEventListener('lr-deny-request', () => {
       denyFired = true;
     });
     base.dispatchEvent(
@@ -649,7 +654,7 @@ describe('focus-on-mount and escape-denies', () => {
       { parentNode: wrapper },
     )) as LyraConfirmBar;
     let denyFired = false;
-    el.addEventListener('lr-deny', () => {
+    el.addEventListener('lr-deny-request', () => {
       denyFired = true;
     });
     let bubbledToWrapper = false;
@@ -823,9 +828,9 @@ describe('deny/approve as lr-button', () => {
 });
 
 describe('async pending decisions', () => {
-  it('lr-approve/lr-deny are cancelable; preventDefault() sets pending instead of finalizing decision', async () => {
+  it('lr-approve-request/lr-deny-request are cancelable; preventDefault() sets pending instead of finalizing decision', async () => {
     const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
-    approveEl.addEventListener('lr-approve', (e) => e.preventDefault());
+    approveEl.addEventListener('lr-approve-request', (e) => e.preventDefault());
     (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await approveEl.updateComplete;
     expect(approveEl.decision).to.equal(null);
@@ -835,50 +840,50 @@ describe('async pending decisions', () => {
     expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
 
     const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
+    denyEl.addEventListener('lr-deny-request', (e) => e.preventDefault());
     (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal(null);
     expect(denyEl.pendingAction).to.equal('deny');
   });
 
-  it('lr-approve/lr-deny report cancelable:true, and only a prevented listener stops the default finalization', async () => {
+  it('lr-approve-request/lr-deny-request report cancelable:true, and only a prevented listener stops the default finalization', async () => {
     const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
-    const approvePromise = oneEvent(approveEl, 'lr-approve');
+    const approvePromise = oneEvent(approveEl, 'lr-approve-request');
     (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     const approveEvent = await approvePromise;
-    expect(approveEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(approveEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
     expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
     await approveEl.updateComplete;
     expect(approveEl.decision, 'not-prevented path finalizes normally').to.equal('approved');
     expect(approveEl.pendingAction).to.equal(null);
 
     const preventedEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
-    const preventedPromise = oneEvent(preventedEl, 'lr-approve');
-    preventedEl.addEventListener('lr-approve', (e) => e.preventDefault(), { once: true });
+    const preventedPromise = oneEvent(preventedEl, 'lr-approve-request');
+    preventedEl.addEventListener('lr-approve-request', (e) => e.preventDefault(), { once: true });
     (preventedEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     const preventedEvent = await preventedPromise;
-    expect(preventedEvent.cancelable, 'lr-approve must be cancelable').to.equal(true);
+    expect(preventedEvent.cancelable, 'lr-approve-request must be cancelable').to.equal(true);
     expect(preventedEvent.defaultPrevented, 'prevented here').to.equal(true);
     await preventedEl.updateComplete;
     expect(preventedEl.decision, 'prevented path never finalizes').to.equal(null);
     expect(preventedEl.pendingAction).to.equal('approve');
 
     const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    const denyPromise = oneEvent(denyEl, 'lr-deny');
+    const denyPromise = oneEvent(denyEl, 'lr-deny-request');
     (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     const denyEvent = await denyPromise;
-    expect(denyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(denyEvent.cancelable, 'lr-deny-request must be cancelable').to.equal(true);
     expect(denyEvent.defaultPrevented).to.equal(false);
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal('denied');
 
     const preventedDenyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny');
-    preventedDenyEl.addEventListener('lr-deny', (e) => e.preventDefault(), { once: true });
+    const preventedDenyPromise = oneEvent(preventedDenyEl, 'lr-deny-request');
+    preventedDenyEl.addEventListener('lr-deny-request', (e) => e.preventDefault(), { once: true });
     (preventedDenyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     const preventedDenyEvent = await preventedDenyPromise;
-    expect(preventedDenyEvent.cancelable, 'lr-deny must be cancelable').to.equal(true);
+    expect(preventedDenyEvent.cancelable, 'lr-deny-request must be cancelable').to.equal(true);
     expect(preventedDenyEvent.defaultPrevented).to.equal(true);
     await preventedDenyEl.updateComplete;
     expect(preventedDenyEl.decision).to.equal(null);
@@ -887,7 +892,7 @@ describe('async pending decisions', () => {
 
   it('shows loading on the pending button and disables the other one', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
@@ -900,7 +905,7 @@ describe('async pending decisions', () => {
 
   it('finalizes normally when the host sets .decision after preventDefault()', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('approve');
@@ -914,7 +919,7 @@ describe('async pending decisions', () => {
 
   it('bounces back to the undecided, both-buttons-enabled state when pending is reset to null', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-deny', (e) => e.preventDefault());
+    el.addEventListener('lr-deny-request', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('deny');
@@ -933,7 +938,7 @@ describe('async pending decisions', () => {
   it('defaults pending to null and leaves the synchronous decide() path unchanged when never touched', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     expect(el.pendingAction).to.equal(null);
-    const approvePromise = oneEvent(el, 'lr-approve');
+    const approvePromise = oneEvent(el, 'lr-approve-request');
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await approvePromise;
     await el.updateComplete;
@@ -943,7 +948,7 @@ describe('async pending decisions', () => {
 
   it('is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)', async () => {
     const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-approve', (e) => e.preventDefault());
+    el.addEventListener('lr-approve-request', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     // Prove the pending state actually landed before checking accessibility -- otherwise this
@@ -954,12 +959,12 @@ describe('async pending decisions', () => {
   });
 
   it('a listener that vetoes and clears pending itself synchronously wins over the built-in fallback', async () => {
-    // Regression: decide() used to dispatch lr-approve/lr-deny synchronously, then unconditionally
+    // Regression: decide() used to dispatch lr-approve-request/lr-deny-request synchronously, then unconditionally
     // overwrite `pending` with its own built-in value -- clobbering whatever a synchronous listener
     // had just set (e.g. a listener that resolves out of band and bounces pending straight back to
     // null instead of ever wanting the loading/disabled pending presentation).
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-approve', (e) => {
+    el.addEventListener('lr-approve-request', (e) => {
       e.preventDefault();
       el.pendingAction = null;
     });
@@ -977,7 +982,7 @@ describe('async pending decisions', () => {
 
   it('a listener that vetoes and finalizes the decision itself synchronously wins over the built-in fallback', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    el.addEventListener('lr-deny', (e) => {
+    el.addEventListener('lr-deny-request', (e) => {
       e.preventDefault();
       el.decision = 'denied';
     });
@@ -997,7 +1002,7 @@ describe('async pending decisions', () => {
     // the host's async work -- contradicting the component's own documented focus contract.
     for (const which of ['approve', 'deny'] as const) {
       const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-      el.addEventListener(which === 'approve' ? 'lr-approve' : 'lr-deny', (e) => e.preventDefault());
+      el.addEventListener(which === 'approve' ? 'lr-approve-request' : 'lr-deny-request', (e) => e.preventDefault());
       const button = el.shadowRoot!.querySelector(`[part="${which}-button"]`) as LyraButton;
       button.focus();
       await el.updateComplete;
@@ -1036,20 +1041,20 @@ describe('disabled', () => {
     expect(approve.disabled).to.be.true;
   });
 
-  it('blocks the approve path: clicking Approve fires no lr-approve and leaves decision unset', async () => {
+  it('blocks the approve path: clicking Approve fires no lr-approve-request and leaves decision unset', async () => {
     const el = (await fixture(html`<lr-confirm-bar disabled></lr-confirm-bar>`)) as LyraConfirmBar;
     let fired = false;
-    el.addEventListener('lr-approve', () => (fired = true));
+    el.addEventListener('lr-approve-request', () => (fired = true));
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(fired).to.be.false;
     expect(el.decision).to.equal(null);
   });
 
-  it('blocks the deny path: clicking Deny fires no lr-deny and leaves decision unset', async () => {
+  it('blocks the deny path: clicking Deny fires no lr-deny-request and leaves decision unset', async () => {
     const el = (await fixture(html`<lr-confirm-bar disabled></lr-confirm-bar>`)) as LyraConfirmBar;
     let fired = false;
-    el.addEventListener('lr-deny', () => (fired = true));
+    el.addEventListener('lr-deny-request', () => (fired = true));
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(fired).to.be.false;
@@ -1128,11 +1133,11 @@ describe('waitUntil (deferred decisions)', () => {
     return { promise, reject, resolve };
   }
 
-  it('lr-approve\'s detail carries waitUntil; calling it holds the bar pending with no preventDefault()', async () => {
+  it('lr-approve-request\'s detail carries waitUntil; calling it holds the bar pending with no preventDefault()', async () => {
     const el = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
     let sawArgs: unknown;
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       const detail = (event as CustomEvent<{ args: unknown; waitUntil: (p: Promise<unknown>) => void }>).detail;
       sawArgs = detail.args;
       detail.waitUntil(work.promise);
@@ -1161,10 +1166,10 @@ describe('waitUntil (deferred decisions)', () => {
     ).to.equal('Approved');
   });
 
-  it('lr-deny\'s detail carries waitUntil too, and a rejection bounces the bar back to undecided', async () => {
+  it('lr-deny-request\'s detail carries waitUntil too, and a rejection bounces the bar back to undecided', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-deny', (event) => {
+    el.addEventListener('lr-deny-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
@@ -1188,10 +1193,10 @@ describe('waitUntil (deferred decisions)', () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const first = deferred();
     const second = deferred();
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(first.promise);
     });
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(second.promise);
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
@@ -1216,7 +1221,7 @@ describe('waitUntil (deferred decisions)', () => {
     // makes `pending = null` -- value-identical to "untouched" -- detectable.
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       event.preventDefault();
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
       el.pendingAction = null;
@@ -1248,7 +1253,7 @@ describe('waitUntil (deferred decisions)', () => {
     };
     window.addEventListener('unhandledrejection', onUnhandled);
     try {
-      el.addEventListener('lr-approve', (event) => {
+      el.addEventListener('lr-approve-request', (event) => {
         event.preventDefault();
         (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
         el.decision = 'approved';
@@ -1272,7 +1277,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('a host that finalizes the decision itself while the promise is in flight is not overwritten', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-deny', (event) => {
+    el.addEventListener('lr-deny-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
@@ -1290,7 +1295,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('waitUntil() called after the dispatch is a no-op, not a retroactive pending state', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     let late: ((p: Promise<unknown>) => void) | undefined;
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       late = (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil;
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
@@ -1307,7 +1312,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('hands focus to [part="status"] when waitUntil() enters the pending state', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
@@ -1326,7 +1331,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('restores focus to the action\'s own control when a rejection bounces the bar back', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-deny', (event) => {
+    el.addEventListener('lr-deny-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
@@ -1349,7 +1354,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('is accessible while a waitUntil() decision is in flight', async () => {
     const el = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
@@ -1363,7 +1368,7 @@ describe('waitUntil (deferred decisions)', () => {
   it('does not throw when the promise settles after the bar was removed from the document', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const work = deferred();
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
@@ -1417,7 +1422,7 @@ describe('lr-decision-settled', () => {
     const work = new Promise<void>((resolve) => {
       resolveWork = resolve;
     });
-    el.addEventListener('lr-approve', (event) => {
+    el.addEventListener('lr-approve-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work);
     });
     const settledPromise = oneEvent(el, 'lr-decision-settled');
@@ -1501,7 +1506,7 @@ describe('returnFocusTo', () => {
   it('returns focus when a pending decision is finalized externally', async () => {
     const { back, el } = await barWithTrigger();
     el.returnFocusTo = back;
-    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(el.pendingAction).to.equal('approve');
@@ -1517,7 +1522,7 @@ describe('returnFocusTo', () => {
     const work = new Promise<void>((resolve) => {
       resolveWork = resolve;
     });
-    el.addEventListener('lr-deny', (event) => {
+    el.addEventListener('lr-deny-request', (event) => {
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work);
     });
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
@@ -1608,10 +1613,10 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
       return litHtml`<lr-confirm-bar
         tool-name="delete"
         .returnFocusTo=${() => this.shadowRoot!.querySelector<HTMLElement>('[data-action="delete"]')}
-        @lr-deny=${() => {
+        @lr-deny-request=${() => {
           this.confirming = false;
         }}
-        @lr-approve=${(event: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
+        @lr-approve-request=${(event: CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>) => {
           event.preventDefault();
         }}
       ></lr-confirm-bar>`;
@@ -1635,7 +1640,7 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
     await bar.updateComplete;
 
     (bar.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
-    // The host's `lr-deny` listener clears `confirming` synchronously, inside the bar's own
+    // The host's `lr-deny-request` listener clears `confirming` synchronously, inside the bar's own
     // synchronous dispatch -- but the host's own re-render (the thing that removes the bar and
     // re-creates the trigger) is scheduled asynchronously, same as every supported framework.
     await nextHostUpdateOpportunity();
@@ -1667,7 +1672,7 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
 
     // The documented deferred-path shape: the decision lands first, and only afterward does the
     // host clear its own state, both from the same async continuation -- matching the reference's
-    // own worked example (`llms/agent-tools.md`'s async `lr-approve` handler).
+    // own worked example (`llms/agent-tools.md`'s async `lr-approve-request` handler).
     bar.decision = 'approved';
     host.confirming = false;
     await nextHostUpdateOpportunity();
@@ -1837,7 +1842,7 @@ describe('lr-confirm-bar deprecated pending alias', () => {
     let state: unknown[] = [];
     await captureDeprecationWarnings(PENDING, async () => {
       const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.addEventListener('lr-approve', (e) => {
+      el.addEventListener('lr-approve-request', (e) => {
         e.preventDefault();
         el.pending = null;
       });
@@ -1863,3 +1868,38 @@ describe('lr-confirm-bar deprecated pending alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+expectDeprecatedUsage('lr-confirm-bar', 'event', 'lr-approve');
+
+expectDeprecatedUsage('lr-confirm-bar', 'event', 'lr-deny');
+
+it('retains the deprecated lr-approve veto alias', async () => {
+  const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+  const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+  el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+  approve.click();
+  await el.updateComplete;
+  approve.focus();
+  el.decision = 'approved';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
+});
+
+it('retains the deprecated lr-deny veto alias', async () => {
+    const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
+    approveEl.addEventListener('lr-approve-request', (e) => e.preventDefault());
+    (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+    await approveEl.updateComplete;
+    expect(approveEl.decision).to.equal(null);
+    expect(approveEl.pendingAction).to.equal('approve');
+    expect(approveEl.hasAttribute('pending-action')).to.be.true;
+    expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.exist;
+    expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
+
+    const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
+    (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+    await denyEl.updateComplete;
+    expect(denyEl.decision).to.equal(null);
+    expect(denyEl.pendingAction).to.equal('deny');
+  });

@@ -361,6 +361,8 @@ export class ThemeWatcher implements ReactiveController {
     private readonly host: ReactiveControllerHost & Element,
     /** Invoked once per microtask when the effective theme may have changed. */
     private readonly onChange: () => void,
+    /** Non-CSS producers can enroll media queries their own rendering depends on. */
+    private readonly additionalMediaQueries: readonly string[] = [],
   ) {
     host.addController(this);
   }
@@ -534,6 +536,7 @@ export class ThemeWatcher implements ReactiveController {
       '(prefers-color-scheme: dark)',
       '(prefers-contrast: more)',
       '(forced-colors: active)',
+      ...this.additionalMediaQueries,
     ]);
     for (const root of this.roots) {
       for (const sheet of sheetsForRoot(root)) {

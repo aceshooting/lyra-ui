@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-flow-canvas.js to register this component. */
 export * from './flow-canvas.class.js';
 import { LyraFlowCanvas } from './flow-canvas.class.js';
 import { defineElement } from '../../../internal/prefix.js';

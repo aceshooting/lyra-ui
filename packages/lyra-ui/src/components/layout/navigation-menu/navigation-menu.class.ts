@@ -496,7 +496,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     if (
       this.layout === 'bar' &&
       this._panelAnchor === 'menu' &&
-      !prefersReducedMotion(this.ownerDocument.defaultView)
+      !prefersReducedMotion(this)
     ) {
       const panel = currentController?.panel();
       const from = panel && !panel.hidden ? panel.getBoundingClientRect() : undefined;

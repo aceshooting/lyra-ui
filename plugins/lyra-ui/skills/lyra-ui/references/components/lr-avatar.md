@@ -6,7 +6,7 @@
 - **Class** `LyraAvatar`, also available unregistered from `@aceshooting/lyra-ui/components/media/avatar/avatar.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -44,7 +44,7 @@ values restore the image or fallback name.
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
-- `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
+- `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
 'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
   matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes

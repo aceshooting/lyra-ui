@@ -1,0 +1,64 @@
+name: Translation review
+description: Offer a human or native-speaker review of a specific Lyra locale catalog.
+title: '[Translation review]: '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reviewing a locale. Catalog completeness and linguistic review are separate.
+        This form opens a review discussion; it does not approve or certify a translation.
+        Use a public handle and avoid private contact details. Maintainers record accepted reviews
+        against the exact catalog hash in the translation review ledger.
+  - type: input
+    id: locale
+    attributes:
+      label: Locale, script and written register
+      description: Give the exact BCP-47 tag and describe the regional wording or written register reviewed.
+      placeholder: 'ur — Urdu, Arabic script, concise interface wording'
+    validations:
+      required: true
+  - type: dropdown
+    id: experience
+    attributes:
+      label: Your relationship to this language
+      options:
+        - Native speaker offering a review
+        - Fluent human reviewer
+        - Contributor reporting a translation issue
+    validations:
+      required: true
+  - type: input
+    id: identity
+    attributes:
+      label: Public reviewer name or stable handle
+      description: This attribution may appear in the public review ledger; a legal name is not required.
+    validations:
+      required: true
+  - type: input
+    id: snapshot
+    attributes:
+      label: Catalog revision and SHA-256
+      description: Link the reviewed commit and copy the catalog.sha256 value from packages/lyra-ui/scripts/fixtures/translation-reviews.json.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Review scope and findings
+      description: State whether you reviewed every message or a named subset. Include message keys, proposed wording, reasons and examples of plural counts or mixed-direction text.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reproducible review evidence
+      description: Link a public review or attach your findings here. Cover meaning, concise UI register, terminology, placeholders, plural forms and accessible labels. Note any use of AI assistance.
+    validations:
+      required: true
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Review status
+      options:
+        - label: I understand that this submission is not approval; maintainers must validate the scope and current catalog hash before recording a human or native-speaker review tier.
+          required: true

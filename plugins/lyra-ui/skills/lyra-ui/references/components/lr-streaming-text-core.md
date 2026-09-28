@@ -6,7 +6,7 @@
 - **Class** `LyraStreamingTextCore`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text-core.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
 - **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.

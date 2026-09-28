@@ -95,6 +95,7 @@ describe('localeNativeName', () => {
     try {
       expect(languageToCountry('en-u-ca-gregory')).to.equal('gb');
       expect(languageToCountry('en-x-ca')).to.equal('gb');
+      expect(languageToCountry('es-419')).to.equal(undefined);
       expect(languageToCountry('x-ca')).to.equal(undefined);
       expect(languageToCountry(42 as never)).to.equal(undefined);
       // Without likely-subtags data only the base-language default remains.
@@ -126,8 +127,10 @@ describe('localeNativeName', () => {
     // A script that implies the language's own likely region keeps the table's convention.
     expect(languageToCountry('en-Latn')).to.equal('gb');
     expect(languageToCountry('sr-Latn')).to.equal('rs');
-    // Only a table default is corrected; a language with no entry stays unresolved.
-    expect(languageToCountry('pa-Arab')).to.equal(undefined);
+    // Punjabi's table default is India, but its Arabic-script likely region is Pakistan. An
+    // unlisted language still stays unresolved because script inference only adjusts table entries.
+    expect(languageToCountry('pa-Arab')).to.equal('pk');
+    expect(languageToCountry('zz-Arab')).to.equal(undefined);
   });
 
   it('applies the script-implied region to every table language, not only Chinese', () => {
@@ -153,6 +156,45 @@ describe('localeNativeName', () => {
     expect(languageToCountry('he-IL')).to.equal('il');
     expect(localeNativeName('fa')).to.equal(new Intl.DisplayNames(['fa'], { type: 'language' }).of('fa'));
     expect(localeNativeName('he')).to.equal(new Intl.DisplayNames(['he'], { type: 'language' }).of('he'));
+  });
+
+  it('maps the expanded translation locales to representative flag countries', () => {
+    const mappings: ReadonlyArray<readonly [string, string]> = [
+      ['am', 'et'],
+      ['bho', 'in'],
+      ['gu', 'in'],
+      ['ha', 'ng'],
+      ['ig', 'ng'],
+      ['jv', 'id'],
+      ['kn', 'in'],
+      ['lah', 'pk'],
+      ['ln', 'cd'],
+      ['ml', 'in'],
+      ['mr', 'in'],
+      ['my', 'mm'],
+      ['ne', 'np'],
+      ['om', 'et'],
+      ['or', 'in'],
+      ['pa', 'in'],
+      ['pcm', 'ng'],
+      ['pnb', 'pk'],
+      ['ps', 'af'],
+      ['sd', 'pk'],
+      ['su', 'id'],
+      ['sw', 'tz'],
+      ['te', 'in'],
+      ['tl', 'ph'],
+      ['uz', 'uz'],
+      ['yo', 'ng'],
+      ['zu', 'za'],
+    ];
+
+    for (const [locale, country] of mappings) {
+      expect(languageToCountry(locale), locale).to.equal(country);
+    }
+    // The regional tag derives its Afghan flag from the explicit region subtag; the base Persian
+    // entry remains mapped to Iran.
+    expect(languageToCountry('fa-AF')).to.equal('af');
   });
 
   it('maps the bare region-less Norwegian Nynorsk and Kazakh locale tags to a flag country', () => {
@@ -216,4 +258,17 @@ describe('alpha3ToAlpha2', () => {
     expect(mapped, 'the 249 officially-assigned ISO 3166-1 entries').to.equal(249);
     expect(seen.size, 'each alpha-3 key appears once').to.equal(249);
   });
+});
+
+it('does not assign a country flag to numeric language regions', () => {
+  expect(languageToCountry('es-419')).to.equal(undefined);
+  expect(languageToCountry('en-001')).to.equal(undefined);
+  expect(languageToCountry('es-419-u-nu-latn')).to.equal(undefined);
+  expect(languageToCountry('es-MX')).to.equal('mx');
+});
+
+it('supports representative flags for Luxembourgish and Filipino', () => {
+  expect(languageToCountry('lb')).to.equal('lu');
+  expect(languageToCountry('fil')).to.equal('ph');
+  expect(languageToCountry('lb-BE')).to.equal('be');
 });

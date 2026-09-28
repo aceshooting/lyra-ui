@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
   html,
@@ -410,6 +411,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** The sequence is bounded/detached/frozen while applying a preset still reports its exact
    * caller-owned source identity through `appliedPreset`. */
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['presets']);
   protected static override readonly identityCollectionProperties = Object.freeze(['presets']);
 

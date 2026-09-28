@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -52,7 +54,7 @@ function normalizeContextMeterLegendDisplay(value: unknown): ContextMeterLegendD
     : 'label';
 }
 
-/** Detail of `lr-segment-activate`: which band the user picked, and what it stands for. */
+/** Detail of `lr-segment-activate-request`: which band the user picked, and what it stands for. */
 export interface LyraContextMeterSegmentActivateDetail {
   /** Zero-based index into the projected `segments` array. */
   readonly index: number;
@@ -63,6 +65,8 @@ export interface LyraContextMeterSegmentActivateDetail {
 }
 
 export interface LyraContextMeterEventMap {
+  'lr-segment-activate-request': CustomEvent<LyraContextMeterSegmentActivateDetail>;
+  /** @deprecated Use lr-segment-activate-request for selection vetoes. */
   'lr-segment-activate': CustomEvent<LyraContextMeterSegmentActivateDetail>;
 }
 
@@ -76,7 +80,7 @@ export interface ContextMeterSegment {
   /**
    * Marks this band non-actionable while `interactive` is set: its control renders genuinely
    * disabled (no tab stop, no hover/press affordance) and activating it emits no
-   * `lr-segment-activate`.
+   * `lr-segment-activate-request`.
    *
    * Deliberately NOT inferred from `value === 0`. A zero band is legitimately clickable in a
    * budget meter -- the original use for this component -- so inertness is declared, never
@@ -231,10 +235,14 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-selected-ring-width=var(--lr-border-width-thick)] - Width of that selected ring.
  * @cssprop [--lr-context-meter-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a band or legend row whose `segments` entry sets `disabled`. The band keeps its own colour -- it is still the datum it always was -- and loses only the affordances that promise activation.
  * @cssprop [--lr-context-meter-selected-arc-stroke=16] - Stroke width, in this component's `0 0 100 100` viewBox units, of a selected `ring`-shape arc. Arcs share one bounding box, so a selected arc reports itself by thickening in place rather than by an outline that would trace the whole ring.
- * @event lr-segment-activate - A band or its legend row was activated while `interactive` is set.
+ * @event lr-segment-activate-request - Before a band or legend activation toggles selection in interactive mode.
  *   `detail: { index, label, value }`. Cancelable: the default action is this component toggling
  *   `index` in its own `selectedIndices`, so `preventDefault()` hands that state entirely to the
- *   consumer. Never emitted in the default presentational mode.
+ *   consumer. Never emitted in the default presentational mode. Synchronous reentry is ignored;
+ *   replacing the segments, disabling interaction, or disconnecting during dispatch cancels the write.
+ * @event lr-segment-activate - Deprecated cancelable veto alias for `lr-segment-activate-request`.
+ *   Fires after the canonical request and before selection changes, with the same `detail: { index, label, value }`.
+ *   Either event can veto; only vetoing this legacy alias issues a development warning.
  * @status stable
  * @since 4.0.0
  */
@@ -249,6 +257,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'segments',
@@ -256,6 +265,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   ]);
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-segment-activate-request',
     'lr-segment-activate',
   ]);
 
@@ -329,7 +339,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   /**
    * Opt-in filter mode: every band, and every legend row, becomes a real button that emits the
-   * cancelable `lr-segment-activate`.
+   * cancelable `lr-segment-activate-request`.
    *
    * Off by default, and off is unchanged from before this property existed -- a pure part-to-whole
    * visualization whose visible parts are all `aria-hidden`. On, the bands are `<button>`s (the
@@ -353,10 +363,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    * Meaningful only while `interactive` is set.
    *
    * Uncontrolled by default: an activation this component emits and nobody vetoes toggles the
-   * index here itself. `preventDefault()` on `lr-segment-activate` suppresses that write, which is
+   * index here itself. `preventDefault()` on `lr-segment-activate-request` suppresses that write, which is
    * how a consumer that owns the selection takes control -- the library's standard request/commit
-   * shape. Assigning the property directly always wins either way. A non-integer or out-of-range
-   * entry selects nothing rather than throwing.
+   * shape. Without a veto, the default toggle uses the latest selection, including a synchronous
+   * host assignment. A non-integer or out-of-range entry selects nothing rather than throwing.
    */
   // numeric-guard-exempt: isSelected() rejects anything that is not an in-range integer before the
   // value reaches rendering, so a non-finite or fractional entry selects nothing.
@@ -473,36 +483,41 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     }).format(ratio);
   }
 
-  /**
-   * Emits the activation and, unless a listener vetoed it, toggles `index` in this component's own
-   * `selectedIndices`. The write is the default action, which is what makes the event a real veto
-   * point rather than a notification wearing a cancelable costume: a consumer that owns the
-   * selection calls `preventDefault()` and assigns the property itself.
-   *
-   * No write-tracking guard: `selectedIndices` is a plain collection property with no setter side
-   * effects, so there is nothing for a guard to observe, and a listener that reassigns it during
-   * the dispatch is deliberately overwritten by this commit -- `preventDefault()` is the documented
-   * way to stop it, exactly as `<lr-thread-list>`'s group-toggle pair behaves.
-   */
+  private activationDispatching = false;
+
+  /** Dispatch both veto names before applying the default toggle to the latest selection. */
   private activateSegment(index: number): void {
-    if (!this.interactive) return;
+    if (this.activationDispatching || !this.interactive) return;
     const segment = this.effectiveSegments[index];
     if (!segment || segment.disabled) return;
-    requestThenCommit({
-      requestDetail: {
-        index,
-        label: segment.label,
-        value: this.normalizedSegmentValue(segment),
-      },
-      emitRequest: (detail, init: { cancelable: true }) =>
-        this.emit('lr-segment-activate', detail, init),
-      commit: () => {
-        const selected = this.canonicalSelectedIndices();
-        this.selectedIndices = selected.includes(index)
-          ? selected.filter((candidate) => candidate !== index)
-          : [...selected, index].sort((left, right) => left - right);
-      },
-    });
+    this.activationDispatching = true;
+    try {
+      requestThenCommit({
+        requestDetail: {
+          index,
+          label: segment.label,
+          value: this.normalizedSegmentValue(segment),
+        },
+        emitRequest: (detail, init: { cancelable: true }) => {
+          const request = this.emit('lr-segment-activate-request', detail, init);
+          const alias = this.emit('lr-segment-activate', detail, init);
+          if (alias.defaultPrevented) {
+            warnDeprecatedUsage(this, 'event', 'lr-segment-activate', 'lr-segment-activate-request');
+            request.preventDefault();
+          }
+          return request;
+        },
+        commit: () => {
+          if (!this.isConnected || !this.interactive || this.effectiveSegments[index] !== segment) return;
+          const selected = this.canonicalSelectedIndices();
+          this.selectedIndices = selected.includes(index)
+            ? selected.filter((candidate) => candidate !== index)
+            : [...selected, index].sort((left, right) => left - right);
+        },
+      });
+    } finally {
+      this.activationDispatching = false;
+    }
   }
 
   /** Enter/Space on the ring's `role="button"` arcs, which get none of a native button's keys. */

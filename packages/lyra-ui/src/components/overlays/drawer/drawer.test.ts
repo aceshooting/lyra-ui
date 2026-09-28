@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import "./drawer.js";
@@ -95,7 +96,7 @@ it("closes through the inherited cancelable close contract", async () => {
   button.click();
   const event = await eventPromise;
 
-  expect(event.detail).to.equal("close-button");
+  expect(event.detail).to.deep.equal({ reason: "close-button" });
   await el.updateComplete;
   expect(el.open).to.be.false;
 });
@@ -1024,3 +1025,5 @@ describe('lr-drawer renamed members', () => {
     await alias!.close('api');
   });
 });
+
+expectDeprecatedUsage('lr-drawer', 'property', 'accessibleLabel');

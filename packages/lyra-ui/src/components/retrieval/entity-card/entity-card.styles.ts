@@ -10,7 +10,7 @@ export const styles = css`
     gap: var(--lr-space-s);
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-radius-container);
     /* The RESTING frame's own hook, alongside the dense size tier's existing padding/gap levers --
        the default tier every dossier list actually renders was the only one with no card-specific
        override, so retinting one themed list meant a ::part(base) rule or an app-wide

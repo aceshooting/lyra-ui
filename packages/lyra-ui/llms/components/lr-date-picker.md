@@ -6,7 +6,7 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated css-property** `--lr-cell-size` since `21.1.0`; use css-property `--lr-date-picker-cell-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
 - **Themeable via** 38 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below

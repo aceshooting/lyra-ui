@@ -20,11 +20,11 @@ Nothing on this page is proven by a human using the software. See
 | Engine | Supported from | Proven by CI |
 |---|---|---|
 | Chrome / Edge (Chromium) | **120** | Current Playwright Chromium — full suite; Chrome and Edge channels — contract subset |
-| Firefox (Gecko) | **121** | Current stable — contract subset (CI `platform-contracts`) |
-| Safari (WebKit) | **16.4** | Current stable — contract subset (CI `platform-contracts`) |
+| Firefox (Gecko) | **125** | Current stable — contract subset (CI `platform-contracts`) |
+| Safari (WebKit) | **17** | Current stable — contract subset (CI `platform-contracts`) |
 | Anything without native Custom Elements v1 + Shadow DOM (Internet Explorer, legacy Edge) | Not supported | — |
 
-Mobile equivalents track their desktop engine: Chrome for Android ≥ 120, Safari on iOS ≥ 16.4.
+Mobile equivalents track their desktop engine: Chrome for Android ≥ 120, Safari on iOS ≥ 17.
 
 **The floor is derived, not tested.** CI only ever runs the engines' *current stable* builds. The
 version numbers above come from the platform features this library's source actually uses — Lyra
@@ -38,13 +38,13 @@ feature the source uses is a hard floor:
 | `:has()` | component state and authored-content styling | Chrome 105 · Safari 15.4 · **Firefox 121** |
 | `@container` / `container-type` | allocation-responsive component layouts | Chrome 105 · **Safari 16** · Firefox 110 |
 | `ElementInternals` form association | form-associated controls | Chrome 77 · **Safari 16.4** · Firefox 98 |
+| Popover API | native top-layer popup and focus behavior | Chrome 114 · Safari 17 · Firefox 125 |
 | `inert` | widely, incl. the overlay manager | Chrome 102 · Safari 15.5 · Firefox 112 |
 | `@layer` | the token cascade | Chrome 99 · Safari 15.4 · Firefox 97 |
 | ES2022 output (`tsconfig` `target`) | the whole package | Chrome 94 · Safari 15.4 · Firefox 93 |
 
-`:dir()` and `:has()` are what set the Chromium and Gecko numbers; `ElementInternals` and
-`@container` set the WebKit one. If any of those three lines moves, the window moves with it and
-this table has to move in the same pull request.
+`Popover API` raises the Firefox and Safari floors; `:dir()` sets the Chromium floor.
+Any change to the required platform features must update this support window in the same release.
 
 There is deliberately **no `browserslist` field** in either package. A browserslist implies a build
 step that targets it; this package has none, so the field would describe nothing and drift silently.
@@ -57,12 +57,11 @@ This table is the support window.
 - **`build-and-coverage`** — the complete `@web/test-runner` suite on Chromium (Playwright's pinned
   build), plus coverage floors, SSR render matrix, and DSD hydration.
 - **`platform-contracts`** — a source-defined matrix running the curated `test:platform` subset.
-  Node 20 covers Firefox and Safari (WebKit); Node 22 covers Chromium, Chrome, Edge, Firefox, and
-  Safari. The exact browser/shard matrix lives in `.github/workflows/ci.yml`, and the exact test
+  Node 22 covers Chromium, Chrome, Edge, Firefox, and Safari (WebKit). The exact browser/shard matrix lives in `.github/workflows/ci.yml`, and the exact test
   inventory is the `test:platform` script entry in `packages/lyra-ui/package.json` — those sources,
   not this summary, are the definition.
-  The Firefox/Node 20 leg additionally builds and runs the clean packed-consumer install, import,
-  type, style, tree-shaking, and framework-recipe matrix at the supported Node floor.
+  The primary Node 22 packed-consumer jobs cover install, import, types, styles, tree shaking
+  and framework recipes at the supported Node floor.
 
 Every named browser therefore has blocking per-push contract coverage; Playwright Chromium also
 runs the complete suite per push. Firefox and WebKit run the complete non-coverage suite weekly
@@ -79,8 +78,8 @@ documented WebKit guard first.
 
 | | |
 |---|---|
-| Supported | **≥ 20** (`engines.node` in both packages) |
-| Proven by CI | Node 22 on every primary job; Node 20 **and** 22 on `platform-contracts`; packed consumers on both supported majors |
+| Supported | **≥ 22** for Lyra UI and contributor tooling; the asset-only flag companion retains Node ≥ 20 |
+| Proven by CI | Node 22 on primary and platform-contract jobs, including packed consumers |
 | Module format | ESM only. No CommonJS entry point, no `require()` path. |
 
 Node matters for two things: building/testing this repository, and server-side rendering. The SSR
@@ -145,7 +144,7 @@ For a browser older than the floor above, or one with no native custom elements 
 A `@supports` guard exists to keep something usable on an engine that lacks the feature. It may be
 removed when — and only when — **every engine in the support window above supports the guarded
 feature unprefixed and unflagged**, i.e. the feature's support floor is at or below the Chrome 120 /
-Firefox 121 / Safari 16.4 line.
+Firefox 125 / Safari 17 line.
 
 Concretely:
 

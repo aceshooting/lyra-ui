@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type ComplexAttributeConverter, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -794,6 +795,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     heatmapValueLabel: LYRA_DEFAULT_heatmapValueLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze(['lr-selection-change']);
 

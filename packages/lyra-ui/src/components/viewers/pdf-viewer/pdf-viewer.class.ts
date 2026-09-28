@@ -1200,7 +1200,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const offset = rect.top - containerRect.top - containerRect.height / 2 + rect.height / 2;
     scrollContainer.scrollBy({
       top: offset,
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
     });
   }
 
@@ -1213,7 +1213,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const offset = targetY - containerRect.top - containerRect.height / 2;
     scrollContainer.scrollBy({
       top: offset,
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
     });
   }
 

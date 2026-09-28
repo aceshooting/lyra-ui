@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type {
   CitationSelectEventDetail,
@@ -13,8 +15,10 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
 import type { LyraToolCallChip } from "../../agent-tools/tool-call-chip/tool-call-chip.class.js";
 import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import { captureDeprecationWarnings, expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import type { ToolInvocation } from "../../../ai/types.js";
+
+expectDeprecatedUsage('lr-message-parts', 'property', 'accessibleLabel');
 
 function assertiveSinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -948,6 +952,33 @@ it("preserves an explicitly empty aria-label override by presence", async () => 
   ).to.equal("");
 });
 
+it('keeps the deprecated accessibleLabel accessor compatible with native aria-label and null removal', async () => {
+  const el = (await fixture(html`
+    <lr-message-parts aria-label="Native message name"
+      .parts=${[{ id: 'text', type: 'text', text: 'Ready' }]}></lr-message-parts>
+  `)) as LyraMessageParts;
+  expect(el.accessibleLabel).to.equal('Native message name');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Native message name');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Message content');
+});
+
+it('warns on direct deprecated accessibleLabel assignment while keeping its compatibility behavior', async () => {
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: 'lr-message-parts', kind: 'property', name: 'accessibleLabel' }],
+    async () => {
+      const el = (await fixture(html`<lr-message-parts></lr-message-parts>`)) as LyraMessageParts;
+      el.accessibleLabel = 'Legacy programmatic name';
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Legacy programmatic name');
+    }
+  );
+  expect(warnings).to.have.lengthOf(1);
+  expect(warnings[0]!.message).to.contain('accessibleLabel');
+});
+
 it("uses one nonempty first-wins part projection for rendering and error announcements", async () => {
   const el = (await fixture(
     html`<lr-message-parts .parts=${[{ id: "baseline", type: "text", text: "ready" }]}></lr-message-parts>`
@@ -1495,4 +1526,83 @@ describe('lr-message-parts deprecated code-block-chrome spelling', () => {
     });
     expect(after).to.equal('0,0');
   });
+});
+
+it('preserves interrupted content and emits a controlled owned resume request', async () => {
+  const part: MessagePart = { id: 'partial', type: 'text', text: 'Partial answer', state: 'interrupted', interruption: { resumable: true, reason: 'Connection lost' } };
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts content-mode="plain" .parts=${[part]}></lr-message-parts>`);
+  expect(el.shadowRoot!.textContent).to.include('Partial answer');
+  expect(el.shadowRoot!.textContent).to.include('Stream interrupted');
+  expect(el.shadowRoot!.textContent).to.include('Connection lost');
+  expect(el.shadowRoot!.querySelectorAll('[part~="part-interrupted"]').length).to.equal(1);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  expect(Boolean(button)).to.equal(true);
+  const requested = oneEvent(el, 'lr-part-resume');
+  await focusByKeyboard(button);
+  await sendKeys({ press: 'Enter' });
+  const event = await requested;
+  expect(event.bubbles && event.composed).to.equal(true);
+  expect(event.detail.part).to.deep.equal(part);
+  expect(event.detail.part === part).to.equal(false);
+  expect(el.parts[0]?.state).to.equal('interrupted');
+  await expect(el).to.be.accessible();
+  let calls = 0;
+  el.addEventListener('lr-part-resume', () => calls++);
+  el.disabled = true;
+  button.click();
+  expect(calls).to.equal(0);
+  el.parts = [];
+  await el.updateComplete;
+  button.click();
+  expect(calls).to.equal(0);
+});
+
+it('renders no resume by default or for non-resumable parts and honors strings overrides', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts content-mode="plain" .parts=${[{ id: 'text', type: 'text', text: 'Normal' }]}></lr-message-parts>`);
+  expect(el.disabled).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part="interruption"], [part="resume"]').length).to.equal(0);
+  el.parts = [{ id: 'text', type: 'text', text: 'Retained', state: 'interrupted' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="resume"]').length).to.equal(0);
+  el.strings = { streamInterrupted: 'Interrompu', streamResume: 'Reprendre' };
+  el.parts = [{ ...el.parts[0]!, interruption: { resumable: true } }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.include('Interrompu');
+  expect(el.shadowRoot!.querySelector('[part="resume"]')?.textContent).to.equal('Reprendre');
+});
+
+it('keeps interrupted tool results visible in block display and wraps long reasons in RTL', async () => {
+  const el = await fixture<LyraMessageParts>(html`<lr-message-parts style="inline-size:320px" dir="rtl" tool-display="block"
+    .parts=${[
+      { id: 'call', type: 'tool-call', invocation: { id: 'tool', name: 'search', args: {}, status: 'running' } },
+      { id: 'result', type: 'tool-result', invocationId: 'tool', result: {}, state: 'interrupted', interruption: { resumable: true, reason: 'Reason'.repeat(150) } },
+    ]}></lr-message-parts>`);
+  expect(el.shadowRoot!.querySelectorAll('[part~="part-interrupted"]').length).to.equal(1);
+  const status = el.shadowRoot!.querySelector<HTMLElement>('[part="interruption"]')!;
+  expect(Boolean(status)).to.equal(true);
+  expect(status.scrollWidth).to.be.at.most(el.clientWidth + 1);
+  expect(getComputedStyle(status).direction).to.equal('rtl');
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  const oldPart = el.parts[1]!;
+  el.parts = [el.parts[0]!, { ...oldPart, interruption: { resumable: false } }];
+  let calls = 0;
+  el.addEventListener('lr-part-resume', () => calls++);
+  button.click();
+  expect(calls).to.equal(0);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="resume"]').length).to.equal(0);
+});
+
+it('prevents synchronous resume reentry while permitting later host retries', async () => {
+  const el = await fixture(html`<lr-message-parts .parts=${[{ type: 'text', id: 'part', text: 'preserved', state: 'interrupted', interruption: { resumable: true } }]}></lr-message-parts>`) as LyraMessageParts;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  let calls = 0;
+  el.addEventListener('lr-part-resume', () => {
+    calls++;
+    if (calls === 1) button.dispatchEvent(new MouseEvent('click'));
+  });
+  button.click();
+  expect(calls).to.equal(1);
+  button.click();
+  expect(calls).to.equal(2);
 });

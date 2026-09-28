@@ -392,7 +392,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     const region = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
       .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
-    const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
+    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
     region.scrollIntoView({ behavior, block: 'center', inline: 'center' });
     return true;
   }

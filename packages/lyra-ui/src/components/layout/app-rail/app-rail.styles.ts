@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -60,7 +61,7 @@ export const styles = css`
   }
   [part="toggle"]:hover {
     background: var(--lr-app-rail-toggle-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-toggle-hover-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-toggle-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   /* The hover fill mixed further toward --lr-color-mix-partner (the text colour), so the pressed
      step is always deeper than the hover step whichever way the theme runs. */
@@ -73,7 +74,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-app-rail-toggle-active-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -301,7 +302,7 @@ export const styles = css`
   }
   [part="collapse-toggle"]:hover {
     background: var(--lr-app-rail-collapse-toggle-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-collapse-toggle-hover-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-collapse-toggle-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="collapse-toggle"]:active {
     background: var(
@@ -312,7 +313,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-app-rail-collapse-toggle-active-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-collapse-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="collapse-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -399,4 +400,9 @@ export const styles = css`
       border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     }
   }
+
+  ${glassScrollLayerStyles}
+  ${glassSurface('[part="base"]', css`var(--lr-app-rail-bg, var(--lr-app-rail-background, var(--lr-color-surface)))`, undefined, true)}
+  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-app-rail-background, var(--lr-color-surface)))`, css`var(--lr-app-rail-bg, var(--lr-app-rail-background, transparent))`, true)}
+  ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay)))`, undefined, true)}
 `;

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-pdf-viewer.js to register this component. */
 export * from './pdf-viewer.class.js';
 import { html } from 'lit';
 import { LyraPdfViewer } from './pdf-viewer.class.js';

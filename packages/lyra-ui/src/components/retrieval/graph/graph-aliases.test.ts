@@ -189,7 +189,7 @@ describe('lr-graph edge vocabulary', () => {
     expect(warnings).to.have.length(0);
   });
 
-  it('fires lr-edge-enter/lr-edge-leave, then the lr-link-* aliases with their own equal detail, never warning', async () => {
+  it('fires edge hover events with edgeId, then legacy link hover aliases with linkId, never warning', async () => {
     const seen: { type: string; detail: string; cancelable: boolean }[] = [];
     const details = new Set<unknown>();
     const warnings = await captureDeprecationWarnings(ALIASES, async () => {
@@ -207,12 +207,13 @@ describe('lr-graph edge vocabulary', () => {
       link.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
       link.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     });
-    const detail = JSON.stringify({ sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' });
+    const canonical = JSON.stringify({ sourceNodeId: 'a', targetNodeId: 'b', edgeId: 'ab' });
+    const legacy = JSON.stringify({ sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' });
     expect(seen).to.deep.equal([
-      { type: 'lr-edge-enter', detail, cancelable: false },
-      { type: 'lr-link-enter', detail, cancelable: false },
-      { type: 'lr-edge-leave', detail, cancelable: false },
-      { type: 'lr-link-leave', detail, cancelable: false },
+      { type: 'lr-edge-enter', detail: canonical, cancelable: false },
+      { type: 'lr-link-enter', detail: legacy, cancelable: false },
+      { type: 'lr-edge-leave', detail: canonical, cancelable: false },
+      { type: 'lr-link-leave', detail: legacy, cancelable: false },
     ]);
     expect(details.size, 'each event carries its own detail object').to.equal(4);
     expect(warnings).to.have.length(0);

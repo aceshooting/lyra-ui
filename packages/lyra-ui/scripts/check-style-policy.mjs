@@ -124,6 +124,18 @@ function stripComments(source) {
   );
 }
 
+// CSS math does not coerce a number zero to a length. Keep the canonical 0px identity in
+// calc/min/max/clamp (including their var() fallbacks); all nonzero design lengths still need tokens.
+function maskTypedMathZeros(source) {
+  const functions = [];
+  return source.replace(/([A-Za-z][\w-]*)\s*\(|\(|\)|(?<![\w.+-])0px\b/g, (token, name) => {
+    if (token.endsWith('(')) functions.push(['calc', 'min', 'max', 'clamp'].includes(name));
+    else if (token === ')') functions.pop();
+    else if (token === '0px' && functions.includes(true)) return '   ';
+    return token;
+  });
+}
+
 function documentedCssProperties(styleFile) {
   const directory = dirname(styleFile);
   const classSource = readdirSync(directory, { withFileTypes: true })
@@ -195,13 +207,14 @@ for (const file of policyStyleFiles()) {
     }
   }
 
+  const dimensionLines = maskTypedMathZeros(source).split('\n');
   source.split('\n').forEach((line, index) => {
     if (line.includes('@media') || line.includes('@container')) return;
 
     if (rawColor.test(line) || /\bblack\b/.test(line)) {
       findings.push(`${file}:${index + 1}: raw color literal`);
     }
-    if (rawDimension.test(line)) {
+    if (rawDimension.test(dimensionLines[index])) {
       findings.push(`${file}:${index + 1}: raw dimension literal`);
     }
 

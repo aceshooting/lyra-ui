@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
@@ -37,6 +38,8 @@ async function point(el: HTMLElement): Promise<[number, number]> {
   return [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)];
 }
 afterEach(async () => resetMouse());
+
+expectLocaleFallback('ar', ['heatmapMatrixCellLabel', 'heatmapMatrixLabel', 'heatmapSelectedCellLabel', 'heatmapValueLabel']);
 
 describe('lr-heatmap controlled multiple selection', () => {
   it('preserves single-cell behavior when multiple is unset', async () => {

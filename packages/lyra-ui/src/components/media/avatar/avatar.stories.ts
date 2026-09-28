@@ -95,7 +95,7 @@ export const Sizes: Story = {
     docs: {
       description: {
         story:
-          '`size` runs the library-wide six-step ladder, `2xs` through `xl`. `small`/`medium`/`large` are the mirrored spellings of `s`/`m`/`l`.',
+          '`size` defaults to `m` and runs the library-wide six-step ladder, `2xs` through `xl`. `small`/`medium`/`large` remain accepted aliases of `s`/`m`/`l`.',
       },
     },
   },

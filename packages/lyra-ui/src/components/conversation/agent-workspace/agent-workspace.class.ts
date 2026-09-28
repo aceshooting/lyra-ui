@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
@@ -161,6 +162,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-retrieval-select',

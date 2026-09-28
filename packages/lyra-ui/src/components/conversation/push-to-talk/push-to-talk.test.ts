@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
   expect,
@@ -221,6 +222,8 @@ async function mountServerRenderedPushToTalk(): Promise<LyraPushToTalk> {
 
 // -- Defaults ----------------------------------------------------------
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('fa-u-nu-arab', ['pushToTalkHold', 'pushToTalkUnsupported']);
 it("defaults to mode=hold, state=idle, and every capture prop at its documented default", async () => {
   const el = (await fixture(
     html`<lr-push-to-talk></lr-push-to-talk>`

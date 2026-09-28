@@ -1,3 +1,4 @@
+import { topLayerReset } from './top-layer.styles.js';
 import { nativePopoverSupported } from './native-popover.js';
 import {
   establishesFixedContainingBlock,
@@ -48,6 +49,26 @@ interface TopLayerLease {
 
 const leaseByOwner = new WeakMap<HTMLElement, TopLayerLease>();
 const ownerByMember = new WeakMap<HTMLElement, HTMLElement>();
+
+const resetSheets = new WeakMap<Document, CSSStyleSheet>();
+
+/** Adopt the UA reset only into roots that actually host a promoted surface. Sheets belong to
+ * their document realm, including when a component has moved into another document. */
+function ensureTopLayerReset(element: HTMLElement): void {
+  const root = element.getRootNode() as Document | ShadowRoot;
+  const ownerDocument = element.ownerDocument;
+  const Sheet = ownerDocument.defaultView?.CSSStyleSheet;
+  if (!Sheet || !('adoptedStyleSheets' in root)) return;
+  let sheet = resetSheets.get(ownerDocument);
+  if (!sheet) {
+    sheet = new Sheet();
+    sheet.replaceSync(topLayerReset.cssText);
+    resetSheets.set(ownerDocument, sheet);
+  }
+  if (!root.adoptedStyleSheets.includes(sheet))
+    // Keep the base reset before component sheets, including their zero-specificity rules.
+    root.adoptedStyleSheets = [sheet, ...root.adoptedStyleSheets];
+}
 
 function leaseFor(member: HTMLElement, owner: HTMLElement): TopLayerLease {
   let lease = leaseByOwner.get(owner);
@@ -116,6 +137,7 @@ export function promoteToTopLayer(element: HTMLElement, owner: HTMLElement = ele
   if (!nativePopoverSupported() || !element.isConnected) return false;
   if (element.hasAttribute('popover') && !isLibraryOwned(element)) return false;
   if (typeof element.showPopover !== 'function') return false;
+  ensureTopLayerReset(element);
   if (element.getAttribute('popover') !== 'manual') element.setAttribute('popover', 'manual');
   if (!isLibraryOwned(element)) element.setAttribute(TOP_LAYER_ATTRIBUTE, '');
   if (!isNativeTopLayerElement(element)) {

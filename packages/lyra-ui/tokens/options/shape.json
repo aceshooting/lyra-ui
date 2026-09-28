@@ -1,0 +1,21 @@
+{
+  "$schema": "../option-presets.schema.json",
+  "schemaVersion": 1,
+  "kind": "shape",
+  "presets": {
+    "square": {
+      "--lr-theme-border-radius-xs": "0px",
+      "--lr-theme-border-radius-m": "0px",
+      "--lr-theme-form-control-radius": "0px",
+      "--lr-theme-border-radius-button": "0px",
+      "--lr-theme-border-radius-container": "0px"
+    },
+    "rounded": {
+      "--lr-theme-border-radius-xs": "0.25rem",
+      "--lr-theme-border-radius-m": "0.75rem",
+      "--lr-theme-form-control-radius": "0.75rem",
+      "--lr-theme-border-radius-button": "1.5rem",
+      "--lr-theme-border-radius-container": "1rem"
+    }
+  }
+}

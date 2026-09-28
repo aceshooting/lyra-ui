@@ -146,3 +146,25 @@ test('rejects documented CSS inputs declared by a component while accepting priv
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('allows typed zero lengths only inside CSS math while still rejecting nonzero design literals', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lyra-style-policy-'));
+  const target = 'src/internal/math-probe.styles.ts';
+  try {
+    for (const value of [
+      'filter: blur(clamp(0px, var(--lr-theme-surface-blur, 0px), var(--lr-size-1rem)))',
+      'min-block-size: max(\n  var(--lr-size-1rem),\n  var(--_lr-density-target-min, 0px)\n)',
+      'transform: translate(calc(var(--_lr-offset, 0px) - var(--_lr-padding, 0px)))',
+    ]) {
+      write(root, target, 'export const styles = css`\n.surface { ' + value + '; }\n`;\n');
+      const result = run(root);
+      assert.equal(result.status, 0, result.stderr);
+    }
+    for (const value of ['clamp(0px, 1px, var(--lr-size-1rem))', 'calc(var(--lr-size-1rem) + 0.1px)', 'max(0px, -2rem)', '0px', 'var(--_lr-offset, 0px)']) {
+      write(root, target, 'export const styles = css`\n.surface { margin: ' + value + '; }\n`;\n');
+      const result = run(root);
+      assert.equal(result.status, 1, value);
+      assert.match(result.stderr, /raw dimension literal/);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

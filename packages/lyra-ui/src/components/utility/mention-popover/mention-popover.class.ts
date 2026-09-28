@@ -328,7 +328,7 @@ export interface LyraMentionPopoverEventMap {
  *   `aria-selected="true"` (keyboard-highlighted) suggestion row, independent of
  *   `--lr-mention-popover-option-active-bg`.
  * @cssprop [--lr-mention-popover-option-disabled-opacity=0.5] - Opacity of a row whose `items` entry sets `disabled`.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the listbox. Unlike a floating panel's decorative edge, it defaults to
@@ -1199,7 +1199,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (token !== this.listboxHideToken || this.open) return;
     const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
     const view = this.ownerDocument.defaultView;
-    if (listbox && view && !prefersReducedMotion(view)) {
+    if (listbox && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(listbox);
       const durationMs =
         maxCssTransitionTime(computed.transitionDuration) +

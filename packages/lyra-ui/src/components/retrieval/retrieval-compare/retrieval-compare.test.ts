@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import './retrieval-compare.js';
@@ -19,6 +20,16 @@ const sets: RetrievalComparisonSet[] = [
   { id: 'reranked', label: 'Reranked', chunks: [chunk('a', 0.95, 1), chunk('c', 0.7, 2)] },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'retrievalCompareLabel',
+  'retrievalCompareOverlap',
+  'retrievalCompareRank',
+  'retrievalCompareDenseScore',
+  'retrievalCompareSparseScore',
+  'retrievalCompareRerankScore',
+  'retrievalCompareFinalScore',
+]);
 it('sorts explicit ranks, reports overlap, and shows score breakdowns', async () => {
   const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   const firstColumn = el.shadowRoot!.querySelector('[part="set"]')!;

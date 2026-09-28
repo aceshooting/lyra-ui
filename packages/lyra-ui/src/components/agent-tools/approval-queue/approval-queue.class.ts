@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -36,8 +38,10 @@ export interface ToolApprovalRequest {
 }
 
 export interface LyraApprovalQueueEventMap {
+  /** @deprecated Use `lr-approval-decision-request`. */
+  'lr-approval-decision': LyraApprovalQueueEventMap['lr-approval-decision-request'];
   'lr-approval-select': CustomEvent<{ invocationId: string }>;
-  'lr-approval-decision': CustomEvent<ToolApprovalEventDetail & { args?: unknown }>;
+  'lr-approval-decision-request': CustomEvent<ToolApprovalEventDetail & { args?: unknown }>;
   'lr-approval-close': CustomEvent<{ invocationId: string; reason: ToolApprovalDialogCloseReason }>;
 }
 
@@ -53,7 +57,8 @@ export interface LyraApprovalQueueEventMap {
  *
  * @customElement lr-approval-queue
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
- * @event lr-approval-decision - A request was approved or denied. `detail: { invocationId,
+ * @event lr-approval-decision - Deprecated cancelable compatibility alias of `lr-approval-decision-request`.
+ * @event lr-approval-decision-request - A request was approved or denied. `detail: { invocationId,
  *   approved, args? }`. Cancelable; preventing it keeps the nested dialog pending.
  * @event lr-approval-close - The nested decision dialog closed, or controlled requests invalidated
  *   its formerly pending selection. `detail: { invocationId, reason }`; invalidation uses
@@ -89,6 +94,17 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     confirmDenied: LYRA_DEFAULT_confirmDenied,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private emitApprovalDecisionRequest(detail: LyraApprovalQueueEventMap['lr-approval-decision-request']['detail']): CustomEvent {
+    const request = this.emit('lr-approval-decision-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-approval-decision', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-approval-decision', 'lr-approval-decision-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['requests']);
 
@@ -193,29 +209,35 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     this.emit('lr-approval-select', { invocationId: request.id });
   }
 
+  private decisionDispatching = false;
   private onApprove(request: ToolApprovalRequest, event: CustomEvent<{ args: unknown }>): void {
-    event.stopPropagation();
-    if ((request.status ?? 'pending') !== 'pending') return;
-    const translated = this.emit(
-      'lr-approval-decision',
-      { invocationId: request.id, approved: true, args: event.detail.args },
-      { cancelable: true },
-    );
-    if (translated.defaultPrevented) event.preventDefault();
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      event.stopPropagation();
+      if ((request.status ?? 'pending') !== 'pending') return;
+      const translated = this.emitApprovalDecisionRequest({ invocationId: request.id, approved: true, args: event.detail.args });
+      if (translated.defaultPrevented) event.preventDefault();
+
+    } finally {
+      this.decisionDispatching = false;
+    }
   }
 
   private onDeny(request: ToolApprovalRequest, event: CustomEvent<null>): void {
-    event.stopPropagation();
-    if ((request.status ?? 'pending') !== 'pending') return;
-    const translated = this.emit(
-      'lr-approval-decision',
-      { invocationId: request.id, approved: false },
-      { cancelable: true },
-    );
-    if (translated.defaultPrevented) event.preventDefault();
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      event.stopPropagation();
+      if ((request.status ?? 'pending') !== 'pending') return;
+      const translated = this.emitApprovalDecisionRequest({ invocationId: request.id, approved: false });
+      if (translated.defaultPrevented) event.preventDefault();
+    } finally {
+      this.decisionDispatching = false;
+    }
   }
 
-  private onClose(request: ToolApprovalRequest, event: CustomEvent<ToolApprovalDialogCloseReason>): void {
+  private onClose(request: ToolApprovalRequest, event: CustomEvent<{ reason: ToolApprovalDialogCloseReason }>): void {
     event.stopPropagation();
     this.nestedCloseInvocationId = request.id;
     if (request.id === this.selectedInvocationId) {
@@ -229,7 +251,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
       // Keep that replacement open, while still scheduling the stale close marker's cleanup.
       this.requestUpdate();
     }
-    this.emit('lr-approval-close', { invocationId: request.id, reason: event.detail });
+    this.emit('lr-approval-close', { invocationId: request.id, reason: event.detail.reason });
   }
 
   private renderRequest(request: ToolApprovalRequest): TemplateResult {
@@ -282,9 +304,11 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
               .toolName=${request.toolName}
               .args=${request.args}
               .readonly=${this.readonly}
-              @lr-approve=${(event: CustomEvent<{ args: unknown }>) => this.onApprove(request, event)}
-              @lr-deny=${(event: CustomEvent<null>) => this.onDeny(request, event)}
-              @lr-close=${(event: CustomEvent<ToolApprovalDialogCloseReason>) => this.onClose(request, event)}
+              @lr-approve=${(event: Event) => event.stopPropagation()}
+              @lr-approve-request=${(event: CustomEvent<{ args: unknown }>) => this.onApprove(request, event)}
+              @lr-deny=${(event: Event) => event.stopPropagation()}
+              @lr-deny-request=${(event: CustomEvent<null>) => this.onDeny(request, event)}
+              @lr-close=${(event: CustomEvent<{ reason: ToolApprovalDialogCloseReason }>) => this.onClose(request, event)}
             ></lr-tool-approval-dialog>`,
           )
         : nothing}

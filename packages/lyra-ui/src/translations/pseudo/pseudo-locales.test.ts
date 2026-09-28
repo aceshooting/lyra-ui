@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { expectLocaleFallback } from '../../../test/expected-locale-fallbacks.js';
 import {
   getLyraLocaleDirection,
   getRegisteredLyraLocales,
@@ -11,6 +12,8 @@ import './ar-XB.js';
 import type { LyraSparkline } from '../../components/data/sparkline/sparkline.class.js';
 import type { LyraFormatNumber } from '../../components/utility/format/format-number.class.js';
 import { createPseudoCatalog, pseudoExpand, pseudoMirror } from '../../internal/pseudo-localization.js';
+
+expectLocaleFallback('ar', ['noData']);
 
 it('generates deterministic synthetic catalogs without changing placeholders or plural shapes', () => {
   const source = {

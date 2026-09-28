@@ -34,8 +34,8 @@ import {
   webTypesValue,
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
-import { formatDeprecationSubject } from './component-metadata.mjs';
-import { deprecationDescription, webTypesElementContributions } from './editor-web-types.mjs';
+import { webTypesElementContributions } from './editor-web-types.mjs';
+import { editorDescription, editorSummary, isCurrentEditorEntry } from './editor-descriptions.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
@@ -62,11 +62,9 @@ function literalValues(typeText) {
   return htmlDataValues(typeText, TYPE_ALIAS_REGISTRY);
 }
 
-function attributeDescriptionText(attribute) {
+function attributeDescriptionText(attribute, tagName) {
   const lines = [];
-  if (attribute.description) lines.push(attribute.description);
-  const deprecation = deprecationDescription(attribute.deprecation);
-  if (deprecation) lines.push(deprecation);
+  lines.push(editorDescription(attribute.description, tagName));
   const meta = [];
   if (attribute.type?.text) meta.push(`Type: \`${attribute.type.text}\``);
   if (attribute.default !== undefined) meta.push(`Default: \`${attribute.default}\``);
@@ -74,8 +72,8 @@ function attributeDescriptionText(attribute) {
   return lines.length ? lines.join('\n\n') : undefined;
 }
 
-function attributeDescription(attribute) {
-  const text = attributeDescriptionText(attribute);
+function attributeDescription(attribute, tagName) {
+  const text = attributeDescriptionText(attribute, tagName);
   return text ? markdown(text) : undefined;
 }
 
@@ -89,80 +87,8 @@ function webTypesAttributeValue(attribute) {
   return webTypesValue(attribute.type?.text, TYPE_ALIAS_REGISTRY);
 }
 
-function escapeTableCell(text) {
-  return (text ?? '').replaceAll('\n', ' ').replaceAll('|', '\\|');
-}
-
-function markdownTable(rows) {
-  const header = '| Name | Description |\n| --- | --- |';
-  const body = rows.map((row) => `| ${row.name} | ${escapeTableCell(row.description)} |`).join('\n');
-  return `${header}\n${body}`;
-}
-
-function componentMetadataDescription(declaration) {
-  if (!declaration.status || !declaration.since) return undefined;
-  const lines = [
-    '**Component metadata**',
-    '',
-    `- Status: \`${declaration.status}\``,
-    `- Since: \`${declaration.since}\``,
-  ];
-  if (declaration.maturity?.rationale) lines.push(`- Rationale: ${declaration.maturity.rationale}`);
-  if (declaration.maturity?.graduationCriteria) {
-    lines.push(`- Graduation: ${declaration.maturity.graduationCriteria}`);
-  }
-  for (const entry of declaration.deprecations ?? []) {
-    const subject = formatDeprecationSubject(entry, declaration.tagName);
-    lines.push(`- Deprecated ${entry.kind} ${subject}: ${deprecationDescription(entry)}`);
-  }
-  return lines.join('\n');
-}
-
 function tagDescription(declaration) {
-  const sections = [declaration.description || `\`<${declaration.tagName}>\` custom element.`];
-  const componentMetadata = componentMetadataDescription(declaration);
-  if (componentMetadata) sections.push(componentMetadata);
-
-  if (declaration.slots?.length) {
-    sections.push(
-      [
-        '**Slots**',
-        markdownTable(
-          declaration.slots.map((slot) => ({
-            name: slot.name ? `\`${slot.name}\`` : '(default)',
-            description: slot.description,
-          })),
-        ),
-      ].join('\n\n'),
-    );
-  }
-
-  if (declaration.cssParts?.length) {
-    sections.push(
-      [
-        '**CSS Shadow Parts**',
-        markdownTable(
-          declaration.cssParts.map((part) => ({ name: `\`${part.name}\``, description: part.description })),
-        ),
-      ].join('\n\n'),
-    );
-  }
-
-  if (declaration.cssProperties?.length) {
-    sections.push(
-      [
-        '**CSS Custom Properties**',
-        declaration.cssProperties
-          .map((prop) => {
-            const defaultSuffix = prop.default !== undefined ? ` (default: \`${prop.default}\`)` : '';
-            return `- \`${prop.name}\`${defaultSuffix} — ${prop.description ?? ''}`;
-          })
-          .join('\n'),
-      ].join('\n\n'),
-    );
-  }
-
-  return sections.join('\n\n---\n\n');
+  return editorDescription(declaration.description || `\`<${declaration.tagName}>\` custom element.`, declaration.tagName);
 }
 
 function collectCustomElements() {
@@ -192,9 +118,9 @@ const htmlData = {
   tags: customElements.map((declaration) => ({
     name: declaration.tagName,
     description: markdown(tagDescription(declaration)),
-    attributes: (declaration.attributes ?? []).map((attribute) => ({
+    attributes: (declaration.attributes ?? []).filter(isCurrentEditorEntry).map((attribute) => ({
       name: attribute.name,
-      description: attributeDescription(attribute),
+      description: attributeDescription(attribute, declaration.tagName),
       values: literalValues(attribute.type?.text),
     })),
   })),
@@ -211,11 +137,11 @@ writeFileSync(htmlDataPath, publishedJson(htmlData));
 
 const propertiesByName = new Map();
 for (const declaration of customElements) {
-  for (const prop of declaration.cssProperties ?? []) {
+  for (const prop of (declaration.cssProperties ?? []).filter(isCurrentEditorEntry)) {
     if (!propertiesByName.has(prop.name)) propertiesByName.set(prop.name, []);
     propertiesByName.get(prop.name).push({
       tag: declaration.tagName,
-      description: prop.description,
+      description: editorSummary(prop.description),
       ...(Object.hasOwn(prop, 'default') ? { default: prop.default } : {}),
     });
   }
@@ -261,8 +187,8 @@ const webTypes = {
       elements: customElements.map((declaration) => ({
         name: declaration.tagName,
         description: tagDescription(declaration),
-        attributes: (declaration.attributes ?? []).map((attribute) => {
-          const description = attributeDescriptionText(attribute);
+        attributes: (declaration.attributes ?? []).filter(isCurrentEditorEntry).map((attribute) => {
+          const description = attributeDescriptionText(attribute, declaration.tagName);
           const value = webTypesAttributeValue(attribute);
           return {
             name: attribute.name,

@@ -6,7 +6,7 @@
 - **Class** `LyraMap`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated event** `lr-map-legend-panel-toggle` since `21.1.0`; use event `addEventListener('lr-map-legend-panel-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Deprecated event** `lr-map-legend-toggle` since `21.1.0`; use event `addEventListener('lr-map-legend-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`

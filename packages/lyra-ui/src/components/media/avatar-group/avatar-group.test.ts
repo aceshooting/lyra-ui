@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
@@ -40,6 +41,8 @@ function fiveAvatars() {
   `;
 }
 
+expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreCount']);
+
 it('sanitizes a NaN/negative max to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
   const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
 
@@ -57,7 +60,7 @@ it('sanitizes a NaN/negative max to a finite non-negative integer instead of poi
   expect(el.max).to.be.undefined; // explicitly unsetting still means "no limit"
 });
 
-it('defaults max to undefined, size to medium, shape to circle, variant to neutral -- no overflow badge, every avatar visible', async () => {
+it('defaults max to undefined, size to m, shape to circle, variant to neutral -- no overflow badge, every avatar visible', async () => {
   const el = (await fixture(html`
     <lr-avatar-group>
       <lr-avatar initials="AB"></lr-avatar>
@@ -65,7 +68,7 @@ it('defaults max to undefined, size to medium, shape to circle, variant to neutr
     </lr-avatar-group>
   `)) as LyraAvatarGroup;
   expect(el.max).to.be.undefined;
-  expect(el.size).to.equal('medium');
+  expect(el.size).to.equal('m');
   expect(el.shape).to.equal('circle');
   expect(el.variant).to.equal('neutral');
   expect((el.shadowRoot!.querySelector('[part="overflow-badge"]')) == null).to.be.true;
@@ -89,7 +92,7 @@ it('spells its default size the same way lr-avatar does, and renders the same di
     getComputedStyle((avatar as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot.querySelector('[part="base"]') as HTMLElement)
       .inlineSize;
 
-  expect(group.size, 'the group defaults to the canonical medium spelling').to.equal('medium');
+  expect(group.size, 'the group defaults to the canonical m spelling').to.equal('m');
   expect(diameterOf(grouped), 'a default avatar inside a default group matches a standalone one').to.equal(
     diameterOf(standalone),
   );
@@ -116,10 +119,10 @@ it('normalizes an unsupported size/shape/variant value back to its default inste
   el.variant = 'rainbow' as never;
   await el.updateComplete;
 
-  expect(el.size).to.equal('medium');
+  expect(el.size).to.equal('m');
   expect(el.shape).to.equal('circle');
   expect(el.variant).to.equal('neutral');
-  expect(el.getAttribute('size')).to.equal('medium');
+  expect(el.getAttribute('size')).to.equal('m');
   expect(el.getAttribute('shape')).to.equal('circle');
   expect(el.getAttribute('variant')).to.equal('neutral');
 });
@@ -1059,4 +1062,12 @@ it('paints the neutral overflow badge from the neutral quiet fill role, not the 
   `)) as LyraAvatarGroup;
   const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
   expect(getComputedStyle(visual).backgroundColor).to.equal('rgb(1, 2, 3)');
+});
+
+it('defaults the shared size spelling to m while retaining explicit medium', async () => {
+  const el = await fixture<LyraAvatarGroup>(html`<lr-avatar-group><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>`);
+  expect(el.size).to.equal('m');
+  el.size = 'medium';
+  await el.updateComplete;
+  expect(el.size).to.equal('medium');
 });

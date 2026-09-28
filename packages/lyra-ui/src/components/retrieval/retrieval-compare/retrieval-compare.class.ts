@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -80,6 +81,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     retrievalCompareSparseScore: LYRA_DEFAULT_retrievalCompareSparseScore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sets']);
 

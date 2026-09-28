@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.js';
@@ -21,6 +22,12 @@ const trace = [
 
 const overflowLocation = '9'.repeat(400);
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', [
+  'stackTraceLabel',
+  'copy',
+  'stackTraceShowFrames',
+]);
 describe('lr-stack-trace', () => {
   it('expands separate internal runs independently', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;

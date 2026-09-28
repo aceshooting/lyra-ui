@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-realtime-session.js to register this component. */
 export * from './realtime-session.class.js';
 import { LyraRealtimeSession } from './realtime-session.class.js';
 import { defineElement } from '../../../internal/prefix.js';

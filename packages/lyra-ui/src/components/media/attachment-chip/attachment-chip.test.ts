@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
@@ -32,6 +33,8 @@ function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
 function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
 }
+
+expectLocaleFallback('ar-EG', ['attachmentRetryWithContext', 'attachmentUntitledFile', 'attachmentUploadFailed', 'attachmentUploadingProgress', 'attachmentUploadingWithContext', 'fileSizeUnitMb', 'removeWithContext']);
 
 describe('formatFileSize', () => {
   it('renders whole bytes with no decimal', () => {

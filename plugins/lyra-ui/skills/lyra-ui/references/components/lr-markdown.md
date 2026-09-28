@@ -6,7 +6,8 @@
 - **Class** `LyraMarkdown`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
+- **Deprecated event** `lr-link-click` since `unreleased`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning.
 - **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -96,7 +97,7 @@ uses for its own `[part="body"]`.
   `_blank`, so rendered links open in the same tab
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
-  intercepted on click and reported via `lr-link-click` instead of navigating; empty (the default)
+  intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
   means every link is treated as external
 - `headingOffset: number = 0` (attribute `heading-offset`) — added to every rendered heading's
   source `token.depth` before emitting `<h${depth}>` (e.g. `heading-offset="2"` renders a source `#`
@@ -195,10 +196,12 @@ placed first and preserved inside both ceilings.
 
 **Events:**
 
-- `lr-link-click` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
+- `lr-link-activate` (`detail: { href: string }`) — fired, with navigation prevented, when a rendered
   link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
+- `lr-link-click` — deprecated compatibility alias of `lr-link-activate`, emitted afterward with
+  the same detail.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
@@ -216,7 +219,6 @@ placed first and preserved inside both ceilings.
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 - `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
   code-block copy chrome; both bubble and are composed.
-
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; respects
@@ -307,7 +309,7 @@ after that lazy load resolves; each instance owns its configuration. Call `rende
 <script>
   document
     .querySelector("lr-markdown")
-    .addEventListener("lr-link-click", (e) => {
+    .addEventListener("lr-link-activate", (e) => {
       router.navigate(e.detail.href);
     });
 </script>

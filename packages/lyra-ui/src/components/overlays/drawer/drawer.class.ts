@@ -30,14 +30,10 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @event lr-after-hide - The drawer is closed and has finished sliding out.
  * @event lr-initial-focus - Inherited cancelable event before automatic modal focus movement.
  * @event lr-request-close - Inherited cancelable built-in dismissal request with a source detail.
- * @event lr-close - Inherited conditionally cancelable close event; detail is the dismissal
- *   reason. Ordinary dismissal can be vetoed; an `'unmount'` notification after external removal
- *   cannot be. **The name is not drawer-scoped, so filter by target.** `lr-close` is also emitted
- *   by several components commonly nested inside a drawer body (`<lr-callout>`, `<lr-tab>`/
- *   `<lr-tab-group>`, `<lr-command-palette>`, `<lr-document-viewer>`), and library events bubble
- *   and are composed, so a listener bound directly on `<lr-drawer>` also receives a descendant's
- *   close. Guard on the target exactly as documented on `<lr-dialog>`'s own `lr-close`:
- *   `if (event.target !== event.currentTarget) return;`.
+ * @event lr-close-request - Inherited cancelable proposal with `{ reason }` detail.
+ * @event lr-close - Inherited non-cancelable accepted dismissal with `{ reason }` detail.
+ *   Removal while open uses reason `unmount`. Filter `event.target === event.currentTarget`
+ *   to distinguish this drawer's dismissal from composed descendant notifications.
  * It inherits every `<lr-dialog>` CSS part unchanged, with one deliberate layout exception:
  * `<lr-dialog>`'s `[part="body"]` grows to fill the panel once a consumer sets
  * `--lr-dialog-height`, because that panel is otherwise content-sized. A drawer's panel is

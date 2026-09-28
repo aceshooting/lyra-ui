@@ -341,7 +341,9 @@ const BRAZILIAN_ONLY_FORMS: ReadonlyArray<[string, RegExp]> = [
   ['artefato (European: artefacto)', /(?<![\p{L}\p{N}])artefatos?(?![\p{L}\p{N}])/iu],
   ['rastreamento (European: rastreio)', /(?<![\p{L}\p{N}])rastreamentos?(?![\p{L}\p{N}])/iu],
   ['por vez (European: de cada vez)', /(?<![\p{L}\p{N}])por vez(?![\p{L}\p{N}])/iu],
-  ['conectar (European: ligar)', /(?<![\p{L}\p{N}])(?:des|re)?conect\p{L}*/iu],
+  // Conector(es) is the standard noun for integration connectors in both regions; only the verb
+  // family is under review here.
+  ['conectar (European: ligar)', /(?<![\p{L}\p{N}])(?:des|re)?conect(?!or(?:es)?\b)\p{L}*/iu],
   ['conexão (European: ligação)', /(?<![\p{L}\p{N}])(?:conexão|conexões)(?![\p{L}\p{N}])/iu],
   ['você (European UI: imperative or third person)', /(?<![\p{L}\p{N}])vocês?(?![\p{L}\p{N}])/iu],
   ['usuário (European: utilizador)', /(?<![\p{L}\p{N}])usuári\p{L}*/iu],

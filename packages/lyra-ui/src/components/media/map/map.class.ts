@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -2816,6 +2817,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-map-click',
@@ -3524,7 +3526,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     // A live fit is newer than anything still queued from before construction.
     this.pendingFit = undefined;
-    return this.applyFit(map, fit, fit.animate && !prefersReducedMotion(ownerWindow(this)));
+    return this.applyFit(map, fit, fit.animate && !prefersReducedMotion(this));
   }
 
   private applyFit(map: MapLibreMapCapability, fit: MapFitRequest, animate: boolean): boolean {

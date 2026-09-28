@@ -62,6 +62,9 @@ done
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m%s\033[0m\n' "$*"; }
 
+step "current-major changelog and release history archive"
+pnpm --filter @aceshooting/lyra-ui archive-changelog
+
 step "package metadata (src/internal/package-metadata.ts)"
 pnpm --filter @aceshooting/lyra-ui package-metadata
 
@@ -70,6 +73,9 @@ pnpm --filter @aceshooting/lyra-ui default-string-slices
 
 step "per-family translation slices"
 pnpm --filter @aceshooting/lyra-ui translation-slices
+
+step "locale metadata and optional loader map"
+pnpm --filter @aceshooting/lyra-ui locale-manifest
 
 step "initial manifest (custom-elements.json)"
 pnpm manifest
@@ -95,6 +101,9 @@ pnpm --filter @aceshooting/lyra-ui autoloader-manifest
 step "registration graph (registrations.json)"
 pnpm --filter @aceshooting/lyra-ui registration-graph
 
+step "scoped custom-element definitions"
+pnpm --filter @aceshooting/lyra-ui scoped-definitions
+
 step "typed global event surface"
 pnpm --filter @aceshooting/lyra-ui events
 
@@ -108,7 +117,9 @@ step "semantic, chart, and terminal palette artifacts, and generated theme look 
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
+pnpm --filter @aceshooting/lyra-ui style-axes
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-theme-presets.mjs
+pnpm --filter @aceshooting/lyra-ui option-presets
 
 step "design-token artifacts"
 pnpm --filter @aceshooting/lyra-ui design-tokens

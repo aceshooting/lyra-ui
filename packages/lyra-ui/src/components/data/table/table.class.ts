@@ -1,3 +1,4 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -38,7 +39,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -283,8 +284,8 @@ interface TableColumnCommon<T> {
    *  and keyboard resizing; other CSS lengths still constrain the rendered column. */
   maxWidth?: string;
   /** Enables pointer and keyboard resizing from this column's header. The table keeps the live
-   *  width internally and emits `lr-column-resize` on every resize step; only the final,
-   *  drag-end/keypress-committed emission is cancelable (see the event's own doc). */
+   *  width internally and emits non-cancelable `lr-column-resize` notifications. The final
+   *  drag-end or keyboard proposal can be vetoed with `lr-column-resize-request`. */
   resizable?: boolean;
   sortable?: boolean;
   /** This column's own initial sort direction the first time header activation makes it the active
@@ -548,11 +549,14 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-row-expand-request': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-load-more': CustomEvent<null>;
+  'lr-retry-request': CustomEvent<null>;
+  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
   'lr-retry': CustomEvent<null>;
-  'lr-selection-change': CustomEvent<Readonly<{ rowKeys: readonly K[] }>>;
-  'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
+  'lr-selection-change': CustomEvent<Readonly<{ selectedRowKeys: readonly K[] }>>;
+  'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
+  'lr-column-resize-request': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
   'lr-column-resize': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
 }
 /**
@@ -797,7 +801,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @event lr-row-click - Deprecated alias of `lr-row-activate`, fired unchanged right after it from
  *   the same activation with an equal `detail: { row }`. Removal not before 23.0.0.
  * @event lr-load-more - The "load more" control was activated.
- * @event lr-retry - The built-in `[part='retry-button']` was activated, only rendered while
+ * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
+ * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
+ *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
  * @event lr-priority-columns-visibility-change - `priorityColumnsVisible` was toggled by
@@ -822,20 +828,16 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   alone for the same reason — a key that matches no rendered row cannot carry a `row`.
  * @event lr-selection-change - Opt-in row selection changed, from a row activation or from a
  *   `selectionMode` flip to `'single'` coercing an existing multi-row selection down to one key.
- *   Frozen readonly `detail: { rowKeys: readonly K[] }` — `readonly (string | number)[]` on an
+ *   Frozen readonly `detail: { selectedRowKeys: readonly K[] }` — `readonly (string | number)[]` on an
  *   unparameterized table, the default `K`. Not cancelable in either case: it announces a
  *   selection that has already changed rather than proposing one.
- * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { text }`.
+ * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { filterText }`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
- * @event lr-column-resize - A resizable column changed width by pointer or keyboard. `detail:
- *   { columnKey, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of
- *   movement as non-cancelable live feedback, then once more, **cancelable**, for the final
- *   width committed at drag-end; a keyboard step (Home/End/Arrow) is already a single discrete
- *   action and fires that one cancelable commit directly. `preventDefault()` on a cancelable
- *   emission reverts the column to its pre-gesture width -- unless the listener resolved the
- *   resize itself during that same synchronous dispatch, in which case the width it applied stands
- *   instead of being rolled back over.
+ * @event lr-column-resize-request - Cancelable proposal before accepting a keyboard resize or
+ *   final pointer drag width. `detail: { columnKey, width }`. Vetoing discards the proposal or drag preview.
+ * @event lr-column-resize - Non-cancelable live pointer preview or accepted resize notification.
+ *   `detail: { columnKey, width }`, with width in CSS pixels. Use `lr-column-resize-request` to veto.
  * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
  * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
@@ -951,6 +953,10 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @cssprop [--lr-table-cell-padding-compact=var(--lr-space-xs) var(--lr-space-s)] - Padding of a
  *   group-header cell and a footer cell, which default to a tighter block/inline shorthand than
  *   `--lr-table-cell-padding` rather than sharing it outright.
+ * @cssprop --lr-table-row-height - Minimum header, body and footer row height. Overrides the optional
+ *   --lr-theme-table-row-height minimum; 24px and density target floors still apply. Unset rows remain content-driven.
+ * @cssprop --lr-table-row-min-height - Shared minimum row height supplied by the theme. The
+ *   component's --lr-table-row-height override takes precedence.
  * @cssprop [--lr-table-font-size=inherit] - Font size of the `<table>` element and, through normal
  *   inheritance, every cell inside it. The rest of the font shorthand (family, weight, etc.) keeps
  *   inheriting from the host regardless of this override.
@@ -1008,7 +1014,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
     retry: LYRA_DEFAULT_retry,
@@ -1150,12 +1155,31 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  overrides a direction the user just chose for the column they are still on. Defaults to
    *  `'asc'`; set `'desc'` for a most-recent-first or highest-first table. */
   @property({ attribute: 'default-sort-dir' }) defaultSortDir: TableSortDirection = 'asc';
-  /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
-   *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
-   *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. An
-   *  explicitly empty string is a real override (renders `aria-label=""`) rather than falling
-   *  back to the host `aria-label`. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  /** Compatibility accessible-name fallback for the grid. Host `aria-label` wins by presence,
+   * including the empty string. Without a host name, an explicitly empty compatibility value
+   * remains a real override; omitted names let the caption name the grid.
+   * @deprecated Use the host `aria-label` or native `ariaLabel` property; removal not before 24.0.0.
+   */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string | undefined { return this.legacyAccessibleLabel; }
+  set accessibleLabel(value: string | undefined) {
+    const previous = this.legacyAccessibleLabel;
+    this.legacyAccessibleLabel = value;
+    if (value !== undefined && !this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'ariaLabel');
+    }
+    this.requestUpdate('accessibleLabel', previous);
+  }
+  private legacyAccessibleLabel?: string;
+
+  /** The canonical host accessible name. Presence wins, including an explicitly empty string. */
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
+
+  override attributeChangedCallback(name: string, previous: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, previous, value);
+    if (name === 'accessible-label' && value !== null) warnDeprecatedUsage(this, 'attribute', name, 'aria-label');
+  }
+
   /** Optional visible caption rendered as the table's `<caption>`. Also names the grid (via
    *  `aria-labelledby`) when no `accessibleLabel`/host `aria-label` is set. Consumer-supplied
    *  text, not localized. */
@@ -1555,7 +1579,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private rovingFocusSnapshot: TableRovingFocusSnapshot | null = null;
   private _resizedColumnWidths = new Map<string, number>();
 
-  /** Opened immediately before each cancelable `lr-column-resize` commit and read immediately
+  /** Opened immediately before each cancelable `lr-column-resize-request` proposal and read immediately
    *  after it. Both commit paths apply the new width optimistically and roll it back when the
    *  event is vetoed -- a write that lands *after* the synchronous dispatch, so without this it
    *  also overwrites a width a listener resolved for itself from inside that dispatch (it refuses
@@ -1714,27 +1738,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const width = Math.min(maxWidth, Math.max(minWidth, requestedWidth));
     const previousWidth = this.resizedColumnWidths.get(column.key);
     if (previousWidth === width) return;
-    this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
-    // Unlike a pointer drag's per-pixel `onResizePointerMove` stream, every keyboard step here is
-    // already a single, final, deliberately-committed width change -- exactly the kind of
-    // "committed width" this event is scoped to be vetoable for.
     this.resizeWriteGuard.open();
-    const event = this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }), { cancelable: true });
-    // A vetoing listener may also have resolved the resize itself from inside that synchronous
-    // dispatch -- re-entering one of the resize affordances is the only public route to a
-    // committed width, and the guard is what tells that write apart from our own. Rolling back on
-    // top of it would restore the stale pre-emit width over the one the listener just chose, so a
-    // veto only un-does a width nothing else replaced.
-    if (event.defaultPrevented && !this.resizeWriteGuard.touched) {
-      const reverted = new Map(this.resizedColumnWidths);
-      if (previousWidth === undefined) reverted.delete(column.key);
-      else reverted.set(column.key, previousWidth);
-      this.resizedColumnWidths = reverted;
-    }
-    // Re-assert the write for any *enclosing* guard window: this call always writes a width by the
-    // time it reaches here, and the `open()` above cleared whatever its caller had recorded. Without
-    // this, a listener resolving an outer commit by re-entering here would leave that outer read
-    // seeing an untouched guard and clobber the very width it just applied.
+    const request = this.emit('lr-column-resize-request', Object.freeze({ columnKey: column.key, width }), { cancelable: true });
+    if (request.defaultPrevented || this.resizeWriteGuard.touched) return;
+    this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
+    this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }));
     markVetoGuardWrite(this.resizeWriteGuard);
   }
 
@@ -1871,24 +1879,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     }
 
     // The drag's committed final width -- the one and only point in the gesture that's vetoable.
-    // `onResizePointerMove` above fires the same event once per pixel purely as live drag
+    // `onResizePointerMove` above fires a notification once per pixel purely as live drag
     // feedback. Those intermediate steps stay non-cancelable so the preview cannot be vetoed
     // frame by frame.
     const committedWidth = this.resizedColumnWidths.get(state.key);
     if (committedWidth === undefined || committedWidth === state.previousWidth) return;
     this.resizeWriteGuard.open();
-    const commitEvent = this.emit(
-      'lr-column-resize',
-      Object.freeze({ columnKey: state.key, width: committedWidth }),
-      { cancelable: true }
-    );
-    // Same rollback contract as the keyboard commit above, and the same exception: a listener that
-    // vetoes the drag's committed width and applies its own instead keeps it.
-    if (!commitEvent.defaultPrevented || this.resizeWriteGuard.touched) return;
-    const reverted = new Map(this.resizedColumnWidths);
-    if (state.previousWidth === undefined) reverted.delete(state.key);
-    else reverted.set(state.key, state.previousWidth);
-    this.resizedColumnWidths = reverted;
+    const request = this.emit('lr-column-resize-request', Object.freeze({ columnKey: state.key, width: committedWidth }), { cancelable: true });
+    if (this.resizeWriteGuard.touched) return;
+    if (request.defaultPrevented) {
+      this.rollbackResizePreview(state);
+      return;
+    }
+    this.emit('lr-column-resize', Object.freeze({ columnKey: state.key, width: committedWidth }));
   };
 
   private detachResizePointerListeners(): void {
@@ -2567,7 +2570,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     this.filterText = input.value;
-    this.emit('lr-filter-change', Object.freeze({ text: this.filterText }));
+    this.emit('lr-filter-change', Object.freeze({ filterText: this.filterText }));
   };
   // The native `::-webkit-search-cancel-button` reset in table.styles.ts removes the browser's
   // own clear affordance with no replacement -- this button, firing the same `lr-filter-change`
@@ -2576,7 +2579,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private onClearFilter = (): void => {
     if (this.filterText === '') return;
     this.filterText = '';
-    this.emit('lr-filter-change', Object.freeze({ text: '' }));
+    this.emit('lr-filter-change', Object.freeze({ filterText: '' }));
     this.renderRoot.querySelector<HTMLInputElement>('[part="filter"]')?.focus();
   };
   private stopOwnedEvent = (event: Event): void => {
@@ -2714,7 +2717,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       // state, not a live transition, and `changed` lists every property on that first pass.
       if (this.hasUpdated) {
         const rowKeys = this.asKeyList(Object.freeze(first === undefined ? [] : [first]));
-        this.emit('lr-selection-change', Object.freeze({ rowKeys }));
+        this.emit('lr-selection-change', Object.freeze({ selectedRowKeys: rowKeys }));
       }
     }
     // The expansion mirror of the coercion above. It emits nothing: `lr-row-expand-toggle`
@@ -3055,7 +3058,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (this.selectionMode === 'single') {
       this.selectedRowKeys = this.asKeySet(new Set([selectedKey]));
       const rowKeys = this.asKeyList(Object.freeze([selectedKey]));
-      this.emit('lr-selection-change', Object.freeze({ rowKeys }));
+      this.emit('lr-selection-change', Object.freeze({ selectedRowKeys: rowKeys }));
     } else if (this.selectionMode === 'multiple') {
       const rawKey = selectedKey;
       const next = new Set(this._selectedKeys);
@@ -3063,7 +3066,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       else next.add(rawKey);
       this.selectedRowKeys = this.asKeySet(next);
       const rowKeys = this.asKeyList(Object.freeze([...next]));
-      this.emit('lr-selection-change', Object.freeze({ rowKeys }));
+      this.emit('lr-selection-change', Object.freeze({ selectedRowKeys: rowKeys }));
     }
   }
 
@@ -3708,7 +3711,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         onRetry: () => {
           this.error = false;
         },
-        emitRetry: (detail, init: { cancelable: true }) => this.emit('lr-retry', detail, init),
+        emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
+        emitRetry: (detail, init: { cancelable: true }) => {
+          const legacy = this.emit('lr-retry', detail, init);
+          if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+          return legacy;
+        },
       },
       'error',
       'lr-retry'
@@ -3765,10 +3773,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // its own shell here: its whole point is that the <colgroup>/<thead>/filter/pagination chrome
     // stays put, which is only achievable by rendering the real table.
     const hasHostAriaLabel = this.hasAttribute('aria-label');
-    const gridAriaLabel =
-      this.accessibleLabel == null
-        ? (hasHostAriaLabel ? this.getAttribute('aria-label')! : nothing)
-        : this.accessibleLabel;
+    const gridAriaLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? nothing;
 
     // Sorted, not merely filtered: `footer`/`grandTotal` are documented as seeing every rendered
     // row "post-sort, pre-pagination", and an aggregate that reads position (a first/last value, a

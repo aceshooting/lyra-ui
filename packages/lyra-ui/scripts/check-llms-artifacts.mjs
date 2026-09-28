@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 // Verifies the generated agent-facing artifacts against their authored sources:
-//  1. `llms-full.txt` and everything under `llms/` (index, components/, tokens, peers, migration)
-//     are byte-identical to a fresh `scripts/build-llms.mjs` run — the same generated-file
-//     discipline already applied to `custom-elements.json`.
+//  1. `llms-full.txt` (a repository archive) and everything under `llms/` (index, components/,
+//     tokens, peers, migration) are byte-identical to a fresh `scripts/build-llms.mjs` run — the
+//     same generated-file discipline already applied to `custom-elements.json`.
 //  2. Every `@aceshooting/lyra-ui/components/...` path quoted anywhere in the agent-facing docs
 //     resolves to a real module. Stale paths were shipped for a whole major after the components
 //     moved into family directories, and a wrong path is a hard module-resolution failure for the
 //     consumer, so this is checked rather than assumed.
-//  3. No generated artifact, and not the shipped package README, links an authored
-//     `llms/<family>.md` source, which is not published.
+//  3. No generated artifact, and not the shipped package README, references an authored
+//     `llms/<family>.md` source as a local file, which is not published.
 //  4. `package.json`'s `files` allowlist covers every artifact the docs tell an agent to read.
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build, FAMILIES } from './build-llms.mjs';
+import { build, FAMILIES, SHARED_TOPICS } from './build-llms.mjs';
 import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -21,9 +21,9 @@ const problems = [];
 const REQUIRED_PACKAGE_FILES = Object.freeze([
   'CHANGELOG.md',
   'llms.txt',
-  'llms-full.txt',
   'llms/index.md',
   'llms/shared.md',
+  'llms/shared',
   'llms/tokens.md',
   'llms/peers.md',
   'llms/migration.md',
@@ -33,14 +33,21 @@ const REQUIRED_PACKAGE_FILES = Object.freeze([
 const AUTHORED_FAMILY_FILES = Object.freeze(FAMILIES.map(([family]) => `llms/${family}.md`));
 
 /**
- * Reports every reference to an authored `llms/<family>.md` source in `documents`, an iterable of
- * `[label, text]` pairs holding shipped text.
+ * Reports local references to authored `llms/<family>.md` sources in shipped text.
+ * Absolute HTTP(S) links resolve independently of the package's published file list.
  */
 export function unpublishedSourceReferenceProblems(documents) {
   const found = [];
   for (const [label, text] of documents) {
+    const localText = text.replace(/https?:\/\/[^\s<>()[\]`"']+/gu, (candidate) => {
+      try {
+        return new URL(candidate).hostname ? '' : candidate;
+      } catch {
+        return candidate;
+      }
+    });
     for (const familyFile of AUTHORED_FAMILY_FILES) {
-      if (text.includes(familyFile)) {
+      if (localText.includes(familyFile)) {
         found.push(
           `${label} references \`${familyFile}\`, which is an authored build input and is not published. Point at \`llms/components/<tag>.md\` or \`llms/index.md\` instead.`,
         );
@@ -89,6 +96,7 @@ const docs = [
   ...readdirSync(path.join(packageDir, 'llms'))
     .filter((f) => f.endsWith('.md'))
     .map((f) => path.join('llms', f)),
+  ...SHARED_TOPICS.map(([name]) => path.join('llms', 'shared', `${name}.md`)),
 ];
 const seenPaths = new Map();
 for (const doc of docs) {

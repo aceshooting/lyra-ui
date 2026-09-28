@@ -1,5 +1,5 @@
-// Regenerates the 8-series categorical chart ramp in `src/theme.css`, in place, between the
-// `chart ramp: generated` markers.
+// Generates the 8-series categorical chart fallbacks and optional chart preset arrays.
+// Canonical theme values are validated; style-axes alone writes src/theme.css.
 // The old ramp failed twice over, and `scripts/check-contrast.mjs` now measures both:
 //   1. SC 1.4.11. A chart series is a non-text graphical object conveying data, so it needs 3:1
 //      against the surface it is drawn on. Four of the eight light-mode series were below that, the
@@ -17,11 +17,11 @@
 // Run: node scripts/generate-chart-palette.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { assertCanonicalPalette, canonicalPaletteColor, readCanonicalPalette } from './palette-canonical.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const themePath = join(packageDir, 'src', 'theme.css');
 const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
 
 const SERIES = 8;
@@ -206,35 +206,14 @@ function writeTokenFallbacks(filePath, valuesByMode) {
   writeFileSync(filePath, text, 'utf8');
 }
 
-const themeText = readFileSync(themePath, 'utf8');
-
-/**
- * Reads a token from each mode's block. Anchored on the `.lr-dark` SELECTOR LINE, never a substring
- * search: the file's own header prose mentions `.lr-dark`, so an `indexOf` split silently returns
- * the light value for both modes -- which produced a "dark" ramp designed against white.
- */
-function readPerMode(token) {
-  const lines = themeText.split('\n');
-  const darkStart = lines.findIndex((line) => /^\s*\.lr-dark\s*,?\s*$/.test(line));
-  const grab = (slice) => slice.join('\n').match(new RegExp(`${token}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
-  return { light: grab(lines.slice(0, darkStart)), dark: grab(lines.slice(darkStart)) };
-}
-
-const { light: lightSurface, dark: darkSurface } = readPerMode('--lr-theme-color-surface-default');
-if (!lightSurface || !darkSurface) throw new Error('could not read a surface token for both modes');
-
+const canonical = readCanonicalPalette(packageDir);
+const lightSurface = canonicalPaletteColor(canonical, '--lr-theme-color-surface-default', 'light');
+const darkSurface = canonicalPaletteColor(canonical, '--lr-theme-color-surface-default', 'dark');
 const ramps = { light: solve(lightSurface, 'light'), dark: solve(darkSurface, 'dark') };
+assertCanonicalPalette(canonical, Object.fromEntries(Object.entries(ramps).map(([mode, hexes]) =>
+  [mode, Object.fromEntries(hexes.map((hex, index) => [`--lr-theme-color-chart-${index + 1}`, hex]))],
+)));
 
-let output = themeText;
-for (const [mode, hexes] of Object.entries(ramps)) {
-  const block = hexes.map((hex, i) => `    --lr-theme-color-chart-${i + 1}: ${hex};`).join('\n');
-  const pattern = new RegExp(
-    `(/\\* chart ramp: generated \\(${mode}\\) -- see scripts/generate-chart-palette\\.mjs \\*/\\n)[\\s\\S]*?(\\n\\s*/\\* chart ramp: end \\*/)`,
-  );
-  if (!pattern.test(output)) throw new Error(`missing generated-chart markers for ${mode} in theme.css`);
-  output = output.replace(pattern, `$1${block}$2`);
-}
-writeFileSync(themePath, output, 'utf8');
 // The chart component keeps its own JS copy of the light ramp, reached when the tokens cannot be
 // resolved at all (no DOM, or an unparseable custom property). Hand-written, it silently outlived
 // two regenerations of the CSS ramp and went on shipping colours that fail both the contrast and
@@ -246,6 +225,15 @@ const fallbackPattern =
   /(\/\* chart fallback: generated -- see scripts\/generate-chart-palette\.mjs \*\/\nconst FALLBACK_SERIES_PALETTE = \[\n)[\s\S]*?(\n\] as const;)/;
 if (!fallbackPattern.test(fallbackText)) throw new Error('missing chart-fallback markers in chart-colors.ts');
 writeFileSync(fallbackPath, fallbackText.replace(fallbackPattern, `$1${fallbackBlock}$2`), 'utf8');
+
+const optionPath = join(packageDir, 'src', 'theme', 'options', 'charts.ts');
+const optionSource = readFileSync(optionPath, 'utf8');
+const optionPattern = /(\/\* categorical options: generated -- see scripts\/generate-chart-palette\.mjs \*\/\n)[\s\S]*?(\n\/\* categorical options: end \*\/)/;
+if (!optionPattern.test(optionSource)) throw new Error('missing categorical option markers in charts.ts');
+const optionBlock = Object.entries(ramps).map(([mode, hexes]) =>
+  `const ${mode.toUpperCase()}_CATEGORIES = Object.freeze([\n  ${hexes.map(hex => `'${hex}'`).join(', ')},\n]);`
+).join('\n');
+writeFileSync(optionPath, optionSource.replace(optionPattern, `$1${optionBlock}$2`), 'utf8');
 
 writeTokenFallbacks(
   specialistTokensPath,

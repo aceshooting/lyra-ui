@@ -14,8 +14,8 @@ before(() => trackInputModality(document));
  * compatibility entry registers (the optional-peer chart/map/graph families are excluded
  * because importing them requires peers this environment must not assume).
  *
- * Four contracts per tag, each in its default state (no attributes, no
- * properties, no slotted content):
+ * Four contracts per tag use default behavior, with explicit names where required and
+ * optional data loaders disabled by prepareDefaultElement(). No slotted content is supplied:
  *
  * 1. reconnect-smoke — an element survives disconnect + reconnect: no thrown
  *    errors, the shadow root still renders, and `requestUpdate()` still
@@ -103,8 +103,9 @@ function mountPoint(): HTMLDivElement {
   return host;
 }
 
-/** Keep the generic lifecycle checks independent of optional data-loader peers. */
+/** Supply required accessible names and keep lifecycle checks independent of optional peers. */
 function prepareDefaultElement(tag: string, el: Element): void {
+  if (tag === 'lr-table') el.setAttribute('aria-label', 'Records');
   if (tag === 'lr-emoji-picker') {
     (el as unknown as { loadGroups: () => Promise<null> }).loadGroups = () => Promise.resolve(null);
   }

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -276,6 +277,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
   /** Queue items may carry opaque host metadata. Keep each admitted source identity only while the

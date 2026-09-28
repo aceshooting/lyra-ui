@@ -5,6 +5,17 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Зерттеу барысы',
+  researchProgressEmpty: 'Зерттеу қадамдары жоқ.',
+  researchProgressLimit: 'Алғашқы {count} зерттеу қадамын көрсету.',
+  researchProgressStatusPending: 'Күтуде',
+  researchProgressStatusRunning: 'Орындалуда',
+  researchProgressStatusCompleted: 'Аяқталды',
+  researchProgressStatusFailed: 'Сәтсіз',
+  researchProgressSources: {
+    one: '{count} дереккөз',
+    other: '{count} дереккөз',
+  },
   graphLegendLabel: 'Граф шартты белгілері',
   entityChipWithType: '{label}, {type}',
   showMore: 'Көбірек көрсету',

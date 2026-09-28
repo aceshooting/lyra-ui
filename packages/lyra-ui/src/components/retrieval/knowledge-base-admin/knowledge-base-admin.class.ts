@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -20,7 +21,7 @@ let knowledgeBaseAdminInstance = 0;
 export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';
 
 export interface LyraKnowledgeBaseAdminEventMap {
-  'lr-tab-change': CustomEvent<{ tab: KnowledgeBaseAdminTab }>;
+  'lr-tab-change': CustomEvent<{ activeTab: KnowledgeBaseAdminTab }>;
   'lr-activate': CustomEvent<{ value: KnowledgeBaseAdminTab }>;
   'lr-source-create': CustomEvent<null>;
   'lr-source-sync': CustomEvent<{ sourceId: string }>;
@@ -41,7 +42,7 @@ export interface LyraKnowledgeBaseAdminEventMap {
  *
  * @customElement lr-knowledge-base-admin
  * @slot settings - Optional host-owned ingestion, chunking, embedding, or permissions controls.
- * @event lr-tab-change - The active operations tab changed. `detail: { tab }`.
+ * @event lr-tab-change - The active operations tab changed. `detail: { activeTab }`.
  * @event lr-activate - Fired on every user activation of an available tab -- a click, or an
  *   Arrow/Home/End key -- whether or not `activeTab` actually moved. `detail: { value }` carries
  *   the activated tab, the same identity `lr-tab-change` reports. Bubbling and composed, so a host
@@ -83,6 +84,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     knowledgeBaseAdminSourcesTab: LYRA_DEFAULT_knowledgeBaseAdminSourcesTab,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
 
@@ -126,7 +128,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     if (tab === 'ingestion' && this.withoutIngestion) return;
     if (tab !== this.activeTab) {
       this.activeTab = tab;
-      this.emit('lr-tab-change', { tab });
+      this.emit('lr-tab-change', { activeTab: tab });
     }
     // Every activation of an available tab reports, including the re-pick of the active tab that
     // `lr-tab-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
@@ -143,7 +145,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     this.focusSourcesAfterUpdate =
       activeElementIn(this.shadowRoot)?.matches('[role="tab"]') ?? false;
     this.activeTab = 'sources';
-    this.emit('lr-tab-change', { tab: 'sources' });
+    this.emit('lr-tab-change', { activeTab: 'sources' });
   }
 
   protected override updated(changed: PropertyValues<this>): void {

@@ -6,10 +6,10 @@
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated property** `showFlags` / `show-flags` since `21.1.0`; use property `without-flags`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -87,18 +87,42 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 - `size: LyraSize = 'm'` (reflected) — the same full scale as `lr-select`, accepting
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`.
 
-**Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
-every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
-`setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
-active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
-are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`.
-`lr-invalid` is the single
+**Lazy catalogs:** `localeLoader?: LyraLocaleLoader` is an optional, property-only callback. When
+unset, selection commits synchronously without loading a catalog. Set it to `loadLyraLocale` from
+`@aceshooting/lyra-ui/locale-loader.js` to import the selected built-in catalog before committing.
+The loader accepts exact shipped canonical tags (equivalent casing/underscores normalize), shares
+concurrent requests, and permits retry after a failed import. `en` needs no import; an unshipped
+regional tag rejects instead of claiming a translation. Importing the helper does not load a catalog
+or select the page locale. Supply an explicit `locales` list to offer catalogs before registration.
+
+```js
+import { loadLyraLocale } from "@aceshooting/lyra-ui/locale-loader.js";
+import "@aceshooting/lyra-ui/components/lr-locale-picker.js";
+const picker = document.querySelector("lr-locale-picker");
+picker.locales = ["en", "fr", "de"];
+picker.localeLoader = loadLyraLocale;
+```
+
+The unset callback preserves synchronous selection. A vetoed request never invokes the loader.
+While loading, the previous value stays committed and the trigger exposes `aria-busy`; a visible
+localized status and light-DOM announcement explain progress. Failure retains the value and offers
+Retry through a fresh request. New selection, host value/catalog/loader writes, reset, disablement,
+disconnect or adoption cancel ownership of an old completion. Dynamic imports themselves may still
+finish and register messages. No raw loader error is shown. Style the status with `load-status` and
+the retry button with `load-retry`.
+
+**Events:** `lr-change-request` is cancelable and carries `{ value, previousValue, direction }`
+before the selected value, popup, or global locale changes. Prevent it to keep all three unchanged;
+a synchronous host value assignment also takes precedence. On acceptance, the component sets
+`value`, closes the popup, applies `setLyraLocale(value)`, then emits a non-cancelable `lr-change`
+with the captured values and the direction resolved after any catalog load. Preventing the notification has no effect. `focus`/`blur` relay once from the
+trigger as native `FocusEvent`s preserving `relatedTarget`. `lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
 direction, resolved through `getLyraLocaleDirection(value)` — a catalog's declared
 `registerLyraLocale(tag, strings, { dir })` first, then `Intl.Locale`'s text-info surface where the
-engine has it, then `'ltr'`. It is present on every `lr-change`, cancelled or not, and it is carried
+engine has it, then `'ltr'`. It is present on both `lr-change-request` and `lr-change`, and it is carried
 precisely so applying the direction is a one-liner instead of an application-maintained table of RTL
 tags:
 
@@ -137,7 +161,8 @@ visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present 
 `option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag; rendered only while
 `optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
 `expand-icon`,
-`hint`, `error`.
+`hint`, `error`, `load-status` (the optional localized loading or failure message), and
+`load-retry` (the retry button shown after a locale load fails).
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -196,7 +221,7 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 **Known gotchas:**
 
 - selecting a row applies `setLyraLocale()` itself unless the listener calls
-  `event.preventDefault()` on `lr-change` — it does not touch
+  `event.preventDefault()` on `lr-change-request` — it does not touch
   `document.documentElement.lang`/`dir`. Applying those is still the host's job, but the direction
   is no longer the host's to _derive_: read `event.detail.direction` (or call
   `getLyraLocaleDirection(tag)`), rather than keeping a hand-maintained list of RTL tags.
@@ -205,29 +230,19 @@ resolver. Menu labels stay visible; a per-entry `country` override also reaches 
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
 
-**Lazy-loading the picked locale's catalog.** `locales` accepts a tag list before any of those
-tags has a registered catalog (see the `locales` property above), and `lr-change` is cancelable, so
-the lightest integration offers every supported tag up front and fetches only the one the visitor
-actually picks:
+**Applying a successfully loaded locale to the document.** Use the `localeLoader` example above
+for catalog loading, failure and retry. The successful `lr-change` notification can synchronize
+the document's language and direction after the picker commits:
 
 ```js
-import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
-
-const picker = document.querySelector("lr-locale-picker");
-picker.locales = ["en", "fr", "ar", "ja"]; // offered before any catalog is registered
-picker.addEventListener("lr-change", async (e) => {
-  e.preventDefault(); // keep `value` updated, defer applying the locale until the catalog lands
-  const tag = e.detail.value;
-  await import(`@aceshooting/lyra-ui/translations/${tag}.js`); // registers the catalog as a side effect
-  setLyraLocale(tag);
-  document.documentElement.lang = tag;
-  document.documentElement.dir = e.detail.direction;
+picker.addEventListener("lr-change", (event) => {
+  document.documentElement.lang = event.detail.value;
+  document.documentElement.dir = event.detail.direction;
 });
 ```
 
-Only the tags actually shipped as ready-made catalogs (see "The shipped catalogs" in the
-localization guide) resolve through that dynamic-import path unmodified; an application-authored
-locale still needs its own `registerLyraLocale()` call before `setLyraLocale()` does anything.
+Application-authored catalogs can supply their own `localeLoader` callback. It should resolve
+only once it has registered the requested messages; it must not change the active locale itself.
 
 **Additional API surface:**
 

@@ -320,3 +320,12 @@ export const RightToLeftCode: Story = {
     { id: 'rtl-answer', type: 'text', text: 'استخدم هذا الأمر:\n\n```sh\nnpm run build -- --verbose\n```' },
   ] satisfies MessagePart[]}></lr-message-parts></div>`,
 };
+
+export const Interrupted: Story = {
+  render: () => html`<div style="max-inline-size: 20rem">
+    <lr-message-parts .parts=${[
+      { id: 'complete', type: 'text', text: 'The first result is ready.', state: 'complete' },
+      { id: 'partial', type: 'text', text: 'The next result was interrupted while loading…', state: 'interrupted', interruption: { resumable: true, reason: 'The host can resume this response when the connection is available.' } },
+    ] satisfies MessagePart[]}></lr-message-parts>
+  </div>`,
+};

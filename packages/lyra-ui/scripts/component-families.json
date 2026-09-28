@@ -296,6 +296,14 @@
     "navigation-menu": "layout",
     "navigation-menu-item": "layout",
     "tool-call-block": "agent-tools",
-    "menubar": "layout"
+    "menubar": "layout",
+    "change-review": "agent-tools",
+    "agent-question": "agent-tools",
+    "permission-rules": "agent-tools",
+    "permission-grant": "agent-tools",
+    "connector-manager": "agent-tools",
+    "background-runs": "agent-tools",
+    "research-progress": "retrieval",
+    "budget-meter": "agent-tools"
   }
 }

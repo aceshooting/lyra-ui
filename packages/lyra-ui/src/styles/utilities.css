@@ -5,12 +5,19 @@
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
 @layer lr-utilities {
+  :where(.lr-prose, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4),
+  :where(.lr-typography) :where(h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote):where(:not([slot], .lr-not-typography, .lr-not-typography *)) {
+    line-break: var(--lr-line-break, var(--lr-theme-line-break, inherit));
+    word-break: var(--lr-word-break, var(--lr-theme-word-break, inherit));
+  }
+
   /* Typography. Role classes (.lr-heading-1..4, .lr-inline-code) style the element that carries
      them. The .lr-typography scope styles bare descendants except named-slot children, anything
      inside an .lr-not-typography boundary, and elements carrying a heading role class (the role
      wins). These rules open the layer so every later lr-* utility on the same element wins. */
   :where(.lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4),
   :where(.lr-typography) :where(h1, h2, h3, h4, h5, h6):where(:not([slot], .lr-not-typography, .lr-not-typography *, .lr-heading-1, .lr-heading-2, .lr-heading-3, .lr-heading-4)) {
+    font-family: var(--lr-theme-font-family-heading, inherit);
     font-weight: var(--lr-font-weight-semibold, var(--lr-theme-font-weight-semibold, 600));
     line-height: var(--lr-line-height-compact, var(--lr-theme-line-height-compact, 1.25));
     letter-spacing: var(--lr-heading-letter-spacing, var(--lr-theme-heading-letter-spacing, normal));

@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
@@ -299,20 +300,20 @@ describe('lr-terminal', () => {
     }
   });
 
-  it('download button emits lr-download with the configured filename', async () => {
+  it('download button emits lr-download-request with the configured filename', async () => {
     const el = (await fixture(
       html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,
     )) as LyraTerminal;
     el.write('hi');
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement;
-    const listener = oneEvent(el, 'lr-download');
+    const listener = oneEvent(el, 'lr-download-request');
     button.click();
     const event = (await listener) as CustomEvent<{ filename: string }>;
     expect(event.detail.filename).to.equal('out.log');
   });
 
-  it('lr-download is cancelable; preventDefault() suppresses the built-in Blob download', async () => {
+  it('lr-download-request is cancelable; preventDefault() suppresses the built-in Blob download', async () => {
     const el = (await fixture(
       html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,
     )) as LyraTerminal;
@@ -325,9 +326,9 @@ describe('lr-terminal', () => {
       return original.call(URL, blob);
     }) as typeof URL.createObjectURL;
     try {
-      el.addEventListener('lr-download', (e) => e.preventDefault(), { once: true });
+      el.addEventListener('lr-download-request', (e) => e.preventDefault(), { once: true });
       const button = el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement;
-      const listener = oneEvent(el, 'lr-download');
+      const listener = oneEvent(el, 'lr-download-request');
       button.click();
       const event = (await listener) as CustomEvent<{ filename: string }>;
       expect(event.detail.filename).to.equal('out.log');
@@ -2073,3 +2074,31 @@ describe('lr-terminal deprecated wrap and copyable aliases', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+expectDeprecatedUsage('lr-terminal', 'event', 'lr-download');
+
+it('retains the deprecated lr-download veto alias', async () => {
+    const el = (await fixture(
+      html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,
+    )) as LyraTerminal;
+    el.write('hi');
+    await el.updateComplete;
+    const original = URL.createObjectURL;
+    let createObjectURLCalled = false;
+    URL.createObjectURL = ((blob: Blob) => {
+      createObjectURLCalled = true;
+      return original.call(URL, blob);
+    }) as typeof URL.createObjectURL;
+    try {
+      el.addEventListener('lr-download', (e) => e.preventDefault(), { once: true });
+      const button = el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement;
+      const listener = oneEvent(el, 'lr-download');
+      button.click();
+      const event = (await listener) as CustomEvent<{ filename: string }>;
+      expect(event.detail.filename).to.equal('out.log');
+      expect(event.defaultPrevented).to.be.true;
+      expect(createObjectURLCalled).to.be.false;
+    } finally {
+      URL.createObjectURL = original;
+    }
+  });

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
@@ -350,6 +351,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',

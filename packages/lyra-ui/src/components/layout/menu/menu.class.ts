@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
@@ -240,8 +241,9 @@ function registerMenuWidthScale(): void {
  *   either. A contained menu (inside `lr-dropdown`) sizes from its dropdown and is unaffected.
  * @cssprop [--lr-menu-min-inline-size=var(--lr-size-10rem)] - Width floor of the same two
  *   surfaces. Lower it alongside `--lr-menu-max-inline-size` to make a menu narrower than 10rem;
- *   the floor wins over the ceiling, so capping alone cannot go below it.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ *   the floor wins over the authored ceiling, so capping alone cannot go below it. The viewport
+ *   and available container or positioned width still bound the floor, including at text zoom.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  *   on the standalone menu surface and on a submenu's own surface. A contained menu (inside
  *   `lr-dropdown`) paints no surface of its own, so it is unaffected.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
@@ -266,6 +268,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     menuLabel: LYRA_DEFAULT_menuLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
@@ -617,7 +620,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         ? maxCssTime(view.getComputedStyle(surface).transitionDuration) +
           maxCssTime(view.getComputedStyle(surface).transitionDelay)
         : 0;
-    const waitForEvent = Boolean(surface && view && transitionMs > 0 && !prefersReducedMotion(view));
+    const waitForEvent = Boolean(surface && view && transitionMs > 0 && !prefersReducedMotion(this));
     let settled = false;
     let timeout: number | undefined;
     const finish = (): void => {

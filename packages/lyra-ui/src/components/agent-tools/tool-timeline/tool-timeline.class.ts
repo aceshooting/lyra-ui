@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -73,7 +75,7 @@ export interface ToolTimelineEntry extends ToolInvocation {
 }
 
 /**
- * `detail` for `lr-tool-approval-decide` -- extends the shared `ToolApprovalEventDetail`
+ * `detail` for `lr-tool-approval-decide-request` -- extends the shared `ToolApprovalEventDetail`
  * (`src/ai/types.ts`) with the (possibly host-edited) `args` the approval dialog produced,
  * present only when `approved` is `true`. A listener that only cares about the shared
  * `{ invocationId, approved }` shape can ignore `args` entirely; one driving actual tool
@@ -95,11 +97,13 @@ export interface ToolTimelineRenderErrorDetail extends ToolTimelineActivateDetai
   error: unknown;
 }
 
-/** Which approval action is waiting for a host that vetoed `lr-tool-approval-decide` to settle it. */
+/** Which approval action is waiting for a host that vetoed `lr-tool-approval-decide-request` to settle it. */
 export type ToolTimelineApprovalPending = ApprovalAction | null;
 
 export interface LyraToolTimelineEventMap {
-  'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
+  /** @deprecated Use `lr-tool-approval-decide-request`. */
+  'lr-tool-approval-decide': LyraToolTimelineEventMap['lr-tool-approval-decide-request'];
+  'lr-tool-approval-decide-request': CustomEvent<ToolTimelineApprovalDetail>;
   'lr-tool-activate': CustomEvent<ToolTimelineActivateDetail>;
   'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
 }
@@ -278,11 +282,11 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *
  * Approval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and
  * an undecided `approved` opens the shared dialog for that entry; approving or denying emits this
- * component's own `lr-tool-approval-decide` and closes the dialog. This component never mutates
+ * component's own `lr-tool-approval-decide-request` and closes the dialog. This component never mutates
  * `entries` itself — a host applies the decision (and any resulting status change) and re-assigns
  * `entries`; if the entry currently under review disappears or no longer qualifies as pending
  * (its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on
- * its own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide` to
+ * its own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide-request` to
  * persist it asynchronously, `pendingApproval` identifies the held action. After success, update
  * the controlled entries and call `finalizePendingApproval()`; after failure, call
  * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A host that
@@ -300,7 +304,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * array does not update the view.
  *
  * @customElement lr-tool-timeline
- * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
+ * @event lr-tool-approval-decide - Deprecated cancelable compatibility alias of `lr-tool-approval-decide-request`.
+ * @event lr-tool-approval-decide-request - A pending entry's approval dialog was resolved.
  *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
  *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
  *   preserves the pending dialog and its current argument edits, sets `pendingApproval`, and
@@ -369,6 +374,17 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  private emitToolApprovalDecideRequest(detail: LyraToolTimelineEventMap['lr-tool-approval-decide-request']['detail']): CustomEvent {
+    const request = this.emit('lr-tool-approval-decide-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-tool-approval-decide', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-tool-approval-decide', 'lr-tool-approval-decide-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  protected static override collectionSupport = collectionSupport;
+
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
   /** Provider tool payloads can be opaque objects. Preserve row identity at the array boundary,
    * then admit only one descriptor-safe canonical record for every rendering path. */
@@ -435,7 +451,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
-  /** The approval/denial action held after a listener vetoes `lr-tool-approval-decide`, or `null`
+  /** The approval/denial action held after a listener vetoes `lr-tool-approval-decide-request`, or `null`
    *  otherwise. Read-only: call `finalizePendingApproval()` after persisting the controlled entry,
    *  or `revertPendingApproval()` to release the same dialog and draft for another attempt. */
   get pendingApproval(): ToolTimelineApprovalPending {
@@ -543,7 +559,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   /** Re-derives, directly from the live `entries` prop, whether the entry identified by `key` still
-   *  needs a decision. Used right after dispatching `lr-tool-approval-decide`, whose listener runs
+   *  needs a decision. Used right after dispatching `lr-tool-approval-decide-request`, whose listener runs
    *  synchronously inside `emit()` -- a host resolving the decision by reassigning `entries` (rather
    *  than calling `finalizePendingApproval()`/`revertPendingApproval()`) has already done so by the
    *  time control returns, and `this.projectedEntriesCache` is not rebuilt until the next `willUpdate`
@@ -559,49 +575,57 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return false;
   }
 
-  private onDialogApprove = (event: CustomEvent<{ args: unknown }>): void => {
-    event.stopPropagation();
-    const entry = this.reviewingEntry;
-    if (entry === undefined) return;
-    const key = entryIdentity(entry);
-    const wrapperEvent = this.emit(
-      'lr-tool-approval-decide',
-      {
-        ...entryCorrelation(entry),
-        approved: true,
-        args: event.detail.args,
-      },
-      { cancelable: true },
-    );
-    // Never set/keep a pending flag for an entry the host already finalized (e.g. synchronously,
-    // by reassigning `entries` from inside the listener above) -- otherwise the shared dialog would
-    // be left showing a stale pending spinner over an already-resolved entry.
-    if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
-      this.approvalPending = 'approve';
-      event.preventDefault();
-      return;
+  private decisionDispatching = false;
+  private onDialogApprove = (event: CustomEvent<{
+ args: unknown
+  }>): void => {
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      event.stopPropagation();
+      const entry = this.reviewingEntry;
+      if (entry === undefined) return;
+      const key = entryIdentity(entry);
+      const wrapperEvent = this.emitToolApprovalDecideRequest({
+          ...entryCorrelation(entry),
+          approved: true,
+          args: event.detail.args,
+        });
+      // Never set/keep a pending flag for an entry the host already finalized (e.g. synchronously,
+      // by reassigning `entries` from inside the listener above) -- otherwise the shared dialog would
+      // be left showing a stale pending spinner over an already-resolved entry.
+      if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
+        this.approvalPending = 'approve';
+        event.preventDefault();
+        return;
+      }
+      this.approvalPending = null;
+      this.reviewingEntryKey = undefined;
+
+    } finally {
+      this.decisionDispatching = false;
     }
-    this.approvalPending = null;
-    this.reviewingEntryKey = undefined;
   };
 
   private onDialogDeny = (event: CustomEvent): void => {
-    event.stopPropagation();
-    const entry = this.reviewingEntry;
-    if (entry === undefined) return;
-    const key = entryIdentity(entry);
-    const wrapperEvent = this.emit(
-      'lr-tool-approval-decide',
-      { ...entryCorrelation(entry), approved: false },
-      { cancelable: true },
-    );
-    if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
-      this.approvalPending = 'deny';
-      event.preventDefault();
-      return;
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      event.stopPropagation();
+      const entry = this.reviewingEntry;
+      if (entry === undefined) return;
+      const key = entryIdentity(entry);
+      const wrapperEvent = this.emitToolApprovalDecideRequest({ ...entryCorrelation(entry), approved: false });
+      if (wrapperEvent.defaultPrevented && this.entryStillNeedsApproval(key)) {
+        this.approvalPending = 'deny';
+        event.preventDefault();
+        return;
+      }
+      this.approvalPending = null;
+      this.reviewingEntryKey = undefined;
+    } finally {
+      this.decisionDispatching = false;
     }
-    this.approvalPending = null;
-    this.reviewingEntryKey = undefined;
   };
 
   private onDialogClose = (event: CustomEvent): void => {
@@ -768,8 +792,10 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         .open=${reviewing !== undefined}
         @focus=${this.stopOwnedEvent}
         @blur=${this.stopOwnedEvent}
-        @lr-approve=${this.onDialogApprove}
-        @lr-deny=${this.onDialogDeny}
+        @lr-approve=${(event: Event) => event.stopPropagation()}
+              @lr-approve-request=${this.onDialogApprove}
+        @lr-deny=${(event: Event) => event.stopPropagation()}
+              @lr-deny-request=${this.onDialogDeny}
         @lr-close=${this.onDialogClose}
       ></lr-tool-approval-dialog>
     `;

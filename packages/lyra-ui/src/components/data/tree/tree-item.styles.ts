@@ -11,8 +11,7 @@ export const styles = css`
        so background-color is all this needs; without it this item's fill snaps while
        lr-button/lr-copy-button/lr-icon-button ease. No local reduced-motion override needed --
        tokens.styles.ts's shared reduced-motion block already flattens --lr-transition-fast to
-       0.001ms and applies a blanket transition-duration: 0.001ms across the whole shadow tree
-       under prefers-reduced-motion. */
+       0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   :host(:focus-visible) [part='row'] {
@@ -65,6 +64,11 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  /* The quiet fill moves toward body text under the pointer. Its on-quiet foreground
+     retains contrast; an explicit selected colour continues to own every selected state. */
+  :host(:where([aria-selected='true'])) [part~='item']:is(:hover, :active) {
+    color: var(--lr-tree-selected-color, var(--lr-color-brand-on-quiet));
+  }
   :host([aria-disabled='true']) [part~='item'] {
     opacity: var(--lr-opacity-disabled);
   }
@@ -102,8 +106,7 @@ export const styles = css`
     /* Hover/active/data-pressed below only ever repaint background, so background-color is all
        this needs; without it this toggle's fill snaps while lr-button/lr-copy-button/
        lr-icon-button ease. No local reduced-motion override needed -- tokens.styles.ts's shared
-       reduced-motion block already flattens --lr-transition-fast to 0.001ms and applies a blanket
-       transition-duration: 0.001ms across the whole shadow tree under prefers-reduced-motion. */
+       reduced-motion block already flattens --lr-transition-fast to 0.001ms under prefers-reduced-motion. */
     transition: background-color var(--lr-transition-fast);
   }
   :where([part='toggle']):hover:where(:not(:disabled)) {
@@ -163,7 +166,7 @@ export const styles = css`
     border: var(--lr-border-width-medium) solid var(--lr-color-border);
     border-block-start-color: var(--lr-color-brand);
     border-radius: 50%;
-    animation: lr-tree-spin var(--lr-duration-ambient) linear infinite;
+    animation: var(--_lr-motion-animation, lr-tree-spin var(--lr-duration-ambient) linear infinite);
   }
   [part='checkbox'] {
     display: inline-flex;
@@ -310,15 +313,15 @@ export const styles = css`
     background: var(--lr-tree-badge-danger-bg, var(--lr-color-danger-quiet));
   }
   [part='children'] {
-    animation-duration: var(--show-duration, var(--lr-duration-base));
+    animation-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-base)));
     animation-timing-function: var(--lr-easing-standard);
   }
   :host([expanded]) [part='children'] {
-    animation-name: lr-tree-show;
+    animation-name: var(--_lr-motion-animation, lr-tree-show);
   }
   [part='children'][data-collapsing] {
-    animation-name: lr-tree-hide;
-    animation-duration: var(--hide-duration, var(--lr-duration-base));
+    animation-name: var(--_lr-motion-animation, lr-tree-hide);
+    animation-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-duration-base)));
   }
 
   @keyframes lr-tree-show {

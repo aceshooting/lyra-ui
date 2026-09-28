@@ -48,26 +48,6 @@ that report and the target component reference in `llms/components/<tag>.md`.
 Web Awesome's `did-ssr` is its runtime hydration marker, not an authored member to recreate or
 rename on a Lyra component. The inventory records these exclusions explicitly.
 
-## Migrating Lyra 7 defaults
-
-The local defaults profile is opt-in and separate from Web Awesome/Shoelace migration. It never
-renames an `lr-*` tag or import; it only inserts an absent attribute that preserves a changed
-Lyra 7 default. Boolean `true` is emitted as canonical attribute presence, including the positive
-inverse `without-arrow` spelling.
-
-```bash
-npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate --origin=lyra-v7 --check --report=lyra-v7-migration.json src
-```
-
-Opaque framework spreads and DOM aliases block that component profile across the scanned target
-set with a warning. Expand or classify them before applying, then rerun to verify byte idempotence.
-
-| Origin | Component | Inserted only when absent |
-|---|---|---|
-| `lyra-v7` | `<lr-popover>` | `placement="bottom-start"`, `distance="4"`, presence `without-arrow` |
-| `lyra-v7` | `<lr-popup>` | `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, presence `flip`, presence `shift` |
-| `lyra-v7` | `<lr-tooltip>` | `distance="6"`, presence `without-arrow` |
-
 ## Migrating from Lyra 21 to Lyra 22 (`--origin=lyra-v21`)
 
 Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes, properties, events, CSS parts,
@@ -99,7 +79,11 @@ the old name keeps working meanwhile.
 | `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
 | `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
 | `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
 
@@ -333,8 +317,6 @@ hydration compares template strings.
 | `<lr-graph>` | css-property | `--lr-link-color` | `--lr-graph-edge-color` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-graph>` | css-property | `--lr-node-fill` | `--lr-graph-node-fill` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-graph>` | event | `lr-community-click` | `lr-community-activate` | Rewritten where the reach is unchanged, otherwise reported |
-| `<lr-graph>` | event | `lr-link-enter` | `lr-edge-enter` | Rewritten where the reach is unchanged, otherwise reported |
-| `<lr-graph>` | event | `lr-link-leave` | `lr-edge-leave` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-graph>` | property | `dimmedLinkIds` | `dimmedEdgeIds` | Rewritten where the component is proven |
 | `<lr-graph>` | property | `linkDistance` | `edgeDistance` | Rewritten where the component is proven |
 | `<lr-graph>` | property | `links` | `edges` | Rewritten where the component is proven |
@@ -622,6 +604,75 @@ hydration compares template strings.
 | `<lr-xml-viewer>` | property | `collapsedDepth` | `expandDepth` | Rewritten where the component is proven |
 | `<lr-zoomable-frame>` | css-property | `--lr-zoomable-frame-control-hover-background` | `--lr-zoomable-frame-control-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
 
+| Component | Attribute | Inserted when absent to keep the Lyra 21 default |
+|---|---|---|
+| `<lr-attachment-trigger>` | `multiple` | presence `multiple` |
+| `<lr-avatar>` | `size` | `size="medium"` |
+| `<lr-avatar-group>` | `size` | `size="medium"` |
+| `<lr-drop-zone>` | `multiple` | presence `multiple` |
+| `<lr-dropdown>` | `without-arrow` | presence `without-arrow` |
+
+| Component | Event | Detail change in Lyra 22 (reported, never rewritten) |
+|---|---|---|
+| `<lr-app-rail>` | `lr-toggle` | Toggle notifications are now non-cancelable and fire after the state changes; move veto listeners to lr-toggle-request. Detail.expanded always describes the resulting state. |
+| `<lr-app-rail-group>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-app-rail-group>` | `lr-toggle-request` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-app-rail-item>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-app-rail-item>` | `lr-toggle-request` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-callout>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-chat-message>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-chat-message>` | `lr-toggle-request` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-code-block>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-code-block>` | `lr-toggle-request` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-code-block-core>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-code-block-core>` | `lr-toggle-request` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-command-palette>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-details>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-dialog>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-document-viewer>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-drawer>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-flow-canvas>` | `lr-selection-change` | Detail.selectedNodeIds and selectedEdgeIds replace nodeIds and edgeIds, matching the selection properties. The deletion action retains nodeIds and edgeIds. |
+| `<lr-graph>` | `lr-edge-enter` | The canonical edge hover detail uses edgeId instead of linkId. Legacy link hover aliases retain linkId. |
+| `<lr-graph>` | `lr-edge-leave` | The canonical edge hover detail uses edgeId instead of linkId. Legacy link hover aliases retain linkId. |
+| `<lr-graph>` | `lr-selection-change` | Selection detail now uses selectedNodeIds and selectedEdgeIds, matching the controlled properties; replace reads of nodeIds and linkIds. |
+| `<lr-knowledge-base-admin>` | `lr-tab-change` | Detail.activeTab replaces tab and matches the activeTab property. |
+| `<lr-locale-picker>` | `lr-change` | The change event is now a non-cancelable notification after the locale selection is accepted. Move veto handlers to lr-change-request. |
+| `<lr-multi-split>` | `lr-toggle` | Toggle notifications are now non-cancelable and fire after the state changes; move veto listeners to lr-toggle-request. Detail.expanded always describes the resulting state. |
+| `<lr-navigation-menu-item>` | `lr-toggle` | Detail.expanded is now required in the TypeScript contract and always carries the disclosure state. Compatibility open or collapsed fields remain available. |
+| `<lr-prompt-studio>` | `lr-change` | The change event is now a non-cancelable notification after the accepted state change. Move veto handlers to lr-change-request; preventing lr-change no longer cancels the proposal. |
+| `<lr-responsive-panel>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-table>` | `lr-column-resize` | Resize notifications are now always non-cancelable. Move final-width veto handlers to lr-column-resize-request; per-pixel preview notifications keep their detail. |
+| `<lr-table>` | `lr-filter-change` | Detail.filterText replaces text and matches the filterText property. |
+| `<lr-table>` | `lr-selection-change` | Detail.selectedRowKeys replaces rowKeys and contains the frozen key array for the selectedRowKeys property. |
+| `<lr-tool-approval-dialog>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-tool-result-dialog>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-tool-select-dialog>` | `lr-change` | The change event is now a non-cancelable notification after the accepted state change. Move veto handlers to lr-change-request; preventing lr-change no longer cancels the proposal. |
+| `<lr-tool-select-dialog>` | `lr-close` | Close detail is now an object with reason. The notification follows the accepted state change and is not cancelable; use lr-close-request for available dismissal vetoes. |
+| `<lr-tour>` | `lr-tour-end` | Tour end now carries { reason } instead of a raw reason and is a non-cancelable notification after closing. Move ordinary-end vetoes to lr-tour-end-request. Forced unmount still emits lr-tour-end with reason unmount and cannot be vetoed. |
+
+The following aliases were still published in Lyra 21 and are removed in Lyra 22. They are
+reported without rewriting: move listeners and matching removals together, preserve unrelated
+events with the same name, and check nested event targets and existing canonical handlers.
+
+| Component | Removed event | Replacement | Migration review |
+|---|---|---|---|
+| `<lr-box-plot>` | `lr-before-legend-visibility-change` | `lr-legend-visibility-change-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-chart>` | `lr-before-datum-visibility-change` | `lr-datum-visibility-change-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-chart>` | `lr-before-legend-visibility-change` | `lr-legend-visibility-change-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-command-palette>` | `lr-open` | `lr-show` | The palette lifecycle uses lr-show with the same null detail, timing and cancelability. Keep lr-open listeners for document-library and source-card item activation unchanged. |
+| `<lr-graph-legend>` | `lr-before-visibility-change` | `lr-visibility-change-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-graph-query-builder>` | `lr-before-query-delete` | `lr-query-delete-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-graph-query-builder>` | `lr-before-query-load` | `lr-query-load-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-graph-query-builder>` | `lr-before-query-run` | `lr-query-run-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+| `<lr-graph-query-builder>` | `lr-before-query-save` | `lr-query-save-request` | The replacement keeps the old detail and cancelable pre-action veto. Move preventDefault() to the canonical request listener; do not wait for a post-action notification. |
+
+| Component | Property | Semantic change in Lyra 22 (reported, never rewritten) |
+|---|---|---|
+| `<lr-app-rail-group>` | `headingLevel` | Use the string heading levels '1' through '6', or 'none'; numeric JavaScript assignments must be reviewed and converted. HTML heading-level strings remain valid; invalid values now fall back to '3' instead of numeric clamping. |
+| `<lr-sequence-strip>` | `accessibleLabel` | An authored host aria-label now takes precedence over this legacy property, including an explicitly empty host value. Review consumers that set both names. |
+| `<lr-table>` | `accessibleLabel` | An authored host aria-label now takes precedence over this legacy property, including an explicitly empty host value. Review consumers that set both names. |
+| `<lr-thread-list>` | `size` | Size now controls both search chrome and thread rows. Previously size controlled search while compact controlled rows independently; review explicit size and compact combinations, using row styling where independent density must be preserved. |
+
 | Component | Kind | Deprecated name | Replacement (manual) |
 |---|---|---|---|
 | `<lr-activity-feed>` | attribute | `compact` | `size="s"` |
@@ -659,6 +710,8 @@ hydration compares template strings.
 | `<lr-flow-node>` | attribute | `compact` | `size="s"` |
 | `<lr-flow-node>` | property | `compact` | `size="s"` |
 | `<lr-geojson-view>` | component | `lr-geojson-view` | `<lr-geojson-viewer>` |
+| `<lr-graph>` | event | `lr-link-enter` | `addEventListener('lr-edge-enter', event => { /* Read event.detail.edgeId instead of linkId. */ })` |
+| `<lr-graph>` | event | `lr-link-leave` | `addEventListener('lr-edge-leave', event => { /* Read event.detail.edgeId instead of linkId. */ })` |
 | `<lr-histogram>` | attribute | `compact` | `size="s"` |
 | `<lr-histogram>` | property | `compact` | `size="s"` |
 | `<lr-icon>` | attribute | `fixed-width` | `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)` |
@@ -712,6 +765,725 @@ hydration compares template strings.
 | Component | Slot | Reported content | Change |
 |---|---|---|---|
 | `<lr-menu>` | default | anything but `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` | Only items, labels and separators belong in the menu list; move other content to slot="header" or slot="footer", which render it outside role="menu". |
+
+Module migrations are report-only. Named imports and re-exports establish export ownership;
+namespace, dynamic and CommonJS imports require a module-level review. Window event listeners,
+root attribute bindings and selectors are reported without requiring a local module import.
+Computed module paths, computed event/attribute names and application re-export chains still
+need manual inspection. Review event detail, saved preferences and selector scope before updating.
+
+| Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |
+|---|---|---|---|
+| entry-point | `./components/lr-geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.class.js` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
+| entry-point | `./utilities/localization.js` | import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js'; | 23.0.0 |
+| type | `./components/retrieval/graph/graph.class.js#LyraGraphLink` | import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentFile` | import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentRendererDefinition` | import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
+| type | `./components/viewers/geojson-view/geojson-view.class.js#LyraGeojsonViewEventMap` | import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
+
+## Migrating from Lyra 22 to Lyra 23 (`--origin=lyra-v22`)
+
+Lyra 22 minor releases and Lyra 23 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Each previous name keeps working as a deprecated alias until
+Lyra 24 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading, within Lyra 22 or to Lyra 23. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
+
+```bash
+npx lyra-ui-migrate --origin=lyra-v22 --diff src > lyra-v22.patch
+npx lyra-ui-migrate --origin=lyra-v22 --check --report=lyra-v22-migration.json src
+```
+
+`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite
+cannot change what the site reaches: attribute, property and slot bindings on the component in
+HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute
+selectors that name the component; and calls rooted at `querySelector('lr-…')`, `closest()` or
+`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no
+other component already dispatches the new name, and an unowned listener or any custom-property
+use only when, in addition, every component with the old name renamed it the same way and the
+scanned code never dispatches the old name itself. Everything else is reported with a location;
+the old name keeps working meanwhile.
+
+| Code | Reported when |
+|---|---|
+| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |
+| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |
+| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
+| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
+| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
+| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
+| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
+
+After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
+`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before
+the element's opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile
+is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
+hydration compares template strings.
+
+| Component | Kind | Deprecated name | New name | Handling |
+|---|---|---|---|---|
+| `<lr-dropdown>` | attribute | `arrow` | `without-arrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-dropdown>` | property | `arrow` | `withoutArrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-graph>` | event | `lr-node-click` | `lr-node-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-knowledge-graph-explorer>` | event | `lr-node-click` | `lr-node-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-markdown>` | event | `lr-link-click` | `lr-link-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-markdown-core>` | event | `lr-link-click` | `lr-link-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-message-parts>` | event | `lr-link-click` | `lr-link-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-sequence-strip>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-table>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+
+| Component | Kind | Deprecated name | Replacement (manual) |
+|---|---|---|---|
+| `<lr-approval-queue>` | event | `lr-approval-decision` | `addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-attachment-trigger>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-callout>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-carousel>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-combobox>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-compare-panel>` | event | `lr-vote` | `addEventListener('lr-vote-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-confirm-bar>` | event | `lr-approve` | `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-confirm-bar>` | event | `lr-deny` | `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-context-meter>` | event | `lr-segment-activate` | `addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })` |
+| `<lr-data-grid>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-dialog>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-document-library>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-drawer>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-eval-run>` | event | `lr-example-tool-approval-decide` | `addEventListener('lr-example-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-export-button>` | event | `lr-export` | `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })` |
+| `<lr-file-input>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-graph>` | event | `lr-link-click` | `lr-edge-activate` |
+| `<lr-knowledge-base>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-knowledge-graph-explorer>` | event | `lr-link-click` | `lr-edge-activate` |
+| `<lr-lightbox>` | event | `lr-lightbox-close` | `Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation.` |
+| `<lr-lite-chart>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-message-actions>` | event | `lr-feedback-submit` | `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-message-feedback>` | event | `lr-feedback-submit` | `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-message-parts>` | property | `accessibleLabel` | `element.setAttribute('aria-label', 'Message content');` |
+| `<lr-progress-bar>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-progress-ring>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-reorder-item>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-sequence-strip>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-table>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-table>` | property | `accessibleLabel` | `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.` |
+| `<lr-terminal>` | event | `lr-download` | `addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-thread-list>` | attribute | `compact` | `Use size="s" for compact rows and size="m" for the default row density.` |
+| `<lr-thread-list>` | event | `lr-retry` | `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-thread-list>` | property | `compact` | `Use size="s" for compact rows and size="m" for the default row density.` |
+| `<lr-tool-approval-dialog>` | event | `lr-approve` | `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-tool-approval-dialog>` | event | `lr-deny` | `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+| `<lr-tool-timeline>` | event | `lr-tool-approval-decide` | `addEventListener('lr-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
+
+Module migrations are report-only. Named imports and re-exports establish export ownership;
+namespace, dynamic and CommonJS imports require a module-level review. Window event listeners,
+root attribute bindings and selectors are reported without requiring a local module import.
+Computed module paths, computed event/attribute names and application re-export chains still
+need manual inspection. Review event detail, saved preferences and selector scope before updating.
+
+| Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |
+|---|---|---|---|
+| class | `.#LyraAccordion` | import { LyraAccordion } from '@aceshooting/lyra-ui/components/layout/details/accordion.class.js'; | 24.0.0 |
+| class | `.#LyraAccordionItem` | import { LyraAccordionItem } from '@aceshooting/lyra-ui/components/layout/details/accordion-item.class.js'; | 24.0.0 |
+| class | `.#LyraActivityFeed` | import { LyraActivityFeed } from '@aceshooting/lyra-ui/components/agent-tools/activity-feed/activity-feed.class.js'; | 24.0.0 |
+| class | `.#LyraAgentEvalDashboard` | import { LyraAgentEvalDashboard } from '@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js'; | 24.0.0 |
+| class | `.#LyraAgentRun` | import { LyraAgentRun } from '@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js'; | 24.0.0 |
+| class | `.#LyraAgentTrace` | import { LyraAgentTrace } from '@aceshooting/lyra-ui/components/agent-tools/agent-trace/agent-trace.class.js'; | 24.0.0 |
+| class | `.#LyraAgentWorkspace` | import { LyraAgentWorkspace } from '@aceshooting/lyra-ui/components/conversation/agent-workspace/agent-workspace.class.js'; | 24.0.0 |
+| class | `.#LyraAlert` | import { LyraAlert } from '@aceshooting/lyra-ui/components/overlays/alert/alert.class.js'; | 24.0.0 |
+| class | `.#LyraAnimatedImage` | import { LyraAnimatedImage } from '@aceshooting/lyra-ui/components/media/animated-image/animated-image.class.js'; | 24.0.0 |
+| class | `.#LyraAppRailGroup` | import { LyraAppRailGroup } from '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.class.js'; | 24.0.0 |
+| class | `.#LyraAppRailItem` | import { LyraAppRailItem } from '@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js'; | 24.0.0 |
+| class | `.#LyraApprovalQueue` | import { LyraApprovalQueue } from '@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js'; | 24.0.0 |
+| class | `.#LyraArchiveViewer` | import { LyraArchiveViewer } from '@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraArtifactPanel` | import { LyraArtifactPanel } from '@aceshooting/lyra-ui/components/agent-tools/artifact-panel/artifact-panel.class.js'; | 24.0.0 |
+| class | `.#LyraAttachmentTrigger` | import { LyraAttachmentTrigger } from '@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js'; | 24.0.0 |
+| class | `.#LyraAudioVisualizer` | import { LyraAudioVisualizer } from '@aceshooting/lyra-ui/components/conversation/audio-visualizer/audio-visualizer.class.js'; | 24.0.0 |
+| class | `.#LyraAvPlayer` | import { LyraAvPlayer } from '@aceshooting/lyra-ui/components/media/av-player/av-player.class.js'; | 24.0.0 |
+| class | `.#LyraAvatar` | import { LyraAvatar } from '@aceshooting/lyra-ui/components/media/avatar/avatar.class.js'; | 24.0.0 |
+| class | `.#LyraAvatarGroup` | import { LyraAvatarGroup } from '@aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js'; | 24.0.0 |
+| class | `.#LyraBadge` | import { LyraBadge } from '@aceshooting/lyra-ui/components/overlays/badge/badge.class.js'; | 24.0.0 |
+| class | `.#LyraBarChart` | import { LyraBarChart } from '@aceshooting/lyra-ui/components/charts/chart/bar-chart.class.js'; | 24.0.0 |
+| class | `.#LyraBoxPlot` | import { LyraBoxPlot } from '@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js'; | 24.0.0 |
+| class | `.#LyraBranchPicker` | import { LyraBranchPicker } from '@aceshooting/lyra-ui/components/conversation/branch-picker/branch-picker.class.js'; | 24.0.0 |
+| class | `.#LyraBreadcrumb` | import { LyraBreadcrumb } from '@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb.class.js'; | 24.0.0 |
+| class | `.#LyraBreadcrumbItem` | import { LyraBreadcrumbItem } from '@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb-item.class.js'; | 24.0.0 |
+| class | `.#LyraBrowserFrame` | import { LyraBrowserFrame } from '@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.class.js'; | 24.0.0 |
+| class | `.#LyraBubbleChart` | import { LyraBubbleChart } from '@aceshooting/lyra-ui/components/charts/chart/bubble-chart.class.js'; | 24.0.0 |
+| class | `.#LyraButton` | import { LyraButton } from '@aceshooting/lyra-ui/components/forms/button/button.class.js'; | 24.0.0 |
+| class | `.#LyraButtonGroup` | import { LyraButtonGroup } from '@aceshooting/lyra-ui/components/layout/button-group/button-group.class.js'; | 24.0.0 |
+| class | `.#LyraCalendar` | import { LyraCalendar } from '@aceshooting/lyra-ui/components/data/calendar/calendar.class.js'; | 24.0.0 |
+| class | `.#LyraCalendarViewer` | import { LyraCalendarViewer } from '@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraCallout` | import { LyraCallout } from '@aceshooting/lyra-ui/components/overlays/callout/callout.class.js'; | 24.0.0 |
+| class | `.#LyraCard` | import { LyraCard } from '@aceshooting/lyra-ui/components/layout/card/card.class.js'; | 24.0.0 |
+| class | `.#LyraCarousel` | import { LyraCarousel } from '@aceshooting/lyra-ui/components/layout/carousel/carousel.class.js'; | 24.0.0 |
+| class | `.#LyraCarouselItem` | import { LyraCarouselItem } from '@aceshooting/lyra-ui/components/layout/carousel/carousel-item.class.js'; | 24.0.0 |
+| class | `.#LyraChart` | import { LyraChart } from '@aceshooting/lyra-ui/components/charts/chart/chart.class.js'; | 24.0.0 |
+| class | `.#LyraChatComposer` | import { LyraChatComposer } from '@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js'; | 24.0.0 |
+| class | `.#LyraChatMessage` | import { LyraChatMessage } from '@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js'; | 24.0.0 |
+| class | `.#LyraChatViewport` | import { LyraChatViewport } from '@aceshooting/lyra-ui/components/conversation/chat-viewport/chat-viewport.class.js'; | 24.0.0 |
+| class | `.#LyraCheckbox` | import { LyraCheckbox } from '@aceshooting/lyra-ui/components/forms/checkbox/checkbox.class.js'; | 24.0.0 |
+| class | `.#LyraCheckboxGroup` | import { LyraCheckboxGroup } from '@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js'; | 24.0.0 |
+| class | `.#LyraCheckpoint` | import { LyraCheckpoint } from '@aceshooting/lyra-ui/components/conversation/checkpoint/checkpoint.class.js'; | 24.0.0 |
+| class | `.#LyraChip` | import { LyraChip } from '@aceshooting/lyra-ui/components/overlays/chip/chip.class.js'; | 24.0.0 |
+| class | `.#LyraChipGroup` | import { LyraChipGroup } from '@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js'; | 24.0.0 |
+| class | `.#LyraChunkInspector` | import { LyraChunkInspector } from '@aceshooting/lyra-ui/components/retrieval/chunk-inspector/chunk-inspector.class.js'; | 24.0.0 |
+| class | `.#LyraCitationBadge` | import { LyraCitationBadge } from '@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.class.js'; | 24.0.0 |
+| class | `.#LyraClaimEvidence` | import { LyraClaimEvidence } from '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.class.js'; | 24.0.0 |
+| class | `.#LyraCodeBlock` | import { LyraCodeBlock } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.class.js'; | 24.0.0 |
+| class | `.#LyraCodeBlockCore` | import { LyraCodeBlockCore } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.class.js'; | 24.0.0 |
+| class | `.#LyraCodeEditor` | import { LyraCodeEditor } from '@aceshooting/lyra-ui/components/forms/code-editor/code-editor.class.js'; | 24.0.0 |
+| class | `.#LyraColorPicker` | import { LyraColorPicker } from '@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js'; | 24.0.0 |
+| class | `.#LyraCombobox` | import { LyraCombobox } from '@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js'; | 24.0.0 |
+| class | `.#LyraCommandPalette` | import { LyraCommandPalette } from '@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js'; | 24.0.0 |
+| class | `.#LyraCommitCard` | import { LyraCommitCard } from '@aceshooting/lyra-ui/components/agent-tools/commit-card/commit-card.class.js'; | 24.0.0 |
+| class | `.#LyraCommunityCard` | import { LyraCommunityCard } from '@aceshooting/lyra-ui/components/retrieval/community-card/community-card.class.js'; | 24.0.0 |
+| class | `.#LyraComparePanel` | import { LyraComparePanel } from '@aceshooting/lyra-ui/components/agent-tools/compare-panel/compare-panel.class.js'; | 24.0.0 |
+| class | `.#LyraConditionBuilder` | import { LyraConditionBuilder } from '@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js'; | 24.0.0 |
+| class | `.#LyraConfirmBar` | import { LyraConfirmBar } from '@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js'; | 24.0.0 |
+| class | `.#LyraContactViewer` | import { LyraContactViewer } from '@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraContextInspector` | import { LyraContextInspector } from '@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js'; | 24.0.0 |
+| class | `.#LyraContextMeter` | import { LyraContextMeter } from '@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js'; | 24.0.0 |
+| class | `.#LyraControlGroup` | import { LyraControlGroup } from '@aceshooting/lyra-ui/components/layout/control-group/control-group.class.js'; | 24.0.0 |
+| class | `.#LyraConversationItem` | import { LyraConversationItem } from '@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js'; | 24.0.0 |
+| class | `.#LyraCopyButton` | import { LyraCopyButton } from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js'; | 24.0.0 |
+| class | `.#LyraCsvViewer` | import { LyraCsvViewer } from '@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraDashboardGrid` | import { LyraDashboardGrid } from '@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js'; | 24.0.0 |
+| class | `.#LyraDataGrid` | import { LyraDataGrid } from '@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js'; | 24.0.0 |
+| class | `.#LyraDatasetViewer` | import { LyraDatasetViewer } from '@aceshooting/lyra-ui/components/viewers/dataset-viewer/dataset-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraDateInput` | import { LyraDateInput } from '@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js'; | 24.0.0 |
+| class | `.#LyraDatePicker` | import { LyraDatePicker } from '@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js'; | 24.0.0 |
+| class | `.#LyraDetails` | import { LyraDetails } from '@aceshooting/lyra-ui/components/layout/details/details.class.js'; | 24.0.0 |
+| class | `.#LyraDialog` | import { LyraDialog } from '@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js'; | 24.0.0 |
+| class | `.#LyraDiffView` | import { LyraDiffView } from '@aceshooting/lyra-ui/components/utility/diff-view/diff-view.class.js'; | 24.0.0 |
+| class | `.#LyraDivider` | import { LyraDivider } from '@aceshooting/lyra-ui/components/utility/divider/divider.class.js'; | 24.0.0 |
+| class | `.#LyraDockPanel` | import { LyraDockPanel } from '@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js'; | 24.0.0 |
+| class | `.#LyraDocumentCompare` | import { LyraDocumentCompare } from '@aceshooting/lyra-ui/components/viewers/document-compare/document-compare.class.js'; | 24.0.0 |
+| class | `.#LyraDocumentLibrary` | import { LyraDocumentLibrary } from '@aceshooting/lyra-ui/components/data/document-library/document-library.class.js'; | 24.0.0 |
+| class | `.#LyraDocumentPreview` | import { LyraDocumentPreview } from '@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js'; | 24.0.0 |
+| class | `.#LyraDocumentViewer` | import { LyraDocumentViewer } from '@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraDocxViewer` | import { LyraDocxViewer } from '@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraDoughnutChart` | import { LyraDoughnutChart } from '@aceshooting/lyra-ui/components/charts/chart/doughnut-chart.class.js'; | 24.0.0 |
+| class | `.#LyraDrawer` | import { LyraDrawer } from '@aceshooting/lyra-ui/components/overlays/drawer/drawer.class.js'; | 24.0.0 |
+| class | `.#LyraDrilldownPanel` | import { LyraDrilldownPanel } from '@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js'; | 24.0.0 |
+| class | `.#LyraDropZone` | import { LyraDropZone } from '@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js'; | 24.0.0 |
+| class | `.#LyraDropdownItem` | import { LyraDropdownItem } from '@aceshooting/lyra-ui/components/layout/menu/dropdown-item.class.js'; | 24.0.0 |
+| class | `.#LyraEbookViewer` | import { LyraEbookViewer } from '@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraEmailViewer` | import { LyraEmailViewer } from '@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraEmbeddingExplorer` | import { LyraEmbeddingExplorer } from '@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js'; | 24.0.0 |
+| class | `.#LyraEmojiPicker` | import { LyraEmojiPicker } from '@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js'; | 24.0.0 |
+| class | `.#LyraEmpty` | import { LyraEmpty } from '@aceshooting/lyra-ui/components/overlays/empty/empty.class.js'; | 24.0.0 |
+| class | `.#LyraEntityCard` | import { LyraEntityCard } from '@aceshooting/lyra-ui/components/retrieval/entity-card/entity-card.class.js'; | 24.0.0 |
+| class | `.#LyraEntityChip` | import { LyraEntityChip } from '@aceshooting/lyra-ui/components/retrieval/entity-chip/entity-chip.class.js'; | 24.0.0 |
+| class | `.#LyraEntityDossier` | import { LyraEntityDossier } from '@aceshooting/lyra-ui/components/retrieval/entity-dossier/entity-dossier.class.js'; | 24.0.0 |
+| class | `.#LyraEnvList` | import { LyraEnvList } from '@aceshooting/lyra-ui/components/data/env-list/env-list.class.js'; | 24.0.0 |
+| class | `.#LyraEvalDataset` | import { LyraEvalDataset } from '@aceshooting/lyra-ui/components/agent-tools/eval-dataset/eval-dataset.class.js'; | 24.0.0 |
+| class | `.#LyraEvalResult` | import { LyraEvalResult } from '@aceshooting/lyra-ui/components/agent-tools/eval-result/eval-result.class.js'; | 24.0.0 |
+| class | `.#LyraEvalRun` | import { LyraEvalRun } from '@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js'; | 24.0.0 |
+| class | `.#LyraExportButton` | import { LyraExportButton } from '@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js'; | 24.0.0 |
+| class | `.#LyraFileIcon` | import { LyraFileIcon } from '@aceshooting/lyra-ui/components/media/file-icon/file-icon.class.js'; | 24.0.0 |
+| class | `.#LyraFileTree` | import { LyraFileTree } from '@aceshooting/lyra-ui/components/data/file-tree/file-tree.class.js'; | 24.0.0 |
+| class | `.#LyraFilterBar` | import { LyraFilterBar } from '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js'; | 24.0.0 |
+| class | `.#LyraFlowCanvas` | import { LyraFlowCanvas } from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js'; | 24.0.0 |
+| class | `.#LyraFlowControls` | import { LyraFlowControls } from '@aceshooting/lyra-ui/components/data/flow-controls/flow-controls.class.js'; | 24.0.0 |
+| class | `.#LyraFlowMinimap` | import { LyraFlowMinimap } from '@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.class.js'; | 24.0.0 |
+| class | `.#LyraFlowNode` | import { LyraFlowNode } from '@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js'; | 24.0.0 |
+| class | `.#LyraFlowRunStatus` | import { LyraFlowRunStatus } from '@aceshooting/lyra-ui/components/data/flow-run-status/flow-run-status.class.js'; | 24.0.0 |
+| class | `.#LyraFormatBytes` | import { LyraFormatBytes } from '@aceshooting/lyra-ui/components/utility/format/format-bytes.class.js'; | 24.0.0 |
+| class | `.#LyraFormatDate` | import { LyraFormatDate } from '@aceshooting/lyra-ui/components/utility/format/format-date.class.js'; | 24.0.0 |
+| class | `.#LyraFormatNumber` | import { LyraFormatNumber } from '@aceshooting/lyra-ui/components/utility/format/format-number.class.js'; | 24.0.0 |
+| class | `.#LyraFunnel` | import { LyraFunnel } from '@aceshooting/lyra-ui/components/data/funnel/funnel.class.js'; | 24.0.0 |
+| class | `.#LyraGauge` | import { LyraGauge } from '@aceshooting/lyra-ui/components/data/gauge/gauge.class.js'; | 24.0.0 |
+| class | `.#LyraGenerationMetrics` | import { LyraGenerationMetrics } from '@aceshooting/lyra-ui/components/conversation/generation-metrics/generation-metrics.class.js'; | 24.0.0 |
+| class | `.#LyraGeoJsonViewer` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraGeojsonView` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraGraph` | import { LyraGraph } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | 24.0.0 |
+| class | `.#LyraGraphLegend` | import { LyraGraphLegend } from '@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js'; | 24.0.0 |
+| class | `.#LyraGraphQueryBuilder` | import { LyraGraphQueryBuilder } from '@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js'; | 24.0.0 |
+| class | `.#LyraGroundingSummary` | import { LyraGroundingSummary } from '@aceshooting/lyra-ui/components/retrieval/grounding-summary/grounding-summary.class.js'; | 24.0.0 |
+| class | `.#LyraHandoffDivider` | import { LyraHandoffDivider } from '@aceshooting/lyra-ui/components/conversation/handoff-divider/handoff-divider.class.js'; | 24.0.0 |
+| class | `.#LyraHeatmap` | import { LyraHeatmap } from '@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js'; | 24.0.0 |
+| class | `.#LyraHighlightLayer` | import { LyraHighlightLayer } from '@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js'; | 24.0.0 |
+| class | `.#LyraHistogram` | import { LyraHistogram } from '@aceshooting/lyra-ui/components/charts/chart/histogram.class.js'; | 24.0.0 |
+| class | `.#LyraHtmlViewer` | import { LyraHtmlViewer } from '@aceshooting/lyra-ui/components/viewers/html-viewer/html-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraIcon` | import { LyraIcon } from '@aceshooting/lyra-ui/components/utility/icon/icon.class.js'; | 24.0.0 |
+| class | `.#LyraIconButton` | import { LyraIconButton } from '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js'; | 24.0.0 |
+| class | `.#LyraImageComparer` | import { LyraImageComparer } from '@aceshooting/lyra-ui/components/media/image-comparer/image-comparer.class.js'; | 24.0.0 |
+| class | `.#LyraImageViewer` | import { LyraImageViewer } from '@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraInclude` | import { LyraInclude } from '@aceshooting/lyra-ui/components/viewers/include/include.class.js'; | 24.0.0 |
+| class | `.#LyraIngestionQueue` | import { LyraIngestionQueue } from '@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js'; | 24.0.0 |
+| class | `.#LyraInput` | import { LyraInput } from '@aceshooting/lyra-ui/components/forms/input/input.class.js'; | 24.0.0 |
+| class | `.#LyraIntersectionObserver` | import { LyraIntersectionObserver } from '@aceshooting/lyra-ui/components/utility/intersection-observer/intersection-observer.class.js'; | 24.0.0 |
+| class | `.#LyraJsonSchemaViewer` | import { LyraJsonSchemaViewer } from '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraJsonViewer` | import { LyraJsonViewer } from '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraKnowledgeBase` | import { LyraKnowledgeBase } from '@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js'; | 24.0.0 |
+| class | `.#LyraKnowledgeBaseAdmin` | import { LyraKnowledgeBaseAdmin } from '@aceshooting/lyra-ui/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js'; | 24.0.0 |
+| class | `.#LyraKnowledgeGraphExplorer` | import { LyraKnowledgeGraphExplorer } from '@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js'; | 24.0.0 |
+| class | `.#LyraKnownDate` | import { LyraKnownDate } from '@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js'; | 24.0.0 |
+| class | `.#LyraLightbox` | import { LyraLightbox } from '@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js'; | 24.0.0 |
+| class | `.#LyraLineChart` | import { LyraLineChart } from '@aceshooting/lyra-ui/components/charts/chart/line-chart.class.js'; | 24.0.0 |
+| class | `.#LyraLiteChart` | import { LyraLiteChart } from '@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js'; | 24.0.0 |
+| class | `.#LyraLiveRegion` | import { LyraLiveRegion } from '@aceshooting/lyra-ui/components/utility/live-region/live-region.class.js'; | 24.0.0 |
+| class | `.#LyraLocalePicker` | import { LyraLocalePicker } from '@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js'; | 24.0.0 |
+| class | `.#LyraMap` | import { LyraMap } from '@aceshooting/lyra-ui/components/media/map/map.class.js'; | 24.0.0 |
+| class | `.#LyraMarkdown` | import { LyraMarkdown } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js'; | 24.0.0 |
+| class | `.#LyraMarkdownCore` | import { LyraMarkdownCore } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.class.js'; | 24.0.0 |
+| class | `.#LyraMcpApp` | import { LyraMcpApp } from '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js'; | 24.0.0 |
+| class | `.#LyraMediaCard` | import { LyraMediaCard } from '@aceshooting/lyra-ui/components/media/media-card/media-card.class.js'; | 24.0.0 |
+| class | `.#LyraMemoryPanel` | import { LyraMemoryPanel } from '@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js'; | 24.0.0 |
+| class | `.#LyraMentionPopover` | import { LyraMentionPopover } from '@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js'; | 24.0.0 |
+| class | `.#LyraMenu` | import { LyraMenu } from '@aceshooting/lyra-ui/components/layout/menu/menu.class.js'; | 24.0.0 |
+| class | `.#LyraMenuItem` | import { LyraMenuItem } from '@aceshooting/lyra-ui/components/layout/menu/menu-item.class.js'; | 24.0.0 |
+| class | `.#LyraMenuLabel` | import { LyraMenuLabel } from '@aceshooting/lyra-ui/components/layout/menu/menu-label.class.js'; | 24.0.0 |
+| class | `.#LyraMenubar` | import { LyraMenubar } from '@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js'; | 24.0.0 |
+| class | `.#LyraMenubarItem` | import { LyraMenubarItem } from '@aceshooting/lyra-ui/components/layout/menubar/menubar-item.class.js'; | 24.0.0 |
+| class | `.#LyraMessageActions` | import { LyraMessageActions } from '@aceshooting/lyra-ui/components/conversation/message-actions/message-actions.class.js'; | 24.0.0 |
+| class | `.#LyraMessageFeedback` | import { LyraMessageFeedback } from '@aceshooting/lyra-ui/components/conversation/message-feedback/message-feedback.class.js'; | 24.0.0 |
+| class | `.#LyraMessageParts` | import { LyraMessageParts } from '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js'; | 24.0.0 |
+| class | `.#LyraMindMap` | import { LyraMindMap } from '@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js'; | 24.0.0 |
+| class | `.#LyraModelSelect` | import { LyraModelSelect } from '@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js'; | 24.0.0 |
+| class | `.#LyraModelSettingsPanel` | import { LyraModelSettingsPanel } from '@aceshooting/lyra-ui/components/conversation/model-settings-panel/model-settings-panel.class.js'; | 24.0.0 |
+| class | `.#LyraMultiSplit` | import { LyraMultiSplit } from '@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js'; | 24.0.0 |
+| class | `.#LyraMutationObserver` | import { LyraMutationObserver } from '@aceshooting/lyra-ui/components/utility/mutation-observer/mutation-observer.class.js'; | 24.0.0 |
+| class | `.#LyraNativeTimeInput` | import { LyraNativeTimeInput } from '@aceshooting/lyra-ui/components/forms/input/native-time-input.class.js'; | 24.0.0 |
+| class | `.#LyraNavigationMenu` | import { LyraNavigationMenu } from '@aceshooting/lyra-ui/components/layout/navigation-menu/navigation-menu.class.js'; | 24.0.0 |
+| class | `.#LyraNavigationMenuItem` | import { LyraNavigationMenuItem } from '@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.class.js'; | 24.0.0 |
+| class | `.#LyraNeighborList` | import { LyraNeighborList } from '@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js'; | 24.0.0 |
+| class | `.#LyraNodePalette` | import { LyraNodePalette } from '@aceshooting/lyra-ui/components/retrieval/node-palette/node-palette.class.js'; | 24.0.0 |
+| class | `.#LyraNotebookViewer` | import { LyraNotebookViewer } from '@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraNumberInput` | import { LyraNumberInput } from '@aceshooting/lyra-ui/components/forms/input/number-input.class.js'; | 24.0.0 |
+| class | `.#LyraOption` | import { LyraOption } from '@aceshooting/lyra-ui/components/forms/combobox/option.class.js'; | 24.0.0 |
+| class | `.#LyraOtpInput` | import { LyraOtpInput } from '@aceshooting/lyra-ui/components/forms/otp-input/otp-input.class.js'; | 24.0.0 |
+| class | `.#LyraPage` | import { LyraPage } from '@aceshooting/lyra-ui/components/layout/page/page.class.js'; | 24.0.0 |
+| class | `.#LyraPageRail` | import { LyraPageRail } from '@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js'; | 24.0.0 |
+| class | `.#LyraPagination` | import { LyraPagination } from '@aceshooting/lyra-ui/components/data/pagination/pagination.class.js'; | 24.0.0 |
+| class | `.#LyraPanZoom` | import { LyraPanZoom } from '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.class.js'; | 24.0.0 |
+| class | `.#LyraPathStrip` | import { LyraPathStrip } from '@aceshooting/lyra-ui/components/retrieval/path-strip/path-strip.class.js'; | 24.0.0 |
+| class | `.#LyraPdfViewer` | import { LyraPdfViewer } from '@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraPieChart` | import { LyraPieChart } from '@aceshooting/lyra-ui/components/charts/chart/pie-chart.class.js'; | 24.0.0 |
+| class | `.#LyraPolarAreaChart` | import { LyraPolarAreaChart } from '@aceshooting/lyra-ui/components/charts/chart/polar-area-chart.class.js'; | 24.0.0 |
+| class | `.#LyraPolicySummary` | import { LyraPolicySummary } from '@aceshooting/lyra-ui/components/agent-tools/policy-summary/policy-summary.class.js'; | 24.0.0 |
+| class | `.#LyraPollStatus` | import { LyraPollStatus } from '@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js'; | 24.0.0 |
+| class | `.#LyraPopover` | import { LyraPopover } from '@aceshooting/lyra-ui/components/overlays/overlay/popover.class.js'; | 24.0.0 |
+| class | `.#LyraPopup` | import { LyraPopup } from '@aceshooting/lyra-ui/components/overlays/popup/popup.class.js'; | 24.0.0 |
+| class | `.#LyraPptxViewer` | import { LyraPptxViewer } from '@aceshooting/lyra-ui/components/viewers/pptx-viewer/pptx-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraProgressBar` | import { LyraProgressBar } from '@aceshooting/lyra-ui/components/overlays/progress/progress-bar.class.js'; | 24.0.0 |
+| class | `.#LyraProgressRing` | import { LyraProgressRing } from '@aceshooting/lyra-ui/components/overlays/progress/progress-ring.class.js'; | 24.0.0 |
+| class | `.#LyraPromptInput` | import { LyraPromptInput } from '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.class.js'; | 24.0.0 |
+| class | `.#LyraPromptQueue` | import { LyraPromptQueue } from '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.class.js'; | 24.0.0 |
+| class | `.#LyraPromptStudio` | import { LyraPromptStudio } from '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js'; | 24.0.0 |
+| class | `.#LyraProvenancePanel` | import { LyraProvenancePanel } from '@aceshooting/lyra-ui/components/retrieval/provenance-panel/provenance-panel.class.js'; | 24.0.0 |
+| class | `.#LyraPushToTalk` | import { LyraPushToTalk } from '@aceshooting/lyra-ui/components/conversation/push-to-talk/push-to-talk.class.js'; | 24.0.0 |
+| class | `.#LyraQrCode` | import { LyraQrCode } from '@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js'; | 24.0.0 |
+| class | `.#LyraRadarChart` | import { LyraRadarChart } from '@aceshooting/lyra-ui/components/charts/chart/radar-chart.class.js'; | 24.0.0 |
+| class | `.#LyraRadio` | import { LyraRadio } from '@aceshooting/lyra-ui/components/forms/radio/radio.class.js'; | 24.0.0 |
+| class | `.#LyraRadioButton` | import { LyraRadioButton } from '@aceshooting/lyra-ui/components/forms/radio/radio-button.class.js'; | 24.0.0 |
+| class | `.#LyraRadioGroup` | import { LyraRadioGroup } from '@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js'; | 24.0.0 |
+| class | `.#LyraRagAnswer` | import { LyraRagAnswer } from '@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.class.js'; | 24.0.0 |
+| class | `.#LyraRagEvalDashboard` | import { LyraRagEvalDashboard } from '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js'; | 24.0.0 |
+| class | `.#LyraRandomContent` | import { LyraRandomContent } from '@aceshooting/lyra-ui/components/utility/random-content/random-content.class.js'; | 24.0.0 |
+| class | `.#LyraRating` | import { LyraRating } from '@aceshooting/lyra-ui/components/overlays/rating/rating.class.js'; | 24.0.0 |
+| class | `.#LyraRealtimeSession` | import { LyraRealtimeSession } from '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.class.js'; | 24.0.0 |
+| class | `.#LyraRelativeTime` | import { LyraRelativeTime } from '@aceshooting/lyra-ui/components/utility/format/relative-time.class.js'; | 24.0.0 |
+| class | `.#LyraReorderItem` | import { LyraReorderItem } from '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-item.class.js'; | 24.0.0 |
+| class | `.#LyraReorderList` | import { LyraReorderList } from '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js'; | 24.0.0 |
+| class | `.#LyraResizeObserver` | import { LyraResizeObserver } from '@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.class.js'; | 24.0.0 |
+| class | `.#LyraResultCard` | import { LyraResultCard } from '@aceshooting/lyra-ui/components/agent-tools/result-card/result-card.class.js'; | 24.0.0 |
+| class | `.#LyraResultField` | import { LyraResultField } from '@aceshooting/lyra-ui/components/agent-tools/result-card/result-field.class.js'; | 24.0.0 |
+| class | `.#LyraRetrievalCompare` | import { LyraRetrievalCompare } from '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.class.js'; | 24.0.0 |
+| class | `.#LyraRetrievalResults` | import { LyraRetrievalResults } from '@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js'; | 24.0.0 |
+| class | `.#LyraRetrievalSearch` | import { LyraRetrievalSearch } from '@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.class.js'; | 24.0.0 |
+| class | `.#LyraRetrievalTrace` | import { LyraRetrievalTrace } from '@aceshooting/lyra-ui/components/retrieval/retrieval-trace/retrieval-trace.class.js'; | 24.0.0 |
+| class | `.#LyraRubricForm` | import { LyraRubricForm } from '@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js'; | 24.0.0 |
+| class | `.#LyraScatterChart` | import { LyraScatterChart } from '@aceshooting/lyra-ui/components/charts/chart/scatter-chart.class.js'; | 24.0.0 |
+| class | `.#LyraScroller` | import { LyraScroller } from '@aceshooting/lyra-ui/components/layout/scroller/scroller.class.js'; | 24.0.0 |
+| class | `.#LyraSegmented` | import { LyraSegmented } from '@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js'; | 24.0.0 |
+| class | `.#LyraSelect` | import { LyraSelect } from '@aceshooting/lyra-ui/components/forms/select/select.class.js'; | 24.0.0 |
+| class | `.#LyraSelectionToolbar` | import { LyraSelectionToolbar } from '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.class.js'; | 24.0.0 |
+| class | `.#LyraSequencePlayback` | import { LyraSequencePlayback } from '@aceshooting/lyra-ui/components/media/sequence-playback/sequence-playback.class.js'; | 24.0.0 |
+| class | `.#LyraSequenceStrip` | import { LyraSequenceStrip } from '@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js'; | 24.0.0 |
+| class | `.#LyraSkeleton` | import { LyraSkeleton } from '@aceshooting/lyra-ui/components/overlays/skeleton/skeleton.class.js'; | 24.0.0 |
+| class | `.#LyraSlider` | import { LyraSlider } from '@aceshooting/lyra-ui/components/forms/slider/slider.class.js'; | 24.0.0 |
+| class | `.#LyraSourceCard` | import { LyraSourceCard } from '@aceshooting/lyra-ui/components/retrieval/source-card/source-card.class.js'; | 24.0.0 |
+| class | `.#LyraSourceList` | import { LyraSourceList } from '@aceshooting/lyra-ui/components/retrieval/source-list/source-list.class.js'; | 24.0.0 |
+| class | `.#LyraSourcePicker` | import { LyraSourcePicker } from '@aceshooting/lyra-ui/components/retrieval/source-picker/source-picker.class.js'; | 24.0.0 |
+| class | `.#LyraSpanWaterfall` | import { LyraSpanWaterfall } from '@aceshooting/lyra-ui/components/agent-tools/span-waterfall/span-waterfall.class.js'; | 24.0.0 |
+| class | `.#LyraSparkline` | import { LyraSparkline } from '@aceshooting/lyra-ui/components/data/sparkline/sparkline.class.js'; | 24.0.0 |
+| class | `.#LyraSpinner` | import { LyraSpinner } from '@aceshooting/lyra-ui/components/overlays/spinner/spinner.class.js'; | 24.0.0 |
+| class | `.#LyraSpreadsheetViewer` | import { LyraSpreadsheetViewer } from '@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraStackTrace` | import { LyraStackTrace } from '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.class.js'; | 24.0.0 |
+| class | `.#LyraStat` | import { LyraStat } from '@aceshooting/lyra-ui/components/data/stat/stat.class.js'; | 24.0.0 |
+| class | `.#LyraStepper` | import { LyraStepper } from '@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js'; | 24.0.0 |
+| class | `.#LyraStreamStatus` | import { LyraStreamStatus } from '@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js'; | 24.0.0 |
+| class | `.#LyraStreamingTextCore` | import { LyraStreamingTextCore } from '@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text-core.class.js'; | 24.0.0 |
+| class | `.#LyraSubagentPanel` | import { LyraSubagentPanel } from '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js'; | 24.0.0 |
+| class | `.#LyraSuggestionChips` | import { LyraSuggestionChips } from '@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.class.js'; | 24.0.0 |
+| class | `.#LyraSvgViewer` | import { LyraSvgViewer } from '@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraSwatchPicker` | import { LyraSwatchPicker } from '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js'; | 24.0.0 |
+| class | `.#LyraSwitch` | import { LyraSwitch } from '@aceshooting/lyra-ui/components/forms/switch/switch.class.js'; | 24.0.0 |
+| class | `.#LyraTab` | import { LyraTab } from '@aceshooting/lyra-ui/components/layout/tab-group/tab.class.js'; | 24.0.0 |
+| class | `.#LyraTabGroup` | import { LyraTabGroup } from '@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js'; | 24.0.0 |
+| class | `.#LyraTabPanel` | import { LyraTabPanel } from '@aceshooting/lyra-ui/components/layout/tab-group/tab-panel.class.js'; | 24.0.0 |
+| class | `.#LyraTable` | import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js'; | 24.0.0 |
+| class | `.#LyraTag` | import { LyraTag } from '@aceshooting/lyra-ui/components/overlays/badge/tag.class.js'; | 24.0.0 |
+| class | `.#LyraTaskList` | import { LyraTaskList } from '@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js'; | 24.0.0 |
+| class | `.#LyraTerminal` | import { LyraTerminal } from '@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js'; | 24.0.0 |
+| class | `.#LyraTextarea` | import { LyraTextarea } from '@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js'; | 24.0.0 |
+| class | `.#LyraThinkingPanel` | import { LyraThinkingPanel } from '@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js'; | 24.0.0 |
+| class | `.#LyraThreadList` | import { LyraThreadList } from '@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js'; | 24.0.0 |
+| class | `.#LyraTimeInput` | import { LyraTimeInput } from '@aceshooting/lyra-ui/components/forms/input/time-input.class.js'; | 24.0.0 |
+| class | `.#LyraTimeRange` | import { LyraTimeRange } from '@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js'; | 24.0.0 |
+| class | `.#LyraTimeline` | import { LyraTimeline } from '@aceshooting/lyra-ui/components/data/timeline/timeline.class.js'; | 24.0.0 |
+| class | `.#LyraTimelineItem` | import { LyraTimelineItem } from '@aceshooting/lyra-ui/components/data/timeline/timeline-item.class.js'; | 24.0.0 |
+| class | `.#LyraToast` | import { LyraToast } from '@aceshooting/lyra-ui/components/overlays/toast/toast.class.js'; | 24.0.0 |
+| class | `.#LyraToastItem` | import { LyraToastItem } from '@aceshooting/lyra-ui/components/overlays/toast/toast-item.class.js'; | 24.0.0 |
+| class | `.#LyraToggle` | import { LyraToggle } from '@aceshooting/lyra-ui/components/forms/toggle/toggle.class.js'; | 24.0.0 |
+| class | `.#LyraToggleGroup` | import { LyraToggleGroup } from '@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.class.js'; | 24.0.0 |
+| class | `.#LyraTokenInput` | import { LyraTokenInput } from '@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js'; | 24.0.0 |
+| class | `.#LyraToolApprovalDialog` | import { LyraToolApprovalDialog } from '@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js'; | 24.0.0 |
+| class | `.#LyraToolCallBlock` | import { LyraToolCallBlock } from '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js'; | 24.0.0 |
+| class | `.#LyraToolCallChip` | import { LyraToolCallChip } from '@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js'; | 24.0.0 |
+| class | `.#LyraToolParamForm` | import { LyraToolParamForm } from '@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js'; | 24.0.0 |
+| class | `.#LyraToolResultDialog` | import { LyraToolResultDialog } from '@aceshooting/lyra-ui/components/agent-tools/tool-result-dialog/tool-result-dialog.class.js'; | 24.0.0 |
+| class | `.#LyraToolResultView` | import { LyraToolResultView } from '@aceshooting/lyra-ui/components/agent-tools/tool-result-view/tool-result-view.class.js'; | 24.0.0 |
+| class | `.#LyraToolSelectDialog` | import { LyraToolSelectDialog } from '@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js'; | 24.0.0 |
+| class | `.#LyraToolTimeline` | import { LyraToolTimeline } from '@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js'; | 24.0.0 |
+| class | `.#LyraTooltip` | import { LyraTooltip } from '@aceshooting/lyra-ui/components/overlays/overlay/tooltip.class.js'; | 24.0.0 |
+| class | `.#LyraTour` | import { LyraTour } from '@aceshooting/lyra-ui/components/utility/tour/tour.class.js'; | 24.0.0 |
+| class | `.#LyraTraceTree` | import { LyraTraceTree } from '@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js'; | 24.0.0 |
+| class | `.#LyraTranscriptFeed` | import { LyraTranscriptFeed } from '@aceshooting/lyra-ui/components/conversation/transcript-feed/transcript-feed.class.js'; | 24.0.0 |
+| class | `.#LyraTree` | import { LyraTree } from '@aceshooting/lyra-ui/components/data/tree/tree.class.js'; | 24.0.0 |
+| class | `.#LyraTreeItem` | import { LyraTreeItem } from '@aceshooting/lyra-ui/components/data/tree/tree-item.class.js'; | 24.0.0 |
+| class | `.#LyraTypingIndicator` | import { LyraTypingIndicator } from '@aceshooting/lyra-ui/components/conversation/typing-indicator/typing-indicator.class.js'; | 24.0.0 |
+| class | `.#LyraUsageBadge` | import { LyraUsageBadge } from '@aceshooting/lyra-ui/components/conversation/usage-badge/usage-badge.class.js'; | 24.0.0 |
+| class | `.#LyraVideo` | import { LyraVideo } from '@aceshooting/lyra-ui/components/media/video/video.class.js'; | 24.0.0 |
+| class | `.#LyraVideoPlaylist` | import { LyraVideoPlaylist } from '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js'; | 24.0.0 |
+| class | `.#LyraVisuallyHidden` | import { LyraVisuallyHidden } from '@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.class.js'; | 24.0.0 |
+| class | `.#LyraVoicePicker` | import { LyraVoicePicker } from '@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.class.js'; | 24.0.0 |
+| class | `.#LyraWidget` | import { LyraWidget } from '@aceshooting/lyra-ui/components/layout/widget/widget.class.js'; | 24.0.0 |
+| class | `.#LyraWidgetRenderer` | import { LyraWidgetRenderer } from '@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.class.js'; | 24.0.0 |
+| class | `.#LyraWordCloud` | import { LyraWordCloud } from '@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js'; | 24.0.0 |
+| class | `.#LyraXmlViewer` | import { LyraXmlViewer } from '@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.class.js'; | 24.0.0 |
+| class | `.#LyraZoomableFrame` | import { LyraZoomableFrame } from '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.class.js'; | 24.0.0 |
+| constant | `./theme/presets.js#LYRA_THEME_PRESETS` | setLyraStyle({ mode: "system", accent: "sapphire" }) | 24.0.0 |
+| constant | `./theme/presets/shadcn.js#LYRA_SHADCN_THEME_PRESET` | setLyraStyle({ look: LYRA_SHADCN_LOOK }) | 24.0.0 |
+| entry-point | `./components/agent-tools/activity-feed/activity-feed.js` | import '@aceshooting/lyra-ui/components/lr-activity-feed.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js` | import '@aceshooting/lyra-ui/components/lr-agent-eval-dashboard.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/agent-run/agent-run.js` | import '@aceshooting/lyra-ui/components/lr-agent-run.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/agent-trace/agent-trace.js` | import '@aceshooting/lyra-ui/components/lr-agent-trace.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/approval-queue/approval-queue.js` | import '@aceshooting/lyra-ui/components/lr-approval-queue.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/artifact-panel/artifact-panel.js` | import '@aceshooting/lyra-ui/components/lr-artifact-panel.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/browser-frame/browser-frame.js` | import '@aceshooting/lyra-ui/components/lr-browser-frame.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/commit-card/commit-card.js` | import '@aceshooting/lyra-ui/components/lr-commit-card.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/compare-panel/compare-panel.js` | import '@aceshooting/lyra-ui/components/lr-compare-panel.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/confirm-bar/confirm-bar.js` | import '@aceshooting/lyra-ui/components/lr-confirm-bar.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/context-inspector/context-inspector.js` | import '@aceshooting/lyra-ui/components/lr-context-inspector.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/eval-dataset/eval-dataset.js` | import '@aceshooting/lyra-ui/components/lr-eval-dataset.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/eval-result/eval-result.js` | import '@aceshooting/lyra-ui/components/lr-eval-result.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/evaluation-run/evaluation-run.js` | import '@aceshooting/lyra-ui/components/lr-eval-run.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/mcp-app/mcp-app.js` | import '@aceshooting/lyra-ui/components/lr-mcp-app.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/policy-summary/policy-summary.js` | import '@aceshooting/lyra-ui/components/lr-policy-summary.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/prompt-studio/prompt-studio.js` | import '@aceshooting/lyra-ui/components/lr-prompt-studio.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/result-card/result-card.js` | import '@aceshooting/lyra-ui/components/lr-result-card.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/result-card/result-field.js` | import '@aceshooting/lyra-ui/components/lr-result-field.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/schema-viewer/schema-viewer.js` | import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/span-waterfall/span-waterfall.js` | import '@aceshooting/lyra-ui/components/lr-span-waterfall.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/stack-trace/stack-trace.js` | import '@aceshooting/lyra-ui/components/lr-stack-trace.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/subagent-panel/subagent-panel.js` | import '@aceshooting/lyra-ui/components/lr-subagent-panel.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/task-list/task-list.js` | import '@aceshooting/lyra-ui/components/lr-task-list.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/terminal/terminal.js` | import '@aceshooting/lyra-ui/components/lr-terminal.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/test-results/test-results.js` | import '@aceshooting/lyra-ui/components/lr-test-results.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/thinking-panel/thinking-panel.js` | import '@aceshooting/lyra-ui/components/lr-thinking-panel.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-approval-dialog/tool-approval-dialog.js` | import '@aceshooting/lyra-ui/components/lr-tool-approval-dialog.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-call-block/tool-call-block.js` | import '@aceshooting/lyra-ui/components/lr-tool-call-block.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-call-chip/tool-call-chip.js` | import '@aceshooting/lyra-ui/components/lr-tool-call-chip.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-param-form/tool-param-form.js` | import '@aceshooting/lyra-ui/components/lr-tool-param-form.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-result-dialog/tool-result-dialog.js` | import '@aceshooting/lyra-ui/components/lr-tool-result-dialog.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-result-view/tool-result-view.js` | import '@aceshooting/lyra-ui/components/lr-tool-result-view.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-select-dialog/tool-select-dialog.js` | import '@aceshooting/lyra-ui/components/lr-tool-select-dialog.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/tool-timeline/tool-timeline.js` | import '@aceshooting/lyra-ui/components/lr-tool-timeline.js'; | 24.0.0 |
+| entry-point | `./components/agent-tools/trace-tree/trace-tree.js` | import '@aceshooting/lyra-ui/components/lr-trace-tree.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/bar-chart.js` | import '@aceshooting/lyra-ui/components/lr-bar-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/box-plot.js` | import '@aceshooting/lyra-ui/components/lr-box-plot.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/bubble-chart.js` | import '@aceshooting/lyra-ui/components/lr-bubble-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/chart.js` | import '@aceshooting/lyra-ui/components/lr-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/doughnut-chart.js` | import '@aceshooting/lyra-ui/components/lr-doughnut-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/histogram.js` | import '@aceshooting/lyra-ui/components/lr-histogram.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/line-chart.js` | import '@aceshooting/lyra-ui/components/lr-line-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/lite-chart.js` | import '@aceshooting/lyra-ui/components/lr-lite-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/pie-chart.js` | import '@aceshooting/lyra-ui/components/lr-pie-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/polar-area-chart.js` | import '@aceshooting/lyra-ui/components/lr-polar-area-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/radar-chart.js` | import '@aceshooting/lyra-ui/components/lr-radar-chart.js'; | 24.0.0 |
+| entry-point | `./components/charts/chart/scatter-chart.js` | import '@aceshooting/lyra-ui/components/lr-scatter-chart.js'; | 24.0.0 |
+| entry-point | `./components/conversation/agent-workspace/agent-workspace.js` | import '@aceshooting/lyra-ui/components/lr-agent-workspace.js'; | 24.0.0 |
+| entry-point | `./components/conversation/audio-visualizer/audio-visualizer.js` | import '@aceshooting/lyra-ui/components/lr-audio-visualizer.js'; | 24.0.0 |
+| entry-point | `./components/conversation/branch-picker/branch-picker.js` | import '@aceshooting/lyra-ui/components/lr-branch-picker.js'; | 24.0.0 |
+| entry-point | `./components/conversation/chat-composer/chat-composer.js` | import '@aceshooting/lyra-ui/components/lr-chat-composer.js'; | 24.0.0 |
+| entry-point | `./components/conversation/chat-message/chat-message.js` | import '@aceshooting/lyra-ui/components/lr-chat-message.js'; | 24.0.0 |
+| entry-point | `./components/conversation/chat-viewport/chat-viewport.js` | import '@aceshooting/lyra-ui/components/lr-chat-viewport.js'; | 24.0.0 |
+| entry-point | `./components/conversation/checkpoint/checkpoint.js` | import '@aceshooting/lyra-ui/components/lr-checkpoint.js'; | 24.0.0 |
+| entry-point | `./components/conversation/code-block/code-block-core.js` | import '@aceshooting/lyra-ui/components/lr-code-block-core.js'; | 24.0.0 |
+| entry-point | `./components/conversation/code-block/code-block.js` | import '@aceshooting/lyra-ui/components/lr-code-block.js'; | 24.0.0 |
+| entry-point | `./components/conversation/conversation-item/conversation-item.js` | import '@aceshooting/lyra-ui/components/lr-conversation-item.js'; | 24.0.0 |
+| entry-point | `./components/conversation/generation-metrics/generation-metrics.js` | import '@aceshooting/lyra-ui/components/lr-generation-metrics.js'; | 24.0.0 |
+| entry-point | `./components/conversation/handoff-divider/handoff-divider.js` | import '@aceshooting/lyra-ui/components/lr-handoff-divider.js'; | 24.0.0 |
+| entry-point | `./components/conversation/markdown/markdown-core.js` | import '@aceshooting/lyra-ui/components/lr-markdown-core.js'; | 24.0.0 |
+| entry-point | `./components/conversation/markdown/markdown.js` | import '@aceshooting/lyra-ui/components/lr-markdown.js'; | 24.0.0 |
+| entry-point | `./components/conversation/message-actions/message-actions.js` | import '@aceshooting/lyra-ui/components/lr-message-actions.js'; | 24.0.0 |
+| entry-point | `./components/conversation/message-feedback/message-feedback.js` | import '@aceshooting/lyra-ui/components/lr-message-feedback.js'; | 24.0.0 |
+| entry-point | `./components/conversation/message-parts/message-parts.js` | import '@aceshooting/lyra-ui/components/lr-message-parts.js'; | 24.0.0 |
+| entry-point | `./components/conversation/model-select/model-select.js` | import '@aceshooting/lyra-ui/components/lr-model-select.js'; | 24.0.0 |
+| entry-point | `./components/conversation/model-settings-panel/model-settings-panel.js` | import '@aceshooting/lyra-ui/components/lr-model-settings-panel.js'; | 24.0.0 |
+| entry-point | `./components/conversation/prompt-input/prompt-input.js` | import '@aceshooting/lyra-ui/components/lr-prompt-input.js'; | 24.0.0 |
+| entry-point | `./components/conversation/prompt-queue/prompt-queue.js` | import '@aceshooting/lyra-ui/components/lr-prompt-queue.js'; | 24.0.0 |
+| entry-point | `./components/conversation/push-to-talk/push-to-talk.js` | import '@aceshooting/lyra-ui/components/lr-push-to-talk.js'; | 24.0.0 |
+| entry-point | `./components/conversation/realtime-session/realtime-session.js` | import '@aceshooting/lyra-ui/components/lr-realtime-session.js'; | 24.0.0 |
+| entry-point | `./components/conversation/selection-toolbar/selection-toolbar.js` | import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js'; | 24.0.0 |
+| entry-point | `./components/conversation/stream-status/stream-status.js` | import '@aceshooting/lyra-ui/components/lr-stream-status.js'; | 24.0.0 |
+| entry-point | `./components/conversation/streaming-text/streaming-text-core.js` | import '@aceshooting/lyra-ui/components/lr-streaming-text-core.js'; | 24.0.0 |
+| entry-point | `./components/conversation/streaming-text/streaming-text.js` | import '@aceshooting/lyra-ui/components/lr-streaming-text.js'; | 24.0.0 |
+| entry-point | `./components/conversation/suggestion-chips/suggestion-chips.js` | import '@aceshooting/lyra-ui/components/lr-suggestion-chips.js'; | 24.0.0 |
+| entry-point | `./components/conversation/thread-list/thread-list.js` | import '@aceshooting/lyra-ui/components/lr-thread-list.js'; | 24.0.0 |
+| entry-point | `./components/conversation/transcript-feed/transcript-feed.js` | import '@aceshooting/lyra-ui/components/lr-transcript-feed.js'; | 24.0.0 |
+| entry-point | `./components/conversation/typing-indicator/typing-indicator.js` | import '@aceshooting/lyra-ui/components/lr-typing-indicator.js'; | 24.0.0 |
+| entry-point | `./components/conversation/usage-badge/usage-badge.js` | import '@aceshooting/lyra-ui/components/lr-usage-badge.js'; | 24.0.0 |
+| entry-point | `./components/conversation/voice-picker/voice-picker.js` | import '@aceshooting/lyra-ui/components/lr-voice-picker.js'; | 24.0.0 |
+| entry-point | `./components/conversation/widget-renderer/widget-renderer.js` | import '@aceshooting/lyra-ui/components/lr-widget-renderer.js'; | 24.0.0 |
+| entry-point | `./components/data/calendar/calendar.js` | import '@aceshooting/lyra-ui/components/lr-calendar.js'; | 24.0.0 |
+| entry-point | `./components/data/condition-builder/condition-builder.js` | import '@aceshooting/lyra-ui/components/lr-condition-builder.js'; | 24.0.0 |
+| entry-point | `./components/data/context-meter/context-meter.js` | import '@aceshooting/lyra-ui/components/lr-context-meter.js'; | 24.0.0 |
+| entry-point | `./components/data/data-grid/data-grid.js` | import '@aceshooting/lyra-ui/components/lr-data-grid.js'; | 24.0.0 |
+| entry-point | `./components/data/document-library/document-library.js` | import '@aceshooting/lyra-ui/components/lr-document-library.js'; | 24.0.0 |
+| entry-point | `./components/data/env-list/env-list.js` | import '@aceshooting/lyra-ui/components/lr-env-list.js'; | 24.0.0 |
+| entry-point | `./components/data/file-tree/file-tree.js` | import '@aceshooting/lyra-ui/components/lr-file-tree.js'; | 24.0.0 |
+| entry-point | `./components/data/flow-canvas/flow-canvas.js` | import '@aceshooting/lyra-ui/components/lr-flow-canvas.js'; | 24.0.0 |
+| entry-point | `./components/data/flow-controls/flow-controls.js` | import '@aceshooting/lyra-ui/components/lr-flow-controls.js'; | 24.0.0 |
+| entry-point | `./components/data/flow-minimap/flow-minimap.js` | import '@aceshooting/lyra-ui/components/lr-flow-minimap.js'; | 24.0.0 |
+| entry-point | `./components/data/flow-node/flow-node.js` | import '@aceshooting/lyra-ui/components/lr-flow-node.js'; | 24.0.0 |
+| entry-point | `./components/data/flow-run-status/flow-run-status.js` | import '@aceshooting/lyra-ui/components/lr-flow-run-status.js'; | 24.0.0 |
+| entry-point | `./components/data/funnel/funnel.js` | import '@aceshooting/lyra-ui/components/lr-funnel.js'; | 24.0.0 |
+| entry-point | `./components/data/gauge/gauge.js` | import '@aceshooting/lyra-ui/components/lr-gauge.js'; | 24.0.0 |
+| entry-point | `./components/data/graph-query-builder/graph-query-builder.js` | import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js'; | 24.0.0 |
+| entry-point | `./components/data/heatmap/heatmap.js` | import '@aceshooting/lyra-ui/components/lr-heatmap.js'; | 24.0.0 |
+| entry-point | `./components/data/pagination/pagination.js` | import '@aceshooting/lyra-ui/components/lr-pagination.js'; | 24.0.0 |
+| entry-point | `./components/data/sequence-strip/sequence-strip.js` | import '@aceshooting/lyra-ui/components/lr-sequence-strip.js'; | 24.0.0 |
+| entry-point | `./components/data/sparkline/sparkline.js` | import '@aceshooting/lyra-ui/components/lr-sparkline.js'; | 24.0.0 |
+| entry-point | `./components/data/stat/stat.js` | import '@aceshooting/lyra-ui/components/lr-stat.js'; | 24.0.0 |
+| entry-point | `./components/data/table/table.js` | import '@aceshooting/lyra-ui/components/lr-table.js'; | 24.0.0 |
+| entry-point | `./components/data/timeline/timeline-item.js` | import '@aceshooting/lyra-ui/components/lr-timeline-item.js'; | 24.0.0 |
+| entry-point | `./components/data/timeline/timeline.js` | import '@aceshooting/lyra-ui/components/lr-timeline.js'; | 24.0.0 |
+| entry-point | `./components/data/tree/tree-item.js` | import '@aceshooting/lyra-ui/components/lr-tree-item.js'; | 24.0.0 |
+| entry-point | `./components/data/tree/tree.js` | import '@aceshooting/lyra-ui/components/lr-tree.js'; | 24.0.0 |
+| entry-point | `./components/data/word-cloud/word-cloud.js` | import '@aceshooting/lyra-ui/components/lr-word-cloud.js'; | 24.0.0 |
+| entry-point | `./components/forms/button/button.js` | import '@aceshooting/lyra-ui/components/lr-button.js'; | 24.0.0 |
+| entry-point | `./components/forms/checkbox-group/checkbox-group.js` | import '@aceshooting/lyra-ui/components/lr-checkbox-group.js'; | 24.0.0 |
+| entry-point | `./components/forms/checkbox/checkbox.js` | import '@aceshooting/lyra-ui/components/lr-checkbox.js'; | 24.0.0 |
+| entry-point | `./components/forms/code-editor/code-editor.js` | import '@aceshooting/lyra-ui/components/lr-code-editor.js'; | 24.0.0 |
+| entry-point | `./components/forms/color-picker/color-picker.js` | import '@aceshooting/lyra-ui/components/lr-color-picker.js'; | 24.0.0 |
+| entry-point | `./components/forms/combobox/combobox.js` | import '@aceshooting/lyra-ui/components/lr-combobox.js'; | 24.0.0 |
+| entry-point | `./components/forms/combobox/option.js` | import '@aceshooting/lyra-ui/components/lr-option.js'; | 24.0.0 |
+| entry-point | `./components/forms/date-picker/date-input.js` | import '@aceshooting/lyra-ui/components/lr-date-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/date-picker/date-picker.js` | import '@aceshooting/lyra-ui/components/lr-date-picker.js'; | 24.0.0 |
+| entry-point | `./components/forms/emoji-picker/emoji-picker.js` | import '@aceshooting/lyra-ui/components/lr-emoji-picker.js'; | 24.0.0 |
+| entry-point | `./components/forms/icon-button/icon-button.js` | import '@aceshooting/lyra-ui/components/lr-icon-button.js'; | 24.0.0 |
+| entry-point | `./components/forms/input/input.js` | import '@aceshooting/lyra-ui/components/lr-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/input/native-time-input.js` | import '@aceshooting/lyra-ui/components/lr-native-time-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/input/number-input.js` | import '@aceshooting/lyra-ui/components/lr-number-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/input/time-input.js` | import '@aceshooting/lyra-ui/components/lr-time-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/locale-picker/locale-picker.js` | import '@aceshooting/lyra-ui/components/lr-locale-picker.js'; | 24.0.0 |
+| entry-point | `./components/forms/otp-input/otp-input.js` | import '@aceshooting/lyra-ui/components/lr-otp-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/phone-input/phone-input.js` | import '@aceshooting/lyra-ui/components/lr-phone-input.js'; | 24.0.0 |
+| entry-point | `./components/forms/radio/radio-button.js` | import '@aceshooting/lyra-ui/components/lr-radio-button.js'; | 24.0.0 |
+| entry-point | `./components/forms/radio/radio-group.js` | import '@aceshooting/lyra-ui/components/lr-radio-group.js'; | 24.0.0 |
+| entry-point | `./components/forms/radio/radio.js` | import '@aceshooting/lyra-ui/components/lr-radio.js'; | 24.0.0 |
+| entry-point | `./components/forms/rubric-form/rubric-form.js` | import '@aceshooting/lyra-ui/components/lr-rubric-form.js'; | 24.0.0 |
+| entry-point | `./components/forms/select/select.js` | import '@aceshooting/lyra-ui/components/lr-select.js'; | 24.0.0 |
+| entry-point | `./components/forms/slider/slider.js` | import '@aceshooting/lyra-ui/components/lr-slider.js'; | 24.0.0 |
+| entry-point | `./components/forms/swatch-picker/swatch-picker.js` | import '@aceshooting/lyra-ui/components/lr-swatch-picker.js'; | 24.0.0 |
+| entry-point | `./components/forms/switch/switch.js` | import '@aceshooting/lyra-ui/components/lr-switch.js'; | 24.0.0 |
+| entry-point | `./components/forms/textarea/textarea.js` | import '@aceshooting/lyra-ui/components/lr-textarea.js'; | 24.0.0 |
+| entry-point | `./components/forms/time-range/time-range.js` | import '@aceshooting/lyra-ui/components/lr-time-range.js'; | 24.0.0 |
+| entry-point | `./components/forms/toggle-group/toggle-group.js` | import '@aceshooting/lyra-ui/components/lr-toggle-group.js'; | 24.0.0 |
+| entry-point | `./components/forms/toggle/toggle.js` | import '@aceshooting/lyra-ui/components/lr-toggle.js'; | 24.0.0 |
+| entry-point | `./components/forms/token-input/token-input.js` | import '@aceshooting/lyra-ui/components/lr-token-input.js'; | 24.0.0 |
+| entry-point | `./components/layout/app-rail-group/app-rail-group.js` | import '@aceshooting/lyra-ui/components/lr-app-rail-group.js'; | 24.0.0 |
+| entry-point | `./components/layout/app-rail/app-rail-item.js` | import '@aceshooting/lyra-ui/components/lr-app-rail-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/app-rail/app-rail.js` | import '@aceshooting/lyra-ui/components/lr-app-rail.js'; | 24.0.0 |
+| entry-point | `./components/layout/breadcrumb/breadcrumb-item.js` | import '@aceshooting/lyra-ui/components/lr-breadcrumb-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/breadcrumb/breadcrumb.js` | import '@aceshooting/lyra-ui/components/lr-breadcrumb.js'; | 24.0.0 |
+| entry-point | `./components/layout/button-group/button-group.js` | import '@aceshooting/lyra-ui/components/lr-button-group.js'; | 24.0.0 |
+| entry-point | `./components/layout/card/card.js` | import '@aceshooting/lyra-ui/components/lr-card.js'; | 24.0.0 |
+| entry-point | `./components/layout/carousel/carousel-item.js` | import '@aceshooting/lyra-ui/components/lr-carousel-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/carousel/carousel.js` | import '@aceshooting/lyra-ui/components/lr-carousel.js'; | 24.0.0 |
+| entry-point | `./components/layout/command-palette/command-palette.js` | import '@aceshooting/lyra-ui/components/lr-command-palette.js'; | 24.0.0 |
+| entry-point | `./components/layout/control-group/control-group.js` | import '@aceshooting/lyra-ui/components/lr-control-group.js'; | 24.0.0 |
+| entry-point | `./components/layout/dashboard-grid/dashboard-grid.js` | import '@aceshooting/lyra-ui/components/lr-dashboard-grid.js'; | 24.0.0 |
+| entry-point | `./components/layout/details/accordion-item.js` | import '@aceshooting/lyra-ui/components/lr-accordion-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/details/accordion.js` | import '@aceshooting/lyra-ui/components/lr-accordion.js'; | 24.0.0 |
+| entry-point | `./components/layout/details/details.js` | import '@aceshooting/lyra-ui/components/lr-details.js'; | 24.0.0 |
+| entry-point | `./components/layout/dock-panel/dock-panel.js` | import '@aceshooting/lyra-ui/components/lr-dock-panel.js'; | 24.0.0 |
+| entry-point | `./components/layout/drilldown-panel/drilldown-panel.js` | import '@aceshooting/lyra-ui/components/lr-drilldown-panel.js'; | 24.0.0 |
+| entry-point | `./components/layout/filter-bar/filter-bar.js` | import '@aceshooting/lyra-ui/components/lr-filter-bar.js'; | 24.0.0 |
+| entry-point | `./components/layout/menu/dropdown-item.js` | import '@aceshooting/lyra-ui/components/lr-dropdown-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/menu/menu-item.js` | import '@aceshooting/lyra-ui/components/lr-menu-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/menu/menu-label.js` | import '@aceshooting/lyra-ui/components/lr-menu-label.js'; | 24.0.0 |
+| entry-point | `./components/layout/menu/menu.js` | import '@aceshooting/lyra-ui/components/lr-menu.js'; | 24.0.0 |
+| entry-point | `./components/layout/menubar/menubar-item.js` | import '@aceshooting/lyra-ui/components/lr-menubar-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/menubar/menubar.js` | import '@aceshooting/lyra-ui/components/lr-menubar.js'; | 24.0.0 |
+| entry-point | `./components/layout/multi-split/multi-split.js` | import '@aceshooting/lyra-ui/components/lr-multi-split.js'; | 24.0.0 |
+| entry-point | `./components/layout/navigation-menu-item/navigation-menu-item.js` | import '@aceshooting/lyra-ui/components/lr-navigation-menu-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/navigation-menu/navigation-menu.js` | import '@aceshooting/lyra-ui/components/lr-navigation-menu.js'; | 24.0.0 |
+| entry-point | `./components/layout/page/page.js` | import '@aceshooting/lyra-ui/components/lr-page.js'; | 24.0.0 |
+| entry-point | `./components/layout/reorder-list/reorder-item.js` | import '@aceshooting/lyra-ui/components/lr-reorder-item.js'; | 24.0.0 |
+| entry-point | `./components/layout/reorder-list/reorder-list.js` | import '@aceshooting/lyra-ui/components/lr-reorder-list.js'; | 24.0.0 |
+| entry-point | `./components/layout/responsive-panel/responsive-panel.js` | import '@aceshooting/lyra-ui/components/lr-responsive-panel.js'; | 24.0.0 |
+| entry-point | `./components/layout/scroller/scroller.js` | import '@aceshooting/lyra-ui/components/lr-scroller.js'; | 24.0.0 |
+| entry-point | `./components/layout/segmented/segmented.js` | import '@aceshooting/lyra-ui/components/lr-segmented.js'; | 24.0.0 |
+| entry-point | `./components/layout/split-panel/split-panel.js` | import '@aceshooting/lyra-ui/components/lr-split-panel.js'; | 24.0.0 |
+| entry-point | `./components/layout/stepper/stepper.js` | import '@aceshooting/lyra-ui/components/lr-stepper.js'; | 24.0.0 |
+| entry-point | `./components/layout/tab-group/tab-group.js` | import '@aceshooting/lyra-ui/components/lr-tab-group.js'; | 24.0.0 |
+| entry-point | `./components/layout/tab-group/tab-panel.js` | import '@aceshooting/lyra-ui/components/lr-tab-panel.js'; | 24.0.0 |
+| entry-point | `./components/layout/tab-group/tab.js` | import '@aceshooting/lyra-ui/components/lr-tab.js'; | 24.0.0 |
+| entry-point | `./components/layout/virtual-list/virtual-list.js` | import '@aceshooting/lyra-ui/components/lr-virtual-list.js'; | 24.0.0 |
+| entry-point | `./components/layout/widget/widget.js` | import '@aceshooting/lyra-ui/components/lr-widget.js'; | 24.0.0 |
+| entry-point | `./components/media/animated-image/animated-image.js` | import '@aceshooting/lyra-ui/components/lr-animated-image.js'; | 24.0.0 |
+| entry-point | `./components/media/animation/animation.js` | import '@aceshooting/lyra-ui/components/lr-animation.js'; | 24.0.0 |
+| entry-point | `./components/media/attachment-chip/attachment-chip.js` | import '@aceshooting/lyra-ui/components/lr-attachment-chip.js'; | 24.0.0 |
+| entry-point | `./components/media/attachment-trigger/attachment-trigger.js` | import '@aceshooting/lyra-ui/components/lr-attachment-trigger.js'; | 24.0.0 |
+| entry-point | `./components/media/av-player/av-player.js` | import '@aceshooting/lyra-ui/components/lr-av-player.js'; | 24.0.0 |
+| entry-point | `./components/media/avatar-group/avatar-group.js` | import '@aceshooting/lyra-ui/components/lr-avatar-group.js'; | 24.0.0 |
+| entry-point | `./components/media/avatar/avatar.js` | import '@aceshooting/lyra-ui/components/lr-avatar.js'; | 24.0.0 |
+| entry-point | `./components/media/drop-zone/drop-zone.js` | import '@aceshooting/lyra-ui/components/lr-drop-zone.js'; | 24.0.0 |
+| entry-point | `./components/media/file-icon/file-icon.js` | import '@aceshooting/lyra-ui/components/lr-file-icon.js'; | 24.0.0 |
+| entry-point | `./components/media/file-input/file-input.js` | import '@aceshooting/lyra-ui/components/lr-file-input.js'; | 24.0.0 |
+| entry-point | `./components/media/flag/flag.js` | import '@aceshooting/lyra-ui/components/lr-flag.js'; | 24.0.0 |
+| entry-point | `./components/media/image-comparer/image-comparer.js` | import '@aceshooting/lyra-ui/components/lr-image-comparer.js'; | 24.0.0 |
+| entry-point | `./components/media/image-viewer/image-viewer.js` | import '@aceshooting/lyra-ui/components/lr-image-viewer.js'; | 24.0.0 |
+| entry-point | `./components/media/lightbox/lightbox.js` | import '@aceshooting/lyra-ui/components/lr-lightbox.js'; | 24.0.0 |
+| entry-point | `./components/media/map/map.js` | import '@aceshooting/lyra-ui/components/lr-map.js'; | 24.0.0 |
+| entry-point | `./components/media/media-card/media-card.js` | import '@aceshooting/lyra-ui/components/lr-media-card.js'; | 24.0.0 |
+| entry-point | `./components/media/pan-zoom/pan-zoom.js` | import '@aceshooting/lyra-ui/components/lr-pan-zoom.js'; | 24.0.0 |
+| entry-point | `./components/media/qr-code/qr-code.js` | import '@aceshooting/lyra-ui/components/lr-qr-code.js'; | 24.0.0 |
+| entry-point | `./components/media/sequence-playback/sequence-playback.js` | import '@aceshooting/lyra-ui/components/lr-sequence-playback.js'; | 24.0.0 |
+| entry-point | `./components/media/video-playlist/video-playlist.js` | import '@aceshooting/lyra-ui/components/lr-video-playlist.js'; | 24.0.0 |
+| entry-point | `./components/media/video/video.js` | import '@aceshooting/lyra-ui/components/lr-video.js'; | 24.0.0 |
+| entry-point | `./components/media/zoomable-frame/zoomable-frame.js` | import '@aceshooting/lyra-ui/components/lr-zoomable-frame.js'; | 24.0.0 |
+| entry-point | `./components/overlays/alert/alert.js` | import '@aceshooting/lyra-ui/components/lr-alert.js'; | 24.0.0 |
+| entry-point | `./components/overlays/badge/badge.js` | import '@aceshooting/lyra-ui/components/lr-badge.js'; | 24.0.0 |
+| entry-point | `./components/overlays/badge/tag.js` | import '@aceshooting/lyra-ui/components/lr-tag.js'; | 24.0.0 |
+| entry-point | `./components/overlays/callout/callout.js` | import '@aceshooting/lyra-ui/components/lr-callout.js'; | 24.0.0 |
+| entry-point | `./components/overlays/chip/chip-group.js` | import '@aceshooting/lyra-ui/components/lr-chip-group.js'; | 24.0.0 |
+| entry-point | `./components/overlays/chip/chip.js` | import '@aceshooting/lyra-ui/components/lr-chip.js'; | 24.0.0 |
+| entry-point | `./components/overlays/context-menu/context-menu.js` | import '@aceshooting/lyra-ui/components/lr-context-menu.js'; | 24.0.0 |
+| entry-point | `./components/overlays/dialog/dialog.js` | import '@aceshooting/lyra-ui/components/lr-dialog.js'; | 24.0.0 |
+| entry-point | `./components/overlays/drawer/drawer.js` | import '@aceshooting/lyra-ui/components/lr-drawer.js'; | 24.0.0 |
+| entry-point | `./components/overlays/empty/empty.js` | import '@aceshooting/lyra-ui/components/lr-empty.js'; | 24.0.0 |
+| entry-point | `./components/overlays/kbd/kbd.js` | import '@aceshooting/lyra-ui/components/lr-kbd.js'; | 24.0.0 |
+| entry-point | `./components/overlays/overlay/dropdown.js` | import '@aceshooting/lyra-ui/components/lr-dropdown.js'; | 24.0.0 |
+| entry-point | `./components/overlays/overlay/popover.js` | import '@aceshooting/lyra-ui/components/lr-popover.js'; | 24.0.0 |
+| entry-point | `./components/overlays/overlay/tooltip.js` | import '@aceshooting/lyra-ui/components/lr-tooltip.js'; | 24.0.0 |
+| entry-point | `./components/overlays/popup/popup.js` | import '@aceshooting/lyra-ui/components/lr-popup.js'; | 24.0.0 |
+| entry-point | `./components/overlays/progress/progress-bar.js` | import '@aceshooting/lyra-ui/components/lr-progress-bar.js'; | 24.0.0 |
+| entry-point | `./components/overlays/progress/progress-ring.js` | import '@aceshooting/lyra-ui/components/lr-progress-ring.js'; | 24.0.0 |
+| entry-point | `./components/overlays/rating/rating.js` | import '@aceshooting/lyra-ui/components/lr-rating.js'; | 24.0.0 |
+| entry-point | `./components/overlays/skeleton/skeleton.js` | import '@aceshooting/lyra-ui/components/lr-skeleton.js'; | 24.0.0 |
+| entry-point | `./components/overlays/spinner/spinner.js` | import '@aceshooting/lyra-ui/components/lr-spinner.js'; | 24.0.0 |
+| entry-point | `./components/overlays/toast/toast-item.js` | import '@aceshooting/lyra-ui/components/lr-toast-item.js'; | 24.0.0 |
+| entry-point | `./components/overlays/toast/toast.js` | import '@aceshooting/lyra-ui/components/lr-toast.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/chunk-inspector/chunk-inspector.js` | import '@aceshooting/lyra-ui/components/lr-chunk-inspector.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/citation-badge/citation-badge.js` | import '@aceshooting/lyra-ui/components/lr-citation-badge.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/claim-evidence/claim-evidence.js` | import '@aceshooting/lyra-ui/components/lr-claim-evidence.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/community-card/community-card.js` | import '@aceshooting/lyra-ui/components/lr-community-card.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/embedding-explorer/embedding-explorer.js` | import '@aceshooting/lyra-ui/components/lr-embedding-explorer.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/entity-card/entity-card.js` | import '@aceshooting/lyra-ui/components/lr-entity-card.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/entity-chip/entity-chip.js` | import '@aceshooting/lyra-ui/components/lr-entity-chip.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/entity-dossier/entity-dossier.js` | import '@aceshooting/lyra-ui/components/lr-entity-dossier.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/graph-legend/graph-legend.js` | import '@aceshooting/lyra-ui/components/lr-graph-legend.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/graph/graph.js` | import '@aceshooting/lyra-ui/components/lr-graph.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/grounding-summary/grounding-summary.js` | import '@aceshooting/lyra-ui/components/lr-grounding-summary.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/ingestion-queue/ingestion-queue.js` | import '@aceshooting/lyra-ui/components/lr-ingestion-queue.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/knowledge-base-admin/knowledge-base-admin.js` | import '@aceshooting/lyra-ui/components/lr-knowledge-base-admin.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/knowledge-base/knowledge-base.js` | import '@aceshooting/lyra-ui/components/lr-knowledge-base.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js` | import '@aceshooting/lyra-ui/components/lr-knowledge-graph-explorer.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/memory-panel/memory-panel.js` | import '@aceshooting/lyra-ui/components/lr-memory-panel.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/mind-map/mind-map.js` | import '@aceshooting/lyra-ui/components/lr-mind-map.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/neighbor-list/neighbor-list.js` | import '@aceshooting/lyra-ui/components/lr-neighbor-list.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/node-palette/node-palette.js` | import '@aceshooting/lyra-ui/components/lr-node-palette.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/path-strip/path-strip.js` | import '@aceshooting/lyra-ui/components/lr-path-strip.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/provenance-panel/provenance-panel.js` | import '@aceshooting/lyra-ui/components/lr-provenance-panel.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/rag-answer/rag-answer.js` | import '@aceshooting/lyra-ui/components/lr-rag-answer.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js` | import '@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/retrieval-compare/retrieval-compare.js` | import '@aceshooting/lyra-ui/components/lr-retrieval-compare.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/retrieval-results/retrieval-results.js` | import '@aceshooting/lyra-ui/components/lr-retrieval-results.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/retrieval-search/retrieval-search.js` | import '@aceshooting/lyra-ui/components/lr-retrieval-search.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/retrieval-trace/retrieval-trace.js` | import '@aceshooting/lyra-ui/components/lr-retrieval-trace.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/source-card/source-card.js` | import '@aceshooting/lyra-ui/components/lr-source-card.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/source-list/source-list.js` | import '@aceshooting/lyra-ui/components/lr-source-list.js'; | 24.0.0 |
+| entry-point | `./components/retrieval/source-picker/source-picker.js` | import '@aceshooting/lyra-ui/components/lr-source-picker.js'; | 24.0.0 |
+| entry-point | `./components/utility/copy-button/copy-button.js` | import '@aceshooting/lyra-ui/components/lr-copy-button.js'; | 24.0.0 |
+| entry-point | `./components/utility/diff-view/diff-view.js` | import '@aceshooting/lyra-ui/components/lr-diff-view.js'; | 24.0.0 |
+| entry-point | `./components/utility/divider/divider.js` | import '@aceshooting/lyra-ui/components/lr-divider.js'; | 24.0.0 |
+| entry-point | `./components/utility/export-button/export-button.js` | import '@aceshooting/lyra-ui/components/lr-export-button.js'; | 24.0.0 |
+| entry-point | `./components/utility/format/format-bytes.js` | import '@aceshooting/lyra-ui/components/lr-format-bytes.js'; | 24.0.0 |
+| entry-point | `./components/utility/format/format-date.js` | import '@aceshooting/lyra-ui/components/lr-format-date.js'; | 24.0.0 |
+| entry-point | `./components/utility/format/format-number.js` | import '@aceshooting/lyra-ui/components/lr-format-number.js'; | 24.0.0 |
+| entry-point | `./components/utility/format/relative-time.js` | import '@aceshooting/lyra-ui/components/lr-relative-time.js'; | 24.0.0 |
+| entry-point | `./components/utility/icon/icon.js` | import '@aceshooting/lyra-ui/components/lr-icon.js'; | 24.0.0 |
+| entry-point | `./components/utility/intersection-observer/intersection-observer.js` | import '@aceshooting/lyra-ui/components/lr-intersection-observer.js'; | 24.0.0 |
+| entry-point | `./components/utility/json-viewer/json-viewer.js` | import '@aceshooting/lyra-ui/components/lr-json-viewer.js'; | 24.0.0 |
+| entry-point | `./components/utility/known-date/known-date.js` | import '@aceshooting/lyra-ui/components/lr-known-date.js'; | 24.0.0 |
+| entry-point | `./components/utility/live-region/live-region.js` | import '@aceshooting/lyra-ui/components/lr-live-region.js'; | 24.0.0 |
+| entry-point | `./components/utility/mention-popover/mention-popover.js` | import '@aceshooting/lyra-ui/components/lr-mention-popover.js'; | 24.0.0 |
+| entry-point | `./components/utility/mutation-observer/mutation-observer.js` | import '@aceshooting/lyra-ui/components/lr-mutation-observer.js'; | 24.0.0 |
+| entry-point | `./components/utility/poll-status/poll-status.js` | import '@aceshooting/lyra-ui/components/lr-poll-status.js'; | 24.0.0 |
+| entry-point | `./components/utility/random-content/random-content.js` | import '@aceshooting/lyra-ui/components/lr-random-content.js'; | 24.0.0 |
+| entry-point | `./components/utility/resize-observer/resize-observer.js` | import '@aceshooting/lyra-ui/components/lr-resize-observer.js'; | 24.0.0 |
+| entry-point | `./components/utility/tour/tour.js` | import '@aceshooting/lyra-ui/components/lr-tour.js'; | 24.0.0 |
+| entry-point | `./components/utility/visually-hidden/visually-hidden.js` | import '@aceshooting/lyra-ui/components/lr-visually-hidden.js'; | 24.0.0 |
+| entry-point | `./components/viewers/archive-viewer/archive-viewer.js` | import '@aceshooting/lyra-ui/components/lr-archive-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/calendar-viewer/calendar-viewer.js` | import '@aceshooting/lyra-ui/components/lr-calendar-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/contact-viewer/contact-viewer.js` | import '@aceshooting/lyra-ui/components/lr-contact-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/csv-viewer/csv-viewer.js` | import '@aceshooting/lyra-ui/components/lr-csv-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/dataset-viewer/dataset-viewer.js` | import '@aceshooting/lyra-ui/components/lr-dataset-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/document-compare/document-compare.js` | import '@aceshooting/lyra-ui/components/lr-document-compare.js'; | 24.0.0 |
+| entry-point | `./components/viewers/document-preview/document-preview.js` | import '@aceshooting/lyra-ui/components/lr-document-preview.js'; | 24.0.0 |
+| entry-point | `./components/viewers/document-viewer/document-viewer.js` | import '@aceshooting/lyra-ui/components/lr-document-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/docx-viewer/docx-viewer.js` | import '@aceshooting/lyra-ui/components/lr-docx-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/ebook-viewer/ebook-viewer.js` | import '@aceshooting/lyra-ui/components/lr-ebook-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/email-viewer/email-viewer.js` | import '@aceshooting/lyra-ui/components/lr-email-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-viewer.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/highlight-layer/highlight-layer.js` | import '@aceshooting/lyra-ui/components/lr-highlight-layer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/html-viewer/html-viewer.js` | import '@aceshooting/lyra-ui/components/lr-html-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/include/include.js` | import '@aceshooting/lyra-ui/components/lr-include.js'; | 24.0.0 |
+| entry-point | `./components/viewers/notebook-viewer/notebook-viewer.js` | import '@aceshooting/lyra-ui/components/lr-notebook-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/page-rail/page-rail.js` | import '@aceshooting/lyra-ui/components/lr-page-rail.js'; | 24.0.0 |
+| entry-point | `./components/viewers/pdf-viewer/pdf-viewer.js` | import '@aceshooting/lyra-ui/components/lr-pdf-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/pptx-viewer/pptx-viewer.js` | import '@aceshooting/lyra-ui/components/lr-pptx-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/spreadsheet-viewer/spreadsheet-viewer.js` | import '@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/svg-viewer/svg-viewer.js` | import '@aceshooting/lyra-ui/components/lr-svg-viewer.js'; | 24.0.0 |
+| entry-point | `./components/viewers/xml-viewer/xml-viewer.js` | import '@aceshooting/lyra-ui/components/lr-xml-viewer.js'; | 24.0.0 |
+| entry-point | `./ssr-loader.js` | In the browser import hydration.js before explicit component registrations; on the server use ssr.js for diagnostics. | 24.0.0 |
+| entry-point | `./theme/presets.js` | import { setLyraStyle, defineLyraLook } from "@aceshooting/lyra-ui/theme.js"; | 24.0.0 |
+| entry-point | `./theme/presets/shadcn.js` | import { LYRA_SHADCN_LOOK } from "@aceshooting/lyra-ui/theme/looks/shadcn.js"; | 24.0.0 |
+| function | `./theme.js#getLyraTheme` | getLyraStyle() | 24.0.0 |
+| function | `./theme.js#setLyraTheme` | setLyraStyle({ mode: "system", accentBackground: referenceColor, overrides: tokens }) | 24.0.0 |
+| function | `./theme/presets.js#applyLyraThemePreset` | setLyraStyle | 24.0.0 |
+| function | `./theme/presets.js#defineLyraThemePreset` | defineLyraLook | 24.0.0 |
+| root-attribute | `./theme/presets.js#data-lr-theme-preset` | data-lr-look plus the independent data-lr-surface, data-lr-density, data-lr-mode and data-lr-accent attributes | 24.0.0 |
+| stylesheet | `./themes/shadcn.css` | Import theme.css and looks/shadcn.css, then set data-lr-look="shadcn" on the intended scope. | 24.0.0 |
+| type | `./theme.js#LyraTheme` | LyraStyle | 24.0.0 |
+| type | `./theme.js#LyraThemeChangeDetail` | LyraStyleChangeDetail | 24.0.0 |
+| type | `./theme.js#LyraThemeMode` | LyraMode | 24.0.0 |
+| type | `./theme/presets.js#LyraThemePreset` | LyraStyleChoices | 24.0.0 |
+| type | `./theme/presets.js#LyraThemePresetChangeDetail` | LyraStyleChangeDetail | 24.0.0 |
+| type | `./theme/presets.js#LyraThemePresetName` | LyraStyleChoices | 24.0.0 |
+| window-event | `./theme.js#lr-theme-change` | event.detail.style and event.detail.changed | 24.0.0 |
+| window-event | `./theme/presets.js#lr-theme-preset-change` | event.detail.style and event.detail.changed | 24.0.0 |
 
 ## Classification summary
 

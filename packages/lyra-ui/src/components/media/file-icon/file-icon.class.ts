@@ -18,7 +18,7 @@ import { usesFileNameFallback } from './mime-type.js';
 import { styles } from './file-icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_fileTypeArchive, LYRA_DEFAULT_fileTypeAudio, LYRA_DEFAULT_fileTypeCode, LYRA_DEFAULT_fileTypeFile, LYRA_DEFAULT_fileTypeImage, LYRA_DEFAULT_fileTypePdf, LYRA_DEFAULT_fileTypePresentation, LYRA_DEFAULT_fileTypeSpreadsheet, LYRA_DEFAULT_fileTypeText, LYRA_DEFAULT_fileTypeVideo, LYRA_DEFAULT_fileTypeWithSize, LYRA_DEFAULT_fileTypeWord, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -135,7 +135,6 @@ export class LyraFileIcon extends LyraElement {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };

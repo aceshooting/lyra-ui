@@ -10,9 +10,17 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('ar', [
-  'documentPreviewEmpty', 'documentPreviewTypeEmail', 'emailViewerAttachments',
-  'emailViewerDate', 'emailViewerFrom', 'emailViewerLabel', 'emailViewerNoSubject',
-  'emailViewerOpenAttachment', 'emailViewerSubject', 'emailViewerTo', 'fileSizeUnitB',
+  'documentPreviewEmpty',
+  'documentPreviewTypeEmail',
+  'emailViewerAttachments',
+  'emailViewerDate',
+  'emailViewerFrom',
+  'emailViewerLabel',
+  'emailViewerNoSubject',
+  'emailViewerOpenAttachment',
+  'emailViewerSubject',
+  'emailViewerTo',
+  'fileSizeUnitB',
   'loadingDocument',
 ]);
 

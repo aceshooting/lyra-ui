@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
   expect,
@@ -13,6 +14,8 @@ import type {
   LyraMultiSplitToggleDetail,
 } from './multi-split.js';
 import { styles } from "./multi-split.styles.js";
+
+expectLocaleFallback('ar-EG', ['resizeDivider', 'resizeValuePercent']);
 
 it("removes only the floating pane's adjacent divider track in either orientation and collapse direction", async () => {
   for (const orientation of ["horizontal", "vertical"] as const) {
@@ -4626,7 +4629,7 @@ it('proposes Escape dismissal before committing it and honors a veto', async () 
         defaultPrevented: event.defaultPrevented,
       });
     };
-    el.addEventListener('lr-toggle', veto);
+    el.addEventListener('lr-toggle-request', veto);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     await elementUpdated(el);
     expect(el.open).to.be.true;
@@ -4637,7 +4640,7 @@ it('proposes Escape dismissal before committing it and honors a veto', async () 
       defaultPrevented: true,
     }]);
 
-    el.removeEventListener('lr-toggle', veto);
+    el.removeEventListener('lr-toggle-request', veto);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await elementUpdated(el);
     expect(el.open).to.be.false;
@@ -4668,7 +4671,7 @@ it('routes backdrop dismissal through the same cancelable proposal and keeps dir
       cancelable: boolean;
       open: boolean;
     }> = [];
-    el.addEventListener('lr-toggle', (event) => {
+    el.addEventListener('lr-toggle-request', (event) => {
       proposals.push({
         detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
         cancelable: event.cancelable,
@@ -4726,7 +4729,7 @@ it('does not overwrite a synchronous effective-collapse change during dismissal 
         open: el.open,
       });
     });
-    el.addEventListener('lr-toggle', (event) => {
+    const observeToggle = (event: Event): void => {
       sequence.push({
         type: 'toggle',
         detail: (event as CustomEvent<LyraMultiSplitToggleDetail>).detail,
@@ -4734,7 +4737,9 @@ it('does not overwrite a synchronous effective-collapse change during dismissal 
         open: el.open,
       });
       if (event.cancelable) el.collapseState = 'rail';
-    });
+    };
+    el.addEventListener('lr-toggle-request', observeToggle);
+    el.addEventListener('lr-toggle', observeToggle);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await elementUpdated(el);
@@ -4766,7 +4771,7 @@ it('aborts dismissal when a toggle listener restores open in the same call stack
     await elementUpdated(el);
 
     let proposals = 0;
-    el.addEventListener('lr-toggle', (event) => {
+    el.addEventListener('lr-toggle-request', (event) => {
       if (!event.cancelable) return;
       proposals += 1;
       el.open = false;
@@ -4798,7 +4803,7 @@ it('aborts dismissal when a toggle listener restores the effective collapse stat
     await elementUpdated(el);
 
     let proposals = 0;
-    el.addEventListener('lr-toggle', (event) => {
+    el.addEventListener('lr-toggle-request', (event) => {
       if (!event.cancelable) return;
       proposals += 1;
       el.collapse = 'none';

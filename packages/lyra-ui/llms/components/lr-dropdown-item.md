@@ -6,7 +6,7 @@
 - **Class** `LyraDropdownItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/dropdown-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated event** `lr-menu-item-change` since `21.1.0`; use event `addEventListener('lr-menu-item-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Deprecated part** `spinner__base` since `21.1.0`; use part `::part(spinner-base)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none

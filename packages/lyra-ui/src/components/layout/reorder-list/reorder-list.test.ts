@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./reorder-list.js";
 import "./reorder-item.js";
@@ -7,6 +8,8 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
+
+expectLocaleFallback('ar-EG', ['iconButtonLabel', 'moveDown', 'moveUp', 'reorderItemMoved']);
 
 describe("<lr-reorder-list>", () => {
   const threeItems = html`

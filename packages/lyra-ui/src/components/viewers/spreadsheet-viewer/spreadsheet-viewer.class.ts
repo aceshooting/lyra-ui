@@ -623,7 +623,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         )
         ?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
       target?.scrollIntoView({
-        behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+        behavior: prefersReducedMotion(this)
           ? 'auto'
           : 'smooth',
         block: 'nearest',
@@ -672,7 +672,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       | HTMLElement
       | undefined;
     target?.scrollIntoView({
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+      behavior: prefersReducedMotion(this)
         ? 'auto'
         : 'smooth',
       block: 'nearest',

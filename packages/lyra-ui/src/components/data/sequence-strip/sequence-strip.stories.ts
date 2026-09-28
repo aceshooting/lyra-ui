@@ -152,7 +152,6 @@ export const CustomAccessibleLabel: Story = {
     html`<lr-sequence-strip
       .items=${items}
       .categories=${categories()}
-      accessible-label="Component alias"
       aria-label="Conversation turn history: 2 text, 2 tool, 1 mixed"
     ></lr-sequence-strip>`,
 };

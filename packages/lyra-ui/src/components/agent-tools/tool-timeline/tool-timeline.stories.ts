@@ -124,7 +124,7 @@ export const PendingApproval: Story = {
     docs: {
       description: {
         story:
-          'An entry with `needsApproval: true` and no `approved` yet opens the shared approval dialog when its chip is clicked. Approving/denying fires this component\'s own `lr-tool-approval-decide`; the entry itself is left unchanged until the host re-assigns `entries` with the decision applied.',
+          'An entry with `needsApproval: true` and no `approved` yet opens the shared approval dialog when its chip is clicked. Approving/denying fires this component\'s own `lr-tool-approval-decide-request`; the entry itself is left unchanged until the host re-assigns `entries` with the decision applied.',
       },
     },
   },
@@ -141,9 +141,9 @@ export const PendingApproval: Story = {
           needsApproval: true,
         },
       ] satisfies ToolTimelineEntry[]}
-      @lr-tool-approval-decide=${(e: CustomEvent<ToolTimelineApprovalDetail>) => {
+      @lr-tool-approval-decide-request=${(e: CustomEvent<ToolTimelineApprovalDetail>) => {
         const out = document.getElementById('tool-timeline-approval-log');
-        if (out) out.textContent = `lr-tool-approval-decide: ${JSON.stringify(e.detail)}`;
+        if (out) out.textContent = `lr-tool-approval-decide-request: ${JSON.stringify(e.detail)}`;
       }}
     ></lr-tool-timeline>
     <p id="tool-timeline-approval-log">No decision yet — click the chip above to review.</p>
@@ -176,7 +176,7 @@ export const DeferredApproval: Story = {
           needsApproval: true,
         },
       ] satisfies ToolTimelineEntry[]}
-      @lr-tool-approval-decide=${(event: CustomEvent<ToolTimelineApprovalDetail>) => {
+      @lr-tool-approval-decide-request=${(event: CustomEvent<ToolTimelineApprovalDetail>) => {
         event.preventDefault();
         const timeline = event.currentTarget as LyraToolTimeline;
         const log = document.getElementById('tool-timeline-deferred-approval-log');

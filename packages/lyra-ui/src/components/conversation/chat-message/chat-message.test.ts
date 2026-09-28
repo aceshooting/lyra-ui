@@ -1,11 +1,12 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-message.js";
 import "../../utility/live-region/live-region.js";
 import "../markdown/markdown-core.js";
 import type { LyraChatMessage } from "./chat-message.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.js";
-import { styles } from "./chat-message.styles.js";
 import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 function liveRegionText(el: LyraChatMessage): string {
   const region = el.shadowRoot!.querySelector(
@@ -14,6 +15,8 @@ function liveRegionText(el: LyraChatMessage): string {
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('ar-EG', ['promptStudioRoleAssistant']);
 it('defaults to messageRole="assistant" and status="sent" without taking over the native role property', async () => {
   const el = (await fixture(
     html`<lr-chat-message>hi</lr-chat-message>`
@@ -756,14 +759,6 @@ it("defaults to English status text when no strings override is set", async () =
   ).to.equal("Sending…");
 });
 
-it("uses themeable ambient motion for streaming and wraps crowded footer content", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include(
-    "animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;"
-  );
-  expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
-});
-
 it("allows the ambient motion token to retime the streaming indicator", async () => {
   const el = (await fixture(html`
     <lr-chat-message
@@ -780,14 +775,38 @@ it("allows the ambient motion token to retime the streaming indicator", async ()
   );
 });
 
+it("flattens the streaming indicator animation for reduced motion", async () => {
+  await setReducedMotion("no-preference");
+  try {
+    const el = (await fixture(html`
+      <lr-chat-message status="streaming">hi</lr-chat-message>
+    `)) as LyraChatMessage;
+    const indicator = el.shadowRoot!.querySelector(
+      '[part="status-indicator"]'
+    )!;
+
+    expect(getComputedStyle(indicator).animationName).to.equal("lr-chat-message-pulse");
+    await setReducedMotion("reduce");
+    await waitUntil(() => {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+      const computed = getComputedStyle(indicator);
+      const durationMs = Number.parseFloat(computed.animationDuration) *
+        (computed.animationDuration.endsWith('ms') ? 1 : 1000);
+      return durationMs <= 0.001 && computed.animationIterationCount === '1';
+    });
+    const reduced = getComputedStyle(indicator);
+    expect(Number.parseFloat(reduced.animationDuration) *
+      (reduced.animationDuration.endsWith('ms') ? 1 : 1000)).to.be.at.most(0.001);
+    expect(reduced.animationIterationCount).to.equal('1');
+  } finally {
+    await setReducedMotion("no-preference");
+  }
+});
+
 it("actually wraps a footer crowded with status text, timestamp, retry button, and actions onto multiple lines", async () => {
-  // The cssText-regex assertion above only proves the literal declaration exists in the
-  // stylesheet source, never that it reaches a real rendered footer -- a rule that got silently
-  // overridden or dropped elsewhere in the cascade would leave this test suite green while a real
-  // narrow, crowded footer clipped or overflowed. This renders an actually-crowded footer (failed
-  // status -> indicator + status text + retry button, a timestamp, and an actions slot) inside a
-  // narrow host and asserts both the real computed flex-wrap value and that content visibly
-  // wrapped onto more than one row, not just that the property parses to "wrap".
+  // This renders a crowded footer (failed status -> indicator + status text + retry button, a
+  // timestamp, and an actions slot) inside a narrow host and asserts both the real computed
+  // flex-wrap value and that content visibly wraps onto more than one row.
   const el = (await fixture(html`
     <lr-chat-message
       style="display: block; inline-size: 160px"

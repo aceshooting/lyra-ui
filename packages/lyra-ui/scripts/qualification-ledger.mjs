@@ -5,6 +5,7 @@ import { parseSync } from 'oxc-parser';
 import {
   QUALIFICATION_DIMENSIONS,
   axeEvidenceForTag,
+  extractTestCases,
   normalizeExemptions,
   readComponentTestFiles,
 } from './qualification-core.mjs';
@@ -60,10 +61,7 @@ function firstSignal(files, pattern, packageDir) {
     const match = pattern.exec(source);
     pattern.lastIndex = 0;
     if (!match) continue;
-    return {
-      file: relative(packageDir, file),
-      line: source.slice(0, match.index).split('\n').length,
-    };
+    return sourceSignal({ file, source }, match.index, packageDir);
   }
   return null;
 }
@@ -145,6 +143,11 @@ function syntax(file) {
 }
 
 function sourceSignal(file, index, packageDir) {
+  if (file.file.endsWith('.test.ts')) {
+    const testCase = extractTestCases(file.source, file.file)
+      .find((entry) => entry.index <= index && index < entry.end);
+    if (testCase) return { file: relative(packageDir, file.file), test: testCase.title };
+  }
   return {
     file: relative(packageDir, file.file),
     line: file.source.slice(0, index).split('\n').length,
@@ -488,10 +491,10 @@ function visualProvenance(visualManifest) {
 function accessibilityFor(component, tests, packageDir, exemption) {
   const candidates = tests
     .flatMap(({ file, source }) => axeEvidenceForTag({ file, source, tag: component.tag }))
-    .map((entry) => ({ ...entry, file: relative(packageDir, entry.file) }))
+    .map(({ line: _line, ...entry }) => ({ ...entry, file: relative(packageDir, entry.file) }))
     .sort((a, b) => {
       const rank = (state) => state === 'open' ? 0 : state === 'populated' ? 1 : 2;
-      return rank(a.state) - rank(b.state) || a.file.localeCompare(b.file) || a.line - b.line;
+      return rank(a.state) - rank(b.state) || a.file.localeCompare(b.file) || a.test.localeCompare(b.test);
     });
   const qualified = candidates.filter((entry) => entry.state === 'open' || entry.state === 'populated');
   if (qualified.length > 0) {

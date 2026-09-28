@@ -5,6 +5,17 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'A kutatás előrehaladása',
+  researchProgressEmpty: 'Nincsenek kutatási lépések.',
+  researchProgressLimit: 'Az első {count} kutatási lépés megjelenítése.',
+  researchProgressStatusPending: 'Függőben',
+  researchProgressStatusRunning: 'Folyamatban',
+  researchProgressStatusCompleted: 'Befejezve',
+  researchProgressStatusFailed: 'Sikertelen',
+  researchProgressSources: {
+    one: '{count} forrás',
+    other: '{count} források',
+  },
   graphLegendLabel: 'Gráf jelmagyarázata',
   entityChipWithType: '{label}, {type}',
   showMore: 'Több megjelenítése',

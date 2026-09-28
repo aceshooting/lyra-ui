@@ -1296,7 +1296,7 @@ function normalizedDocumentPath(document) {
 
 function documentLocatorKey(document, locator) {
   const normalizedDocument = normalizedDocumentPath(document);
-  if (locator.kind === 'utility') {
+  if (locator.kind === 'utility' || locator.kind === 'indexed-interface') {
     return JSON.stringify([
       normalizedDocument,
       'utility',
@@ -1313,6 +1313,49 @@ function documentLocatorKey(document, locator) {
     ]);
   }
   return JSON.stringify([normalizedDocument, 'declaration', locator.name]);
+}
+
+/** Indexed documentation is valid only for a homogeneous, explicitly declared record map.
+ * Ordinary interfaces, heritage, optional entries and computed/index signatures retain the
+ * complete authored-field path. Nested entry values remain covered by the exact fingerprint. */
+function indexedInterfaceFields(contract) {
+  if (contract.kind !== 'interface' || contract.declarations.length !== 1) return undefined;
+  const declaration = contract.declarations[0];
+  if (declaration.type !== 'TSInterfaceDeclaration' || declaration.extends?.length ||
+      declaration.typeParameters) return undefined;
+  const entries = declaration.body?.body ?? [];
+  if (entries.length === 0) return undefined;
+  let fields;
+  for (const entry of entries) {
+    const value = entry.typeAnnotation?.typeAnnotation;
+    if (entry.type !== 'TSPropertySignature' || entry.computed || entry.optional ||
+        !identifierName(entry.key) || contract.isInternal(entry) || value?.type !== 'TSTypeLiteral') {
+      return undefined;
+    }
+    const members = value.members;
+    if (!members.length || members.some((member) => member.type !== 'TSPropertySignature' ||
+        member.computed || member.optional || !identifierName(member.key) || contract.isInternal(member))) {
+      return undefined;
+    }
+    const next = members.map((member) => identifierName(member.key)).sort();
+    if (new Set(next).size !== next.length || (fields && JSON.stringify(fields) !== JSON.stringify(next))) {
+      return undefined;
+    }
+    fields = next;
+  }
+  return fields;
+}
+
+function explicitPublicSpecifiers(packageDir, routes) {
+  const file = path.join(packageDir, 'package.json');
+  if (!existsSync(file)) return [];
+  const manifest = JSON.parse(readFileSync(file, 'utf8'));
+  if (typeof manifest.name !== 'string') return [];
+  const targets = new Set(routes.map((route) => `./dist/${route.slice(4, -3)}.js`));
+  return Object.entries(manifest.exports ?? {}).filter(([key, value]) =>
+    (key === '.' || key.startsWith('./')) && !key.includes('*') &&
+    publicExportTargets(value).some((target) => targets.has(target)),
+  ).map(([key]) => key === '.' ? manifest.name : `${manifest.name}/${key.slice(2)}`).sort();
 }
 
 /** Derives every exported non-EventMap interface/free function reachable from public owner routes. */
@@ -1448,6 +1491,7 @@ export function sourceContractCensus(
         if (contract.kind !== 'interface' && contract.kind !== 'function') continue;
         if (isEventMapContract(contract)) continue;
         const { fingerprint, names } = analyze(contract);
+        const indexedFields = indexedInterfaceFields(contract);
         const record = {
           module: contract.origin,
           exportName,
@@ -1456,6 +1500,7 @@ export function sourceContractCensus(
           names,
           routes: [],
           utilityRoutes: [],
+          ...(indexedFields ? { indexedFields } : {}),
         };
         const key = sourceContractKey(record);
         const existing = records.get(key);
@@ -1476,6 +1521,7 @@ export function sourceContractCensus(
       ...record,
       routes: record.routes.sort(),
       utilityRoutes: record.utilityRoutes.sort(),
+      ...(record.indexedFields ? { indexedSpecifiers: explicitPublicSpecifiers(packageDir, record.routes) } : {}),
     }))
     .sort((left, right) => sourceContractKey(left).localeCompare(sourceContractKey(right)));
 }
@@ -1519,7 +1565,15 @@ export function validateSourceContractBaseline(census, baseline) {
         const validLocator =
           typeof entry.document === 'string' &&
           locator &&
-          ((locator.kind === 'utility' &&
+          ((locator.kind === 'indexed-interface' &&
+            entry.kind === 'interface' &&
+            typeof locator.name === 'string' &&
+            typeof locator.declaration === 'string' &&
+            typeof locator.specifier === 'string' &&
+            Array.isArray(locator.fields) && locator.fields.length > 0 &&
+            locator.fields.every((field) => typeof field === 'string') &&
+            new Set(locator.fields).size === locator.fields.length) ||
+           (locator.kind === 'utility' &&
             typeof locator.name === 'string' &&
             typeof locator.declaration === 'string') ||
             (locator.kind === 'component' &&
@@ -1562,6 +1616,14 @@ export function validateSourceContractBaseline(census, baseline) {
           ? `legacy public source contract changed; promote it to documented enrollment: ${key} (routes)`
           : `public source-contract routes changed: ${key}`,
       );
+    }
+    if (entry?.locator?.kind === 'indexed-interface') {
+      const locator = entry.locator;
+      if (locator.declaration !== contract.exportName ||
+          !contract.indexedSpecifiers?.includes(locator.specifier) ||
+          JSON.stringify(contract.indexedFields) !== JSON.stringify(locator.fields?.slice().sort())) {
+        findings.push(`indexed interface requires an exact public export and complete homogeneous fields: ${key}`);
+      }
     }
     if (contract.utilityRoutes.length > 0 && !documentedKeys.has(key)) {
       findings.push(`public utility contract lacks documented enrollment: ${key}`);

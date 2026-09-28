@@ -23,7 +23,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -111,7 +111,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     newMessages: LYRA_DEFAULT_newMessages,
     newMessagesCount: LYRA_DEFAULT_newMessagesCount,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -283,7 +282,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         const behavior = wasMounting
           ? 'auto'
           : (this.pendingScrollBehavior ??
-            (prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth'));
+            (prefersReducedMotion(this) ? 'auto' : 'smooth'));
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
@@ -310,7 +309,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `auto` under
    *  `prefers-reduced-motion`. */
   scrollToBottom(options?: { behavior?: 'auto' | 'smooth' }): void {
-    const behavior = prefersReducedMotion(this.ownerDocument.defaultView)
+    const behavior = prefersReducedMotion(this)
       ? 'auto'
       : (options?.behavior ?? 'smooth');
     if (this.follow) {
@@ -327,7 +326,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   scrollToUnread(options?: { behavior?: 'auto' | 'smooth' }): boolean {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
     if (unreadStartIndex == null) return false;
-    const behavior = prefersReducedMotion(this.ownerDocument.defaultView)
+    const behavior = prefersReducedMotion(this)
       ? 'auto'
       : (options?.behavior ?? 'smooth');
     const list = this.virtualListEl;

@@ -57,7 +57,6 @@ const feedbackText = (el: LyraCopyButton): string =>
   (el.shadowRoot!.querySelector('[part="feedback"]') as HTMLElement).textContent!.trim();
 
 type TooltipElement = HTMLElement & {
-  content: string;
   disabled: boolean;
   hoist: boolean;
   open: boolean;
@@ -69,6 +68,11 @@ type TooltipElement = HTMLElement & {
 };
 
 const tooltip = (el: LyraCopyButton): TooltipElement => el.shadowRoot!.querySelector('lr-tooltip') as TooltipElement;
+
+const tooltipText = (tip: TooltipElement): string => {
+  const slot = tip.shadowRoot!.querySelector<HTMLSlotElement>('[part="body"] slot')!;
+  return slot.assignedNodes({ flatten: true }).map((node) => node.textContent ?? '').join('').trim();
+};
 
 const partTokens = (el: Element): string[] => (el.getAttribute('part') ?? '').split(/\s+/).filter(Boolean);
 
@@ -127,7 +131,7 @@ describe('lr-copy-button', () => {
     expect(feedbackText(el)).to.equal('');
 
     const tip = tooltip(el);
-    expect(tip.content).to.equal('Copy');
+    expect(tooltipText(tip)).to.equal('Copy');
     expect(tip.trigger).to.equal('hover focus');
     expect(tip.placement).to.equal('top');
     expect(tip.hoist).to.be.false;
@@ -145,7 +149,7 @@ describe('lr-copy-button', () => {
     const resting = (await fixture(html`<lr-copy-button copy-label=""></lr-copy-button>`)) as LyraCopyButton;
     expect(resting.copyLabel).to.equal('');
     expect(baseButton(resting).getAttribute('aria-label')).to.equal('');
-    expect(tooltip(resting).content).to.equal('');
+    expect(tooltipText(tooltip(resting))).to.equal('');
 
     const success = (await fixture(
       html`<lr-copy-button success-label="" value="hello"></lr-copy-button>`,
@@ -154,6 +158,9 @@ describe('lr-copy-button', () => {
     await settle(success);
     expect(baseButton(success).getAttribute('aria-label')).to.equal('');
     expect(feedbackText(success)).to.equal('');
+    expect(getComputedStyle(paintedControl(success)).visibility, 'empty feedback keeps the copy trigger visible').to.equal('visible');
+    expect(tooltip(success).disabled).to.be.true;
+    expect(tooltip(success).open).to.be.false;
 
     await withClipboard(
       { writeText: () => Promise.reject(new Error('denied')) },
@@ -166,6 +173,9 @@ describe('lr-copy-button', () => {
         expect(failure.errorLabel).to.equal('');
         expect(baseButton(failure).getAttribute('aria-label')).to.equal('');
         expect(feedbackText(failure)).to.equal('');
+        expect(getComputedStyle(paintedControl(failure)).visibility, 'empty feedback keeps the copy trigger visible').to.equal('visible');
+        expect(tooltip(failure).disabled).to.be.true;
+        expect(tooltip(failure).open).to.be.false;
       },
     );
   });
@@ -180,14 +190,14 @@ describe('lr-copy-button', () => {
       ></lr-copy-button>
     `)) as LyraCopyButton;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy token');
-    expect(tooltip(el).content).to.equal('Copy token');
+    expect(tooltipText(tooltip(el))).to.equal('Copy token');
 
     baseButton(el).click();
     await settle(el);
     await tooltip(el).updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Token copied');
     expect(feedbackText(el)).to.equal('Token copied');
-    expect(tooltip(el).content).to.equal('Token copied');
+    expect(tooltipText(tooltip(el))).to.equal('Token copied');
     expect(tooltip(el).open).to.be.true;
   });
 
@@ -200,7 +210,7 @@ describe('lr-copy-button', () => {
     await aTimeout(250);
     await tip.updateComplete;
     expect(tip.open).to.be.true;
-    expect(tip.content).to.equal('Copy greeting');
+    expect(tooltipText(tip)).to.equal('Copy greeting');
 
     baseButton(el).blur();
     await aTimeout(50);

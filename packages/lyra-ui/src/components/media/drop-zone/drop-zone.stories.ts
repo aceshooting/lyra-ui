@@ -105,3 +105,9 @@ export const Disabled: Story = {
     <p id="disabled-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">accepted=[] rejected=[]</p>
   `,
 };
+
+export const MultipleFiles: Story = {
+  render: () => html`<lr-drop-zone multiple @lr-files=${logFiles('multiple-log')}>
+    <p>Drop several files or a folder here.</p>
+  </lr-drop-zone><output id="multiple-log"></output>`,
+};

@@ -11,9 +11,8 @@ fallbacks, so it works standalone with no theme or runtime dependency.
 
 ## Which file to read
 
-Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated and costs several hundred
-thousand tokens; you almost never want all of it. `llms/index.md` is the source of truth for the
-current element count and complete tag list.
+Read the narrow reference for the task. `llms/index.md` is the source of truth for the current
+element count and complete tag list.
 
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
   **start here** to pick a component.
@@ -23,6 +22,22 @@ current element count and complete tag list.
 - [llms/shared.md](./llms/shared.md): library-wide behavior — status/deprecation, importing and the
   guarded autoloader, events, forms, theming/native styles, localization/RTL, TypeScript/frameworks,
   SSR, shared utilities, the `@aceshooting/lyra-ui/ai` data types, and testing.
+- [llms/shared/imports-and-registration.md](./llms/shared/imports-and-registration.md): version
+  policy, entry points, registration, and scoped registries.
+- [llms/shared/events-and-types.md](./llms/shared/events-and-types.md): event behavior and shared
+  TypeScript contracts.
+- [llms/shared/forms-and-accessibility.md](./llms/shared/forms-and-accessibility.md): native forms,
+  accessible names, shared form chrome, and accessibility scope.
+- [llms/shared/styles-and-tokens.md](./llms/shared/styles-and-tokens.md): tokens, stylesheets,
+  theme APIs, surfaces, density, contrast, and motion.
+- [llms/shared/localization-and-rtl.md](./llms/shared/localization-and-rtl.md): locale catalogs,
+  translated strings, pluralization, and right-to-left behavior.
+- [llms/shared/frameworks-and-ssr.md](./llms/shared/frameworks-and-ssr.md): framework declarations,
+  property/event binding, server rendering, and hydration.
+- [llms/shared/ai-and-peers.md](./llms/shared/ai-and-peers.md): provider-neutral stream types,
+  AI composition, and optional peer dependencies.
+- [llms/shared/testing-and-utilities.md](./llms/shared/testing-and-utilities.md): test helpers,
+  shared utilities, and feature requests.
 - [llms/tokens.md](./llms/tokens.md): every design token, including its theme input and fallback or
   its derived value, as applicable.
 - [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
@@ -30,7 +45,6 @@ current element count and complete tag list.
   exact/rewritten/warning/conceptual/unsupported decision and safe codemod rules.
 - [CHANGELOG.md](./CHANGELOG.md): chronological release notes, including breaking changes and
   post-major minor/patch additions and fixes — read it before upgrading.
-- [llms-full.txt](./llms-full.txt): all of the above component sections in one file.
 - [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
 - [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —
   useful for a human reviewer, redundant for an assistant reading these files.
@@ -83,6 +97,6 @@ privacy rules.
 
 - **Conversation & chat UI** (`components/conversation/`, 34) — `lr-markdown`, `lr-markdown-core`, `lr-chat-message`, `lr-typing-indicator`, `lr-chat-composer`, `lr-stream-status`, `lr-conversation-item`, `lr-model-select`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-generation-metrics`, `lr-code-block`, `lr-code-block-core`, `lr-model-settings-panel`, `lr-audio-visualizer`, `lr-branch-picker`, `lr-message-actions`, `lr-message-feedback`, `lr-push-to-talk`, `lr-transcript-feed`, `lr-handoff-divider`, `lr-chat-viewport`, `lr-suggestion-chips`, `lr-thread-list`, `lr-checkpoint`, `lr-usage-badge`, `lr-widget-renderer`, `lr-voice-picker`, `lr-agent-workspace`, `lr-message-parts`, `lr-prompt-input`, `lr-prompt-queue`, `lr-selection-toolbar`, `lr-realtime-session`
 
-- **Agent tooling, tool calls & evaluation** (`components/agent-tools/`, 36) — `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tool-result-dialog`, `lr-tool-select-dialog`, `lr-thinking-panel`, `lr-stack-trace`, `lr-tool-approval-dialog`, `lr-tool-param-form`, `lr-result-card`, `lr-result-field`, `lr-compare-panel`, `lr-span-waterfall`, `lr-task-list`, `lr-terminal`, `lr-trace-tree`, `lr-activity-feed`, `lr-commit-card`, `lr-test-results`, `lr-confirm-bar`, `lr-browser-frame`, `lr-artifact-panel`, `lr-agent-run`, `lr-agent-trace`, `lr-context-inspector`, `lr-eval-dataset`, `lr-eval-result`, `lr-eval-run`, `lr-policy-summary`, `lr-tool-timeline`, `lr-agent-eval-dashboard`, `lr-approval-queue`, `lr-mcp-app`, `lr-prompt-studio`, `lr-json-schema-viewer`, `lr-subagent-panel`, `lr-tool-call-block`
+- **Agent tooling, tool calls & evaluation** (`components/agent-tools/`, 43) — `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tool-result-dialog`, `lr-tool-select-dialog`, `lr-thinking-panel`, `lr-stack-trace`, `lr-tool-approval-dialog`, `lr-tool-param-form`, `lr-result-card`, `lr-result-field`, `lr-compare-panel`, `lr-span-waterfall`, `lr-task-list`, `lr-terminal`, `lr-trace-tree`, `lr-activity-feed`, `lr-commit-card`, `lr-test-results`, `lr-confirm-bar`, `lr-browser-frame`, `lr-artifact-panel`, `lr-agent-run`, `lr-agent-trace`, `lr-context-inspector`, `lr-eval-dataset`, `lr-eval-result`, `lr-eval-run`, `lr-policy-summary`, `lr-tool-timeline`, `lr-agent-eval-dashboard`, `lr-approval-queue`, `lr-mcp-app`, `lr-prompt-studio`, `lr-json-schema-viewer`, `lr-subagent-panel`, `lr-tool-call-block`, `lr-change-review`, `lr-agent-question`, `lr-permission-rules`, `lr-permission-grant`, `lr-connector-manager`, `lr-background-runs`, `lr-budget-meter`
 
-- **Retrieval, knowledge graph & grounding** (`components/retrieval/`, 30) — `lr-graph`, `lr-node-palette`, `lr-graph-legend`, `lr-entity-card`, `lr-entity-chip`, `lr-neighbor-list`, `lr-path-strip`, `lr-community-card`, `lr-chunk-inspector`, `lr-source-picker`, `lr-provenance-panel`, `lr-mind-map`, `lr-citation-badge`, `lr-source-list`, `lr-source-card`, `lr-entity-dossier`, `lr-grounding-summary`, `lr-ingestion-queue`, `lr-knowledge-base`, `lr-knowledge-graph-explorer`, `lr-memory-panel`, `lr-retrieval-results`, `lr-retrieval-search`, `lr-retrieval-trace`, `lr-rag-answer`, `lr-embedding-explorer`, `lr-knowledge-base-admin`, `lr-claim-evidence`, `lr-retrieval-compare`, `lr-rag-eval-dashboard`
+- **Retrieval, knowledge graph & grounding** (`components/retrieval/`, 31) — `lr-graph`, `lr-node-palette`, `lr-graph-legend`, `lr-entity-card`, `lr-entity-chip`, `lr-neighbor-list`, `lr-path-strip`, `lr-community-card`, `lr-chunk-inspector`, `lr-source-picker`, `lr-provenance-panel`, `lr-mind-map`, `lr-citation-badge`, `lr-source-list`, `lr-source-card`, `lr-entity-dossier`, `lr-grounding-summary`, `lr-ingestion-queue`, `lr-knowledge-base`, `lr-knowledge-graph-explorer`, `lr-memory-panel`, `lr-retrieval-results`, `lr-retrieval-search`, `lr-retrieval-trace`, `lr-rag-answer`, `lr-embedding-explorer`, `lr-knowledge-base-admin`, `lr-claim-evidence`, `lr-retrieval-compare`, `lr-rag-eval-dashboard`, `lr-research-progress`

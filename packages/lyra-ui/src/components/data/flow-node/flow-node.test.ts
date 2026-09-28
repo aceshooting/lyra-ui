@@ -1,4 +1,5 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './flow-node.js';
 import type { LyraFlowNode } from './flow-node.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
@@ -12,6 +13,8 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
       addEventListener: () => {},
       removeEventListener: () => {},
     } as unknown as MediaQueryList)) as typeof window.matchMedia;
+
+expectLocaleFallback('ar', ['durationSeconds', 'flowInputHandle', 'flowOutputHandle', 'flowStatusWithDuration', 'statusRunning']);
 
 it('defaults to empty heading, no status, in/out handles, horizontal orientation', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
@@ -363,6 +366,26 @@ describe('numeric guards', () => {
 });
 
 describe('reduced-motion running pulse', () => {
+  it('updates a running ring when its ancestor preference changes without another property write', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = motionMatchMedia(false);
+    try {
+      const scope = await fixture<HTMLElement>(html`<section><lr-flow-node status="running"></lr-flow-node></section>`);
+      const node = scope.querySelector<LyraFlowNode>('lr-flow-node')!;
+      const card = () => node.shadowRoot!.querySelector('.card')!;
+      expect(card().hasAttribute('data-pulse')).to.equal(true);
+      scope.setAttribute('data-lr-motion', 'reduce');
+      await waitUntil(() => !card().hasAttribute('data-pulse'));
+      node.setAttribute('data-lr-motion', 'system');
+      await waitUntil(() => card().hasAttribute('data-pulse'));
+      node.status = 'success';
+      await node.updateComplete;
+      expect(card().hasAttribute('data-pulse')).to.equal(false);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
   it('pulses the running status ring by default', async () => {
     const el = (await fixture(html`<lr-flow-node status="running"></lr-flow-node>`)) as LyraFlowNode;
     expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.be.true;

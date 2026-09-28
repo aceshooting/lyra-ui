@@ -1,3 +1,4 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -24,11 +25,11 @@ import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFA
 export type ToolApprovalDialogWrap = LyraTextWrap;
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lr-close` event detail
+ * Reason the dialog was dismissed, forwarded as `lr-close` detail.reason
  * -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
  * `'backdrop'` come from the dialog's own built-in dismiss triggers,
  * `'approve'`/`'deny'` from the built-in action buttons (fired in addition
- * to, and immediately after, their own dedicated `lr-approve`/`lr-deny`
+ * to, and immediately after, their own dedicated `lr-approve-request`/`lr-deny-request`
  * event -- see the class doc), and any other string is whatever a caller
  * passes to `close()` directly.
  */
@@ -47,10 +48,19 @@ export type ToolApprovalDialogCloseReason =
  */
 export type ToolApprovalDialogPending = ApprovalAction | null;
 
+/** The accepted dismissal reason. */
+export interface LyraToolApprovalDialogCloseDetail {
+  reason: ToolApprovalDialogCloseReason;
+}
+
 export interface LyraToolApprovalDialogEventMap {
-  'lr-approve': CustomEvent<{ args: unknown }>;
-  'lr-deny': CustomEvent<null>;
-  'lr-close': CustomEvent<ToolApprovalDialogCloseReason>;
+  /** @deprecated Use `lr-deny-request`. */
+  'lr-deny': LyraToolApprovalDialogEventMap['lr-deny-request'];
+  /** @deprecated Use `lr-approve-request`. */
+  'lr-approve': LyraToolApprovalDialogEventMap['lr-approve-request'];
+  'lr-approve-request': CustomEvent<{ args: unknown }>;
+  'lr-deny-request': CustomEvent<null>;
+  'lr-close': CustomEvent<LyraToolApprovalDialogCloseDetail>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -116,7 +126,7 @@ export interface LyraToolApprovalDialogEventMap {
  * composed children rendered by this component (which offers no `variant` knob of its own, unlike
  * `<lr-confirm-bar>`), each re-exporting `lr-button`'s own `base`/`label`/`start`/
  * `end`/`spinner` parts under `{deny,approve}-button-{base,label,start,end,spinner}`. An
- * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its
+ * `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while its
  * own async work (e.g. a network call) is in flight: `pendingAction` is set to `'approve'`/`'deny'`,
  * showing `loading` on that button and `disabled` on the other (and, for Approve, alongside the
  * existing invalid-JSON `disabled` gate), until the host finalizes by calling
@@ -133,15 +143,17 @@ export interface LyraToolApprovalDialogEventMap {
  * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
- * @event lr-approve - The call was approved. `detail: { args }` — the
+ * @event lr-approve - Deprecated cancelable compatibility alias of `lr-approve-request`.
+ * @event lr-approve-request - The call was approved. `detail: { args }` — the
  * current, already-parsed arguments object: the original `args` prop, or (if
  * an edit was in progress) the user's edited-and-validated version. Cancelable: a listener
  * calling `preventDefault()` sets `pendingAction` to `'approve'` instead of closing. Otherwise always
  * followed by `lr-close` with reason `'approve'`.
- * @event lr-deny - The call was denied (no detail). Cancelable, same `pendingAction` mechanism as
- * `lr-approve` (`pendingAction` is set to `'deny'`). Otherwise always followed by `lr-close` with
+ * @event lr-deny - Deprecated cancelable compatibility alias of `lr-deny-request`.
+ * @event lr-deny-request - The call was denied (no detail). Cancelable, same `pendingAction` mechanism as
+ * `lr-approve-request` (`pendingAction` is set to `'deny'`). Otherwise always followed by `lr-close` with
  * reason `'deny'`.
- * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
+ * @event lr-close - `detail: { reason: ToolApprovalDialogCloseReason }`. Fired exactly
  * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
  * now closed" signal regardless of which path triggered it. The name is not dialog-scoped in
@@ -199,6 +211,25 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  private emitApproveRequest(detail: LyraToolApprovalDialogEventMap['lr-approve-request']['detail']): CustomEvent {
+    const request = this.emit('lr-approve-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-approve', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-approve', 'lr-approve-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+  private emitDenyRequest(detail: LyraToolApprovalDialogEventMap['lr-deny-request']['detail']): CustomEvent {
+    const request = this.emit('lr-deny-request', Object.freeze(detail), { cancelable: true });
+    const alias = this.emit('lr-deny', Object.freeze(detail), { cancelable: true });
+    if (alias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-deny', 'lr-deny-request');
+      request.preventDefault();
+    }
+    return request;
+  }
+
   static override styles = [LyraElement.styles, styles];
 
   protected static override deprecatedAliases: LyraDeprecatedAliases = {
@@ -218,7 +249,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private _pending: ToolApprovalDialogPending = null;
 
   /** Marked on every write to `open`/`pendingAction`, from any source. `onApprove`/`onDeny` open it
-   *  immediately before dispatching `lr-approve`/`lr-deny` and read it back afterward: since the
+   *  immediately before dispatching `lr-approve-request`/`lr-deny-request` and read it back afterward: since the
    *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
    *  marked it in between. */
   private readonly dispatchWriteGuard = new VetoWriteGuard();
@@ -260,7 +291,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  @deprecated Use `readonly`; removal not before 23.0.0. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
 
-  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+  /** Which decision is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
    *  to `null` every time the dialog transitions from closed to open, mirroring
@@ -276,7 +307,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.requestUpdate('pendingAction', previous);
   }
 
-  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+  /** Which decision is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
    *  to `null` every time the dialog transitions from closed to open, mirroring
@@ -444,7 +475,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lr-close` detail — built-in
+   * opened. `reason` is forwarded as `lr-close` detail.reason — built-in
    * triggers pass `'escape'`/`'backdrop'`/`'approve'`/`'deny'` (`'backdrop'` only while
    * `lightDismiss` is enabled); a consumer's
    * own close affordance (e.g. a footer-slotted button) should call this
@@ -455,7 +486,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   close(reason: ToolApprovalDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit('lr-close', reason);
+    this.emit('lr-close', { reason });
   }
 
   /** Opens the dialog. No-op when already open. */
@@ -518,52 +549,65 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private onEditorFocus = (): void => { this.emit('focus'); };
   private onEditorBlur = (): void => { this.emit('blur'); };
 
+  private decisionDispatching = false;
   private onApprove = (): void => {
-    if (this.pendingAction != null) return;
-    let currentArgs: unknown = this.args;
-    if (this.editing) {
-      // The Approve button is disabled whenever draftError is non-empty, so
-      // this should always succeed -- the try/catch is defense-in-depth
-      // against a state desync rather than an expected path.
-      try {
-        currentArgs = JSON.parse(this.draftText);
-      } catch {
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      if (this.pendingAction != null) return;
+      let currentArgs: unknown = this.args;
+      if (this.editing) {
+        // The Approve button is disabled whenever draftError is non-empty, so
+        // this should always succeed -- the try/catch is defense-in-depth
+        // against a state desync rather than an expected path.
+        try {
+          currentArgs = JSON.parse(this.draftText);
+        } catch {
+          return;
+        }
+      }
+      // The guard above proves `pendingAction` is null right up to this point -- but `emit()` below
+      // dispatches synchronously, so a listener can still write `pendingAction` or `open` from inside it
+      // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
+      // close('approve') directly, or bounces `pendingAction` back to null immediately). A before/after
+      // *value* comparison can't detect that last case -- both are already null/true respectively, so
+      // a listener writing `pendingAction = null` reads identically to a listener that touched nothing.
+      // `dispatchWriteGuard` tracks the write itself, not its value: opened here, then marked by
+      // the `open`/`pendingAction` setters if a listener assigns either one during the synchronous `emit()`
+      // below. Only when it stays untouched did the listener leave both alone, and the built-in
+      // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
+      // listener just did.
+      this.dispatchWriteGuard.open();
+      const event = this.emitApproveRequest({ args: currentArgs });
+      if (event.defaultPrevented) {
+        if (!this.dispatchWriteGuard.touched) {
+          this.pendingAction = 'approve';
+        }
         return;
       }
+      if (!this.dispatchWriteGuard.touched) this.close('approve');
+    } finally {
+      this.decisionDispatching = false;
     }
-    // The guard above proves `pendingAction` is null right up to this point -- but `emit()` below
-    // dispatches synchronously, so a listener can still write `pendingAction` or `open` from inside it
-    // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
-    // close('approve') directly, or bounces `pendingAction` back to null immediately). A before/after
-    // *value* comparison can't detect that last case -- both are already null/true respectively, so
-    // a listener writing `pendingAction = null` reads identically to a listener that touched nothing.
-    // `dispatchWriteGuard` tracks the write itself, not its value: opened here, then marked by
-    // the `open`/`pendingAction` setters if a listener assigns either one during the synchronous `emit()`
-    // below. Only when it stays untouched did the listener leave both alone, and the built-in
-    // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
-    // listener just did.
-    this.dispatchWriteGuard.open();
-    const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
-    if (event.defaultPrevented) {
-      if (!this.dispatchWriteGuard.touched) {
-        this.pendingAction = 'approve';
-      }
-      return;
-    }
-    this.close('approve');
   };
 
   private onDeny = (): void => {
-    if (this.pendingAction != null) return;
-    this.dispatchWriteGuard.open();
-    const event = this.emit('lr-deny', null, { cancelable: true });
-    if (event.defaultPrevented) {
-      if (!this.dispatchWriteGuard.touched) {
-        this.pendingAction = 'deny';
+    if (this.decisionDispatching) return;
+    this.decisionDispatching = true;
+    try {
+      if (this.pendingAction != null) return;
+      this.dispatchWriteGuard.open();
+      const event = this.emitDenyRequest(null);
+      if (event.defaultPrevented) {
+        if (!this.dispatchWriteGuard.touched) {
+          this.pendingAction = 'deny';
+        }
+        return;
       }
-      return;
+      if (!this.dispatchWriteGuard.touched) this.close('deny');
+    } finally {
+      this.decisionDispatching = false;
     }
-    this.close('deny');
   };
 
   override render(): TemplateResult {

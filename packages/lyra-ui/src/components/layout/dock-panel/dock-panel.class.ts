@@ -27,7 +27,7 @@ export interface LyraDockPanelCollapseChangeDetail {
   /** @deprecated Use `expanded`, its inverse; removal not before 23.0.0. */
   readonly collapsed: boolean;
   /** Whether the panel's content is (or, on the request, would be) shown: `!collapsed`. */
-  readonly expanded?: boolean;
+  readonly expanded: boolean;
 }
 
 export interface LyraDockPanelEventMap {

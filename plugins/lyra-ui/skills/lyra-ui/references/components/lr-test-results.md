@@ -6,7 +6,7 @@
 - **Class** `LyraTestResults`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated property** `autoExpandFailures` / `auto-expand-failures` since `21.1.0`; use property `without-auto-expand-failures`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below

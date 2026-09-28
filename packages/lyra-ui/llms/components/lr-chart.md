@@ -6,10 +6,8 @@
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated event** `lr-before-datum-visibility-change` since `19.0.1`; use event `addEventListener('lr-datum-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
-- **Deprecated event** `lr-before-legend-visibility-change` since `19.0.1`; use event `addEventListener('lr-legend-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
 - **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
@@ -409,20 +407,14 @@ right after `lr-point-activate` from the same activation with an identical detai
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
-then no property change or commit event occurs. `lr-before-legend-visibility-change` is a
-**deprecated** alias of `lr-legend-visibility-change-request`, fired immediately after it from the
-same gesture with the same frozen detail; either event may veto. It is slated for removal in
-21.0.0 — migrate listeners to `lr-legend-visibility-change-request`.
+then no property change or commit event occurs.
 Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
 `lr-datum-visibility-change` (accepted commit), carrying
 `{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
-`lr-before-datum-visibility-change` is a **deprecated** alias of
-`lr-datum-visibility-change-request`, fired immediately after it from the same gesture with the
-same frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners
-to `lr-datum-visibility-change-request`.
+
 
 ```html
 <lr-doughnut-chart

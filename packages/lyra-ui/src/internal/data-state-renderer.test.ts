@@ -551,3 +551,30 @@ it('is accessible in the empty state', async () => {
   });
   await expect(element).to.be.accessible();
 });
+
+it('dispatches the canonical retry proposal before its compatibility veto alias', async () => {
+  let retries = 0;
+  const element = await stub();
+  const dispatch = (name: string) => (detail: null, init: { cancelable: true }) => {
+    const event = new CustomEvent(name, { ...init, detail, bubbles: true, composed: true });
+    element.dispatchEvent(event);
+    return event;
+  };
+  element.config = { ...IDLE_STATE, error: true, onRetry: () => retries++, emitRetryRequest: dispatch('lr-retry-request'), emitRetry: dispatch('lr-retry') };
+  await element.updateComplete;
+  const order: string[] = [];
+  element.addEventListener('lr-retry-request', () => order.push('request'));
+  element.addEventListener('lr-retry', () => order.push('legacy'));
+  const veto = (event: Event) => event.preventDefault();
+  element.addEventListener('lr-retry-request', veto);
+  retryButton(element)!.click();
+  expect(order).to.deep.equal(['request', 'legacy']);
+  expect(retries).to.equal(0);
+  element.removeEventListener('lr-retry-request', veto);
+  element.addEventListener('lr-retry', veto);
+  retryButton(element)!.click();
+  expect(retries).to.equal(0);
+  element.removeEventListener('lr-retry', veto);
+  retryButton(element)!.click();
+  expect(retries).to.equal(1);
+});

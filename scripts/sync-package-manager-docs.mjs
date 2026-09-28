@@ -18,7 +18,6 @@ const manifestPaths = {
   rootPackage: 'package.json',
   lyraUiPackage: 'packages/lyra-ui/package.json',
   lyraFlagsPackage: 'packages/lyra-flags/package.json',
-  node20Package: '.github/ci-pnpm10.json',
 };
 
 const documentPaths = {
@@ -42,7 +41,6 @@ export function derivePackageManagerVersions({
   rootPackage,
   lyraUiPackage,
   lyraFlagsPackage,
-  node20Package,
 }) {
   const node22Pnpm = exactPnpmVersion(rootPackage, manifestPaths.rootPackage);
   for (const [key, manifest] of [
@@ -59,7 +57,6 @@ export function derivePackageManagerVersions({
 
   return {
     node22Pnpm,
-    node20Pnpm: exactPnpmVersion(node20Package, manifestPaths.node20Package),
   };
 }
 
@@ -76,12 +73,12 @@ function replaceExactlyOne(source, pattern, label, replacement) {
 
 export function synchronizePackageManagerDocumentTexts(
   { agentsMd, contributingMd, ciAndGatesMd },
-  { node22Pnpm, node20Pnpm },
+  { node22Pnpm },
 ) {
   const agentsPattern = new RegExp(
     `(pnpm workspace \\(` +
       '`pnpm-workspace\\.yaml`: `packages/\\*`' +
-      `\\), Node ≥ 20, ` +
+      `\\), Node ≥ 22, ` +
       '`pnpm@' +
       `)${versionPattern}(` +
       '`\\.' +
@@ -89,7 +86,7 @@ export function synchronizePackageManagerDocumentTexts(
     'gu',
   );
   const contributingPattern = new RegExp(
-    `(Node ≥ 20, ` +
+    `(Node ≥ 22, ` +
       '`pnpm@' +
       `)${versionPattern}(` +
       '` \\(pinned via `packageManager` in `package\\.json`' +
@@ -97,17 +94,12 @@ export function synchronizePackageManagerDocumentTexts(
     'gu',
   );
   const ciMatrixPattern = new RegExp(
-    `(Node 20 uses the pnpm version pinned in ` +
-      '`\\.github/ci-pnpm10\\.json` \\(`pnpm@' +
-      `)${versionPattern}(` +
-      '`\\); Node 22\\s+uses `package\\.json#packageManager` \\(`pnpm@' +
-      `)${versionPattern}(` +
-      '`\\)\\.' +
-      `)`,
+    '(Node 22 uses `package\\.json#packageManager` \\(`pnpm@' +
+      `)${versionPattern}(` + '`\\)\\.)',
     'gu',
   );
   const localPlatformPattern = new RegExp(
-    `(Node 20 needs pnpm )${versionPattern}(; Node 22 needs pnpm )${versionPattern}(\\.)`,
+    `(Node 22 needs pnpm )${versionPattern}(\\.)`,
     'gu',
   );
 
@@ -129,11 +121,11 @@ export function synchronizePackageManagerDocumentTexts(
         ciAndGatesMd,
         ciMatrixPattern,
         'CI matrix package-manager',
-        `$1${node20Pnpm}$2${node22Pnpm}$3`,
+        `$1${node22Pnpm}$2`,
       ),
       localPlatformPattern,
       'local platform package-manager',
-      `$1${node20Pnpm}$2${node22Pnpm}$3`,
+      `$1${node22Pnpm}$2`,
     ),
   };
 }

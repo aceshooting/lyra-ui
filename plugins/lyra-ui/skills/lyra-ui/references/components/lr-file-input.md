@@ -6,10 +6,11 @@
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated part** `base` since `8.2.3`; use part `::part(file-input)`; removal not before `10.0.0` — The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Deprecated part** `label` since `8.2.3`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated property** `paste` / `paste` since `21.1.0`; use property `without-paste`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none

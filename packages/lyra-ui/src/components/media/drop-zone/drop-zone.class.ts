@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -9,7 +10,7 @@ import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   DropSessionController,
   type DropSessionState,
@@ -141,6 +142,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
@@ -151,10 +153,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** Disables drag/drop handling entirely; the wrapped content keeps its own interactivity. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Accepts more than one file per drop, and enables recursive folder-drop traversal -- same
-   *  contract as `lr-file-input`'s `multiple`. Unlike `lr-file-input`, this defaults to `true`:
-   *  a region wrapper's typical use (dropping several files onto a chat surface) expects more than
-   *  one file, and there is no native single-file picker here to keep in sync. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) multiple = true;
+   *  contract as `lr-file-input`'s `multiple`. Defaults to `false`; opt in for batches or folders. */
+  @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
   /** Native-`accept`-style allowlist (`".csv,.xlsx"`, `"image/*"`, comma-separated mixes) --
    *  identical parsing to `lr-file-input`'s `accept`, via the same `matchesAccept()`. */
   @property() accept = '';

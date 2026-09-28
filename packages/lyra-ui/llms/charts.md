@@ -415,20 +415,14 @@ right after `lr-point-activate` from the same activation with an identical detai
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
-then no property change or commit event occurs. `lr-before-legend-visibility-change` is a
-**deprecated** alias of `lr-legend-visibility-change-request`, fired immediately after it from the
-same gesture with the same frozen detail; either event may veto. It is slated for removal in
-21.0.0 — migrate listeners to `lr-legend-visibility-change-request`.
+then no property change or commit event occurs.
 Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
 `lr-datum-visibility-change` (accepted commit), carrying
 `{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
-`lr-before-datum-visibility-change` is a **deprecated** alias of
-`lr-datum-visibility-change-request`, fired immediately after it from the same gesture with the
-same frozen detail; either event may veto. It is slated for removal in 21.0.0 — migrate listeners
-to `lr-datum-visibility-change-request`.
+
 
 ```html
 <lr-doughnut-chart
@@ -1017,12 +1011,10 @@ of every entry in these lists.**
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-activate` (`detail: { datasetIndex,
 index, label, value }`; deprecated alias `lr-point-click`, removed in 23.0.0), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
-complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
-of `lr-legend-visibility-change-request` (removal not before 21.0.0).
+complete `hiddenDatasets` snapshot).
 Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
-`lr-before-datum-visibility-change` is a **deprecated** alias of `lr-datum-visibility-change-request`
-(removal not before 21.0.0).
+
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
@@ -1113,8 +1105,7 @@ removed in 23.0.0), `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
-`lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
-the two `*-request` events above (removal not before 21.0.0).
+
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
@@ -1249,9 +1240,7 @@ toggle) and `lr-legend-visibility-change` (accepted commit). The two legend even
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
-`lr-before-legend-visibility-change` is a **deprecated** alias of
-`lr-legend-visibility-change-request`, fired immediately after it from the same gesture with the
-same detail; either event may veto (removal not before 21.0.0).
+
 
 `lr-point-activate` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose.
@@ -1727,3 +1716,71 @@ These named interfaces and helper signatures are available to typed integrations
     label: string;
     seriesLabel: string | null;
   }`
+
+## Optional chart palette foundations
+
+`@aceshooting/lyra-ui/theme/options/charts.js` exports `LYRA_CHART_PALETTES`,
+`getLyraChartPaletteTokens(name)` and `getLyraChartSeriesCue(index)`. The palette names are
+`lyra`, `shadcn` and `material`; each has explicit `light` and `dark` data with eight categorical
+colors, three sequential stops, and three diverging stops. These are Lyra's own presets. The
+categorical set is shared across looks to retain the existing contrast and color-vision separation;
+ordered ramps match each look and are also selected by that look’s stylesheet/runtime definition.
+The module is pure data/helpers with no chart engine or DOM access.
+
+```js
+import { applyLyraStyleScope } from '@aceshooting/lyra-ui/theme.js';
+import { getLyraChartPaletteTokens } from '@aceshooting/lyra-ui/theme/options/charts.js';
+
+applyLyraStyleScope(panel, {
+  mode: 'dark',
+  overrides: getLyraChartPaletteTokens('material'),
+});
+```
+
+The returned immutable token map composes with other `overrides` using object spread. Existing
+canvas charts and `lr-lite-chart` both consume its `--lr-theme-color-chart-1..8` inputs; explicit
+series colors and component-local color hooks retain their existing precedence. Scale inputs are
+`--lr-theme-color-chart-sequential-1..3` and `--lr-theme-color-chart-diverging-1..3`. Stop 1 is low,
+stop 2 is the midpoint and stop 3 is high. Changing chart presets does not change the look or accent.
+
+For custom canvas/SVG drawings, `@aceshooting/lyra-ui/theme/chart-palette.js` exports
+`resolveLyraChartPalette(scope, { mode, palette? })` and
+`sampleLyraChartScale(scope, scale, position)`. Supply the resolved `light`/`dark` mode explicitly;
+`palette` chooses fallback data for missing or invalid scoped tokens. `scope: null` returns
+DOM-free preset colors. With a scope, the resolver reads live tokens and resolves CSS expressions
+before returning concrete colors safe for both canvas and SVG. Re-resolve after theme changes.
+
+```js
+import { resolveLyraChartPalette, sampleLyraChartScale }
+  from '@aceshooting/lyra-ui/theme/chart-palette.js';
+
+const palette = resolveLyraChartPalette(panel, { mode: 'dark', palette: 'material' });
+const color = sampleLyraChartScale(panel, palette.diverging, 0.75);
+context.fillStyle = color;
+svgMark.style.fill = color;
+```
+
+Sampling uses sRGB interpolation, clamps positions to `0..1`, maps non-finite values to zero,
+and returns the exact midpoint at `0.5`. Normalize your numeric domain before sampling; a
+meaningful diverging center need not be the arithmetic middle of your domain. Without a DOM,
+sampling interpolates six-digit hex colors; other color syntaxes return the nearest stop.
+`lr-heatmap` retains its two-endpoint defaults; its `cellColor` callback can consume a precomputed
+sampled scale when three-stop or diverging encoding is needed. Resolve/sample once per ramp,
+then index cached colors from the callback, avoiding DOM probes per cell.
+
+Use labels and accessible data alongside colors. `getLyraChartSeriesCue(index)` supplies a stable
+eight-entry `{ marker, dash }` cycle for custom renderers: `circle`, `square`, `triangle` and
+`diamond`, each solid or dashed. Pass a copied `dash` array to canvas `setLineDash()` or join it
+for SVG `stroke-dasharray`; render the marker in the chart and its legend. Cues do not install
+patterns or change component defaults. Existing charts retain their accessible tables and forced
+color encodings. Sequential low-intensity fills and diverging centers may blend into the surface;
+show values, labels, or boundaries wherever the distinction conveys information. Do not use
+these fills as text colors or assume a color-only plot is accessible.
+
+Ordered scales have a separate contract from categorical series: sequential stop luminance
+decreases in light mode and increases in dark mode, with at least 3:1 tonal range between the
+endpoints. A diverging midpoint is near-neutral and lighter than both endpoints in light mode,
+darker in dark mode; each arm spans at least 3:1 from that midpoint. These are scale-range checks,
+not foreground-on-surface contrast guarantees. The eight categorical series retain their 3:1
+surface contrast and color-vision separation checks. Use a qualified categorical color or a
+separately contrast-tested outline for a required mark boundary; magnitude fill alone is insufficient.

@@ -179,8 +179,8 @@ export const styles = [
       color: var(--lr-task-list-running-color, var(--lr-color-brand));
     }
     [part="item"][data-status="running"] [part="status-icon"] svg {
-      animation: lr-task-list-spin
-        var(--lr-task-list-spin, var(--_lr-task-list-spin)) infinite;
+      animation: var(--_lr-motion-animation, lr-task-list-spin
+        var(--lr-task-list-spin, var(--_lr-task-list-spin)) infinite);
     }
     [part="item"][data-status="success"] [part="status-icon"] {
       color: var(--lr-task-list-success-color, var(--lr-color-success));

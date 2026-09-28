@@ -57,9 +57,8 @@ import { isMainModule } from './is-main-module.mjs';
 //      Coverage is read NARROWLY, and every narrowing is a correction of a way the first version of
 //      this rule could be silenced without animating anything. `transition` is not an inherited
 //      property and applies only to the element whose own value changes, so: a rule on the part
-//      itself counts; a tree-wide `[part]`/`*` rule counts (that is
-//      `interactive-transition.styles.ts`'s shape, and adopting that sheet in `static styles` counts
-//      for the whole shadow tree, which is what it is for); a rule on a part that merely CONTAINS
+//      itself counts; a tree-wide `[part]`/`*` rule counts for the whole shadow tree;
+//      a rule on a part that merely CONTAINS
 //      this one does not, and neither does a `:host`-subject rule, which animates the host box and
 //      nothing below it. The declaration's VALUE is read too -- it has to name a property this part
 //      actually repaints (or `all`), so a `transition: transform` does not answer a background
@@ -529,9 +528,8 @@ const REDUCED_MOTION_QUERY = (prelude) =>
  *   PUTS `transition: none`; a resting transition declared only there covers nothing in the state
  *   the rule is about.
  *
- * `treeWide` is a bare `[part]`/`:where([part])` presence selector or `*`, which is
- * `interactive-transition.styles.ts`'s own shape -- a component that interpolates that sheet, or
- * writes the same selector itself, has covered everything it can name.
+ * `treeWide` is a bare `[part]`/`:where([part])` presence selector or `*`,
+ * covering every matching element in the shadow tree.
  */
 export function transitionCoverage(rules) {
   const parts = new Map();
@@ -622,22 +620,6 @@ export function hasHoverAffordance(part, coverage, containment) {
 }
 
 /**
- * Does this module actually adopt `interactive-transition.styles.ts`? The import alone is not
- * adoption and neither is a mention of the path -- the symbol has to reach a `styles` array (the
- * class-module shape) or be interpolated into a `css` template (the stylesheet shape).
- */
-export function adoptsSharedTransition(text) {
-  const imported =
-    /import\s*\{[^}]*\binteractiveTransition\b[^}]*\}\s*from\s*['"][^'"]*interactive-transition\.styles(?:\.js)?['"]/.test(
-      text,
-    );
-  const used =
-    /styles\s*=\s*\[[^\]]*\binteractiveTransition\b/.test(text) ||
-    /\$\{\s*interactiveTransition\s*\}/.test(text);
-  return imported && used;
-}
-
-/**
  * The pointer half of the contract for one stylesheet: rules 1, 2 and 3.
  *
  * @param {string} styleSource the `*.styles.ts` text
@@ -656,13 +638,6 @@ export function hoverContract(styleSource, templateSources = []) {
     }
   }
   const transitions = transitionCoverage(rules);
-  // Adopting the shared sheet covers the whole shadow tree, and it is composed in the class module
-  // (`static styles`) as often as it is interpolated into the stylesheet, so both are read. The
-  // symbol has to be IMPORTED and then USED: a bare mention of the module path would let a comment
-  // saying "deliberately not adopted here" exempt the component's entire stylesheet.
-  if ([styleSource, ...templateSources].some(adoptsSharedTransition)) {
-    for (const family of INTERACTIVE_TRANSITION_FAMILIES) transitions.treeWide.add(family);
-  }
   const repainted = repaintedParts(rules);
 
   const findings = [];

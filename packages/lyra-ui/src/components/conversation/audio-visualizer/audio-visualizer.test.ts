@@ -1,4 +1,4 @@
-import { fixture, expect, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './audio-visualizer.js';
 import type { LyraAudioVisualizer } from './audio-visualizer.js';
@@ -797,11 +797,20 @@ describe('media-query change handlers', () => {
   it('onMotionPreferenceChange reschedules a draw when the reduced-motion preference flips', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as { motionQuery?: MediaQueryList };
     expect(frameHandle(el)).to.be.undefined;
-    expect(priv.motionQuery).to.exist;
-    priv.motionQuery!.dispatchEvent(new Event('change'));
-    expect(frameHandle(el)).to.not.be.undefined;
+    let scheduled = false;
+    const internal = el as unknown as { scheduleDraw(): void };
+    const original = internal.scheduleDraw;
+    internal.scheduleDraw = function (): void {
+      scheduled = true;
+      original.call(this);
+    };
+    try {
+      el.setAttribute('data-lr-motion', 'reduce');
+      await waitUntil(() => scheduled);
+    } finally {
+      internal.scheduleDraw = original;
+    }
   });
 
   it('refreshes cached colors and ambient duration when a theme input mutates', async () => {
@@ -1360,11 +1369,14 @@ describe('owner-window runtime after adoption', () => {
 
       const staleResize = resizeRecords[0]!;
       const staleIntersection = intersectionRecords[0]!;
-      const staleQueries = [...queryRecords];
+      const staleQueries = queryRecords.filter((record) => record.listeners.size > 0);
+      expect(staleQueries.some((record) => record.media.includes('prefers-reduced-motion'))).to.be.true;
+      expect(staleQueries.some((record) => record.media.includes('resolution: 2dppx'))).to.be.true;
       el.remove();
       expect(staleResize.disconnected).to.be.true;
       expect(staleIntersection.disconnected).to.be.true;
       expect(staleQueries.every((record) => record.removals === 1)).to.be.true;
+      expect(queryRecords.every((record) => record.listeners.size === 0)).to.be.true;
       expect(canceledFrames).to.not.be.empty;
 
       frameDocument.body.append(el);

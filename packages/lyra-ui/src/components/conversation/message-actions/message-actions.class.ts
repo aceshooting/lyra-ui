@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
@@ -7,7 +8,7 @@ import {
   type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -200,6 +201,8 @@ export interface LyraMessageActionsEventMap {
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
+  'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
+  /** @deprecated Use `lr-feedback-submit-request`. */
   'lr-feedback-submit': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
 }
 
@@ -286,7 +289,8 @@ function editIcon(): SVGTemplateResult {
  * @event lr-feedback-change - Bubbles unchanged from the embedded, thumbs-only
  *   `lr-message-feedback`. `detail: { rating }`. A colliding event from a slotted custom child is
  *   contained at the slot boundary and remains observable directly on that child.
- * @event lr-feedback-submit - The built-in feedback control's terminal cancelable persistence
+ * @event lr-feedback-submit - Deprecated cancelable compatibility alias of `lr-feedback-submit-request`.
+ * @event lr-feedback-submit-request - The built-in feedback control's terminal cancelable persistence
  *   request, including thumbs-only choices. Its frozen detail includes a nonblank `submissionId`;
  *   when prevented, pass that exact ID to `finalizePendingSubmit()` or
  *   `revertPendingSubmit()` on this wrapper. Slotted collisions are contained at the slot boundary.
@@ -319,12 +323,14 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     regenerateResponse: LYRA_DEFAULT_regenerateResponse,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['controls']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-feedback-submit',
+    'lr-feedback-submit-request',
   ]);
 
   /** Which built-ins render, in display order. Duplicate names normalize first-wins. */
@@ -410,12 +416,12 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private activeStopIndex = 0;
-  /** Drives the `data-revealed` host attribute (toggled imperatively in `updated()`, not via a Lit
+  /** Drives the `data-revealed` host attribute imperatively, not via a Lit
    *  template binding -- `lr-graph`'s `data-hovered` attribute is the precedent for this exact
    *  technique) while `revealOnInteraction` is active. CSS alone cannot key `:host`'s own opacity off the
    *  ancestor `lr-chat-message`'s hover state from inside this component's own shadow DOM, so the
    *  reveal state is tracked in JS instead (see `bindHoverTarget()`). */
-  @state() private revealed = false;
+  private revealed = false;
 
   private hoverTarget: HTMLElement | null = null;
   /** Whether a menu opened from a slotted control is open -- see `revealOnInteraction`. */
@@ -488,9 +494,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       this.slottedOverlayWasOpen = overlayOpen;
       // Opening reveals; closing hands the reveal back to hover and focus, which neither
       // pointerleave nor focusout re-checks once the menu that held the bar open has gone.
-      if (overlayOpen) this.revealed = true;
+      if (overlayOpen) this.setRevealed(true);
       else if (!this.hoverTarget?.matches(':hover') && !this.matches(':focus-within')) {
-        this.revealed = false;
+        this.setRevealed(false);
       }
     }
   }
@@ -511,12 +517,14 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       );
       void this.reconcileStopsAfterChildren();
     }
-    if (changed.has('revealed')) {
-      // Toggled on the host itself (not a shadow-internal part) so the stylesheet's `:host(...)`
-      // rules can key off it directly -- same imperative-attribute-toggle technique lr-graph's
-      // `data-hovered` attribute already establishes for hover-driven presentation state.
-      this.toggleAttribute('data-revealed', this.revealed);
-    }
+  }
+
+  private setRevealed(revealed: boolean): void {
+    if (this.revealed === revealed) return;
+    this.revealed = revealed;
+    // This visual-only state does not affect the template. Toggling directly avoids scheduling a
+    // second Lit update when a slotted overlay changes during willUpdate().
+    this.toggleAttribute('data-revealed', revealed);
   }
 
   private bindHoverTarget(): void {
@@ -540,19 +548,19 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       this.onHoverTargetLeave
     );
     this.hoverTarget = null;
-    this.revealed = false;
+    this.setRevealed(false);
   }
 
   private onHoverTargetEnter = (): void => {
-    this.revealed = true;
+    this.setRevealed(true);
   };
 
   private onHoverTargetLeave = (): void => {
-    if (!this.matches(':focus-within') && !this.slottedOverlay.open) this.revealed = false;
+    if (!this.matches(':focus-within') && !this.slottedOverlay.open) this.setRevealed(false);
   };
 
   private onFocusIn = (event: Event): void => {
-    this.revealed = true;
+    this.setRevealed(true);
     const stops = this.logicalActions();
     const path = event.composedPath();
     const index = stops.findIndex(({ action }) =>
@@ -579,7 +587,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onFocusOut = (event: Event): void => {
-    if (!this.hoverTarget?.matches(':hover') && !this.slottedOverlay.open) this.revealed = false;
+    if (!this.hoverTarget?.matches(':hover') && !this.slottedOverlay.open) this.setRevealed(false);
     const destination = (event as FocusEvent).relatedTarget;
     if (
       destination &&
@@ -1000,6 +1008,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}
           @lr-feedback-change=${this.containSlottedFeedbackEvent}
           @lr-feedback-submit=${this.containSlottedFeedbackEvent}
+          @lr-feedback-submit-request=${this.containSlottedFeedbackEvent}
         ></slot>
       </div>
     `;

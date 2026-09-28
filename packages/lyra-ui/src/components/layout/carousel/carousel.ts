@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-carousel.js to register this component. */
 import { defineElement } from '../../../internal/prefix.js';
 import { LyraCarousel } from './carousel.class.js';
 

@@ -128,7 +128,7 @@ export const styles = css`
       --lr-highlight-layer-flash-bg,
       var(--lr-highlight-layer-flash-background, var(--lr-color-brand))
     );
-    animation: lr-highlight-layer-flash var(--lr-transition-ambient);
+    animation: var(--_lr-motion-animation, lr-highlight-layer-flash var(--lr-transition-ambient));
   }
   @keyframes lr-highlight-layer-flash {
     from {

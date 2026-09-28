@@ -7,8 +7,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
+  expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+expectDeprecatedUsage('lr-lightbox', 'event', 'lr-lightbox-close');
+
 // Registers the real 'ar' catalog so the lang="ar-EG" counter/live-region digit-formatting test
 // below resolves every key it incidentally touches (lightboxImagePosition, lightboxLabel, close,
 // previous, next, zoom controls, ...) instead of tripping the partial-catalog fallback warning.
@@ -1242,4 +1245,42 @@ it('does not trigger a Lit "scheduled an update after an update completed" dev w
     console.warn = originalWarn;
   }
   expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
+});
+
+it('keeps the string-detail close alias while the canonical notification carries a reason object', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
+  const reports: Array<{ type: string; detail: unknown; open: boolean; cancelable: boolean }> = [];
+  for (const name of ['lr-close-request', 'lr-lightbox-close', 'lr-close']) {
+    el.addEventListener(name, (event: Event) => {
+      reports.push({ type: event.type, detail: (event as CustomEvent).detail, open: el.open, cancelable: event.cancelable });
+    });
+  }
+  await el.close('api');
+  expect(reports).to.deep.equal([
+    { type: 'lr-close-request', detail: { reason: 'api' }, open: true, cancelable: true },
+    { type: 'lr-lightbox-close', detail: 'api', open: true, cancelable: true },
+    { type: 'lr-close', detail: { reason: 'api' }, open: false, cancelable: false },
+  ]);
+});
+
+it('warns when the legacy close alias vetoes and keeps the canonical veto quiet', async () => {
+  const warnings = await captureDeprecationWarnings([
+    { tag: 'lr-lightbox', kind: 'event', name: 'lr-lightbox-close' },
+  ], async () => {
+    const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
+    el.addEventListener('lr-lightbox-close', (event) => event.preventDefault());
+    await el.close('api');
+    await el.close('api');
+    expect(el.open).to.equal(true);
+  });
+  expect(warnings).to.have.length(1);
+  const canonicalWarnings = await captureDeprecationWarnings([
+    { tag: 'lr-lightbox', kind: 'event', name: 'lr-lightbox-close' },
+  ], async () => {
+    const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
+    el.addEventListener('lr-close-request', (event) => event.preventDefault());
+    await el.close('api');
+    expect(el.open).to.equal(true);
+  });
+  expect(canonicalWarnings).to.have.length(0);
 });

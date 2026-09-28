@@ -1,3 +1,4 @@
+import { collectionSupport } from './collection-snapshot.js';
 import { html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from './announcer.js';
@@ -143,6 +144,7 @@ export function DocumentAnchorTarget(
   renderAnchorLiveRegion(): unknown;
 }> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
+    protected static collectionSupport = collectionSupport;
     protected static readonly ownedCollectionProperties = Object.freeze([
       'anchor',
     ]);

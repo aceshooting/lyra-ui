@@ -284,6 +284,33 @@ test('builds all dimensions for stable and experimental tags without conflating 
   assert.ok(ledger.components[0].knownLimitations.some((limitation) => /screen reader/i.test(limitation)));
 });
 
+test('test evidence uses stable titles instead of line numbers', (t) => {
+  const { packageDir, ledger } = fixture();
+  t.after(() => fs.rmSync(packageDir, { recursive: true, force: true }));
+  for (const record of ledger.components) {
+    for (const dimension of Object.values(record.dimensions)) {
+      for (const entry of dimension.evidence ?? []) {
+        if (!entry.file?.endsWith('.test.ts')) continue;
+        assert.equal(typeof entry.test, 'string');
+        assert.equal(Object.hasOwn(entry, 'line'), false);
+      }
+    }
+  }
+});
+
+test('moving a titled keyboard test leaves its qualification reference unchanged', () => {
+  const source = `it('activates with Enter', () => { new KeyboardEvent('keydown'); });`;
+  const signals = (text) => qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'), packageDir: '/fixture',
+    sources: [], styles: [], interactiveTags: new Set(),
+    tests: [sourceFile('/fixture/example.test.ts', text)],
+  });
+  assert.deepEqual(signals(source).keyboardSignal, signals(`\n// unrelated documentation\n${source}`).keyboardSignal);
+  assert.deepEqual(signals(source).keyboardSignal, {
+    file: 'example.test.ts', test: 'activates with Enter',
+  });
+});
+
 test('visual qualification schema rejects dangling enrollment and invented pending review provenance', () => {
   const inventory = { components: [component('lr-stable', 'stable')] };
   const findings = validateVisualQualificationManifest({

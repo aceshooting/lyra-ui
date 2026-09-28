@@ -68,3 +68,58 @@ test('allows ordinary emitted modules whose names merely mention fixtures', () =
     [],
   );
 });
+
+test('rejects a stripped code-block base required by public subclass declarations', () => {
+  const base = '/workspace/dist/components/conversation/code-block/code-block-base.class.d.ts';
+  const regular = '/workspace/dist/components/conversation/code-block/code-block.class.d.ts';
+  const lean = '/workspace/dist/components/conversation/code-block/code-block-core.class.d.ts';
+  const declarations = new Map([
+    [base, 'export interface LyraCodeBlockBaseEventMap {}\n'],
+    [regular, 'export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n'],
+    [lean, 'export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n'],
+  ]);
+
+  assert.deepEqual(
+    findBuildArtifactFindings([base, regular, lean], (file) => declarations.get(file) ?? ''),
+    [
+      `${base}: missing exported LyraCodeBlockBase required by published subclass declarations`,
+    ],
+  );
+});
+
+test('accepts the emitted code-block base required by public subclass declarations', () => {
+  const base = '/workspace/dist/components/conversation/code-block/code-block-base.class.d.ts';
+  const regular = '/workspace/dist/components/conversation/code-block/code-block.class.d.ts';
+  const lean = '/workspace/dist/components/conversation/code-block/code-block-core.class.d.ts';
+  const declarations = new Map([
+    [base, 'export declare abstract class LyraCodeBlockBase {}\n'],
+    [regular, 'export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n'],
+    [lean, 'export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n'],
+  ]);
+
+  assert.deepEqual(
+    findBuildArtifactFindings([base, regular, lean], (file) => declarations.get(file) ?? ''),
+    [],
+  );
+});
+
+test('requires exact exported stylesheets to exist in the emitted package', () => {
+  assert.deepEqual(
+    findBuildArtifactFindings(['/workspace/dist/theme.css'], () => '', {
+      packageDirectory: '/workspace',
+      exports: {
+        './theme.css': './dist/theme.css',
+        './preferences.css': './dist/preferences.css',
+        './themes/*': './dist/themes/*',
+      },
+    }),
+    ['./preferences.css: exported stylesheet is missing: ./dist/preferences.css'],
+  );
+  assert.deepEqual(
+    findBuildArtifactFindings(['/workspace/dist/preferences.css'], () => '', {
+      packageDirectory: '/workspace',
+      exports: { './preferences.css': './dist/preferences.css' },
+    }),
+    [],
+  );
+});

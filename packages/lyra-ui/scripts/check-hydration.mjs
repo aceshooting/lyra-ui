@@ -68,6 +68,16 @@ if (hydrationTag) {
 }
 const statefulProbeMarkup = new Map([
   [
+    'lr-copy-button',
+    await collectResult(
+      render(
+        html`<lr-copy-button data-ssr-probe="lr-copy-button" copy-label="Copy server value" value="server"
+          ><span data-ssr-light="lr-copy-button">Copy action</span></lr-copy-button>`,
+        { elementRenderers }
+      )
+    ),
+  ],
+  [
     'lr-badge',
     await collectResult(
       render(
@@ -707,6 +717,7 @@ for (const [tag, markup] of statefulProbeMarkup) {
 }
 const litRoot = await realpath(join(packageDir, 'node_modules', 'lit'));
 const litDependencyRoot = resolve(litRoot, '..');
+const tslibRoot = await realpath(join(packageDir, 'node_modules', 'tslib'));
 const floatingDomRoot = await realpath(
   join(packageDir, 'node_modules', '@floating-ui', 'dom')
 );
@@ -724,6 +735,7 @@ const mounts = new Map([
     '/modules/lit-element/',
     await realpath(join(litDependencyRoot, 'lit-element')),
   ],
+  ['/modules/tslib/', tslibRoot],
   [
     '/modules/reactive-element/',
     await realpath(join(litDependencyRoot, '@lit', 'reactive-element')),
@@ -738,6 +750,19 @@ const mounts = new Map([
 
 const importMap = {
   imports: {
+    ...Object.fromEntries(
+      Object.entries(packageJson.imports ?? {}).map(
+        ([specifier, conditions]) => {
+          const target =
+            typeof conditions === 'string' ? conditions : conditions.default;
+          assert.ok(
+            typeof target === 'string' && target.startsWith('./dist/'),
+            `browser hydration fixture cannot map package import ${specifier}`
+          );
+          return [specifier, `/${target.slice(2).replaceAll('\\', '/')}`];
+        }
+      )
+    ),
     '@lit-labs/ssr-client/': '/modules/ssr-client/',
     '@lit/reactive-element': '/modules/reactive-element/reactive-element.js',
     '@lit/reactive-element/': '/modules/reactive-element/',
@@ -746,6 +771,7 @@ const importMap = {
     'lit-html': '/modules/lit-html/lit-html.js',
     'lit-html/': '/modules/lit-html/',
     'lit-element/': '/modules/lit-element/',
+    tslib: '/modules/tslib/tslib.es6.mjs',
     '@floating-ui/dom': '/modules/floating-dom/dist/floating-ui.dom.mjs',
     '@floating-ui/core': '/modules/floating-core/dist/floating-ui.core.mjs',
     '@floating-ui/utils': '/modules/floating-utils/dist/floating-ui.utils.mjs',
@@ -935,6 +961,9 @@ const documentHtml = `<!doctype html>
                 }))
               : [],
             semantics: globalThis.__lyraSemanticSnapshot(host),
+            copyTooltipSlots: host.localName === 'lr-copy-button'
+              ? [...(host.shadowRoot?.querySelector('lr-tooltip')?.shadowRoot?.querySelectorAll('slot') ?? [])]
+              : undefined,
             chipIcon: host.localName === 'lr-chip'
               ? host.shadowRoot?.querySelector('[part~="start"]')
               : undefined,
@@ -1136,6 +1165,20 @@ const documentHtml = `<!doctype html>
               populatedFirstNodeReused: firstHydration.populatedNodeReused,
               directShadowNodeSignatureBefore: before.directShadowNodeSignature,
               directShadowNodeSignatureAfter: firstHydration.directShadowNodeSignature,
+              copyTooltipSlotsReused: before.copyTooltipSlots === undefined ? undefined :
+                before.copyTooltipSlots.length > 0 && before.copyTooltipSlots.every((slot) =>
+                  slot.getRootNode() === host.shadowRoot?.querySelector('lr-tooltip')?.shadowRoot && slot.isConnected),
+              copyTooltipDescription: host.localName === 'lr-copy-button'
+                ? host.shadowRoot?.querySelector('lr-tooltip [data-lyra-tooltip-description]')?.textContent
+                : undefined,
+              copyBackgroundInert: host.localName === 'lr-copy-button'
+                ? host.closest('[inert]') !== null
+                : undefined,
+              copyTooltipText: host.localName === 'lr-copy-button'
+                ? [...(host.shadowRoot?.querySelector('lr-tooltip')?.shadowRoot
+                    ?.querySelector('[part="body"] slot')?.assignedNodes({ flatten: true }) ?? [])]
+                    .map((node) => node.textContent ?? '').join('').trim()
+                : undefined,
               chipServerIconHidden: before.chipIconHidden,
               chipServerRemoveLabel: before.chipRemoveLabel,
               chipFirstIconReused: firstHydration.chipIconReused,
@@ -1347,6 +1390,23 @@ try {
     ['first hydration update', component.firstHydrationSemantics],
     ['settled hydration', component.hydratedSemantics],
   ];
+
+  if (shouldAssertHydrationTag('lr-copy-button')) {
+    const copyHydration = hydrationResult('lr-copy-button');
+    assert.equal(
+      copyHydration.copyTooltipSlotsReused,
+      true,
+      'lr-copy-button must preserve its nested tooltip slots through hydration'
+    );
+    // The full crawl opens a modal lightbox, which must exclude its background from accessible
+    // descriptions. The isolated copy probe instead proves the projected label is available.
+    assert.equal(copyHydration.copyBackgroundInert, hydrationTag === undefined,
+      'only the full crawl modal must make the copy fixture inert');
+    assert.equal(copyHydration.copyTooltipDescription, copyHydration.copyBackgroundInert ? '' : 'Copy server value',
+      'the adopted tooltip must project its label and honor the modal background exclusion');
+    assert.equal(copyHydration.copyTooltipText, 'Copy server value',
+      'the adopted tooltip body must retain the projected server content');
+  }
 
   if (shouldAssertHydrationTag('lr-badge')) {
     const badgeHydration = hydrationResult('lr-badge');

@@ -6,7 +6,7 @@
 - **Class** `LyraZoomableFrame`, also available unregistered from `@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated css-property** `--lr-zoomable-frame-control-hover-background` since `21.1.0`; use css-property `--lr-zoomable-frame-control-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
 - **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below

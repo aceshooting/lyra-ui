@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
@@ -13,6 +14,8 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
  */
 const readToken = (el: Element, name: string): string =>
   getComputedStyle(el).getPropertyValue(name).trim();
+
+expectLocaleFallback('ar', ['calendarLabel', 'calendarNextMonth', 'calendarPreviousMonth']);
 
 it('renders a month and emits date selections', async () => {
   const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render } from 'lit';
 import './ingestion-queue.js';
@@ -47,6 +48,18 @@ async function nextFrame(): Promise<void> {
   );
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('ar-u-nu-arab', [
+  'ingestionQueueLabel',
+  'ingestionStageEmbedding',
+  'ingestionItemProgressLabel',
+  'ingestionChunkCount',
+  'ingestionEmbeddedOfTotal',
+  'ingestionAttemptCount',
+  'ingestionCancelWithContext',
+  'cancel',
+  'progress',
+]);
 it('defaults to items=[], label=undefined, virtualizeAt=100', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue></lr-ingestion-queue>`

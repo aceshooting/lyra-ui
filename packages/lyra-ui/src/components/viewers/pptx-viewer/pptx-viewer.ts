@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-pptx-viewer.js to register this component. */
 export * from './pptx-viewer.class.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';

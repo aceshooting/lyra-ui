@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-time-input.js to register this component. */
 export * from './time-input.class.js';
 import { LyraTimeInput } from './time-input.class.js';
 import { defineElement } from '../../../internal/prefix.js';

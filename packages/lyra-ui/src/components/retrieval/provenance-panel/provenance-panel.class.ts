@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -34,7 +35,7 @@ import type { LyraScoreThresholds } from '../graph/graph.class.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraProvenance {
@@ -121,7 +122,6 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     provenanceChunks: LYRA_DEFAULT_provenanceChunks,
     provenanceCommunities: LYRA_DEFAULT_provenanceCommunities,
@@ -133,6 +133,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'provenance',

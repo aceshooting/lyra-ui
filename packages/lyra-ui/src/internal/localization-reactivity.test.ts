@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import {
   getLyraLocale,
@@ -90,6 +91,7 @@ it("re-renders a connected component when its document locale is registered afte
   const root = document.documentElement;
   const previousLang = root.getAttribute("lang");
   const locale = uniqueLocale("latedocument");
+  expectLocaleFallback(locale, ['noData']);
   root.setAttribute("lang", locale);
   try {
     const el = (await fixture(
@@ -109,6 +111,7 @@ it("re-renders a connected component when its document locale is registered afte
 
 it("re-renders through a composed ancestor when its locale is registered after mount", async () => {
   const locale = uniqueLocale("latecomposed");
+  expectLocaleFallback(locale, ['noData']);
   const host = await fixture<HTMLDivElement>(html`<div lang=${locale}></div>`);
   const shadow = host.attachShadow({ mode: "open" });
   const el = document.createElement("lr-sparkline") as LyraSparkline;
@@ -125,6 +128,7 @@ it("re-renders through a composed ancestor when its locale is registered after m
 
 it("re-renders a host locale override when its catalog is registered after mount", async () => {
   const locale = uniqueLocale("latehost");
+  expectLocaleFallback(locale, ['noData']);
   const el = (await fixture(
     html`<lr-sparkline locale=${locale} .values=${[]}></lr-sparkline>`
   )) as LyraSparkline;
@@ -139,6 +143,7 @@ it("re-renders a host locale override when its catalog is registered after mount
 it("re-renders a regional locale when its base catalog is registered after mount", async () => {
   const base = uniqueLocale("latebase");
   const locale = `${base}-region`;
+  expectLocaleFallback(locale, ['noData']);
   const el = (await fixture(
     html`<lr-sparkline locale=${locale} .values=${[]}></lr-sparkline>`
   )) as LyraSparkline;
@@ -152,6 +157,7 @@ it("re-renders a regional locale when its base catalog is registered after mount
 
 it("does not re-render connected localized hosts for an unrelated catalog registration", async () => {
   const locale = uniqueLocale("usedscope");
+  expectLocaleFallback(locale, ['noData']);
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       ${Array.from(
@@ -180,6 +186,8 @@ it("does not re-render connected localized hosts for an unrelated catalog regist
 it("filters lazy catalog delivery by each host ancestor locale candidate chain", async () => {
   const base = uniqueLocale("ancestorbase");
   const unrelated = uniqueLocale("ancestorother");
+  expectLocaleFallback(`${base}-region`, ['noData']);
+  expectLocaleFallback(unrelated, ['noData']);
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       <section lang="${base}-region">
@@ -208,6 +216,8 @@ it("filters lazy catalog delivery by each host ancestor locale candidate chain",
 it("keeps exact-only pseudo catalog delivery isolated from its bare base language", async () => {
   const base = "qps";
   const exact = "qps-XA";
+  expectLocaleFallback(base, ['noData']);
+  expectLocaleFallback(exact, ['noData']);
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       <x-localization-render-probe locale=${base}></x-localization-render-probe>
@@ -234,6 +244,7 @@ it("keeps exact-only pseudo catalog delivery isolated from its bare base languag
 
 it("updates a bare language host when a newly registered regional catalog becomes its fallback", async () => {
   const base = "qrx";
+  expectLocaleFallback(base, ['noData']);
   const probe = await fixture<LocalizationRenderProbe>(html`
     <x-localization-render-probe locale=${base}></x-localization-render-probe>
   `);
@@ -309,6 +320,7 @@ it("subscribes to global locale changes only after a host consumes locale-sensit
 
 it("replays a relevant catalog registration that occurred while the localized host was detached", async () => {
   const locale = uniqueLocale("dc");
+  expectLocaleFallback(locale, ['noData']);
   const wrapper = await fixture<HTMLElement>(html`
     <section lang=${locale}>
       <x-localization-render-probe></x-localization-render-probe>
@@ -342,6 +354,7 @@ it("replays a relevant catalog registration that occurred while the localized ho
 
 it("keeps a localized subscriber live in a legitimate viewless owner document", async () => {
   const locale = uniqueLocale("ic");
+  expectLocaleFallback(locale, ['noData']);
   const inertDocument = document.implementation.createHTMLDocument(
     "inert localized host"
   );
@@ -451,6 +464,7 @@ it("prunes locale subscribers whose iframe owner document was detached without d
 
 it("rejects a first locale subscription activated only after its browsing context was discarded", async () => {
   const locale = uniqueLocale("lateframe");
+  expectLocaleFallback(locale, ['noData']);
   const frame = document.createElement("iframe");
   document.body.append(frame);
   const probe = await fixture<DeferredLocalizationRenderProbe>(html`

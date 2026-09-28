@@ -92,3 +92,9 @@ export const SurfaceAndInteractionTokens: Story = {
     ></lr-terminal>
   `,
 };
+
+export const HostDownload: Story = {
+  parameters: { docs: { description: { story: 'Prevent lr-download-request to replace the built-in Blob download with host-managed export. The request carries the captured filename.' } } },
+  render: () => html`<lr-terminal downloadable .content=${SAMPLE}
+    @lr-download-request=${(event: Event) => event.preventDefault()}></lr-terminal>`,
+};

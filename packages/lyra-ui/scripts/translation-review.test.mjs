@@ -28,7 +28,7 @@ function fixture() {
   const source = messageSnapshot(englishEntries);
   return {
     $schema: './translation-reviews.schema.json',
-    schemaVersion: 1,
+    schemaVersion: 2,
     source: {
       path: 'src/internal/localization.ts#DEFAULT_STRINGS',
       ...source,
@@ -50,6 +50,7 @@ function fixture() {
       {
         locale: 'fa',
         direction: 'rtl',
+        reviewTier: 'ai-assisted',
         source,
         catalog: messageSnapshot(persianEntries),
         translator: {
@@ -181,7 +182,87 @@ approved.catalogs[0].reviewer = {
 assert.deepEqual(
   validateTranslationReviews(approved, { englishEntries, catalogs, upstreamPins }),
   [],
-  'an independently reviewed catalog tied to current hashes must pass',
+  'approval workflow state remains distinct from its ai-assisted evidence tier',
+);
+
+const humanReviewed = fixture();
+humanReviewed.catalogs[0].reviewTier = 'independent-human';
+humanReviewed.catalogs[0].reviewer = {
+  status: 'approved',
+  role: 'independent localization reviewer',
+  identity: '@reviewer',
+  evidenceUrl: 'https://github.com/example/library/issues/42#issuecomment-123',
+  catalogSha256: messageSnapshot(persianEntries).sha256,
+  reviewedAt: '2026-08-03',
+  evidence: 'Checked every message, placeholder, plural form, direction, and technical term.',
+};
+assert.deepEqual(
+  validateTranslationReviews(humanReviewed, { englishEntries, catalogs, upstreamPins }),
+  [],
+  'a human review tier is attributable and bound to the current catalog hash',
+);
+
+const nativeReviewed = structuredClone(humanReviewed);
+nativeReviewed.catalogs[0].reviewTier = 'native-speaker';
+assert.deepEqual(
+  validateTranslationReviews(nativeReviewed, { englishEntries, catalogs, upstreamPins }),
+  [],
+  'native-speaker review carries locale, attribution, current catalog hash, date, and evidence',
+);
+
+const unattributedNative = structuredClone(nativeReviewed);
+unattributedNative.catalogs[0].reviewer.identity = undefined;
+assert.match(
+  validateTranslationReviews(unattributedNative, { englishEntries, catalogs, upstreamPins }).join('\n'),
+  /reviewer\.identity must attribute/,
+  'native-speaker status cannot be claimed without attributable reviewer identity',
+);
+
+const staleNativeHash = structuredClone(nativeReviewed);
+staleNativeHash.catalogs[0].reviewer.catalogSha256 = `sha256:${'0'.repeat(64)}`;
+assert.match(
+  validateTranslationReviews(staleNativeHash, { englishEntries, catalogs, upstreamPins }).join('\n'),
+  /reviewer\.catalogSha256 must match/,
+  'human review tiers must identify the exact current catalog snapshot they reviewed',
+);
+
+const missingNativeReference = structuredClone(nativeReviewed);
+delete missingNativeReference.catalogs[0].reviewer.evidenceUrl;
+assert.match(
+  validateTranslationReviews(missingNativeReference, { englishEntries, catalogs, upstreamPins }).join('\n'),
+  /reviewer\.evidenceUrl must reference/,
+  'a native-speaker tier requires a public evidence reference, not just an assertion of review',
+);
+
+const embeddedCredentials = ['user', 'secret'].join(':');
+for (const evidenceUrl of [
+  'javascript:alert(1)',
+  'http://example.test/review',
+  `https://${embeddedCredentials}@example.test/review`,
+]) {
+  const unsafeReference = structuredClone(nativeReviewed);
+  unsafeReference.catalogs[0].reviewer.evidenceUrl = evidenceUrl;
+  assert.match(
+    validateTranslationReviews(unsafeReference, { englishEntries, catalogs, upstreamPins }).join('\n'),
+    /reviewer\.evidenceUrl must reference/,
+    'review evidence requires a public HTTPS reference without embedded credentials',
+  );
+}
+
+const pendingNative = structuredClone(nativeReviewed);
+pendingNative.catalogs[0].reviewer.status = 'pending-independent-review';
+assert.match(
+  validateTranslationReviews(pendingNative, { englishEntries, catalogs, upstreamPins }).join('\n'),
+  /cannot claim native-speaker/,
+  'submitting a native-speaker intake form is not an approved native-speaker review',
+);
+
+const unknownReviewTier = fixture();
+unknownReviewTier.catalogs[0].reviewTier = 'community';
+assert.match(
+  validateTranslationReviews(unknownReviewTier, { englishEntries, catalogs, upstreamPins }).join('\n'),
+  /reviewTier must be ai-assisted/,
+  'review tiers are a closed evidence classification',
 );
 
 const staleSource = fixture();
@@ -270,8 +351,13 @@ assert.match(
 const schemaPath = fileURLToPath(new URL('./fixtures/translation-reviews.schema.json', import.meta.url));
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
 assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
-assert.equal(schema.properties.schemaVersion.const, 1);
+assert.equal(schema.properties.schemaVersion.const, 2);
 assert.ok(schema.$defs.catalogReview.properties.reviewer);
+assert.deepEqual(schema.$defs.catalogReview.properties.reviewTier.enum, [
+  'ai-assisted',
+  'independent-human',
+  'native-speaker',
+]);
 assert.ok(schema.$defs.catalogReview.properties.englishIdenticalAllowlist);
 
 console.log('translation review schema, freshness, allowlist, and approval tests passed.');

@@ -6,11 +6,8 @@
 - **Class** `LyraGraphQueryBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecated event** `lr-before-query-delete` since `19.0.1`; use event `addEventListener('lr-query-delete-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
-- **Deprecated event** `lr-before-query-load` since `19.0.1`; use event `addEventListener('lr-query-load-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
-- **Deprecated event** `lr-before-query-run` since `19.0.1`; use event `addEventListener('lr-query-run-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
-- **Deprecated event** `lr-before-query-save` since `19.0.1`; use event `addEventListener('lr-query-save-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 28 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -83,17 +80,11 @@ The matching request/accepted pair reuses one frozen payload: `{ query }` for ru
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. Each request also fires a **deprecated** `lr-before-query-run` /
-`lr-before-query-save` / `lr-before-query-load` / `lr-before-query-delete` alias immediately after
-its canonical `-request` counterpart, from the same gesture with the same frozen detail; either
-event may veto. The aliases are slated for removal in 21.0.0 — migrate listeners to the
-`lr-query-*-request` names. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and
-those twelve phased action events (four requests, four deprecated aliases, four accepted
-notifications).
+id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and the
+eight phased action events (four requests and four accepted notifications).
 
-Migration note: veto save in `lr-query-save-request` (or its deprecated `lr-before-query-save`
-alias), not `lr-query-save`; the existing `lr-query-*` action events are accepted, non-cancelable
-notifications. **Slots:** `actions`,
+Migration note: veto save in `lr-query-save-request`, not `lr-query-save`; the existing
+`lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
 `label`, `hint`, `error`. **CSS
 parts:** `base`, `form-control-label` (`label` remains as a compatibility alias on the same node),
 `hint`, `error` (the three form-control chrome parts every

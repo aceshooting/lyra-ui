@@ -76,7 +76,7 @@ export const styles = css`
         var(--lr-push-to-talk-recording-color, var(--lr-color-danger))
       );
     pointer-events: none;
-    animation: lr-push-to-talk-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-push-to-talk-pulse var(--lr-transition-ambient) infinite);
   }
   @keyframes lr-push-to-talk-pulse {
     0%,

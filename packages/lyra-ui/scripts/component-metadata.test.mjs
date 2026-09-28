@@ -31,6 +31,7 @@ import {
 import { generateManifest } from './generate-manifest.mjs';
 import { nextWriteMetadata } from './generate-component-metadata.mjs';
 import cemConfig from '../custom-elements-manifest.config.js';
+import { expandManifestDeprecations } from './manifest-compact.mjs';
 import {
   buildComponentMetadataIndex,
   componentMetadataPresentation,
@@ -73,52 +74,18 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  // 8 once 10.0.0 removed lr-swatch-picker's `label` and `options` properties. It was briefly 13:
-  // the 10.0.0 event-vocabulary pass first deprecated five event aliases in favour of canonical
-  // names, then removed them outright instead, since the library has no released consumers to
-  // protect and a dual-emit alias is a permanent cost. A removed event needs no deprecation record.
-  //
-  // It was briefly 11: the lr-app-rail-item `active` and lr-widget `activeView` restorations (a
-  // property record each, plus the attribute half of `active`) corrected renames that shipped with
-  // no alias, no changelog entry and no record here -- the direct counter-example to the "no
-  // released consumers to protect" reasoning above. There were released consumers, the renames
-  // broke them, and the breakage was invisible: a Lit `.prop=` binding on a custom element is
-  // untyped, so a dead expando fails no type check, no test and no build. 16.0.0 removed all three
-  // records outright: both properties' `removalNotBefore: '13.0.0'` had long passed, and unlike the
-  // upstream-mirrored aliases below, nothing ties their removal to an upstream Web Awesome/Shoelace
-  // release. Back to 8.
-  //
-  // 17 as of 19.0.1: nine records were added in the same release. lr-command-palette's `lr-open`
-  // was deprecated in favour of `lr-show`, matching the lr-show/lr-hide overlay-lifecycle
-  // vocabulary lr-lightbox already follows (lr-open collided in name with the unrelated "item
-  // activated" lr-open fired by lr-document-library/lr-source-card). The other eight are the
-  // *-before-* veto events on lr-chart, lr-box-plot, lr-graph-legend, and lr-graph-query-builder
-  // renamed to the library's dominant `*-request` veto-event convention (`lr-before-datum-
-  // visibility-change`, `lr-before-legend-visibility-change` on both lr-chart and lr-box-plot,
-  // `lr-before-visibility-change` on lr-graph-legend, and lr-graph-query-builder's `lr-before-
-  // query-delete`/`-load`/`-run`/`-save`); each renamed pair fires identically during the
-  // compatibility window and either may veto.
-  //
-  // 33 once the next minor after 21.0.0 recorded sixteen more, all removable no earlier than
-  // 23.0.0. lr-geojson-view became the first `component` record, reversing its earlier "permanent
-  // alias" status. `code-block-chrome` is deprecated for `code-block-header` on the five tags that
-  // declare it (lr-markdown, lr-markdown-core, lr-message-parts, lr-streaming-text,
-  // lr-streaming-text-core). lr-mutation-observer's Lyra-only `attributes`/`character-data`
-  // spellings yield to the mirrored `attr="*"`/`char-data`. lr-media-card's
-  // `lr-before-media-download` became `lr-media-download-request`. lr-sparkline's `area` part and
-  // `--lr-sparkline-stroke-width` yield to the mirrored `fill`/`--line-width`. lr-icon's
-  // `fixed-width` and `--lr-icon-fixed-width` yield to the default canvas or a host `inline-size`.
-  // lr-split-panel's `split-panel` part yields to `base`, lr-stat's unnamed icon slot to `start`,
-  // and lr-menu gained the first `slot-content` record: non-item default-slot content belongs in
-  // `header`/`footer`. Package-level types and entry points live in `exportDeprecations` instead.
-  //
-  // 408 once the 21.2.0 naming harmonization recorded 375 more, all removable no earlier than
-  // 23.0.0: cancelable state-change proposals renamed to `-request`, true-defaulting booleans
-  // inverted to `without-*`, `-click` events renamed to `-activate`, `compact` folded into `size`,
-  // hyphenated forwarded parts, and component-namespaced `-bg`/`-color` custom properties. A
-  // subclass tag carries its own record for each alias it inherits (the nine Chart.js charts from
-  // lr-chart, lr-drawer from lr-dialog).
-  assert.equal(state.metadata.deprecations.length, 408);
+  // The eight older mirrored hooks stay while their upstream counterparts exist. The
+  // 391 published naming aliases retain their original removal floor; the new
+  // attribute, property and event notices must survive one whole subsequent major.
+  const removalCohorts = {};
+  for (const entry of state.metadata.deprecations) {
+    removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
+  }
+  assert.deepEqual(removalCohorts, {
+    '10.0.0': 8,
+    '23.0.0': 391,
+    '24.0.0': 44,
+  });
 });
 
 test('a subclass records an inherited alias against its full public surface', () => {
@@ -755,7 +722,8 @@ test('CEM projection surfaces status, since, policy, and structured member depre
 });
 
 test('authored compatibility parts carry deprecation markers before metadata validation', async () => {
-  const { manifest } = await generateManifest({ write: false });
+  const { manifest: compact } = await generateManifest({ write: false });
+  const manifest = expandManifestDeprecations(compact);
   const declarations = new Map(
     manifest.modules
       .flatMap((module) => module.declarations ?? [])
@@ -909,6 +877,26 @@ test('the final analyzer plugin projects central metadata into generated CEM', (
   plugin.packageLinkPhase({ customElementsManifest: manifest });
   assert.equal(manifest.modules[0].declarations[0].status, 'stable');
   assert.equal(manifest.modules[0].declarations[0].since, '4.0.0');
+});
+
+test('a deprecated message-parts property leaves its native aria-label current', () => {
+  const plugin = cemConfig.plugins.find((entry) => entry.name === 'lr-current-native-attribute-of-deprecated-property');
+  const declaration = {
+    tagName: 'lr-message-parts',
+    members: [{ name: 'accessibleLabel', attribute: 'aria-label', deprecated: 'Use native aria-label.' }],
+    attributes: [
+      { name: 'aria-label', fieldName: 'accessibleLabel', deprecated: 'Use native aria-label.' },
+      { name: 'accessible-label', deprecated: 'Use native aria-label.' },
+    ],
+  };
+  const other = { tagName: 'lr-other', attributes: [{ name: 'aria-label', deprecated: 'Unrelated notice.' }] };
+  const manifest = { modules: [{ declarations: [declaration, other] }] };
+  plugin.packageLinkPhase({ customElementsManifest: manifest });
+  assert.ok(declaration.members[0].deprecated);
+  assert.equal(declaration.attributes[0].deprecated, false);
+  assert.ok(declaration.attributes[1].deprecated);
+  assert.ok(other.attributes[0].deprecated);
+  assert.throws(() => plugin.packageLinkPhase({ customElementsManifest: manifest }), /requires the deprecated accessibleLabel mapping/);
 });
 
 test('the registration analyzer records module-evaluation definitions but ignores lazy helper calls', () => {
@@ -1355,12 +1343,33 @@ const EXPORTS_FIXTURE = {
   './legacy.js': './dist/legacy.js',
   './theme/*': './dist/theme/*',
   './types.js': './dist/types.js',
+  './functions.js': './dist/functions.js',
+  './themes/*': './dist/themes/*',
+  './theme/private/*': null,
   './utilities/*': null,
 };
 
 const EXPORT_SOURCES = {
+  'src/functions.ts': [
+    '/** @deprecated Use current. */',
+    'export function legacy() {}',
+    'export function current() {}',
+    'export interface Options {}',
+    '/** @deprecated Use currentValue. */',
+    'export const oldValue = 1;',
+    'export const currentValue = 2;',
+    '/** @deprecated Import CurrentElement from its class module. */',
+    'export class LegacyElement {}',
+    'export class CurrentElement {}',
+    'declare global { interface WindowEventMap { "lr-old": Event; "lr-current": Event; } }',
+    'document.documentElement.setAttribute("data-lr-old", "");',
+    'document.documentElement.setAttribute("data-lr-current", "");',
+  ].join('\n'),
   'src/current.ts': "export { LyraThing } from './thing.js';\n",
   'src/legacy.ts': "export * from './current.js';\n",
+  'src/theme/legacy.ts': 'export const value = 1;',
+  'src/themes/legacy.css': ':root { color: inherit; }',
+  'src/themes/current.css': ':root { color: inherit; }',
   'src/types.ts': [
     '/** A file. @deprecated Use LyraFile. */',
     'export interface File { readonly name: string }',
@@ -1410,6 +1419,29 @@ const FILE_TYPE = {
     usage: "import type { LyraFile } from '@aceshooting/lyra-ui/types.js';",
   },
 };
+
+test('named runtime exports have individual deprecation records without retiring their module', () => {
+  const state = fixture();
+  for (const [kind, name, replacement] of [
+    ['function', 'legacy', 'current'],
+    ['constant', 'oldValue', 'currentValue'],
+    ['class', 'LegacyElement', 'CurrentElement'],
+  ]) {
+    const record = exportDeprecation(state, {
+      kind, module: './functions.js', name,
+      replacement: { kind, name: replacement },
+    });
+    assert.deepEqual(exportFindings(state, [record]), []);
+    assert.ok(exportFindings(state, [{ ...record, name: 'current' }])
+      .some(finding => finding.includes('has no @deprecated JSDoc')));
+    assert.ok(exportFindings(state, [{ ...record, name: 'Options' }])
+      .some(finding => finding.includes('not a runtime value export')));
+    assert.ok(exportFindings(state, [{ ...record, replacement: { kind, name: 'Options' } }])
+      .some(finding => finding.includes('not a runtime value export')));
+    assert.ok(exportFindings(state, [{ ...record, replacement: { kind, name } }])
+      .some(finding => finding.includes('is itself deprecated')));
+  }
+});
 
 test('the metadata schema carries a top-level exportDeprecations ledger', () => {
   const state = fixture();
@@ -1474,6 +1506,41 @@ test('export deprecations validate entry points against package exports and sour
     ]),
     ['exportDeprecations entry-point ./legacy.js: replacement must be another entry point']
   );
+});
+
+test('export deprecations resolve concrete wildcard paths and stylesheet sources', () => {
+  const state = fixture();
+  const path = exportDeprecation(state, { ...LEGACY_ENTRY, name: './theme/legacy.js' });
+  assert.deepEqual(exportFindings(state, [path]), []);
+  assert.ok(exportFindings(state, [{ ...path, name: './theme/private/legacy.js' }])
+    .some(finding => finding.includes('is not a package export')));
+  assert.ok(exportFindings(state, [{ ...path, name: './theme/../legacy.js' }])
+    .some(finding => finding.includes('is not a package export')));
+  const stylesheet = exportDeprecation(state, {
+    kind: 'stylesheet', name: './themes/legacy.css',
+    replacement: { kind: 'stylesheet', name: './themes/current.css' },
+  });
+  assert.deepEqual(exportFindings(state, [stylesheet]), []);
+  assert.ok(exportFindings(state, [{ ...stylesheet, name: './theme/legacy.js' }])
+    .some(finding => finding.includes('does not resolve to a built CSS stylesheet')));
+});
+
+test('global DOM deprecations validate owner modules and actual syntax rather than comments', () => {
+  const state = fixture();
+  for (const [kind, name, replacement] of [
+    ['window-event', 'lr-old', 'lr-current'],
+    ['root-attribute', 'data-lr-old', 'data-lr-current'],
+  ]) {
+    const record = exportDeprecation(state, {
+      kind, module: './functions.js', name,
+      replacement: { kind, name: replacement },
+    });
+    assert.deepEqual(exportFindings(state, [record]), []);
+    assert.ok(exportFindings(state, [record], { readSource: () => `// ${name}\n// ${replacement}` })
+      .some(finding => finding.includes('is not declared or used')));
+    assert.ok(exportFindings(state, [{ ...record, replacement: { kind, name } }])
+      .some(finding => finding.includes('is itself deprecated')));
+  }
 });
 
 test('export deprecations validate type records against the declaring source', () => {
@@ -1575,6 +1642,6 @@ test('export deprecations share the ledger ordering, window, rationale, and repl
   );
   assert.deepEqual(
     exportFindings(state, [exportDeprecation(state, { ...LEGACY_ENTRY, kind: 'module' })]),
-    ['exportDeprecations module ./legacy.js: kind must be entry-point or type']
+    ['exportDeprecations module ./legacy.js: kind must be entry-point, stylesheet, type, function, constant, class, window-event, root-attribute']
   );
 });

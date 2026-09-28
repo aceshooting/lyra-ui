@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './agent-run.js';
 import type { LyraAgentRun } from './agent-run.js';
@@ -28,6 +29,8 @@ async function getLiveRegionText(el: LyraAgentRun): Promise<string> {
   return el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!.textContent!;
 }
 
+// These locale-formatting fixtures intentionally retain English messages.
+expectLocaleFallback('de-DE', ['durationSeconds', 'agentRunStatusDone']);
 it('defaults to run=null, withoutCancel=false, withoutRetry=false, and renders the shared empty state', async () => {
   const el = (await fixture(html`<lr-agent-run></lr-agent-run>`)) as LyraAgentRun;
   expect(el.run).to.be.null;

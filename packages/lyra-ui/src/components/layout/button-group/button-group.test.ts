@@ -61,7 +61,7 @@ describe('<lr-button-group>', () => {
     expect(getComputedStyle(base).gap).to.equal('24px');
   });
 
-  it('goes full-width when its own allocation is narrow, via a container query rather than a viewport media query', async () => {
+  it('fits a constrained allocation and keeps wider rows compact', async () => {
     const narrow = await fixture<LyraButtonGroup>(html`
       <lr-button-group style="inline-size: 120px;">
         <lr-button>Open</lr-button>
@@ -88,10 +88,8 @@ describe('<lr-button-group>', () => {
     expect(wideBaseWidth).to.be.lessThan(wideHostWidth - 20);
   });
 
-  it('uses its compact intrinsic fallback inside a shrink-to-fit flex parent', async () => {
-    // Inline-size containment makes content-dependent sizing resolve as if the group were empty.
-    // The declared intrinsic fallback must therefore size the host, not merely a tiny minimum that
-    // leaves its slotted actions overflowing an almost-zero query container.
+  it('uses its content width inside a shrink-to-fit flex parent', async () => {
+    // The group must derive its intrinsic width from its slotted actions.
     const wrap = await fixture(html`
       <div style="display:flex">
         <lr-button-group label="Actions">
@@ -134,4 +132,13 @@ it("restores the declared orientation default when the attribute is removed", as
   el.removeAttribute("orientation");
   await el.updateComplete;
   expect(el.orientation).to.equal("horizontal");
+});
+
+it('keeps narrow allocated groups compact unless the base is explicitly filled', async () => {
+  const el = await fixture<LyraButtonGroup>(html`<lr-button-group style="inline-size:300px"><lr-button>Go</lr-button></lr-button-group>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(el.getBoundingClientRect().width).to.equal(300);
+  expect(base.getBoundingClientRect().width).to.be.lessThan(250);
+  base.style.inlineSize = '100%';
+  expect(base.getBoundingClientRect().width).to.equal(300);
 });

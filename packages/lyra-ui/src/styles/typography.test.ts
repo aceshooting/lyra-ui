@@ -167,6 +167,25 @@ after(() => {
 });
 
 describe('typography role classes', () => {
+  it('inherits heading typography until a heading font is supplied, and keeps local font styles authoritative', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <article class="lr-typography" style="font-family: monospace">
+        <h2>Native heading</h2>
+        <div class="lr-heading-2">Role heading</div>
+        <h3 style="font-family: cursive">Local heading</h3>
+        <p>Body text</p>
+      </article>
+    `);
+    expect(style(wrapper, 'h2').fontFamily).to.equal('monospace');
+    expect(style(wrapper, '.lr-heading-2').fontFamily).to.equal('monospace');
+    wrapper.style.setProperty('--lr-theme-font-family-heading', 'serif');
+    expect(style(wrapper, 'h2').fontFamily).to.equal('serif');
+    expect(style(wrapper, '.lr-heading-2').fontFamily).to.equal('serif');
+    expect(style(wrapper, 'h3').fontFamily).to.equal('cursive');
+    expect(style(wrapper, 'p').fontFamily).to.equal('monospace');
+    wrapper.style.removeProperty('--lr-theme-font-family-heading');
+    expect(style(wrapper, 'h2').fontFamily).to.equal('monospace');
+  });
   it('gives any element a heading level look', async () => {
     const el = await fixture(html`
       <div>
@@ -676,7 +695,7 @@ describe('typography tokens, themes and environments', () => {
       `);
       const expected = {
         light: ['rgb(237, 238, 241)', 'rgb(26, 26, 26)', 'rgb(246, 248, 250)', 'rgb(138, 138, 144)', 'rgb(26, 26, 26)', 'rgb(3, 94, 198)'],
-        dark: ['rgb(44, 46, 49)', 'rgb(242, 242, 242)', 'rgb(34, 39, 46)', 'rgb(107, 107, 116)', 'rgb(242, 242, 242)', 'rgb(91, 158, 255)'],
+        dark: ['rgb(44, 46, 49)', 'rgb(242, 242, 242)', 'rgb(34, 39, 46)', 'rgb(120, 120, 129)', 'rgb(242, 242, 242)', 'rgb(91, 158, 255)'],
       } as const;
       for (const [mode, [codeBg, codeText, stripe, rule, heading, link]] of Object.entries(expected)) {
         const scope = pick(el, `#${mode}`);

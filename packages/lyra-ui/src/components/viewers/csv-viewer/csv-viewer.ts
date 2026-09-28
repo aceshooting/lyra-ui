@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-csv-viewer.js to register this component. */
 export * from './csv-viewer.class.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';

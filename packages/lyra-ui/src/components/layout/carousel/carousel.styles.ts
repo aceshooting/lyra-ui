@@ -23,7 +23,7 @@ export const styles = css`
     overflow-y: hidden;
     scroll-snap-type: inline mandatory;
     scroll-padding-inline: var(--scroll-hint, 0);
-    scroll-behavior: smooth;
+    scroll-behavior: var(--_lr-motion-scroll, smooth);
     overscroll-behavior-inline: contain;
     outline: none;
     /* Opt-in theme-level scrollbar hooks (see internal/tokens.styles.ts) -- each reads
@@ -56,7 +56,7 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part~="scroll-container"] {
-      scroll-behavior: auto;
+      scroll-behavior: var(--_lr-motion-scroll, auto);
     }
   }
 

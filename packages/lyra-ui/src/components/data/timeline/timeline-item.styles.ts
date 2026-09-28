@@ -72,7 +72,7 @@ export const styles = css`
         var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default))
       );
     outline-offset: var(--lr-space-2xs);
-    animation: lr-timeline-item-pulse var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-timeline-item-pulse var(--lr-transition-ambient) infinite);
   }
   @keyframes lr-timeline-item-pulse {
     0%,

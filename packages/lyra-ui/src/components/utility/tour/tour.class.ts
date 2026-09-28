@@ -120,7 +120,7 @@ export interface LyraTourStep {
 }
 
 /**
- * Reason a tour ended, forwarded as the `lr-tour-end` event detail.
+ * Reason a tour ended, forwarded as `lr-tour-end` detail.reason.
  * `'completed'`/`'skip'`/`'escape'` are emitted by the tour's own built-in dismiss triggers;
  * `'unmount'` is emitted when the tour is removed from the DOM while still open by something
  * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case); any other
@@ -152,7 +152,8 @@ export interface LyraTourEventMap {
     readonly step: Readonly<LyraTourStep>;
     readonly via: 'next' | 'back' | 'goto';
   }>;
-  'lr-tour-end': CustomEvent<LyraTourEndReason>;
+  'lr-tour-end-request': CustomEvent<{ reason: LyraTourEndReason }>;
+  'lr-tour-end': CustomEvent<{ reason: LyraTourEndReason }>;
   'lr-tour-target-missing': CustomEvent<{
     readonly index: number;
     readonly step: Readonly<LyraTourStep>;
@@ -355,10 +356,10 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   Cancelable -- either event may veto, and a veto through this alias logs a one-time development
  *   warning. Like the canonical event, a deliberate departure from `lr-carousel`'s non-cancelable
  *   `lr-slide-change`. Removal not before 23.0.0.
- * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
- *   `'completed'`). `detail: LyraTourEndReason`. Conditionally cancelable: every ordinary end can be
- *   vetoed, while `'unmount'` cannot because the element is already being removed -- mirrors
- *   `lr-dialog`'s own `lr-close` exactly.
+ * @event lr-tour-end-request - Cancelable proposal before an ordinary tour end. `detail: { reason }`.
+ *   Preventing it keeps the tour open. Removal from the document does not request permission.
+ * @event lr-tour-end - Non-cancelable notification after the tour closes. `detail: { reason }`.
+ *   Forced removal emits reason `unmount` without a request because it cannot be vetoed.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
  *   auto-end; it renders that step's popover unanchored (viewport-centered, no spotlight cutout)
@@ -617,7 +618,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           this.open = false;
-          this.emit('lr-tour-end', 'unmount');
+          this.emit('lr-tour-end', { reason: 'unmount' });
         }
       });
     }
@@ -635,7 +636,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   /** Advances to the next step. On the last step, ends the tour instead (`end('completed')`) --
    *  the built-in Next/Done button calls this same method, so a custom control wired to `next()`
    *  behaves identically to the built-in one. Cancelable via `lr-tour-step-change-request` (or
-   *  `lr-tour-end` when it triggers completion). */
+   *  `lr-tour-end-request` when it triggers completion). */
   next(): void {
     const total = this.steps.length;
     if (total === 0) return;
@@ -665,13 +666,13 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.end('skip');
   }
 
-  /** Ends the tour. `reason` is forwarded as the `lr-tour-end` detail. Cancelable (except in
-   *  practice for `'unmount'`) -- mirrors `LyraDialog.close(reason)` exactly. */
+  /** Requests an ordinary end, then closes and publishes the accepted reason. */
   end(reason: LyraTourEndReason = 'api'): void {
     if (!this.open) return;
-    const event = this.emit('lr-tour-end', reason, { cancelable: true });
-    if (event.defaultPrevented) return;
+    const request = this.emit('lr-tour-end-request', { reason }, { cancelable: true });
+    if (request.defaultPrevented) return;
     this.open = false;
+    this.emit('lr-tour-end', { reason });
   }
 
   private clampIndex(index: number): number {
@@ -760,7 +761,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     if (options.scroll) {
       const ownerWindow = target.ownerDocument.defaultView;
-      const reducedMotion = !ownerWindow || prefersReducedMotion(ownerWindow);
+      const reducedMotion = !ownerWindow || prefersReducedMotion(this);
       target.scrollIntoView({
         block: 'center',
         inline: 'nearest',

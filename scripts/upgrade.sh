@@ -136,10 +136,6 @@ echo
 echo "==> Synchronizing peer-compatibility current versions"
 node scripts/check-peer-compatibility.mjs --write-current-versions
 
-echo
-echo "==> Building all workspace packages"
-pnpm build
-
 # A dependency bump (Lit, the CEM analyzer, esbuild/vite, shiki, etc.) can shift the manifest,
 # framework type declarations, measured bundle/gzip sizes, or the upstream parity pins even when no
 # lyra-ui source changed -- regenerate the full generated-artifact chain now, in the same dependency
@@ -148,6 +144,7 @@ pnpm build
 # when nothing actually shifted), so this is safe to run unconditionally.
 echo
 echo "==> Regenerating manifest, event surfaces, framework types, and palette/design tokens"
+pnpm --filter @aceshooting/lyra-ui run archive-changelog
 pnpm --filter @aceshooting/lyra-ui run package-metadata
 pnpm manifest
 pnpm --filter @aceshooting/lyra-ui run events
@@ -156,34 +153,45 @@ pnpm --filter @aceshooting/lyra-ui run framework-types
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-chart-palette.mjs
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.mjs
+pnpm --filter @aceshooting/lyra-ui run style-axes
 pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-theme-presets.mjs
+pnpm --filter @aceshooting/lyra-ui run option-presets
 pnpm --filter @aceshooting/lyra-ui run design-tokens
 pnpm --filter @aceshooting/lyra-ui run generate-reservation-styles
 
 echo
-echo "==> Regenerating upstream inventory, editor data, component metadata, and component quality"
+echo "==> Regenerating upstream inventory, editor data, and component metadata"
 # The editor files are a published projection of the manifest. Refresh and validate the parity
 # inventory first so a parity failure cannot leave newly written editor files beside a stale
 # inventory (the next generator/check would otherwise report a misleading half-fresh state).
 node packages/lyra-ui/scripts/check-pinned-upstream-manifests.mjs --write-inventory
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 node packages/lyra-ui/scripts/generate-component-metadata.mjs --write
-node packages/lyra-ui/scripts/generate-component-quality.mjs --write --measure-gzip
 
 echo
 echo "==> Regenerating default-string slices and translation slices"
 node packages/lyra-ui/scripts/generate-default-string-slices.mjs --write
 pnpm --filter @aceshooting/lyra-ui run translation-slices
+pnpm --filter @aceshooting/lyra-ui run locale-manifest
 
 echo
 echo "==> Regenerating registration, autoloader, and registration-graph artifacts"
 pnpm registrations
 pnpm --filter @aceshooting/lyra-ui run autoloader-manifest
 pnpm --filter @aceshooting/lyra-ui run registration-graph
+pnpm --filter @aceshooting/lyra-ui run scoped-definitions
 
 echo
 echo "==> Regenerating llms/ reference docs and the packaged plugin/skill archives"
 ./package.sh
+
+echo
+echo "==> Rebuilding final workspace output and measuring component quality"
+# Source generators above (including package.sh's documentation and skill generators) can change
+# code after earlier generation steps. Quality measurements must consume the final source tree and
+# a dist rebuilt from that tree.
+pnpm build
+node packages/lyra-ui/scripts/generate-component-quality.mjs --write --measure-gzip
 
 echo
 echo "Dependency upgrade, install, workspace build, and full generated-artifact regeneration complete."

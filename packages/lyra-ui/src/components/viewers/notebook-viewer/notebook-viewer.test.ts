@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './notebook-viewer.js';
@@ -38,6 +39,8 @@ const NOTEBOOK: NotebookDocument = {
 function rowRoot(el: LyraNotebookViewer): ShadowRoot {
   return el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
 }
+
+expectLocaleFallback('tr', ['loadingDocument', 'notebookViewerInPromptEmpty', 'notebookViewerLabel', 'notebookViewerRawCell']);
 
 describe('defaults', () => {
   it('defaults to empty src/notebook/name, outputCollapseLines 40', async () => {

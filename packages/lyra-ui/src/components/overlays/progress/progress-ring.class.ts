@@ -120,13 +120,20 @@ export class LyraProgressRing extends LyraElement {
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Mapped accessible-name property. */
   @property() label = '';
-  /** Explicit accessible name, on the library-wide `accessibleLabel` convention shared by every
-   *  Lyra component that names a shadow-owned role. Not an alias kept for one upstream: `label` is
-   *  the mapped upstream name and this is Lyra's own spelling; both are read, with `label` first
-   *  and a host `aria-label` above both. In markup, name the ring with the host `aria-label`; the
-   *  `accessible-label` attribute spelling is deprecated (removal not before 23.0.0) and logs a
-   *  one-time development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private legacyAccessibleLabel: string = '';
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
   /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an
    *  explicitly empty value stays empty. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;

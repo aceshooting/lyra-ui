@@ -6,8 +6,9 @@
 - **Class** `LyraCombobox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecated css-property** `--lr-combobox-text-color` since `21.1.0`; use css-property `--lr-combobox-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `showUnknownOption` / `show-unknown-option` since `21.1.0`; use property `with-unknown-option`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 34 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -411,13 +412,16 @@ async `source` call plus the exact query string that call was made with (the rej
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
 never shows the raw error.
-`lr-retry` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
+`lr-retry-request` and `lr-retry` are cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
 drops `aria-activedescendant`, and the popup carries the localized failure heading as its accessible
 name). `dialog` is one of the four popup roles WAI-ARIA lets a `role="combobox"` own, so the still
 expanded `aria-controls` target keeps a valid owner while holding a retry `button` that is not a
 legal listbox child. A successful retry restores `role="listbox"`.
+`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
+null detail. Either event can veto the built-in refresh; subscribe to one spelling. Removal of the
+alias is not before 24.0.0.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has

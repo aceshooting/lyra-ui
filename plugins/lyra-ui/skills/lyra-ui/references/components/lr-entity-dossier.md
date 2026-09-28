@@ -6,7 +6,7 @@
 - **Class** `LyraEntityDossier`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-dossier/entity-dossier.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none

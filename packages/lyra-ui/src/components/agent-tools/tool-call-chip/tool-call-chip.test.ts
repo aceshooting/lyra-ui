@@ -8,7 +8,10 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
-  'accessibleLabelSeparator', 'durationSeconds', 'statusPending', 'toolCall',
+  'accessibleLabelSeparator',
+  'durationSeconds',
+  'statusPending',
+  'toolCall',
 ]);
 
 it('defaults to status="pending" with empty name/category/summary/icon/call-id and no duration', async () => {

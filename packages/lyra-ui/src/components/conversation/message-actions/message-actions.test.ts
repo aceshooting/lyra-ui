@@ -300,7 +300,7 @@ it("the built-in feedback owns wrapper-domain change and terminal submit events"
     html`<lr-message-actions .controls=${["feedback"]}></lr-message-actions>`
   )) as LyraMessageActions;
   const changePromise = oneEvent(el, "lr-feedback-change");
-  const submitPromise = oneEvent(el, "lr-feedback-submit");
+  const submitPromise = oneEvent(el, "lr-feedback-submit-request");
   // `[part="down-button"]` lives inside the embedded lr-message-feedback's own shadow root, one
   // level deeper than lr-message-actions' -- a shadow-piercing part selector needs the extra hop.
   const feedback = el.shadowRoot!.querySelector(
@@ -335,7 +335,7 @@ it('proxies only the current built-in feedback transaction without re-emitting i
   el.addEventListener('lr-feedback-pending-change', () => {
     pendingChangeEvents += 1;
   });
-  el.addEventListener('lr-feedback-submit', (event) => {
+  el.addEventListener('lr-feedback-submit-request', (event) => {
     events += 1;
     event.preventDefault();
     submissionId = (event as CustomEvent<{ readonly submissionId: string }>).detail

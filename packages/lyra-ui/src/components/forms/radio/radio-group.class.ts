@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
   html,
@@ -130,6 +131,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     radioRequired: LYRA_DEFAULT_radioRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',

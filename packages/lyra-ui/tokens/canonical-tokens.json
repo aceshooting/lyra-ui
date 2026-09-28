@@ -58,8 +58,8 @@
       "scope": "shared",
       "description": "Canonical shared component token for color border.",
       "values": {
-        "light": "var(--lr-theme-color-surface-border, #8a8a90)",
-        "dark": "var(--lr-theme-color-surface-border, #6b6b74)",
+        "light": "var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)))",
+        "dark": "var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)))",
         "forcedColors": "ButtonText"
       },
       "themeInput": "--lr-theme-color-surface-border"
@@ -70,8 +70,8 @@
       "scope": "shared",
       "description": "Canonical shared component token for color border strong.",
       "values": {
-        "light": "var(--lr-theme-color-border-strong, #4b5563)",
-        "dark": "var(--lr-theme-color-border-strong, #c4c9d1)"
+        "light": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)))",
+        "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)))"
       },
       "themeInput": "--lr-theme-color-border-strong"
     },
@@ -81,8 +81,8 @@
       "scope": "shared",
       "description": "Decorative edge colour for dividers and rules, card, panel, table and section edges, and separators between items. Resolves to --lr-color-border until --lr-theme-color-surface-border-subtle is set. Never the only visible boundary of a control or a meaningful graphic: those need 3:1 non-text contrast (WCAG 2.2 SC 1.4.11) and stay on --lr-color-border.",
       "values": {
-        "light": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
-        "dark": "var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))",
+        "light": "var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)))",
+        "dark": "var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)))",
         "forcedColors": "ButtonText"
       },
       "themeInput": "--lr-theme-color-surface-border-subtle"
@@ -301,6 +301,78 @@
         "forcedColors": "LinkText"
       },
       "themeInput": "--lr-theme-color-chart-8"
+    },
+    "--lr-color-chart-diverging-1": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Diverging chart scale stop 1 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-diverging-1, #92400e)",
+        "dark": "var(--lr-theme-color-chart-diverging-1, #fbbf24)",
+        "forcedColors": "CanvasText"
+      },
+      "themeInput": "--lr-theme-color-chart-diverging-1"
+    },
+    "--lr-color-chart-diverging-2": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Diverging chart scale stop 2 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-diverging-2, #f3f4f6)",
+        "dark": "var(--lr-theme-color-chart-diverging-2, #374151)",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-chart-diverging-2"
+    },
+    "--lr-color-chart-diverging-3": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Diverging chart scale stop 3 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-diverging-3, #1e40af)",
+        "dark": "var(--lr-theme-color-chart-diverging-3, #93c5fd)",
+        "forcedColors": "Highlight"
+      },
+      "themeInput": "--lr-theme-color-chart-diverging-3"
+    },
+    "--lr-color-chart-sequential-1": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Sequential chart scale stop 1 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-sequential-1, #dbeafe)",
+        "dark": "var(--lr-theme-color-chart-sequential-1, #172554)",
+        "forcedColors": "CanvasText"
+      },
+      "themeInput": "--lr-theme-color-chart-sequential-1"
+    },
+    "--lr-color-chart-sequential-2": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Sequential chart scale stop 2 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-sequential-2, #3b82f6)",
+        "dark": "var(--lr-theme-color-chart-sequential-2, #3b82f6)",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-chart-sequential-2"
+    },
+    "--lr-color-chart-sequential-3": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Sequential chart scale stop 3 of 3.",
+      "values": {
+        "light": "var(--lr-theme-color-chart-sequential-3, #1e3a8a)",
+        "dark": "var(--lr-theme-color-chart-sequential-3, #bfdbfe)",
+        "forcedColors": "Highlight"
+      },
+      "themeInput": "--lr-theme-color-chart-sequential-3"
     },
     "--lr-color-danger": {
       "type": "color",
@@ -794,6 +866,61 @@
       },
       "themeInput": "--lr-theme-color-surface-default"
     },
+    "--lr-color-surface-container": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Tonal container surface; preserves the existing surface-raised role when unset.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-container, var(--lr-color-surface-raised))",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-surface-container"
+    },
+    "--lr-color-surface-container-high": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Tonal container high surface; preserves the existing surface-overlay role when unset.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-container-high, var(--lr-color-surface-overlay))",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-surface-container-high"
+    },
+    "--lr-color-surface-container-highest": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Tonal container highest surface; preserves the existing surface-overlay role when unset.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-container-highest, var(--lr-color-surface-overlay))",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-surface-container-highest"
+    },
+    "--lr-color-surface-container-low": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Tonal container low surface; preserves the existing surface role when unset.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-container-low, var(--lr-color-surface))",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-surface-container-low"
+    },
+    "--lr-color-surface-container-lowest": {
+      "type": "color",
+      "group": "color",
+      "scope": "shared",
+      "description": "Tonal container lowest surface; preserves the existing surface role when unset.",
+      "values": {
+        "light": "var(--lr-theme-color-surface-container-lowest, var(--lr-color-surface))",
+        "forcedColors": "Canvas"
+      },
+      "themeInput": "--lr-theme-color-surface-container-lowest"
+    },
     "--lr-color-surface-overlay": {
       "type": "color",
       "group": "color",
@@ -835,8 +962,8 @@
       "scope": "shared",
       "description": "Canonical shared component token for color text quiet.",
       "values": {
-        "light": "var(--lr-theme-color-text-quiet, #6b7280)",
-        "dark": "var(--lr-theme-color-text-quiet, #9aa1ac)",
+        "light": "var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)))",
+        "dark": "var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)))",
         "forcedColors": "CanvasText"
       },
       "themeInput": "--lr-theme-color-text-quiet"
@@ -966,7 +1093,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for duration ambient.",
       "values": {
-        "light": "var(--lr-theme-duration-slow, 1.8s)",
+        "light": "var(--_lr-motion-duration, var(--lr-theme-duration-slow, 1.8s))",
         "reducedMotion": "0.001ms"
       },
       "themeInput": "--lr-theme-duration-slow"
@@ -977,7 +1104,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for duration base.",
       "values": {
-        "light": "var(--lr-theme-duration-normal, 180ms)",
+        "light": "var(--_lr-motion-duration, var(--lr-theme-duration-normal, 180ms))",
         "reducedMotion": "0.001ms"
       },
       "themeInput": "--lr-theme-duration-normal"
@@ -988,7 +1115,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for duration fast.",
       "values": {
-        "light": "var(--lr-theme-duration-fast, 120ms)",
+        "light": "var(--_lr-motion-duration, var(--lr-theme-duration-fast, 120ms))",
         "reducedMotion": "0.001ms"
       },
       "themeInput": "--lr-theme-duration-fast"
@@ -999,7 +1126,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for duration icon.",
       "values": {
-        "light": "var(--lr-theme-duration-icon, 1s)",
+        "light": "var(--_lr-motion-duration, var(--lr-theme-duration-icon, 1s))",
         "reducedMotion": "0.001ms"
       },
       "themeInput": "--lr-theme-duration-icon"
@@ -1010,7 +1137,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for easing emphasized.",
       "values": {
-        "light": "var(--lr-theme-easing-emphasized, ease-in-out)",
+        "light": "var(--_lr-motion-easing, var(--lr-theme-easing-emphasized, ease-in-out))",
         "reducedMotion": "linear"
       },
       "themeInput": "--lr-theme-easing-emphasized"
@@ -1031,7 +1158,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for easing standard.",
       "values": {
-        "light": "var(--lr-theme-easing-standard, ease-out)",
+        "light": "var(--_lr-motion-easing, var(--lr-theme-easing-standard, ease-out))",
         "reducedMotion": "linear"
       },
       "themeInput": "--lr-theme-easing-standard"
@@ -1051,7 +1178,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for focus ring color.",
       "values": {
-        "light": "var(--lr-theme-color-focus, var(--lr-color-brand))",
+        "light": "var(--_lr-glass-qualified-focus-ring-color, var(--lr-theme-color-focus, var(--lr-color-brand)))",
         "forcedColors": "Highlight"
       },
       "themeInput": "--lr-theme-color-focus"
@@ -1072,7 +1199,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for focus ring width.",
       "values": {
-        "light": "var(--lr-theme-focus-ring-width, 2px)"
+        "light": "max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px))"
       },
       "themeInput": "--lr-theme-focus-ring-width"
     },
@@ -1085,6 +1212,16 @@
         "light": "var(--lr-theme-font-family-body, system-ui, sans-serif)"
       },
       "themeInput": "--lr-theme-font-family-body"
+    },
+    "--lr-font-heading": {
+      "type": "fontFamily",
+      "group": "typography",
+      "scope": "shared",
+      "description": "Heading font family; inherits the surrounding typography when the optional heading input is unset.",
+      "values": {
+        "light": "var(--lr-theme-font-family-heading, inherit)"
+      },
+      "themeInput": "--lr-theme-font-family-heading"
     },
     "--lr-font-mono": {
       "type": "string",
@@ -1482,6 +1619,16 @@
       },
       "themeInput": "--lr-theme-z-index-toast"
     },
+    "--lr-line-break": {
+      "type": "string",
+      "group": "typography",
+      "scope": "shared",
+      "description": "Inherited text line-breaking strictness; unset preserves authored CSS.",
+      "values": {
+        "light": "var(--lr-theme-line-break, inherit)"
+      },
+      "themeInput": "--lr-theme-line-break"
+    },
     "--lr-line-height-1-4": {
       "type": "number",
       "group": "typography",
@@ -1600,6 +1747,26 @@
         "light": "var(--lr-theme-border-radius-m, 0.375rem)"
       },
       "themeInput": "--lr-theme-border-radius-m"
+    },
+    "--lr-radius-button": {
+      "type": "dimension",
+      "group": "radius",
+      "scope": "shared",
+      "description": "Button corner radius; follows the control radius when the optional button input is unset.",
+      "values": {
+        "light": "var(--lr-theme-border-radius-button, var(--lr-form-control-radius, var(--lr-radius)))"
+      },
+      "themeInput": "--lr-theme-border-radius-button"
+    },
+    "--lr-radius-container": {
+      "type": "dimension",
+      "group": "radius",
+      "scope": "shared",
+      "description": "Container corner radius; follows the shared radius when the optional container input is unset.",
+      "values": {
+        "light": "var(--lr-theme-border-radius-container, var(--lr-radius))"
+      },
+      "themeInput": "--lr-theme-border-radius-container"
     },
     "--lr-radius-pill": {
       "type": "dimension",
@@ -4485,6 +4652,16 @@
       },
       "themeInput": "--lr-theme-space-xs"
     },
+    "--lr-table-row-min-height": {
+      "type": "dimension",
+      "group": "layout",
+      "scope": "shared",
+      "description": "Optional table and data-grid row minimum before local density scaling; zero preserves each component baseline.",
+      "values": {
+        "light": "var(--lr-theme-table-row-height, 0px)"
+      },
+      "themeInput": "--lr-theme-table-row-height"
+    },
     "--lr-terminal-bg-black": {
       "type": "string",
       "group": "color",
@@ -5071,6 +5248,66 @@
         "dark": "#555de3"
       }
     },
+    "--lr-theme-color-chart-diverging-1": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for diverging chart scale stop 1 of 3.",
+      "values": {
+        "light": "#92400e",
+        "dark": "#fbbf24"
+      }
+    },
+    "--lr-theme-color-chart-diverging-2": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for diverging chart scale stop 2 of 3.",
+      "values": {
+        "light": "#f3f4f6",
+        "dark": "#374151"
+      }
+    },
+    "--lr-theme-color-chart-diverging-3": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for diverging chart scale stop 3 of 3.",
+      "values": {
+        "light": "#1e40af",
+        "dark": "#93c5fd"
+      }
+    },
+    "--lr-theme-color-chart-sequential-1": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for sequential chart scale stop 1 of 3.",
+      "values": {
+        "light": "#dbeafe",
+        "dark": "#172554"
+      }
+    },
+    "--lr-theme-color-chart-sequential-2": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for sequential chart scale stop 2 of 3.",
+      "values": {
+        "light": "#3b82f6",
+        "dark": "#3b82f6"
+      }
+    },
+    "--lr-theme-color-chart-sequential-3": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Application input for sequential chart scale stop 3 of 3.",
+      "values": {
+        "light": "#1e3a8a",
+        "dark": "#bfdbfe"
+      }
+    },
     "--lr-theme-color-danger-border-loud": {
       "type": "color",
       "group": "color",
@@ -5435,7 +5672,7 @@
       "description": "Canonical application theme input for color surface border.",
       "values": {
         "light": "#8a8a90",
-        "dark": "#6b6b74"
+        "dark": "#787881"
       }
     },
     "--lr-theme-color-surface-default": {
@@ -5953,6 +6190,15 @@
       "description": "Canonical application theme input for icon button size.",
       "values": {
         "light": "2.5rem"
+      }
+    },
+    "--lr-theme-line-break": {
+      "type": "string",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Optional application text line-breaking strictness; unset preserves authored CSS.",
+      "values": {
+        "light": "initial"
       }
     },
     "--lr-theme-line-height-1-4": {
@@ -7315,6 +7561,15 @@
         "light": "1.8s ease-in-out"
       }
     },
+    "--lr-theme-word-break": {
+      "type": "string",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Optional application text word-breaking policy; unset preserves authored CSS.",
+      "values": {
+        "light": "initial"
+      }
+    },
     "--lr-theme-z-index-base": {
       "type": "number",
       "group": "z",
@@ -7375,7 +7630,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for transition ambient.",
       "values": {
-        "light": "var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized))",
+        "light": "var(--_lr-motion-transition, var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized)))",
         "reducedMotion": "0.001ms linear"
       },
       "themeInput": "--lr-theme-transition-slow"
@@ -7386,7 +7641,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for transition base.",
       "values": {
-        "light": "var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard))",
+        "light": "var(--_lr-motion-transition, var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard)))",
         "reducedMotion": "0.001ms linear"
       },
       "themeInput": "--lr-theme-transition-normal"
@@ -7397,7 +7652,7 @@
       "scope": "shared",
       "description": "Canonical shared component token for transition fast.",
       "values": {
-        "light": "var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard))",
+        "light": "var(--_lr-motion-transition, var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard)))",
         "reducedMotion": "0.001ms linear"
       },
       "themeInput": "--lr-theme-transition-fast"
@@ -7410,6 +7665,16 @@
       "values": {
         "light": "background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)"
       }
+    },
+    "--lr-word-break": {
+      "type": "string",
+      "group": "typography",
+      "scope": "shared",
+      "description": "Inherited text word-breaking policy; unset preserves authored CSS.",
+      "values": {
+        "light": "var(--lr-theme-word-break, inherit)"
+      },
+      "themeInput": "--lr-theme-word-break"
     }
   }
 }

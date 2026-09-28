@@ -25,6 +25,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js').then((module) => module.LyraAgentEvalDashboard),
   },
+  'lr-agent-question': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/agent-question/agent-question.class.js').then((module) => module.LyraAgentQuestion),
+  },
   'lr-agent-run': {
     optionalPeers: [],
     load: () => import('../components/agent-tools/agent-run/agent-run.class.js').then((module) => module.LyraAgentRun),
@@ -97,6 +101,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/media/avatar-group/avatar-group.class.js').then((module) => module.LyraAvatarGroup),
   },
+  'lr-background-runs': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/background-runs/background-runs.class.js').then((module) => module.LyraBackgroundRuns),
+  },
   'lr-badge': {
     optionalPeers: [],
     load: () => import('../components/overlays/badge/badge.class.js').then((module) => module.LyraBadge),
@@ -129,6 +137,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/bubble-chart.class.js').then((module) => module.LyraBubbleChart),
   },
+  'lr-budget-meter': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/budget-meter/budget-meter.class.js').then((module) => module.LyraBudgetMeter),
+  },
   'lr-button': {
     optionalPeers: [],
     load: () => import('../components/forms/button/button.class.js').then((module) => module.LyraButton),
@@ -160,6 +172,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-carousel-item': {
     optionalPeers: [],
     load: () => import('../components/layout/carousel/carousel-item.class.js').then((module) => module.LyraCarouselItem),
+  },
+  'lr-change-review': {
+    optionalPeers: ['shiki'],
+    load: () => import('../components/agent-tools/change-review/change-review.class.js').then((module) => module.LyraChangeReview),
   },
   'lr-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
@@ -252,6 +268,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-confirm-bar': {
     optionalPeers: [],
     load: () => import('../components/agent-tools/confirm-bar/confirm-bar.class.js').then((module) => module.LyraConfirmBar),
+  },
+  'lr-connector-manager': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/connector-manager/connector-manager.class.js').then((module) => module.LyraConnectorManager),
   },
   'lr-contact-viewer': {
     optionalPeers: [],
@@ -749,6 +769,14 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['pdfjs-dist'],
     load: () => import('../components/viewers/pdf-viewer/pdf-viewer.class.js').then((module) => module.LyraPdfViewer),
   },
+  'lr-permission-grant': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/permission-grant/permission-grant.class.js').then((module) => module.LyraPermissionGrant),
+  },
+  'lr-permission-rules': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/permission-rules/permission-rules.class.js').then((module) => module.LyraPermissionRules),
+  },
   'lr-phone-input': {
     optionalPeers: [],
     load: () => import('../components/forms/phone-input/phone-input.class.js').then((module) => module.LyraPhoneInput),
@@ -860,6 +888,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-reorder-list': {
     optionalPeers: [],
     load: () => import('../components/layout/reorder-list/reorder-list.class.js').then((module) => module.LyraReorderList),
+  },
+  'lr-research-progress': {
+    optionalPeers: [],
+    load: () => import('../components/retrieval/research-progress/research-progress.class.js').then((module) => module.LyraResearchProgress),
   },
   'lr-resize-observer': {
     optionalPeers: [],

@@ -35,6 +35,10 @@ import type {
 } from '../src/lyra.js';
 import type {
   DialogCloseReason,
+  LyraDialogCloseDetail,
+  LyraToolApprovalDialogCloseDetail,
+  LyraToolSelectDialogCloseDetail,
+  LyraResponsivePanelCloseDetail,
   LyraResponsivePanelCloseReason,
   ToolApprovalDialogCloseReason,
   ToolSelectDialogCloseReason,
@@ -464,19 +468,26 @@ attachmentTrigger.addEventListener('lr-files', (event) => {
   void capability;
 });
 
-// The close-reason unions are the point of these three: each is already
-// exported, but before its event map existed the union was unreachable
-// through a typed listener -- `event.detail` was a bare `Event`.
+// Canonical close notifications carry a structured detail. The existing reason unions
+// remain public and describe the reason field, rather than replacing the whole payload.
 declare const dialog: LyraDialog;
 dialog.addEventListener('lr-close', (event) => {
-  const reason: DialogCloseReason = event.detail;
+  const detail: LyraDialogCloseDetail = event.detail;
+  const reason: DialogCloseReason = detail.reason;
+  // @ts-expect-error Canonical close detail is structured, not a bare reason.
+  const bareReason: DialogCloseReason = event.detail;
   void reason;
+  void bareReason;
 });
 
 declare const toolApproval: LyraToolApprovalDialog;
 toolApproval.addEventListener('lr-close', (event) => {
-  const reason: ToolApprovalDialogCloseReason = event.detail;
+  const detail: LyraToolApprovalDialogCloseDetail = event.detail;
+  const reason: ToolApprovalDialogCloseReason = detail.reason;
+  // @ts-expect-error Canonical close detail is structured, not a bare reason.
+  const bareReason: ToolApprovalDialogCloseReason = event.detail;
   void reason;
+  void bareReason;
 });
 toolApproval.addEventListener('lr-approve', (event) => {
   const args: unknown = event.detail.args;
@@ -485,8 +496,12 @@ toolApproval.addEventListener('lr-approve', (event) => {
 
 declare const toolSelect: LyraToolSelectDialog;
 toolSelect.addEventListener('lr-close', (event) => {
-  const reason: ToolSelectDialogCloseReason = event.detail;
+  const detail: LyraToolSelectDialogCloseDetail = event.detail;
+  const reason: ToolSelectDialogCloseReason = detail.reason;
+  // @ts-expect-error Canonical close detail is structured, not a bare reason.
+  const bareReason: ToolSelectDialogCloseReason = event.detail;
   void reason;
+  void bareReason;
 });
 toolSelect.addEventListener('lr-change', (event) => {
   const selected: readonly string[] = event.detail.selectedToolIds;
@@ -495,8 +510,12 @@ toolSelect.addEventListener('lr-change', (event) => {
 
 declare const responsivePanel: LyraResponsivePanel;
 responsivePanel.addEventListener('lr-close', (event) => {
-  const reason: LyraResponsivePanelCloseReason = event.detail;
+  const detail: LyraResponsivePanelCloseDetail = event.detail;
+  const reason: LyraResponsivePanelCloseReason = detail.reason;
+  // @ts-expect-error Canonical close detail is structured, not a bare reason.
+  const bareReason: LyraResponsivePanelCloseReason = event.detail;
   void reason;
+  void bareReason;
 });
 responsivePanel.addEventListener('lr-mode-change', (event) => {
   const mode: 'inline' | 'overlay' = event.detail.mode;

@@ -1,3 +1,4 @@
+import { collectionSupport } from './collection-snapshot.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { property } from 'lit/decorators.js';
 import type { PropertyValues } from 'lit';
@@ -10,6 +11,7 @@ interface OwnedRow {
 }
 
 class OwnedCollectionRebindingDemo extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
 
   @property({ attribute: false }) rows: readonly OwnedRow[] = [];
@@ -35,6 +37,7 @@ class ExplicitCollectionChangeDemo extends OwnedCollectionRebindingDemo {
 customElements.define(tag('explicit-collection-change-demo'), ExplicitCollectionChangeDemo);
 
 class IdentityCollectionRebindingDemo extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
   protected static override readonly identityCollectionProperties = Object.freeze(['rows']);
 
@@ -49,6 +52,7 @@ class IdentityCollectionRebindingDemo extends LyraElement {
 customElements.define(tag('identity-collection-rebinding-demo'), IdentityCollectionRebindingDemo);
 
 class AccessorCollectionRebindingDemo extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
 
   private retainedRows: readonly OwnedRow[] = Object.freeze([]);

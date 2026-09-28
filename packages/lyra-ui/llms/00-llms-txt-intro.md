@@ -11,9 +11,8 @@ fallbacks, so it works standalone with no theme or runtime dependency.
 
 ## Which file to read
 
-Prefer the narrow file. `llms-full.txt` is the whole catalog concatenated and costs several hundred
-thousand tokens; you almost never want all of it. `llms/index.md` is the source of truth for the
-current element count and complete tag list.
+Read the narrow reference for the task. `llms/index.md` is the source of truth for the current
+element count and complete tag list.
 
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
   **start here** to pick a component.
@@ -23,6 +22,22 @@ current element count and complete tag list.
 - [llms/shared.md](./llms/shared.md): library-wide behavior — status/deprecation, importing and the
   guarded autoloader, events, forms, theming/native styles, localization/RTL, TypeScript/frameworks,
   SSR, shared utilities, the `@aceshooting/lyra-ui/ai` data types, and testing.
+- [llms/shared/imports-and-registration.md](./llms/shared/imports-and-registration.md): version
+  policy, entry points, registration, and scoped registries.
+- [llms/shared/events-and-types.md](./llms/shared/events-and-types.md): event behavior and shared
+  TypeScript contracts.
+- [llms/shared/forms-and-accessibility.md](./llms/shared/forms-and-accessibility.md): native forms,
+  accessible names, shared form chrome, and accessibility scope.
+- [llms/shared/styles-and-tokens.md](./llms/shared/styles-and-tokens.md): tokens, stylesheets,
+  theme APIs, surfaces, density, contrast, and motion.
+- [llms/shared/localization-and-rtl.md](./llms/shared/localization-and-rtl.md): locale catalogs,
+  translated strings, pluralization, and right-to-left behavior.
+- [llms/shared/frameworks-and-ssr.md](./llms/shared/frameworks-and-ssr.md): framework declarations,
+  property/event binding, server rendering, and hydration.
+- [llms/shared/ai-and-peers.md](./llms/shared/ai-and-peers.md): provider-neutral stream types,
+  AI composition, and optional peer dependencies.
+- [llms/shared/testing-and-utilities.md](./llms/shared/testing-and-utilities.md): test helpers,
+  shared utilities, and feature requests.
 - [llms/tokens.md](./llms/tokens.md): every design token, including its theme input and fallback or
   its derived value, as applicable.
 - [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
@@ -30,7 +45,6 @@ current element count and complete tag list.
   exact/rewritten/warning/conceptual/unsupported decision and safe codemod rules.
 - [CHANGELOG.md](./CHANGELOG.md): chronological release notes, including breaking changes and
   post-major minor/patch additions and fixes — read it before upgrading.
-- [llms-full.txt](./llms-full.txt): all of the above component sections in one file.
 - [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
 - [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —
   useful for a human reviewer, redundant for an assistant reading these files.

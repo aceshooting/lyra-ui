@@ -783,7 +783,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const regionElement = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
       .find((candidate) => candidate.getAttribute('data-id') === region.id);
     if (!regionElement) return false;
-    const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
+    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
     regionElement.scrollIntoView({ behavior, block: 'center', inline: 'center' });
     return true;
   }

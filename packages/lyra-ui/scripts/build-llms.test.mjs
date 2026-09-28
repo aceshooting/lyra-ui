@@ -6,10 +6,12 @@ import {
   build,
   buildComponentFile,
   buildExportDeprecationsSection,
+  buildSharedReferences,
   buildMigration,
   buildPeers,
   COMPOUND_USAGE_REGISTRATIONS,
   FAMILIES,
+  SHARED_TOPICS,
   findDanglingPositionalReferences,
   primaryTagOfSection,
   readTagFacts,
@@ -32,12 +34,16 @@ const packageMetadata = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
 );
 assert.deepEqual(packageAllowlistProblems(packageMetadata.files), []);
+assert.ok(
+  !packageMetadata.files.includes('llms-full.txt'),
+  'the generated full aggregate remains available in the repository but is not part of the published package',
+);
 assert.deepEqual(
   packageAllowlistProblems(packageMetadata.files.filter((file) => file !== 'CHANGELOG.md')),
   ['package.json "files" is missing "CHANGELOG.md" — it would not reach consumers.'],
   'the published documentation links CHANGELOG.md, so the allowlist gate must require it',
 );
-const sharedReference = readFileSync(new URL('../llms/shared.md', import.meta.url), 'utf8');
+const sharedReference = buildSharedReferences().compatibility;
 const layoutReference = readFileSync(new URL('../llms/layout.md', import.meta.url), 'utf8');
 const mediaReference = readFileSync(new URL('../llms/media.md', import.meta.url), 'utf8');
 const viewersReference = readFileSync(new URL('../llms/viewers.md', import.meta.url), 'utf8');
@@ -46,6 +52,12 @@ const llmsIntroReference = readFileSync(
   new URL('../llms/00-llms-txt-intro.md', import.meta.url),
   'utf8',
 );
+for (const [topic] of SHARED_TOPICS) {
+  const route = `./llms/shared/${topic}.md`;
+  assert.ok(llmsIntroReference.includes(route), `llms intro must route to ${route}`);
+  const topicSource = readFileSync(new URL(`../llms/shared/${topic}.md`, import.meta.url), 'utf8');
+  assert.match(topicSource, /^# .+\n/u, `${topic} must be a focused authored guide`);
+}
 assert.deepEqual(
   unpublishedSourceReferenceProblems([['README.md', readmeReference]]),
   [],
@@ -60,6 +72,22 @@ assert.deepEqual(
   ],
   'an authored family source is reported; a published per-tag page is not',
 );
+const externalFamilyReference =
+  '[Forms history](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#breaking-changes)';
+assert.deepEqual(
+  unpublishedSourceReferenceProblems([['component.md', externalFamilyReference]]),
+  [],
+  'an absolute repository URL resolves outside the package and does not require publishing its target',
+);
+for (const localReference of ['[Forms](./llms/forms.md)', '`llms/forms.md`']) {
+  assert.equal(
+    unpublishedSourceReferenceProblems([
+      ['component.md', `${externalFamilyReference}\n${localReference}`],
+    ]).length,
+    1,
+    'an external URL must not hide a separate local link or bare unpublished path',
+  );
+}
 assert.deepEqual(
   COMPOUND_USAGE_REGISTRATIONS,
   {
@@ -100,8 +128,8 @@ assert.match(
 );
 assert.match(
   releaseNavigationFixture,
-  /\[llms-full\.txt\]\(\.\.\/\.\.\/llms-full\.txt\)/u,
-  'a narrow component reference must link the shipped family-wide breaking-change summaries when present',
+  /family-wide breaking-change summaries: \[\w+\]\(https:\/\/github\.com\/aceshooting\/lyra-ui\/blob\/main\/packages\/lyra-ui\/llms\/\w+\.md\)/u,
+  'a narrow component reference must link the linked family-wide breaking-change summaries when present',
 );
 assert.doesNotMatch(
   releaseNavigationFixture,
@@ -672,17 +700,7 @@ assert.match(migration, /`@awesome\.me\/webawesome` and `@awesome\.me\/webawesom
 assert.match(migration, /standalone CSS/);
 assert.match(migration, /Shoelace relationships are classified independently/);
 assert.doesNotMatch(migration, /review ledger|reviewed independently|reviewed and recorded/);
-assert.match(migration, /## Migrating Lyra 7 defaults/);
-assert.match(migration, /lyra-ui-migrate --origin=lyra-v7 --check/);
-assert.match(
-  migration,
-  /\| `lyra-v7` \| `<lr-popup>` \| `strategy="fixed"`, `placement="bottom-start"`, `distance="4"`, presence `flip`, presence `shift` \|/,
-);
-assert.match(
-  migration,
-  /\| `lyra-v7` \| `<lr-popover>` \| `placement="bottom-start"`, `distance="4"`, presence `without-arrow` \|/,
-);
-assert.match(migration, /It never\nrenames an `lr-\*` tag or import/);
+assert.doesNotMatch(migration, /lyra-v7|Migrating Lyra 7 defaults/);
 const classifications = ['exact', 'rewritten', 'warning-required', 'conceptual-only', 'unsupported'];
 for (const [label, upstream] of [
   ['Web Awesome', 'webawesome'],
@@ -777,6 +795,23 @@ assert.match(
 );
 assert.ok(peers, 'build({ write: false }) must produce llms/peers.md');
 assert.ok(index, 'build({ write: false }) must produce llms/index.md');
+const sharedArtifact = [...artifacts].find(([file]) => file.endsWith('/llms/shared.md'))?.[1];
+const shortIndex = [...artifacts].find(([file]) => file.endsWith('/llms.txt'))?.[1];
+assert.equal(sharedArtifact, `${sharedReference.trimEnd()}\n`, 'llms/shared.md must be the generated compatibility assembly');
+for (const [topic] of SHARED_TOPICS) {
+  assert.ok(shortIndex?.includes(`./llms/shared/${topic}.md`), `generated llms.txt must expose the ${topic} route`);
+}
+for (const oldHeading of [
+  '## Component status, versioning, and deprecation',
+  '## Importing and registering components',
+  '## Theming and design tokens',
+  '## Localization: `locale`, `strings`, and the locale runtime',
+  '## When no component fits, file it',
+  '## Exported TypeScript contracts',
+  '### Host accessible names and compatibility properties',
+]) {
+  assert.equal(sharedReference.split(oldHeading).length - 1, 1, `${oldHeading} must remain on the legacy route`);
+}
 assert.ok(table, 'build({ write: false }) must produce per-tag component docs');
 assert.ok(streamingText, 'build({ write: false }) must produce lr-streaming-text docs');
 for (const [tag, reference] of Object.entries(compoundReferences)) {
@@ -841,8 +876,8 @@ assert.match(
 );
 assert.match(
   table,
-  /\[llms-full\.txt\]\(\.\.\/\.\.\/llms-full\.txt\)/u,
-  'generated component references must expose their shipped family-wide breaking-change summaries',
+  /family-wide breaking-change summaries: \[\w+\]\(https:\/\/github\.com\/aceshooting\/lyra-ui\/blob\/main\/packages\/lyra-ui\/llms\/\w+\.md\)/u,
+  'generated component references must expose their linked family-wide breaking-change summaries',
 );
 assert.match(
   streamingText,
@@ -854,14 +889,8 @@ assert.match(
   tokens,
   /^<!-- GENERATED by scripts\/build-llms\.mjs from scripts\/fixtures\/token-docs\.generated\.json/m,
 );
-// The two shared scrollbar tokens (--lr-scrollbar-width, --lr-scrollbar-gutter) were removed from
-// tokens/canonical-tokens.json: each wired component now reads its own
-// --lr-theme-scrollbar-width/-gutter hook directly, with its own default as the fallback, instead
-// of through a shared canonical token, so there is no longer a shared token or theme.css
-// declaration for them. That drops this count from 265 to 263, while the derived/fixed count below
-// stays 77. --lr-color-border-subtle (read through --lr-theme-color-surface-border-subtle) takes it
-// from 270 to 271.
-assert.match(tokens, /## Direct theme-backed tokens \(271\)/);
+// Keep the complete shared token inventory visible in the generated reference.
+assert.match(tokens, /## Direct theme-backed tokens \(288\)/);
 assert.match(tokens, /## Derived and fixed tokens \(77\)/);
 // The decorative border tier documents its derived fallback, not a literal.
 assert.match(

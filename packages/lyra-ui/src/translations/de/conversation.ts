@@ -5,6 +5,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  streamInterrupted: 'Stream unterbrochen',
+  streamResume: 'Weiter',
   chatViewportLabel: 'Unterhaltung',
   newMessageCount: '{count} neue Nachricht',
   newMessagesCount: '{count} neue Nachrichten',

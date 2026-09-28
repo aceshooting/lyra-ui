@@ -173,6 +173,48 @@
       ]
     },
     {
+      "name": "--lr-color-chart-diverging-1",
+      "description": "Diverging chart scale stop 1 of 3.",
+      "references": [
+        "--lr-theme-color-chart-diverging-1"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-diverging-2",
+      "description": "Diverging chart scale stop 2 of 3.",
+      "references": [
+        "--lr-theme-color-chart-diverging-2"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-diverging-3",
+      "description": "Diverging chart scale stop 3 of 3.",
+      "references": [
+        "--lr-theme-color-chart-diverging-3"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-sequential-1",
+      "description": "Sequential chart scale stop 1 of 3.",
+      "references": [
+        "--lr-theme-color-chart-sequential-1"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-sequential-2",
+      "description": "Sequential chart scale stop 2 of 3.",
+      "references": [
+        "--lr-theme-color-chart-sequential-2"
+      ]
+    },
+    {
+      "name": "--lr-color-chart-sequential-3",
+      "description": "Sequential chart scale stop 3 of 3.",
+      "references": [
+        "--lr-theme-color-chart-sequential-3"
+      ]
+    },
+    {
       "name": "--lr-color-danger",
       "description": "Canonical shared component token for color danger.",
       "references": []
@@ -475,6 +517,41 @@
       ]
     },
     {
+      "name": "--lr-color-surface-container",
+      "description": "Tonal container surface; preserves the existing surface-raised role when unset.",
+      "references": [
+        "--lr-theme-color-surface-container"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-container-high",
+      "description": "Tonal container high surface; preserves the existing surface-overlay role when unset.",
+      "references": [
+        "--lr-theme-color-surface-container-high"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-container-highest",
+      "description": "Tonal container highest surface; preserves the existing surface-overlay role when unset.",
+      "references": [
+        "--lr-theme-color-surface-container-highest"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-container-low",
+      "description": "Tonal container low surface; preserves the existing surface role when unset.",
+      "references": [
+        "--lr-theme-color-surface-container-low"
+      ]
+    },
+    {
+      "name": "--lr-color-surface-container-lowest",
+      "description": "Tonal container lowest surface; preserves the existing surface role when unset.",
+      "references": [
+        "--lr-theme-color-surface-container-lowest"
+      ]
+    },
+    {
       "name": "--lr-color-surface-overlay",
       "description": "Canonical shared component token for color surface overlay.",
       "references": [
@@ -655,6 +732,13 @@
       "description": "Canonical shared component token for font.",
       "references": [
         "--lr-theme-font-family-body"
+      ]
+    },
+    {
+      "name": "--lr-font-heading",
+      "description": "Heading font family; inherits the surrounding typography when the optional heading input is unset.",
+      "references": [
+        "--lr-theme-font-family-heading"
       ]
     },
     {
@@ -924,6 +1008,13 @@
       ]
     },
     {
+      "name": "--lr-line-break",
+      "description": "Inherited text line-breaking strictness; unset preserves authored CSS.",
+      "references": [
+        "--lr-theme-line-break"
+      ]
+    },
+    {
       "name": "--lr-line-height-1-4",
       "description": "Canonical shared component token for line height 1 4.",
       "references": [
@@ -1003,6 +1094,20 @@
       "description": "Canonical shared component token for radius.",
       "references": [
         "--lr-theme-border-radius-m"
+      ]
+    },
+    {
+      "name": "--lr-radius-button",
+      "description": "Button corner radius; follows the control radius when the optional button input is unset.",
+      "references": [
+        "--lr-theme-border-radius-button"
+      ]
+    },
+    {
+      "name": "--lr-radius-container",
+      "description": "Container corner radius; follows the shared radius when the optional container input is unset.",
+      "references": [
+        "--lr-theme-border-radius-container"
       ]
     },
     {
@@ -2034,6 +2139,13 @@
       ]
     },
     {
+      "name": "--lr-table-row-min-height",
+      "description": "Optional table and data-grid row minimum before local density scaling; zero preserves each component baseline.",
+      "references": [
+        "--lr-theme-table-row-height"
+      ]
+    },
+    {
       "name": "--lr-terminal-bg-black",
       "description": "Canonical shared component token for terminal bg black.",
       "references": [
@@ -2258,6 +2370,16 @@
       ]
     },
     {
+      "name": "--lr-theme-border-radius-button",
+      "description": "Application input for --lr-radius-button; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-border-radius-container",
+      "description": "Application input for --lr-radius-container; falls back to the shared token default.",
+      "references": []
+    },
+    {
       "name": "--lr-theme-border-radius-m",
       "description": "Canonical application theme input for border radius m.",
       "references": []
@@ -2375,6 +2497,36 @@
     {
       "name": "--lr-theme-color-chart-8",
       "description": "Canonical application theme input for color chart 8.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-diverging-1",
+      "description": "Application input for diverging chart scale stop 1 of 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-diverging-2",
+      "description": "Application input for diverging chart scale stop 2 of 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-diverging-3",
+      "description": "Application input for diverging chart scale stop 3 of 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-sequential-1",
+      "description": "Application input for sequential chart scale stop 1 of 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-sequential-2",
+      "description": "Application input for sequential chart scale stop 2 of 3.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-chart-sequential-3",
+      "description": "Application input for sequential chart scale stop 3 of 3.",
       "references": []
     },
     {
@@ -2568,6 +2720,31 @@
       "references": []
     },
     {
+      "name": "--lr-theme-color-surface-container",
+      "description": "Application input for --lr-color-surface-container; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-container-high",
+      "description": "Application input for --lr-color-surface-container-high; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-container-highest",
+      "description": "Application input for --lr-color-surface-container-highest; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-container-low",
+      "description": "Application input for --lr-color-surface-container-low; falls back to the shared token default.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-surface-container-lowest",
+      "description": "Application input for --lr-color-surface-container-lowest; falls back to the shared token default.",
+      "references": []
+    },
+    {
       "name": "--lr-theme-color-surface-default",
       "description": "Canonical application theme input for color surface default.",
       "references": []
@@ -2685,6 +2862,11 @@
     {
       "name": "--lr-theme-font-family-body",
       "description": "Canonical application theme input for font family body.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-font-family-heading",
+      "description": "Application input for --lr-font-heading; falls back to the shared token default.",
       "references": []
     },
     {
@@ -2845,6 +3027,11 @@
     {
       "name": "--lr-theme-icon-button-size",
       "description": "Canonical application theme input for icon button size.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-line-break",
+      "description": "Optional application text line-breaking strictness; unset preserves authored CSS.",
       "references": []
     },
     {
@@ -3408,6 +3595,11 @@
       "references": []
     },
     {
+      "name": "--lr-theme-table-row-height",
+      "description": "Application input for --lr-table-row-min-height; falls back to the shared token default.",
+      "references": []
+    },
+    {
       "name": "--lr-theme-terminal-bg-black",
       "description": "Canonical application theme input for terminal bg black.",
       "references": []
@@ -3583,6 +3775,11 @@
       "references": []
     },
     {
+      "name": "--lr-theme-word-break",
+      "description": "Optional application text word-breaking policy; unset preserves authored CSS.",
+      "references": []
+    },
+    {
       "name": "--lr-theme-z-index-base",
       "description": "Canonical application theme input for z index base.",
       "references": []
@@ -3637,6 +3834,13 @@
       "name": "--lr-transition-interactive",
       "description": "Shared pointer-interaction transition: fill, text and border colour move together on hover and press, derived from the fast transition token so reduced motion flattens it.",
       "references": []
+    },
+    {
+      "name": "--lr-word-break",
+      "description": "Inherited text word-breaking policy; unset preserves authored CSS.",
+      "references": [
+        "--lr-theme-word-break"
+      ]
     }
   ]
 }

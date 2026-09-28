@@ -6,7 +6,7 @@
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -60,8 +60,7 @@ removed in 23.0.0), `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
-`lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
-the two `*-request` events above (removal not before 21.0.0).
+
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 

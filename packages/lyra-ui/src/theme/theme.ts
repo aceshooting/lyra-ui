@@ -1,12 +1,14 @@
 /**
- * Zero-dependency theme mode/accent runtime, published as the `@aceshooting/lyra-ui/theme.js`
- * subpath. Nothing here imports Lit, any component, or any other module in this package: the
- * whole point of the subpath is that an application can persist and apply a theme without
- * pulling the component graph into its first-paint bundle. Keep it dependency-free.
+ * Standalone theme mode/accent runtime, published as the `@aceshooting/lyra-ui/theme.js`
+ * subpath. Its only shared runtime helper is the dependency-free development diagnostic gate.
+ * Applications persist and apply styles without importing Lit or the component graph.
  *
  * This module is side-effect-free -- importing it never touches the document or storage -- and
  * therefore carries no `package.json#sideEffects` entry, so bundlers may drop it when unused.
  */
+
+import { devWarnOnce, litDevWarnings, warnDeprecatedUsage } from '../internal/dev-warning.js';
+import { readStyleOwnership, type StyleOwnership } from './style-ownership.js';
 
 const STORAGE_KEY = 'lyra-theme';
 
@@ -19,6 +21,7 @@ export interface LyraThemeBootstrapOptions {
  * Theme selection mode. `'light'` and `'dark'` are explicit overrides. `'auto'` resolves and
  * continues following `prefers-color-scheme`; `'unset'` removes Lyra's mode attributes so an
  * application-owned cascade can decide instead.
+ * @deprecated Use LyraMode; migrate auto to system.
  */
 export type LyraThemeMode = 'light' | 'dark' | 'auto' | 'unset';
 
@@ -69,7 +72,9 @@ export type LyraThemeTokenValue = string | { readonly light?: string | null; rea
  */
 export type LyraThemeTokens = { readonly [name: LyraThemeTokenName]: LyraThemeTokenValue };
 
-/** Persisted theme selection, optional per-role accent, optional surface reference, and optional token map. */
+/** Persisted theme selection, optional per-role accent, optional surface reference, and optional token map.
+ * @deprecated Use LyraStyle for snapshots and LyraStyleChoices for updates; review surface and tokens semantics.
+ */
 export interface LyraTheme {
   /** Requested selection mode; `auto` remains distinct from its resolved light/dark value. */
   mode: LyraThemeMode;
@@ -93,7 +98,9 @@ export interface LyraTheme {
   tokens?: LyraThemeTokens | null;
 }
 
-/** Snapshot carried by the global `lr-theme-change` event. */
+/** Snapshot carried by the global `lr-theme-change` event.
+ * @deprecated Use LyraStyleChangeDetail with the lr-style-change event; its detail contains style and changed fields.
+ */
 export type LyraThemeChangeDetail = Readonly<LyraTheme>;
 
 declare global {
@@ -101,19 +108,6 @@ declare global {
     'lr-theme-change': CustomEvent<LyraThemeChangeDetail>;
   }
 }
-
-/**
- * The complete internal theme state. Unlike the public `LyraTheme` snapshot it always carries
- * `tokens`; `toSnapshot`/`toRecord` are the only projections that build public values from it.
- */
-interface ThemeState {
-  mode: LyraThemeMode;
-  accent: LyraThemeAccent;
-  surface: string | null;
-  tokens: LyraThemeTokens | null;
-}
-
-const DEFAULT_STATE: Readonly<ThemeState> = Object.freeze({ mode: 'auto', accent: null, surface: null, tokens: null });
 
 type ResolvedThemeMode = 'light' | 'dark';
 type Rgb = readonly [red: number, green: number, blue: number];
@@ -175,39 +169,6 @@ const ALL_RAMP_PROPERTIES: readonly string[] = [
 ];
 
 /**
- * The last theme this module applied. `localStorage` is the source of truth whenever it is
- * readable *and* writable; this is the fallback for the contexts where it is not (sandboxed
- * iframe, blocked third-party storage, private browsing, quota exhaustion). Without it every
- * `setLyraTheme` call would merge over `DEFAULT_STATE` and silently reset fields an earlier call
- * set -- breaking the documented "degrades to apply-without-persist" guarantee across two calls --
- * and `getLyraTheme()` would report a state the document does not actually have, so a toggle UI
- * bound to it would render the wrong position.
- */
-let lastApplied: ThemeState = { ...DEFAULT_STATE };
-
-/**
- * The token names this module last wrote inline. The shared ownership expando on `<html>` records
- * the same list for the bootstrap and other copies of the library; this module-local copy still
- * covers this module's own writes when a hostile page makes that expando unwritable.
- */
-let writtenTokenNames: readonly string[] = [];
-
-/**
- * What this module last asked for per inline name, and what the engine then serialized it as.
- * WebKit re-serializes a quoted string in a custom property value with double quotes, so comparing
- * the requested value with `getPropertyValue()` alone would rewrite every font-family token on
- * every apply there.
- */
-const inlineWrites = new Map<string, { requested: string; serialized: string }>();
-
-/**
- * True once a persist attempt has thrown and has not since succeeded. Storage may still be
- * *readable* in that state (quota exhaustion is the common case), but it no longer holds what we
- * applied, so a read would return a stale value; `lastApplied` is the truer answer.
- */
-let persistenceFailed = false;
-
-/**
  * `theme.css` keys its light/dark blocks off `data-lr-theme` (and the equivalent `.lr-light`/
  * `.lr-dark` classes). `data-theme` is the generic attribute apps and `ThemeWatcher`
  * (`src/internal/theme-watcher.ts`, which canvas-rendered components use to know when to
@@ -215,13 +176,6 @@ let persistenceFailed = false;
  * triggers a canvas repaint; writing only one leaves half the library on the old theme.
  */
 const MODE_ATTRIBUTES = ['data-lr-theme', 'data-theme'] as const;
-
-let autoMediaQuery: MediaQueryList | null = null;
-let autoMediaListener: ((event: MediaQueryListEvent) => void) | null = null;
-
-function isThemeMode(value: unknown): value is LyraThemeMode {
-  return value === 'light' || value === 'dark' || value === 'auto' || value === 'unset';
-}
 
 /**
  * Parentheses and quotes balance. DOM-free, and shared (as literal copies) by the token grammar, by
@@ -275,7 +229,10 @@ export function isSafeLyraThemeTokenValue(value: unknown): value is string {
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value) as unknown;
-  return prototype === Object.prototype || prototype === null;
+  if (prototype === Object.prototype || prototype === null) return true;
+  if (Object.getPrototypeOf(prototype) !== null) return false;
+  const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value;
+  return typeof constructor === 'function' && Function.prototype.toString.call(constructor) === Function.prototype.toString.call(Object);
 }
 
 function normalizeTokenBranch(value: unknown): string | null {
@@ -297,7 +254,7 @@ function normalizeTokens(raw: unknown): LyraThemeTokens | null {
     let kept = 0;
     for (const name of names) {
       if (!isLyraThemeTokenName(name)) continue;
-      const value = raw[name];
+      const value = ownField(raw, name);
       if (typeof value === 'string') {
         const normalized = normalizeTokenBranch(value);
         if (normalized === null) continue;
@@ -310,8 +267,8 @@ function normalizeTokens(raw: unknown): LyraThemeTokens | null {
       const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
       const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
       if ((!hasLight && !hasDark) || keys.some((key) => key !== 'light' && key !== 'dark')) continue;
-      const light = normalizeTokenBranch(value['light']);
-      const dark = normalizeTokenBranch(value['dark']);
+      const light = normalizeTokenBranch(ownField(value, 'light'));
+      const dark = normalizeTokenBranch(ownField(value, 'dark'));
       if (light === null && dark === null) continue;
       result[name] = Object.freeze({ light, dark });
       kept += 1;
@@ -348,7 +305,7 @@ export function tokensEqual(
 }
 
 /** Syntax-level validation shared by a bare accent string, a per-role accent value, and `surface`. */
-function normalizeColor(value: unknown): string | null {
+function normalizeColor(value: unknown, owner: Document = document): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   const candidate = value.trim();
   // An unclosed parenthesis or quote parses for the probe below in every engine, yet written raw
@@ -365,7 +322,7 @@ function normalizeColor(value: unknown): string | null {
   if (/\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(\s*from\b/i.test(candidate)) {
     return null;
   }
-  const probe = document.createElement('span');
+  const probe = owner.createElement('span');
   probe.style.color = candidate;
   return probe.style.color ? candidate : null;
 }
@@ -433,9 +390,10 @@ export function accentsEqual(left: LyraThemeAccent, right: LyraThemeAccent): boo
   return leftKeys.every((role) => accentValueEqual(left[role] as LyraThemeAccentValue, right[role] as LyraThemeAccentValue));
 }
 
-function parseResolvedRgb(value: string, background: Rgb): Rgb | null {
+function parseResolvedRgb(value: string, background: Rgb, owner: Document = document): Rgb | null {
+  if (!normalizeColor(value, owner)) return null;
   try {
-    const canvas = document.createElement('canvas');
+    const canvas = owner.createElement('canvas');
     canvas.width = 1;
     canvas.height = 1;
     const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -500,9 +458,9 @@ function contrastForeground(fill: Rgb): Rgb {
  * otherwise mixes it toward black or white (chosen from `background`) in tenths until a step clears
  * both, falling back to that target.
  */
-function ensureSurfaceContrast(color: Rgb, background: Rgb, minimum = 3, alsoAgainst: Rgb = background): Rgb {
+function ensureSurfaceContrast(color: Rgb, background: Rgb, minimum = 3, alsoAgainst: Rgb = background, references: readonly Rgb[] = []): Rgb {
   const passes = (candidate: Rgb): boolean =>
-    contrastRatio(candidate, background) >= minimum && contrastRatio(candidate, alsoAgainst) >= minimum;
+    contrastRatio(candidate, background) >= minimum && contrastRatio(candidate, alsoAgainst) >= minimum && references.every(reference => contrastRatio(candidate, reference) >= minimum);
   if (passes(color)) return color;
   const black: Rgb = [0, 0, 0];
   const white: Rgb = [255, 255, 255];
@@ -512,21 +470,6 @@ function ensureSurfaceContrast(color: Rgb, background: Rgb, minimum = 3, alsoAga
     if (passes(candidate)) return candidate;
   }
   return target;
-}
-
-/** The shipped light/dark surface default a ramp mixes against when no `surface` is supplied. */
-function defaultBackground(mode: ResolvedThemeMode): Rgb {
-  return MODE_DEFAULTS[mode].surface;
-}
-
-/**
- * Resolves the mix base for every ramp: the supplied `surface` reference (its alpha, if any,
- * composited against the mode's own default surface), or that default surface unchanged.
- */
-function resolveBackground(mode: ResolvedThemeMode, surface: string | null): Rgb {
-  const fallback = defaultBackground(mode);
-  if (!surface) return fallback;
-  return parseResolvedRgb(surface, fallback) ?? fallback;
 }
 
 /**
@@ -540,19 +483,24 @@ function createRoleRamp(
   base: string,
   mode: ResolvedThemeMode,
   background: Rgb,
+  owner: Document = document,
 ): Record<string, string> | null {
-  const resolved = parseResolvedRgb(base, background);
+  const references = STYLE_CONTRAST_SURFACES[mode].flatMap(color => {
+    const value = parseResolvedRgb(color, MODE_DEFAULTS[mode].surface, owner);
+    return value ? [value] : [];
+  });
+  const resolved = parseResolvedRgb(base, background, owner);
   if (!resolved) return null;
   const quiet = mixRgb(background, resolved, mode === 'dark' ? 0.24 : 0.14);
   const normal = mixRgb(background, resolved, mode === 'dark' ? 0.62 : 0.55);
-  const loud = resolved;
+  const loud = ensureSurfaceContrast(resolved, background, 4.5, quiet, references);
   const borderTarget: Rgb = mode === 'dark' ? [255, 255, 255] : [0, 0, 0];
   const borderQuiet = mixRgb(background, resolved, mode === 'dark' ? 0.46 : 0.38);
   const borderNormal = ensureSurfaceContrast(
     mixRgb(background, resolved, mode === 'dark' ? 0.78 : 0.72),
-    background,
+    background, 3, background, references,
   );
-  const borderLoud = ensureSurfaceContrast(mixRgb(resolved, borderTarget, 0.2), background);
+  const borderLoud = ensureSurfaceContrast(mixRgb(loud, borderTarget, 0.2), background, 3, background, references);
   const prefix = `--lr-theme-color-${role}`;
   const ramp: Record<string, string> = {
     [`${prefix}-fill-quiet`]: serializeRgb(quiet),
@@ -565,33 +513,8 @@ function createRoleRamp(
     [`${prefix}-on-normal`]: serializeRgb(contrastForeground(normal)),
     [`${prefix}-on-loud`]: serializeRgb(contrastForeground(loud)),
   };
-  if (role === 'brand') ramp['--lr-theme-color-focus'] = serializeRgb(ensureSurfaceContrast(resolved, background));
+  if (role === 'brand') ramp['--lr-theme-color-focus'] = serializeRgb(ensureSurfaceContrast(resolved, background, 3, background, references));
   return ramp;
-}
-
-function detachAutoListener(): void {
-  if (!autoMediaQuery || !autoMediaListener) return;
-  if (typeof autoMediaQuery.removeEventListener === 'function') {
-    autoMediaQuery.removeEventListener('change', autoMediaListener);
-  } else {
-    autoMediaQuery.removeListener(autoMediaListener);
-  }
-  autoMediaQuery = null;
-  autoMediaListener = null;
-}
-
-function resolveThemeMode(mode: LyraThemeMode): ResolvedThemeMode | null {
-  if (mode === 'light' || mode === 'dark') return mode;
-  if (mode === 'unset') return null;
-  return matchMedia(COLOR_SCHEME_QUERY).matches ? 'dark' : 'light';
-}
-
-function writeResolvedMode(mode: ResolvedThemeMode | null): void {
-  const root = document.documentElement;
-  for (const attribute of MODE_ATTRIBUTES) {
-    if (mode) root.setAttribute(attribute, mode);
-    else root.removeAttribute(attribute);
-  }
 }
 
 /**
@@ -608,12 +531,13 @@ function paintAccent(
   accent: LyraThemeAccent,
   mode: ResolvedThemeMode | null,
   background: Rgb,
+  owner: Document = document,
 ): { applied: LyraThemeAccent; properties: Map<string, string> } {
   const properties = new Map<string, string>();
   if (!accent) return { applied: null, properties };
   if (!mode) return { applied: accent, properties };
   if (typeof accent === 'string') {
-    const ramp = createRoleRamp('brand', accent, mode, background);
+    const ramp = createRoleRamp('brand', accent, mode, background, owner);
     if (!ramp) return { applied: null, properties };
     properties.set('--lr-theme-accent', accent);
     for (const [property, value] of Object.entries(ramp)) properties.set(property, value);
@@ -628,7 +552,7 @@ function paintAccent(
     const base = resolveAccentValueForMode(value, mode);
     let painted = false;
     if (base) {
-      const ramp = createRoleRamp(role, base, mode, background);
+      const ramp = createRoleRamp(role, base, mode, background, owner);
       if (ramp) {
         for (const [property, propertyValue] of Object.entries(ramp)) properties.set(property, propertyValue);
         painted = true;
@@ -660,9 +584,9 @@ function tokenEntries(tokens: LyraThemeTokens | null, mode: ResolvedThemeMode | 
 }
 
 /** A token value resolved to painted RGB over `background`, or `null` when it cannot be. */
-function resolveTokenColor(value: string | undefined, background: Rgb | null): Rgb | null {
-  if (value === undefined || !background || !normalizeColor(value)) return null;
-  return parseResolvedRgb(value, background);
+function resolveTokenColor(value: string | undefined, background: Rgb | null, owner: Document): Rgb | null {
+  if (value === undefined || !background || !normalizeColor(value, owner)) return null;
+  return parseResolvedRgb(value, background, owner);
 }
 
 /**
@@ -675,17 +599,19 @@ function floorTokenEntries(
   entries: ReadonlyMap<string, string>,
   mode: ResolvedThemeMode,
   surface: Rgb,
+  owner: Document = document,
 ): Map<string, string> {
+  const resolveColor = (value: string | undefined, background: Rgb | null): Rgb | null => resolveTokenColor(value, background, owner);
   const painted = new Map(entries);
   const prefix = '--lr-theme-';
   const defaults = MODE_DEFAULTS[mode];
   const reference = (name: string, fallback: Rgb): Rgb | null =>
-    entries.has(prefix + name) ? resolveTokenColor(entries.get(prefix + name), surface) : fallback;
+    entries.has(prefix + name) ? resolveColor(entries.get(prefix + name), surface) : fallback;
   const raised = reference('color-surface-raised', defaults.raised);
   const floor = (name: string, over: Rgb | null, against: Rgb | null, minimum: number, alsoAgainst?: Rgb | null): void => {
     const value = painted.get(name);
     if (value === undefined || !against || alsoAgainst === null) return;
-    const color = resolveTokenColor(value, over);
+    const color = resolveColor(value, over);
     if (!color) return;
     const repaired = ensureSurfaceContrast(color, against, minimum, alsoAgainst ?? against);
     if (repaired !== color) painted.set(name, serializeRgb(repaired));
@@ -695,7 +621,7 @@ function floorTokenEntries(
   floor(`${prefix}color-text-normal`, surface, surface, 4.5, raised);
   floor(`${prefix}color-text-quiet`, surface, surface, 4.5, raised);
   const text = entries.has(`${prefix}color-text-normal`)
-    ? resolveTokenColor(painted.get(`${prefix}color-text-normal`), surface)
+    ? resolveColor(painted.get(`${prefix}color-text-normal`), surface)
     : defaults.text;
 
   // Row 2: each on-* against its own fill, synthesized when the map carries only the fill.
@@ -707,21 +633,21 @@ function floorTokenEntries(
       synthesized.set(onName, serializeRgb(contrastForeground(fill)));
       return;
     }
-    const color = resolveTokenColor(on, fill);
+    const color = resolveColor(on, fill);
     if (color && contrastRatio(color, fill) < 4.5) painted.set(onName, serializeRgb(contrastForeground(fill)));
   };
   for (const role of SEMANTIC_ROLES) {
     for (const tier of RAMP_TIERS) {
       const fillName = `${prefix}color-${role}-fill-${tier}`;
       if (!entries.has(fillName)) continue;
-      pairForeground(`${prefix}color-${role}-on-${tier}`, resolveTokenColor(entries.get(fillName), surface));
+      pairForeground(`${prefix}color-${role}-on-${tier}`, resolveColor(entries.get(fillName), surface));
     }
   }
 
   // Row 3: the strong scrim's foreground, synthesized when the map carries only the scrim.
   const overlayName = `${prefix}color-overlay-strong`;
   const overlay = entries.has(overlayName)
-    ? resolveTokenColor(entries.get(overlayName), surface)
+    ? resolveColor(entries.get(overlayName), surface)
     : mixRgb(surface, [0, 0, 0], defaults.overlayStrongAlpha);
   // With no scrim in the map, pairForeground only checks an on-strong-overlay that is present.
   if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
@@ -763,127 +689,6 @@ function readOwnershipList(): string[] {
   }
 }
 
-function writeOwnershipList(names: readonly string[]): void {
-  try {
-    (document.documentElement as unknown as Record<symbol, unknown>)[Symbol.for(TOKEN_OWNERSHIP_SYMBOL)] = Object.freeze([...names]);
-  } catch {
-    // A hostile page made the expando unwritable; `writtenTokenNames` still covers our own writes.
-  }
-}
-
-/**
- * Writes the inline part of a theme state on `<html>`: the token map's entries for the resolved
- * mode (contrast-floored), then the accent ramp over them. Only names that change are touched: a
- * name this runtime (or the bootstrap) owned before and no longer wants is removed, a desired value
- * that differs is set, and re-applying an identical state performs no mutation at all. Returns the
- * accent value actually applied.
- */
-function applyInlineTheme(state: ThemeState, mode: ResolvedThemeMode | null): LyraThemeAccent {
-  const rootStyle = document.documentElement.style;
-  const previous = new Set<string>([
-    ...ALL_RAMP_PROPERTIES,
-    '--lr-theme-accent',
-    ...writtenTokenNames,
-    ...readOwnershipList(),
-  ]);
-  const entries = tokenEntries(state.tokens, mode);
-  let painted = entries;
-  let background: Rgb = MODE_DEFAULTS.light.surface;
-  if (mode) {
-    // An explicit surface reference wins over the map's own page surface.
-    background = resolveBackground(mode, state.surface ?? normalizeColor(entries.get('--lr-theme-color-surface-default')));
-    painted = floorTokenEntries(entries, mode, background);
-  }
-  const accent = paintAccent(state.accent, mode, background);
-  const desired = new Map(painted);
-  for (const [name, value] of accent.properties) desired.set(name, value);
-
-  const owned = [...painted.keys()];
-  writtenTokenNames = owned;
-  writeOwnershipList(owned);
-
-  for (const name of previous) {
-    if (desired.has(name)) continue;
-    inlineWrites.delete(name);
-    if (rootStyle.getPropertyValue(name) !== '') rootStyle.removeProperty(name);
-  }
-  for (const [name, value] of desired) {
-    const current = rootStyle.getPropertyValue(name);
-    const written = inlineWrites.get(name);
-    if (current === value || (written?.requested === value && written.serialized === current)) continue;
-    rootStyle.setProperty(name, value);
-    inlineWrites.set(name, { requested: value, serialized: rootStyle.getPropertyValue(name) });
-  }
-  return accent.applied;
-}
-
-/** The public snapshot of a state: `tokens` appears only while a map is applied. */
-function toSnapshot(state: ThemeState): LyraTheme {
-  const snapshot: LyraTheme = { mode: state.mode, accent: state.accent, surface: state.surface };
-  if (state.tokens) snapshot.tokens = state.tokens;
-  return snapshot;
-}
-
-/** The persisted record of a state; the same shape as the snapshot. */
-function toRecord(state: ThemeState): LyraTheme {
-  return toSnapshot(state);
-}
-
-function readStoredState(): ThemeState {
-  // Storage cannot be trusted to hold what we applied -- honour the session's own state instead.
-  if (persistenceFailed) return { ...lastApplied };
-
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Storage is unreachable (sandboxed iframe, blocked third-party storage, private browsing).
-    // What this module last applied is a truer answer than the default.
-    return { ...lastApplied };
-  }
-
-  // Reachable storage with nothing in it is a genuine "unset" -- distinct from the cases above,
-  // and the one case where the default really is correct.
-  if (!raw) return { ...DEFAULT_STATE };
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<LyraTheme> | null;
-    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_STATE };
-    return {
-      mode: isThemeMode(parsed.mode) ? parsed.mode : 'auto',
-      accent: normalizeAccent(parsed.accent),
-      surface: normalizeColor(parsed.surface),
-      tokens: normalizeTokens(parsed.tokens),
-    };
-  } catch {
-    // Readable storage holding garbage (another tool wrote the key, a truncated write): also a
-    // genuine "nothing valid stored", so the default applies rather than `lastApplied`.
-    return { ...DEFAULT_STATE };
-  }
-}
-
-function applyTheme(state: ThemeState): void {
-  detachAutoListener();
-  let resolvedMode = resolveThemeMode(state.mode);
-  const accent = applyInlineTheme(state, resolvedMode);
-  lastApplied = { ...state, accent };
-  writeResolvedMode(resolvedMode);
-
-  if (state.mode !== 'auto') return;
-  autoMediaQuery = matchMedia(COLOR_SCHEME_QUERY);
-  autoMediaListener = (event) => {
-    resolvedMode = event.matches ? 'dark' : 'light';
-    writeResolvedMode(resolvedMode);
-    applyInlineTheme(lastApplied, resolvedMode);
-    window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: toSnapshot(lastApplied) }));
-  };
-  if (typeof autoMediaQuery.addEventListener === 'function') {
-    autoMediaQuery.addEventListener('change', autoMediaListener);
-  } else {
-    autoMediaQuery.addListener(autoMediaListener);
-  }
-}
-
 /**
  * Sets the persisted theme mode/accent/surface/tokens, applies it to `document.documentElement`
  * (via `data-lr-theme`/`data-theme`, the token map's inline `--lr-theme-*` values, and a complete
@@ -912,44 +717,25 @@ function applyTheme(state: ThemeState): void {
  * per-mode branch applies only while Lyra resolves that mode (so `mode: 'unset'` writes bare values
  * only), and colour families the static contrast gate checks are floored against the map's own
  * surfaces before they are written. An accent ramp overrides the map for the roles it paints.
+ * @deprecated Use setLyraStyle; migrate auto to system, surface to accentBackground, and tokens to a look or overrides.
  */
 export function setLyraTheme(theme: Partial<LyraTheme>): void {
-  // A direct mode/accent/surface edit is no longer exactly the named preset that may have produced
-  // the previous state. applyLyraThemePreset() writes its marker back after this call completes.
-  document.documentElement.removeAttribute('data-lr-theme-preset');
-  const current = readStoredState();
-  const next: ThemeState = {
-    mode: theme.mode === undefined
-      ? current.mode
-      : isThemeMode(theme.mode)
-        ? theme.mode
-        : 'auto',
-    accent: theme.accent === undefined ? current.accent : normalizeAccent(theme.accent),
-    surface: theme.surface === undefined ? current.surface : normalizeColor(theme.surface),
-    tokens: theme.tokens === undefined ? current.tokens : normalizeTokens(theme.tokens),
-  };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toRecord(next)));
-    persistenceFailed = false;
-  } catch {
-    // Persistence is best-effort; the theme still applies for this session. Latching the failure
-    // makes subsequent calls merge over what we actually applied (`lastApplied`) instead of over
-    // a stale read or the default, so nothing silently resets.
-    persistenceFailed = true;
+  warnDeprecatedUsage('./theme.js', 'function', 'setLyraTheme', 'setLyraStyle; review surface and token semantics');
+  const before = readStyleState();
+  const next = { ...before };
+  if (theme.mode !== undefined) next.mode = theme.mode === 'auto' ? 'system' : theme.mode === 'light' || theme.mode === 'dark' || theme.mode === 'unset' ? theme.mode : 'system';
+  if (theme.accent !== undefined) {
+    next.accent = typeof document === 'undefined' ? styleAccent(theme.accent) : normalizeAccent(theme.accent);
+    next.accentName = null;
   }
-  applyTheme(next);
-  // applyTheme can fail a computed color (or one role of it) closed even after the syntax-level
-  // check above.
-  const applied = lastApplied;
-  if (!accentsEqual(applied.accent, next.accent)) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(toRecord(applied)));
-      persistenceFailed = false;
-    } catch {
-      persistenceFailed = true;
-    }
+  if (theme.surface !== undefined) next.accentBackground = typeof document === 'undefined' ? styleColor(theme.surface) : normalizeColor(theme.surface);
+  if (theme.tokens !== undefined) {
+    next.tokens = normalizeTokens(theme.tokens);
+    const stamp = theme.tokens && (theme.tokens as Record<symbol, unknown>)[LOOK_STAMP];
+    next.look = next.tokens ? styleId(stamp) ? stamp : 'custom' : 'lyra';
+    next.overrides = null;
   }
-  window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: toSnapshot(applied) }));
+  commitStyle(before, next);
 }
 
 /**
@@ -961,110 +747,32 @@ export function setLyraTheme(theme: Partial<LyraTheme>): void {
  * When `localStorage` is unreadable or unwritable this reports the theme this module last
  * applied, not the default: the returned value always describes what the document is actually
  * showing, so a toggle UI bound to it stays in sync even where nothing can be persisted.
+ * @deprecated Use getLyraStyle; the returned snapshot separates look, surface, density, mode and accent.
  */
 export function getLyraTheme(): LyraTheme {
-  return toSnapshot(readStoredState());
+  warnDeprecatedUsage('./theme.js', 'function', 'getLyraTheme', 'getLyraStyle');
+  return legacyStyleSnapshot(readStyleState());
 }
 
 /**
- * Kept self-contained because createLyraThemeBootstrap serializes this function verbatim -- every
- * identifier it references must be either a parameter, a local declaration, or a browser global,
- * never a module-scoped constant, or the serialized string throws a ReferenceError when it later
- * runs standalone with no `theme.ts` module loaded.
- *
- * The config-resolution prelude lets an external `<script src="theme-bootstrap.js">` override the
- * generation-time defaults via two attributes on its own tag --
- * `data-lr-theme-storage-key`/`data-lr-theme-attributes` (space-separated) -- read via
- * `document.currentScript` at parse time. Hostile or malformed values fail closed to the
- * caller-supplied default rather than throwing.
- *
- * It mirrors the runtime's token pipeline step for step (grammar, per-mode branch, contrast floor,
- * ownership list) with literal copies, clears what the shared ownership list names, then writes the
- * list before the values so the runtime's first apply can remove exactly what was written here.
+ * Self-contained token normalization and contrast paint, serialized into the pre-paint adapter.
+ * The adapter owns storage and document attributes; each call paints a supplied scratch element.
+ * Its token grammar and color pipeline mirror the runtime without importing module state.
  */
 function applyStoredThemeBeforePaint(
-  defaultStorageKey: string,
-  defaultModeAttributes: readonly string[],
-): void {
+  supplied: { record: Record<string, unknown>; root: HTMLElement; references?: readonly number[][]; normalizeOnly?: boolean; tokens?: LyraThemeTokens },
+): LyraThemeTokens | undefined {
   try {
-    // Config-resolution prelude: an external classic script (never a module or async script) can
-    // reach its own <script> element synchronously through `document.currentScript` before this
-    // IIFE runs, so a single static asset can be reconfigured per host page via two attributes on
-    // its own tag, with no per-app regeneration. Both are optional and fail closed -- a missing,
-    // empty, oversized, or malformed value keeps the generation-time default -- so a host page
-    // with neither attribute (including every inline use, where a `<script>` normally carries
-    // neither) behaves byte-for-byte like before this existed.
-    const attributeNamePattern = /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    const maxStorageKeyLength = 200;
-    const maxModeAttributeCount = 8;
-    const maxModeAttributeNameLength = 64;
-
-    const isValidStorageKey = (value: string): boolean =>
-      value.length > 0 && value.length <= maxStorageKeyLength;
-
-    const isValidModeAttributeName = (value: string): boolean =>
-      value.length > 0
-      && value.length <= maxModeAttributeNameLength
-      && attributeNamePattern.test(value);
-
-    const isValidModeAttributeList = (value: string[]): boolean => {
-      if (value.length === 0 || value.length > maxModeAttributeCount) return false;
-      const seen = new Set<string>();
-      for (const name of value) {
-        if (!isValidModeAttributeName(name) || seen.has(name)) return false;
-        seen.add(name);
-      }
-      return true;
-    };
-
-    let storageKey = defaultStorageKey;
-    let modeAttributes = defaultModeAttributes;
-    // `currentScript` is `null` for a module or async script (documented as unsupported for this
-    // asset) -- guarded here, not just by the outer try/catch, so a null/absent script always
-    // resolves to the defaults above rather than skipping the rest of the bootstrap.
-    const configScript = document.currentScript as HTMLScriptElement | null;
-    if (configScript) {
-      const rawStorageKey = configScript.getAttribute('data-lr-theme-storage-key');
-      if (rawStorageKey !== null && isValidStorageKey(rawStorageKey)) {
-        storageKey = rawStorageKey;
-      }
-      const rawModeAttributes = configScript.getAttribute('data-lr-theme-attributes');
-      if (rawModeAttributes !== null) {
-        const parsedModeAttributes = rawModeAttributes.trim().length > 0
-          ? rawModeAttributes.trim().split(/\s+/)
-          : [];
-        if (isValidModeAttributeList(parsedModeAttributes)) {
-          modeAttributes = parsedModeAttributes;
-        }
-      }
-    }
-
-    const raw = localStorage.getItem(storageKey);
-    let theme: { mode?: unknown; accent?: unknown; surface?: unknown; tokens?: unknown } = {};
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (parsed && typeof parsed === 'object') {
-          theme = parsed as { mode?: unknown; accent?: unknown; surface?: unknown; tokens?: unknown };
-        }
-      } catch {
-        // A corrupt record has the same automatic default as the module getter.
-      }
-    }
-    const mode = theme.mode === 'light' || theme.mode === 'dark' || theme.mode === 'unset'
-      ? theme.mode
+    const theme = supplied.record;
+    const mode = theme['mode'] === 'light' || theme['mode'] === 'dark' || theme['mode'] === 'unset'
+      ? theme['mode']
       : 'auto';
     let resolvedMode: 'light' | 'dark' | null = null;
     if (mode === 'light' || mode === 'dark') resolvedMode = mode;
     else if (mode === 'auto') {
       resolvedMode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    for (const attribute of modeAttributes) {
-      if (resolvedMode) document.documentElement.setAttribute(attribute, resolvedMode);
-      else if (mode === 'unset') document.documentElement.removeAttribute(attribute);
-    }
-
-    const root = document.documentElement;
+    const root = supplied.root;
     const style = root.style;
     const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
     const channels = ['fill', 'border', 'on'];
@@ -1147,10 +855,10 @@ function applyStoredThemeBeforePaint(
     }
     for (const property of [...properties, '--lr-theme-accent', ...ownedBefore]) style.removeProperty(property);
 
-    // The stored token map's entries for the resolved mode, normalized exactly as the runtime does.
-    const entries = new Map<string, string>();
+    // Normalize each persisted map before composition, retaining both valid mode branches.
+    const normalizedTokens: Record<string, LyraThemeTokenValue> = {};
     try {
-      const rawTokens = theme.tokens;
+      const rawTokens = theme['tokens'];
       const names = isPlain(rawTokens) ? Object.keys(rawTokens) : [];
       if (isPlain(rawTokens) && names.length <= tokenEntryMax) {
         for (const name of names) {
@@ -1158,19 +866,24 @@ function applyStoredThemeBeforePaint(
           const value = rawTokens[name];
           if (typeof value === 'string') {
             const normalized = safeTokenValue(value);
-            if (normalized !== null) entries.set(name, normalized);
+            if (normalized !== null) normalizedTokens[name] = normalized;
             continue;
           }
           if (!isPlain(value)) continue;
           const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
           const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
           if ((!hasLight && !hasDark) || Object.keys(value).some((key) => key !== 'light' && key !== 'dark')) continue;
-          const branch = resolvedMode ? safeTokenValue(value[resolvedMode]) : null;
-          if (branch !== null) entries.set(name, branch);
+          const light = safeTokenValue(value['light']);
+          const dark = safeTokenValue(value['dark']);
+          if (light !== null || dark !== null) normalizedTokens[name] = { light, dark };
         }
       }
-    } catch {
-      entries.clear();
+    } catch { /* An invalid map contributes no entries. */ }
+    if (supplied.normalizeOnly) return normalizedTokens as LyraThemeTokens;
+    const entries = new Map<string, string>();
+    for (const [name, value] of Object.entries(supplied.tokens ?? normalizedTokens)) {
+      const branch = typeof value === 'string' ? value : resolvedMode ? value[resolvedMode] : null;
+      if (branch) entries.set(name, branch);
     }
 
     const unsupported = (value: string) =>
@@ -1202,7 +915,7 @@ function applyStoredThemeBeforePaint(
     };
 
     const accentRoles: Record<string, string> = {};
-    const rawAccent = theme.accent;
+    const rawAccent = theme['accent'];
     if (typeof rawAccent === 'string') {
       const normalized = normalize(rawAccent);
       if (normalized) accentRoles['brand'] = normalized;
@@ -1263,7 +976,7 @@ function applyStoredThemeBeforePaint(
     const on = (fill: number[]) => contrast(fill, black) >= contrast(fill, white) ? black : white;
     const ensureContrast = (value: number[], background: number[], minimum = 3, alsoAgainst = background) => {
       const passes = (candidate: number[]) =>
-        contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum;
+        contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum && (supplied.references ?? []).every(reference => contrast(candidate, reference) >= minimum);
       if (passes(value)) return value;
       const target = contrast(background, black) >= contrast(background, white) ? black : white;
       for (let step = 1; step <= 10; step += 1) {
@@ -1276,7 +989,7 @@ function applyStoredThemeBeforePaint(
 
     const defaults = modeDefaults[resolvedMode ?? 'light'];
     const defaultSurface = defaults.surface;
-    const surface = normalize(theme.surface) ?? normalize(entries.get('--lr-theme-color-surface-default'));
+    const surface = normalize(theme['surface']) ?? normalize(entries.get('--lr-theme-color-surface-default'));
     const background = (surface && paintRgb(surface, defaultSurface)) || defaultSurface;
 
     // The contrast floor, row for row the runtime's: an unresolved value or reference is written
@@ -1369,23 +1082,24 @@ function applyStoredThemeBeforePaint(
       if (!color) continue;
       const quiet = mix(background, color, resolvedMode === 'dark' ? 0.24 : 0.14);
       const normal = mix(background, color, resolvedMode === 'dark' ? 0.62 : 0.55);
+      const loud = ensureContrast(color, background, 4.5, quiet);
       const borderTarget = resolvedMode === 'dark' ? white : black;
       const borderQuiet = mix(background, color, resolvedMode === 'dark' ? 0.46 : 0.38);
       const borderNormal = ensureContrast(
         mix(background, color, resolvedMode === 'dark' ? 0.78 : 0.72),
         background,
       );
-      const borderLoud = ensureContrast(mix(color, borderTarget, 0.2), background);
+      const borderLoud = ensureContrast(mix(loud, borderTarget, 0.2), background);
       const prefix = `--lr-theme-color-${role}`;
       style.setProperty(`${prefix}-fill-quiet`, rgb(quiet));
       style.setProperty(`${prefix}-fill-normal`, rgb(normal));
-      style.setProperty(`${prefix}-fill-loud`, rgb(color));
+      style.setProperty(`${prefix}-fill-loud`, rgb(loud));
       style.setProperty(`${prefix}-border-quiet`, rgb(borderQuiet));
       style.setProperty(`${prefix}-border-normal`, rgb(borderNormal));
       style.setProperty(`${prefix}-border-loud`, rgb(borderLoud));
       style.setProperty(`${prefix}-on-quiet`, rgb(on(quiet)));
       style.setProperty(`${prefix}-on-normal`, rgb(on(normal)));
-      style.setProperty(`${prefix}-on-loud`, rgb(on(color)));
+      style.setProperty(`${prefix}-on-loud`, rgb(on(loud)));
       if (role === 'brand') {
         style.setProperty('--lr-theme-color-focus', rgb(ensureContrast(color, background)));
         appliedBrand = base;
@@ -1396,6 +1110,165 @@ function applyStoredThemeBeforePaint(
   } catch {
     // A no-flash bootstrap must never block the rest of the document head.
   }
+  return undefined;
+}
+
+/** Self-contained v2 adapter around the shared pre-paint contrast pipeline. */
+function applyStoredStyleBeforePaint(
+  defaultStorageKey: string,
+  defaultModeAttributes: readonly string[],
+  paint: typeof applyStoredThemeBeforePaint,
+  allowed: typeof styleTokenAllowed,
+  readOwnership: typeof readStyleOwnership,
+  model: { inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrastSurfaces: typeof STYLE_CONTRAST_SURFACES; gemstones: typeof STYLE_GEMSTONES },
+): void {
+  const { surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES } = model;
+  // Store each property suffix once. The leading digit carries density/follow/accent membership.
+  const STYLE_SLOTTED: string[] = [];
+  const STYLE_DENSITY: string[] = [];
+  const STYLE_FOLLOW: string[] = [];
+  const ALL_RAMP_PROPERTIES: string[] = [];
+  for (const input of model.inputs.split(' ')) {
+    const flags = Number(input[0]);
+    const name = `--lr-theme-${input.slice(1)}`;
+    STYLE_SLOTTED.push(name);
+    if (flags & 1) STYLE_DENSITY.push(name);
+    if (flags & 2) STYLE_FOLLOW.push(name);
+    if (flags & 4) ALL_RAMP_PROPERTIES.push(name);
+  }
+  function styleSlot(name: string, mode: 'light' | 'dark', accent = false): string {
+    return `--_lr-${accent ? 'a' : 'l'}${mode === 'light' ? 'l' : 'd'}-${name.slice(11)}`;
+  }
+  function styleBranch(name: string, mode: 'light' | 'dark'): string {
+    let result = `var(${styleSlot(name, mode)})`;
+    if (STYLE_FOLLOW.includes(name)) {
+      const key = mode === 'light' ? 'l' : 'd';
+      const target = name.replace(/color-(?:success|warning|danger|neutral)-/, 'color-brand-');
+      result = `var(--_lr-f${key}-${name.slice(11)},${result})var(--_lr-o${key}-${name.slice(11)},var(${styleSlot(target, mode, true)},var(${styleSlot(target, mode)})))`;
+    }
+    return ALL_RAMP_PROPERTIES.includes(name) ? `var(${styleSlot(name, mode, true)},${result})` : result;
+  }
+  function styleResolvedInput(name: string): string {
+    const input = `var(--_lr-dark-on,${styleBranch(name, 'light')})var(--_lr-light-on,${styleBranch(name, 'dark')})`;
+    if (!STYLE_DENSITY.includes(name)) return input;
+    const spacing = name.startsWith('--lr-theme-space-');
+    return `var(--_lr-dense-on,${input})var(--_lr-dense-off,max(calc((${input}) * var(--_lr-density-${spacing ? 'space' : 'control'},1)),${spacing ? '0px' : 'var(--_lr-density-target-min,0px)'}))`;
+  }
+
+  try {
+    const script = document.currentScript;
+    const configuredKey = script?.getAttribute('data-lr-theme-storage-key');
+    const key = configuredKey && configuredKey.length <= 200 ? configuredKey : defaultStorageKey;
+    const names = script?.getAttribute('data-lr-theme-attributes')?.trim().split(/\s+/);
+    const attributes = names?.length && names.length <= 8 && new Set(names).size === names.length && names.every(name => name.length <= 64 && /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) ? names : defaultModeAttributes;
+    let record: Record<string, unknown> = {};
+    const stored = localStorage.getItem(key);
+    try {
+      const parsed: unknown = JSON.parse(stored ?? 'null');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) record = parsed as Record<string, unknown>;
+    } catch { /* A corrupt or inaccessible record uses the automatic defaults. */ }
+    if (record['version'] !== undefined && record['version'] !== 2) record = {};
+    const mode = record['mode'] === 'light' || record['mode'] === 'dark' || record['mode'] === 'unset' ? record['mode'] : 'system';
+    const resolved = mode === 'unset' ? null : mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode;
+    const root = document.documentElement;
+    const desiredAttributes: Record<string, string> = {};
+    const resolver = getComputedStyle(root).getPropertyValue('--_lr-style-resolver').trim() === '1';
+    const validId = (value: unknown): value is string => typeof value === 'string' && value.length <= 64 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+    const asMap = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    const normalizeMap = (value: unknown): LyraThemeTokens => paint({
+      root: document.createElement('div'), record: { mode: 'unset', tokens: value }, normalizeOnly: true,
+    }) ?? {};
+    const lookTokens = normalizeMap(record['tokens']);
+    const overrides = Object.fromEntries(Object.entries(normalizeMap(record['overrides'])).filter(([name, value]) => allowed(name, value, STYLE_SLOTTED)));
+    const tokens: LyraThemeTokens = { ...lookTokens, ...overrides };
+    const look = validId(record['look']) ? record['look'] : Object.keys(lookTokens).length ? 'custom' : 'lyra';
+    desiredAttributes['data-lr-look'] = look;
+    desiredAttributes['data-lr-density'] = record['density'] === 'compact' || record['density'] === 'touch' ? record['density'] : 'comfortable';
+    desiredAttributes['data-lr-surface'] = record['treatment'] === 'glass' ? 'glass' : 'solid';
+    if (mode !== 'unset') desiredAttributes['data-lr-mode'] = mode;
+    if (resolved) for (const name of attributes) desiredAttributes[name] = resolved;
+    const accentName = record['version'] === 2 && typeof record['accentName'] === 'string' && Object.hasOwn(STYLE_GEMSTONES, record['accentName']) ? record['accentName'] : null;
+    const accent = accentName ? STYLE_GEMSTONES[accentName] : record['accent'];
+    desiredAttributes['data-lr-accent'] = accentName ?? (accent ? 'custom' : 'none');
+    const desired = new Map<string, string>();
+    if (mode === 'unset') for (const [name, value] of Object.entries(tokens)) {
+      if (typeof value === 'string') desired.set(name, value);
+    }
+    for (const branch of ['light', 'dark'] as const) {
+      const background = typeof record['surface'] === 'string' ? record['surface'] : asMap(record['surface'])[branch];
+      const surfaceToken = typeof tokens['--lr-theme-color-surface-default'] === 'string' ? tokens['--lr-theme-color-surface-default'] : asMap(tokens['--lr-theme-color-surface-default'])[branch];
+      const surface = background ?? surfaceToken ?? STYLE_REFERENCE_SURFACES[look]?.[branch];
+      // Separate paints preserve accent precedence in nested mode islands without flattening it into the look.
+      for (const accentPass of [false, true]) {
+        if (accentPass && (!accent || accentName)) continue;
+        const scratch = document.createElement('div');
+        paint({ root: scratch, tokens: accentPass ? {} : tokens, references: accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : [], record: { mode: branch, surface: accentPass && accentName ? STYLE_REFERENCE_SURFACES['lyra']?.[branch] : surface, tokens: accentPass ? null : tokens, accent: accentPass ? accent : null } });
+        for (const name of scratch.style) {
+          const value = scratch.style.getPropertyValue(name);
+          if (name === '--lr-theme-accent') { if (branch === resolved) desired.set(name, value); continue; }
+          if (STYLE_SLOTTED.includes(name) && allowed(name, value, STYLE_SLOTTED)) {
+            const channel = name.match(/^--lr-theme-color-(?:success|warning|danger|neutral)-((?:fill|border|on)-(?:quiet|normal|loud))$/)?.[1];
+            const follows = !accentPass && channel && value === `var(--lr-theme-color-brand-${channel})`;
+            const suffix = name.slice(11);
+            const key = branch === 'light' ? 'l' : 'd';
+            if (!follows) desired.set(styleSlot(name, branch, accentPass), value);
+            if (!accentPass && STYLE_FOLLOW.includes(name)) {
+              desired.set(`--_lr-f${key}-${suffix}`, follows ? ' ' : 'initial');
+              desired.set(`--_lr-o${key}-${suffix}`, follows ? 'initial' : ' ');
+            }
+            if (branch === resolved) desired.set(name, resolver ? styleResolvedInput(name) : value);
+          } else if (branch === resolved) desired.set(name, value);
+        }
+      }
+    }
+    if (desired.size) desiredAttributes['data-lr-theme-scope'] = '';
+    const ownershipKey = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
+    const node = root as unknown as Record<symbol, unknown>;
+    let previous: StyleOwnership | undefined;
+    try { previous = readOwnership(node[ownershipKey]); } catch { /* Ignore inaccessible ownership. */ }
+    const ownership = previous ?? { attributes: new Map(), properties: new Map() };
+    if (mode === 'unset') for (const name of attributes) {
+      if (!ownership.attributes.has(name)) root.removeAttribute(name);
+    }
+    try {
+      const legacyKey = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
+      const legacy = node[legacyKey];
+      if (Array.isArray(legacy)) {
+        const names = legacy.slice(0, 528).filter(name => typeof name === 'string' && name.length <= 80 && /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name));
+        for (const name of [...names, ...ALL_RAMP_PROPERTIES, '--lr-theme-accent']) {
+          if (!ownership.properties.has(name) && root.style.getPropertyValue(name)) {
+            ownership.properties.set(name, { before: null, priority: '', written: root.style.getPropertyValue(name) });
+          }
+        }
+        try { delete node[legacyKey]; } catch { /* A sealed root still receives its new values. */ }
+      }
+    } catch { /* Ignore inaccessible legacy ownership. */ }
+
+    for (const [name, old] of ownership.attributes) {
+      if (Object.hasOwn(desiredAttributes, name)) continue;
+      if (root.getAttribute(name) === old.written) { if (old.before === null) root.removeAttribute(name); else root.setAttribute(name, old.before); }
+      ownership.attributes.delete(name);
+    }
+    for (const [name, value] of Object.entries(desiredAttributes)) {
+      if (!ownership.attributes.has(name)) ownership.attributes.set(name, { before: root.getAttribute(name), priority: '', written: value });
+      root.setAttribute(name, value);
+      ownership.attributes.get(name)!.written = value;
+    }
+    for (const [name, old] of ownership.properties) {
+      if (desired.has(name)) continue;
+      if (root.style.getPropertyValue(name) === old.written && !root.style.getPropertyPriority(name)) {
+        if (old.before) root.style.setProperty(name, old.before, old.priority); else root.style.removeProperty(name);
+      }
+      ownership.properties.delete(name);
+    }
+    for (const [name, value] of desired) {
+      if (!ownership.properties.has(name)) ownership.properties.set(name, { before: root.style.getPropertyValue(name), priority: root.style.getPropertyPriority(name), written: null });
+      if (root.style.getPropertyPriority(name)) root.style.removeProperty(name);
+      root.style.setProperty(name, value, '');
+      ownership.properties.get(name)!.written = root.style.getPropertyValue(name);
+    }
+    try { node[ownershipKey] = ownership; } catch { /* A sealed document still receives its initial paint. */ }
+  } catch { /* The bootstrap must never block parsing the rest of the document. */ }
 }
 
 // Built via String.fromCharCode rather than a \uXXXX regex escape so the source bytes are
@@ -1432,7 +1305,14 @@ export function createLyraThemeBootstrap(
   options: LyraThemeBootstrapOptions = {},
 ): string {
   const storageKey = options.storageKey ?? STORAGE_KEY;
-  return `(${applyStoredThemeBeforePaint.toString()})(${serializeInlineScriptData(storageKey)},${serializeInlineScriptData(MODE_ATTRIBUTES)});`;
+  const inputs = STYLE_SLOTTED.map(name => {
+    const flags = Number(STYLE_DENSITY.includes(name))
+      | (Number(STYLE_FOLLOW.includes(name)) << 1)
+      | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
+    return `${flags}${name.slice(11)}`;
+  }).join(' ');
+  const model = JSON.stringify({ inputs, surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES });
+  return `(${applyStoredStyleBeforePaint.toString()})(${serializeInlineScriptData(storageKey)},${serializeInlineScriptData(MODE_ATTRIBUTES)},${applyStoredThemeBeforePaint.toString()},${styleTokenAllowed.toString()},${readStyleOwnership.toString()},${model});`;
 }
 
 /**
@@ -1446,4 +1326,821 @@ export function createLyraThemeBootstrap(
  * letting a host page opt into an application-owned storage key or mode-attribute list by adding
  * attributes to the tag instead of inlining a per-app copy.
  */
+
+
+/** Independently selected style dimensions. */
+export type LyraStyleAxis = 'look' | 'surface' | 'density' | 'mode' | 'accent';
+export type LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides';
+export type LyraLookId = 'lyra' | 'shadcn' | 'material' | (string & {});
+export type LyraSurface = 'solid' | 'glass';
+export type LyraDensity = 'compact' | 'comfortable' | 'touch';
+export type LyraMode = 'light' | 'dark' | 'system' | 'unset';
+export type LyraAccentName = 'emerald' | 'peridot' | 'topaz' | 'ruby' | 'tourmaline' | 'amethyst' | 'aquamarine' | 'sapphire' | 'hematite';
+export type LyraAccent = LyraAccentName | LyraThemeAccent;
+export type LyraAccentBackground = string | { readonly light?: string | null; readonly dark?: string | null } | null;
+export interface LyraLook { readonly id: LyraLookId; readonly tokens: LyraThemeTokens; }
+export interface LyraStyle {
+  readonly look: LyraLookId;
+  readonly lookForm: 'stylesheet' | 'runtime';
+  readonly surface: LyraSurface;
+  readonly density: LyraDensity;
+  readonly mode: LyraMode;
+  readonly accent: LyraAccent;
+  /** Distinguishes a named palette from an identically named CSS color in saved legacy themes. */
+  readonly accentName: LyraAccentName | null;
+  readonly accentBackground: LyraAccentBackground;
+  readonly overrides?: LyraThemeTokens;
+  readonly resolvedMode: 'light' | 'dark' | null;
+}
+export interface LyraStyleChoices {
+  look?: LyraLookId | LyraLook | null;
+  surface?: LyraSurface | null;
+  density?: LyraDensity | null;
+  mode?: LyraMode | null;
+  accent?: LyraAccent;
+  accentBackground?: LyraAccentBackground;
+  overrides?: LyraThemeTokens | null;
+}
+/** Complete scoped choices: an omitted axis inherits; null passed to the helper removes the scope. */
+export interface LyraStyleScopeChoices {
+  look?: LyraLookId | LyraLook;
+  surface?: LyraSurface;
+  density?: LyraDensity;
+  mode?: 'light' | 'dark' | 'system';
+  accent?: LyraAccent;
+  accentBackground?: LyraAccentBackground;
+  overrides?: LyraThemeTokens;
+}
+export interface LyraStyleChangeDetail {
+  readonly style: Readonly<LyraStyle>;
+  readonly changed: readonly (LyraStyleField | 'resolvedMode')[];
+}
+declare global {
+  interface WindowEventMap { 'lr-style-change': CustomEvent<LyraStyleChangeDetail>; }
+}
+
+// GENERATED STYLE MODEL: START
+const STYLE_SLOTTED: readonly string[] = [
+  '--lr-theme-color-border-strong',
+  '--lr-theme-color-brand-border-loud',
+  '--lr-theme-color-brand-border-normal',
+  '--lr-theme-color-brand-border-quiet',
+  '--lr-theme-color-brand-fill-loud',
+  '--lr-theme-color-brand-fill-normal',
+  '--lr-theme-color-brand-fill-quiet',
+  '--lr-theme-color-brand-on-loud',
+  '--lr-theme-color-brand-on-normal',
+  '--lr-theme-color-brand-on-quiet',
+  '--lr-theme-color-chart-1',
+  '--lr-theme-color-chart-2',
+  '--lr-theme-color-chart-3',
+  '--lr-theme-color-chart-4',
+  '--lr-theme-color-chart-5',
+  '--lr-theme-color-chart-6',
+  '--lr-theme-color-chart-7',
+  '--lr-theme-color-chart-8',
+  '--lr-theme-color-chart-diverging-1',
+  '--lr-theme-color-chart-diverging-2',
+  '--lr-theme-color-chart-diverging-3',
+  '--lr-theme-color-chart-sequential-1',
+  '--lr-theme-color-chart-sequential-2',
+  '--lr-theme-color-chart-sequential-3',
+  '--lr-theme-color-danger-border-loud',
+  '--lr-theme-color-danger-border-normal',
+  '--lr-theme-color-danger-border-quiet',
+  '--lr-theme-color-danger-fill-loud',
+  '--lr-theme-color-danger-fill-normal',
+  '--lr-theme-color-danger-fill-quiet',
+  '--lr-theme-color-danger-on-loud',
+  '--lr-theme-color-danger-on-normal',
+  '--lr-theme-color-danger-on-quiet',
+  '--lr-theme-color-focus',
+  '--lr-theme-color-mix-partner',
+  '--lr-theme-color-neutral-border-loud',
+  '--lr-theme-color-neutral-border-normal',
+  '--lr-theme-color-neutral-border-quiet',
+  '--lr-theme-color-neutral-fill-loud',
+  '--lr-theme-color-neutral-fill-normal',
+  '--lr-theme-color-neutral-fill-quiet',
+  '--lr-theme-color-neutral-on-loud',
+  '--lr-theme-color-neutral-on-normal',
+  '--lr-theme-color-neutral-on-quiet',
+  '--lr-theme-color-no-data',
+  '--lr-theme-color-on-strong-overlay',
+  '--lr-theme-color-overlay',
+  '--lr-theme-color-overlay-strong',
+  '--lr-theme-color-success-border-loud',
+  '--lr-theme-color-success-border-normal',
+  '--lr-theme-color-success-border-quiet',
+  '--lr-theme-color-success-fill-loud',
+  '--lr-theme-color-success-fill-normal',
+  '--lr-theme-color-success-fill-quiet',
+  '--lr-theme-color-success-on-loud',
+  '--lr-theme-color-success-on-normal',
+  '--lr-theme-color-success-on-quiet',
+  '--lr-theme-color-surface-border',
+  '--lr-theme-color-surface-border-subtle',
+  '--lr-theme-color-surface-container',
+  '--lr-theme-color-surface-container-high',
+  '--lr-theme-color-surface-container-highest',
+  '--lr-theme-color-surface-container-low',
+  '--lr-theme-color-surface-container-lowest',
+  '--lr-theme-color-surface-default',
+  '--lr-theme-color-surface-overlay',
+  '--lr-theme-color-surface-raised',
+  '--lr-theme-color-text-normal',
+  '--lr-theme-color-text-quiet',
+  '--lr-theme-color-warning-border-loud',
+  '--lr-theme-color-warning-border-normal',
+  '--lr-theme-color-warning-border-quiet',
+  '--lr-theme-color-warning-fill-loud',
+  '--lr-theme-color-warning-fill-normal',
+  '--lr-theme-color-warning-fill-quiet',
+  '--lr-theme-color-warning-on-loud',
+  '--lr-theme-color-warning-on-normal',
+  '--lr-theme-color-warning-on-quiet',
+  '--lr-theme-form-control-height-2xs',
+  '--lr-theme-form-control-height-l',
+  '--lr-theme-form-control-height-m',
+  '--lr-theme-form-control-height-s',
+  '--lr-theme-form-control-height-xl',
+  '--lr-theme-form-control-height-xs',
+  '--lr-theme-graph-cat-1',
+  '--lr-theme-graph-cat-2',
+  '--lr-theme-graph-cat-3',
+  '--lr-theme-graph-cat-4',
+  '--lr-theme-graph-cat-5',
+  '--lr-theme-graph-cat-6',
+  '--lr-theme-graph-cat-7',
+  '--lr-theme-graph-cat-8',
+  '--lr-theme-icon-button-size',
+  '--lr-theme-shadow-l',
+  '--lr-theme-shadow-m',
+  '--lr-theme-shadow-s',
+  '--lr-theme-shadow-xl',
+  '--lr-theme-shadow-xs',
+  '--lr-theme-space-2xl',
+  '--lr-theme-space-2xs',
+  '--lr-theme-space-l',
+  '--lr-theme-space-m',
+  '--lr-theme-space-s',
+  '--lr-theme-space-xs',
+  '--lr-theme-terminal-bg-black',
+  '--lr-theme-terminal-bg-blue',
+  '--lr-theme-terminal-bg-bright-black',
+  '--lr-theme-terminal-bg-bright-blue',
+  '--lr-theme-terminal-bg-bright-cyan',
+  '--lr-theme-terminal-bg-bright-green',
+  '--lr-theme-terminal-bg-bright-magenta',
+  '--lr-theme-terminal-bg-bright-red',
+  '--lr-theme-terminal-bg-bright-white',
+  '--lr-theme-terminal-bg-bright-yellow',
+  '--lr-theme-terminal-bg-cyan',
+  '--lr-theme-terminal-bg-green',
+  '--lr-theme-terminal-bg-magenta',
+  '--lr-theme-terminal-bg-red',
+  '--lr-theme-terminal-bg-white',
+  '--lr-theme-terminal-bg-yellow',
+  '--lr-theme-terminal-color-black',
+  '--lr-theme-terminal-color-blue',
+  '--lr-theme-terminal-color-bright-black',
+  '--lr-theme-terminal-color-bright-blue',
+  '--lr-theme-terminal-color-bright-cyan',
+  '--lr-theme-terminal-color-bright-green',
+  '--lr-theme-terminal-color-bright-magenta',
+  '--lr-theme-terminal-color-bright-red',
+  '--lr-theme-terminal-color-bright-white',
+  '--lr-theme-terminal-color-bright-yellow',
+  '--lr-theme-terminal-color-cyan',
+  '--lr-theme-terminal-color-green',
+  '--lr-theme-terminal-color-magenta',
+  '--lr-theme-terminal-color-red',
+  '--lr-theme-terminal-color-white',
+  '--lr-theme-terminal-color-yellow',
+];
+const STYLE_DENSITY: readonly string[] = [
+  '--lr-theme-space-2xs',
+  '--lr-theme-space-xs',
+  '--lr-theme-space-s',
+  '--lr-theme-space-m',
+  '--lr-theme-space-l',
+  '--lr-theme-space-2xl',
+  '--lr-theme-form-control-height-2xs',
+  '--lr-theme-form-control-height-xs',
+  '--lr-theme-form-control-height-s',
+  '--lr-theme-form-control-height-m',
+  '--lr-theme-form-control-height-l',
+  '--lr-theme-form-control-height-xl',
+  '--lr-theme-icon-button-size',
+];
+const STYLE_FOLLOW: readonly string[] = [
+  '--lr-theme-color-danger-border-loud',
+  '--lr-theme-color-danger-border-normal',
+  '--lr-theme-color-danger-border-quiet',
+  '--lr-theme-color-danger-fill-loud',
+  '--lr-theme-color-danger-fill-normal',
+  '--lr-theme-color-danger-fill-quiet',
+  '--lr-theme-color-danger-on-loud',
+  '--lr-theme-color-danger-on-normal',
+  '--lr-theme-color-danger-on-quiet',
+  '--lr-theme-color-neutral-border-loud',
+  '--lr-theme-color-neutral-border-normal',
+  '--lr-theme-color-neutral-border-quiet',
+  '--lr-theme-color-neutral-fill-loud',
+  '--lr-theme-color-neutral-fill-normal',
+  '--lr-theme-color-neutral-fill-quiet',
+  '--lr-theme-color-neutral-on-loud',
+  '--lr-theme-color-neutral-on-normal',
+  '--lr-theme-color-neutral-on-quiet',
+  '--lr-theme-color-success-border-loud',
+  '--lr-theme-color-success-border-normal',
+  '--lr-theme-color-success-border-quiet',
+  '--lr-theme-color-success-fill-loud',
+  '--lr-theme-color-success-fill-normal',
+  '--lr-theme-color-success-fill-quiet',
+  '--lr-theme-color-success-on-loud',
+  '--lr-theme-color-success-on-normal',
+  '--lr-theme-color-success-on-quiet',
+  '--lr-theme-color-warning-border-loud',
+  '--lr-theme-color-warning-border-normal',
+  '--lr-theme-color-warning-border-quiet',
+  '--lr-theme-color-warning-fill-loud',
+  '--lr-theme-color-warning-fill-normal',
+  '--lr-theme-color-warning-fill-quiet',
+  '--lr-theme-color-warning-on-loud',
+  '--lr-theme-color-warning-on-normal',
+  '--lr-theme-color-warning-on-quiet',
+];
+const STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: string; dark: string }>> = {
+  'lyra': { light: '#ffffff', dark: '#1a1a1a' },
+  'material': { light: '#fff8f5', dark: '#18120f' },
+  'shadcn': { light: '#ffffff', dark: '#0a0a0a' },
+};
+const STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {
+  light: [
+  '#ffffff',
+  '#f6f8fa',
+  '#fff8f5',
+  '#f8eeea',
+  '#fcf2ed',
+  '#f2e7e0',
+  '#ecdfd7',
+  '#fafafa',
+],
+  dark: [
+  '#1a1a1a',
+  '#22272e',
+  '#2b3038',
+  '#18120f',
+  '#251d19',
+  '#302621',
+  '#120d0a',
+  '#211914',
+  '#3a2f29',
+  '#0a0a0a',
+  '#171717',
+],
+};
+const STYLE_GEMSTONES: Readonly<Record<string, string>> = {
+  'emerald': '#34d399',
+  'peridot': '#a8d84a',
+  'topaz': '#f0a83c',
+  'ruby': '#e63950',
+  'tourmaline': '#ec4899',
+  'amethyst': '#9d6df0',
+  'aquamarine': '#22d3ee',
+  'sapphire': '#4f8ff7',
+  'hematite': '#94a3b8',
+};
+// GENERATED STYLE MODEL: END
+
+const LOOK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const LOOK_STAMP = Symbol.for('@aceshooting/lyra-ui.look.v1');
+const STYLE_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
+const STYLE_FIELDS: readonly LyraStyleField[] = ['look', 'surface', 'density', 'mode', 'accent', 'accentBackground', 'overrides'];
+interface StyleState {
+  look: string;
+  tokens: LyraThemeTokens | null;
+  surface: LyraSurface;
+  density: LyraDensity;
+  mode: LyraMode;
+  accent: LyraThemeAccent;
+  accentName: LyraAccentName | null;
+  accentBackground: LyraAccentBackground;
+  overrides: LyraThemeTokens | null;
+}
+const DEFAULT_STYLE: Readonly<StyleState> = Object.freeze({ look: 'lyra', tokens: null, surface: 'solid', density: 'comfortable', mode: 'system', accent: null, accentName: null, accentBackground: null, overrides: null });
+let lastStyle: StyleState = { ...DEFAULT_STYLE };
+let stylePersistenceFailed = false;
+let styleModeCleanup: (() => void) | undefined;
+let styleModeRoot: WeakRef<Element> | undefined;
+const styleOwnershipFallback = new WeakMap<Element, StyleOwnership>();
+const scopeModes = new WeakMap<Element, () => void>();
+
+function ownField(value: object, key: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+}
+function styleId(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 64 && LOOK_ID.test(value);
+}
+function styleTokenAllowed(name: string, value: LyraThemeTokenValue, slotted: readonly string[] = STYLE_SLOTTED): boolean {
+  if (name.startsWith('--lr-theme-surface-') || (typeof value !== 'string' && !slotted.includes(name))) return false;
+  for (const branch of typeof value === 'string' ? [value] : [value.light, value.dark]) {
+    if (!branch) continue;
+    for (const reference of branch.matchAll(/var\(\s*(--[\w-]+)/g)) {
+      if (reference[1] === '--lr-theme-shadow-color') continue;
+      const channel = name.match(/^--lr-theme-color-(?:success|warning|danger|neutral)-((?:fill|border|on)-(?:quiet|normal|loud))$/)?.[1];
+      if (!channel || branch !== `var(--lr-theme-color-brand-${channel})`) return false;
+    }
+  }
+  return true;
+}
+function styleTokens(value: unknown): LyraThemeTokens | null {
+  const tokens = normalizeTokens(value);
+  if (!tokens) return null;
+  const entries = Object.entries(tokens).filter(([name, input]) => styleTokenAllowed(name, input));
+  return entries.length ? Object.freeze(Object.fromEntries(entries)) as LyraThemeTokens : null;
+}
+
+/** Validates and freezes a look definition; it does not register an id or install CSS. */
+export function defineLyraLook<const Look extends LyraLook>(look: Look): Readonly<Look> {
+  if (!look || !styleId(ownField(look, 'id')) || look.id === 'custom') throw new TypeError('Invalid look id');
+  const raw = ownField(look, 'tokens');
+  if (!isPlainRecord(raw) || Object.keys(raw).length > TOKEN_ENTRY_MAX) throw new TypeError('Invalid look tokens');
+  for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(raw))) {
+    if (!('value' in descriptor)) throw new TypeError(`Look inputs must be data properties: ${name}`);
+    const value: unknown = descriptor.value;
+    if (typeof value === 'string') {
+      if (!isSafeLyraThemeTokenValue(value)) throw new TypeError(`Invalid look value: ${name}`);
+      continue;
+    }
+    if (!isPlainRecord(value) || !STYLE_SLOTTED.includes(name)) throw new TypeError(`Invalid per-mode look input: ${name}`);
+    const branches = Object.entries(Object.getOwnPropertyDescriptors(value));
+    if (!branches.length || branches.some(([key, branch]) =>
+      !['light', 'dark'].includes(key) || !('value' in branch) ||
+      (branch.value !== null && !isSafeLyraThemeTokenValue(branch.value)))) {
+      throw new TypeError(`Invalid look mode pair: ${name}`);
+    }
+  }
+  const tokens = styleTokens(raw);
+  if (Object.keys(raw).length !== Object.keys(tokens ?? {}).length) throw new TypeError('Invalid look token or cross-axis reference');
+  const stamped = { ...tokens, [LOOK_STAMP]: look.id };
+  Object.freeze(stamped);
+  return Object.freeze({ id: look.id, tokens: stamped }) as Readonly<Look>;
+}
+
+/** DOM-free syntactic color validation; final browser painting revalidates absolute colors. */
+function styleColor(value: unknown): string | null {
+  if (!isSafeLyraThemeTokenValue(value)) return null;
+  const text = value.trim();
+  if (/\b(?:var|light-dark)\s*\(|\b(?:currentcolor|from)\b/i.test(text)) return null;
+  if (/^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(text)) return null;
+  return /^(?:#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\(.+\))$/i.test(text) ? text : null;
+}
+function styleColorPair(value: unknown): LyraAccentBackground {
+  if (typeof value === 'string') return styleColor(value);
+  if (!isPlainRecord(value)) return null;
+  const light = styleColor(ownField(value, 'light'));
+  const dark = styleColor(ownField(value, 'dark'));
+  return light || dark ? Object.freeze({ light, dark }) : null;
+}
+function styleAccent(value: unknown): LyraThemeAccent {
+  if (typeof value === 'string') return styleColor(value);
+  if (!isPlainRecord(value)) return null;
+  const entries = SEMANTIC_ROLES.filter(role => Object.hasOwn(value, role)).map(role => [role, styleColorPair(ownField(value, role))]);
+  return entries.length ? Object.freeze(Object.fromEntries(entries)) : null;
+}
+function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
+  const next = { ...base };
+  if (!isPlainRecord(raw)) return next;
+  const look = ownField(raw, 'look');
+  if (look !== undefined) {
+    next.look = 'lyra'; next.tokens = null;
+    if (styleId(look)) next.look = look;
+    else if (isPlainRecord(look)) {
+      try {
+        const definition = defineLyraLook(look as unknown as LyraLook);
+        next.look = definition.id;
+        next.tokens = definition.tokens;
+      } catch { /* Invalid runtime definitions reset only the look axis. */ }
+    }
+  }
+  const surface = ownField(raw, 'surface');
+  if (surface !== undefined) next.surface = surface === 'glass' ? 'glass' : 'solid';
+  const density = ownField(raw, 'density');
+  if (density !== undefined) next.density = density === 'compact' || density === 'touch' ? density : 'comfortable';
+  const mode = ownField(raw, 'mode');
+  if (mode !== undefined) next.mode = mode === 'light' || mode === 'dark' || mode === 'unset' ? mode : 'system';
+  const accent = ownField(raw, 'accent');
+  if (accent !== undefined) {
+    next.accentName = typeof accent === 'string' && Object.hasOwn(STYLE_GEMSTONES, accent) ? accent as LyraAccentName : null;
+    next.accent = next.accentName ? STYLE_GEMSTONES[next.accentName]! : styleAccent(accent);
+  }
+  const background = ownField(raw, 'accentBackground');
+  if (background !== undefined) next.accentBackground = styleColorPair(background);
+  const overrides = ownField(raw, 'overrides');
+  if (overrides !== undefined) next.overrides = styleTokens(overrides);
+  return next;
+}
+function styleFromRecord(value: unknown): StyleState {
+  if (!isPlainRecord(value)) return { ...DEFAULT_STYLE };
+  const version = ownField(value, 'version');
+  if (version !== undefined && version !== 2) return { ...DEFAULT_STYLE };
+  const state = normalizeStyleChoices({
+    look: ownField(value, 'look'), mode: ownField(value, 'mode'), density: ownField(value, 'density'),
+    surface: ownField(value, 'treatment'), overrides: ownField(value, 'overrides'), accentBackground: ownField(value, 'surface'),
+  }, { ...DEFAULT_STYLE });
+  // v1 color keywords stay colors, including aquamarine; only accentName opts into a named accent.
+  state.accent = styleAccent(ownField(value, 'accent'));
+  const accentName = ownField(value, 'accentName');
+  if (version === 2 && typeof accentName === 'string' && Object.hasOwn(STYLE_GEMSTONES, accentName)) {
+    state.accentName = accentName as LyraAccentName;
+    state.accent = STYLE_GEMSTONES[accentName]!;
+  }
+  state.tokens = normalizeTokens(ownField(value, 'tokens'));
+  if (state.tokens && !styleId(ownField(value, 'look'))) state.look = 'custom';
+  return state;
+}
+function styleRecord(state: StyleState): Record<string, unknown> {
+  return { version: 2, mode: state.mode, look: state.look, density: state.density, treatment: state.surface,
+    accent: state.accent, surface: state.accentBackground,
+    ...(state.accentName ? { accentName: state.accentName } : {}),
+    ...(state.tokens ? { tokens: state.tokens } : {}), ...(state.overrides ? { overrides: state.overrides } : {}) };
+}
+function styleResolvedMode(mode: LyraMode, view?: Window | null): 'light' | 'dark' | null {
+  if (mode === 'unset') return null;
+  if (mode !== 'system') return mode;
+  return view?.matchMedia?.(COLOR_SCHEME_QUERY).matches ? 'dark' : 'light';
+}
+function styleSnapshot(state: StyleState, view?: Window | null): Readonly<LyraStyle> {
+  return Object.freeze({ look: state.look, lookForm: state.tokens ? 'runtime' : 'stylesheet', surface: state.surface,
+    density: state.density, mode: state.mode, accent: state.accentName ?? state.accent, accentName: state.accentName,
+    accentBackground: state.accentBackground, ...(state.overrides ? { overrides: state.overrides } : {}),
+    resolvedMode: styleResolvedMode(state.mode, view) });
+}
+/** Normalizes a parsed persisted record without reading the document, storage or browser APIs. */
+export function parseLyraStyleRecord(value: unknown): Readonly<LyraStyle> {
+  const state = styleFromRecord(value);
+  const result = styleSnapshot(state);
+  return state.mode === 'system' ? Object.freeze({ ...result, resolvedMode: null }) : result;
+}
+/** Requested-axis attributes for server rendering. Resolved-mode attributes belong to the browser. */
+export function lyraStyleAttributes(style: Partial<LyraStyle>): Readonly<Record<string, string>> {
+  const attributes: Record<string, string> = {};
+  if (styleId(style.look)) attributes['data-lr-look'] = style.look;
+  if (style.surface === 'solid' || style.surface === 'glass') attributes['data-lr-surface'] = style.surface;
+  if (style.density === 'compact' || style.density === 'comfortable' || style.density === 'touch') attributes['data-lr-density'] = style.density;
+  if (style.mode === 'light' || style.mode === 'dark' || style.mode === 'system') attributes['data-lr-mode'] = style.mode;
+  if (style.accent !== undefined) attributes['data-lr-accent'] = style.accent === null ? 'none'
+    : style.accentName === null ? 'custom'
+    : typeof style.accent === 'string' && Object.hasOwn(STYLE_GEMSTONES, style.accent) ? style.accent : 'custom';
+  return Object.freeze(attributes);
+}
+function readStyleState(): StyleState {
+  if (stylePersistenceFailed) return { ...lastStyle };
+  let stored: string | null;
+  try { stored = localStorage.getItem(STORAGE_KEY); }
+  catch { return { ...lastStyle }; }
+  try { return styleFromRecord(JSON.parse(stored ?? 'null')); }
+  catch { return { ...DEFAULT_STYLE }; }
+}
+function persistStyle(state: StyleState): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(styleRecord(state))); stylePersistenceFailed = false; }
+  catch { stylePersistenceFailed = true; }
+  lastStyle = state;
+}
+function ownershipFor(element: Element): StyleOwnership {
+  const node = element as unknown as Record<symbol, unknown>;
+  try {
+    const existing = readStyleOwnership(node[STYLE_OWNERSHIP]);
+    if (existing) {
+      styleOwnershipFallback.set(element, existing);
+      try { node[STYLE_OWNERSHIP] = existing; } catch { /* Retain the validated local copy. */ }
+      return existing;
+    }
+  } catch { /* A hostile getter cannot prevent applying or restoring a style. */ }
+  const fallback = styleOwnershipFallback.get(element);
+  if (fallback) return fallback;
+  const record: StyleOwnership = { attributes: new Map(), properties: new Map() };
+  styleOwnershipFallback.set(element, record);
+  try { node[STYLE_OWNERSHIP] = record; } catch { /* The local weak map retains ownership. */ }
+  return record;
+}
+function writeStyleAttributes(element: Element, desired: Readonly<Record<string, string>>): void {
+  const ownership = ownershipFor(element).attributes;
+  for (const [name, value] of ownership) {
+    if (Object.hasOwn(desired, name)) continue;
+    if (element.getAttribute(name) === value.written) {
+      if (value.before === null) element.removeAttribute(name); else element.setAttribute(name, value.before);
+    }
+    ownership.delete(name);
+  }
+  for (const [name, value] of Object.entries(desired)) {
+    if (!ownership.has(name)) ownership.set(name, { before: element.getAttribute(name), priority: '', written: value });
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+    ownership.get(name)!.written = value;
+  }
+}
+function writeStyleProperties(element: Element, desired: ReadonlyMap<string, string>): void {
+  const style = (element as HTMLElement | SVGElement).style;
+  if (!style) return;
+  const ownership = ownershipFor(element).properties;
+  for (const [name, value] of ownership) {
+    if (desired.has(name)) continue;
+    if (style.getPropertyValue(name) === value.written && style.getPropertyPriority(name) === '') {
+      if (value.before) style.setProperty(name, value.before, value.priority); else style.removeProperty(name);
+    }
+    ownership.delete(name);
+  }
+  for (const [name, value] of desired) {
+    if (!ownership.has(name)) ownership.set(name, { before: style.getPropertyValue(name), priority: style.getPropertyPriority(name), written: null });
+    const record = ownership.get(name)!;
+    if (style.getPropertyPriority(name) !== '' ||
+      (style.getPropertyValue(name) !== value && !(record.requested === value && record.written === style.getPropertyValue(name)))) {
+      // WebKit retains an existing important priority unless the declaration is removed first.
+      if (style.getPropertyPriority(name)) style.removeProperty(name);
+      style.setProperty(name, value, '');
+    }
+    record.requested = value;
+    record.written = style.getPropertyValue(name);
+  }
+}
+function styleSlot(name: string, mode: 'light' | 'dark', accent = false): string {
+  return `--_lr-${accent ? 'a' : 'l'}${mode === 'light' ? 'l' : 'd'}-${name.slice(11)}`;
+}
+function styleFollow(name: string, value: string): boolean {
+  const channel = name.match(/^--lr-theme-color-(?:success|warning|danger|neutral)-((?:fill|border|on)-(?:quiet|normal|loud))$/)?.[1];
+  return Boolean(channel && value === `var(--lr-theme-color-brand-${channel})`);
+}
+function styleBranch(name: string, mode: 'light' | 'dark'): string {
+  let result = `var(${styleSlot(name, mode)})`;
+  if (STYLE_FOLLOW.includes(name)) {
+    const key = mode === 'light' ? 'l' : 'd';
+    const target = name.replace(/color-(?:success|warning|danger|neutral)-/, 'color-brand-');
+    result = `var(--_lr-f${key}-${name.slice(11)},${result})var(--_lr-o${key}-${name.slice(11)},var(${styleSlot(target, mode, true)},var(${styleSlot(target, mode)})))`;
+  }
+  return ALL_RAMP_PROPERTIES.includes(name) ? `var(${styleSlot(name, mode, true)},${result})` : result;
+}
+function styleResolvedInput(name: string): string {
+  const input = `var(--_lr-dark-on,${styleBranch(name, 'light')})var(--_lr-light-on,${styleBranch(name, 'dark')})`;
+  if (!STYLE_DENSITY.includes(name)) return input;
+  const spacing = name.startsWith('--lr-theme-space-');
+  return `var(--_lr-dense-on,${input})var(--_lr-dense-off,max(calc((${input}) * var(--_lr-density-${spacing ? 'space' : 'control'},1)),${spacing ? '0px' : 'var(--_lr-density-target-min,0px)'}))`;
+}
+function styleBackground(state: StyleState, entries: ReadonlyMap<string, string>, mode: 'light' | 'dark', element: Element): string | undefined {
+  const explicit = typeof state.accentBackground === 'string' ? state.accentBackground : state.accentBackground?.[mode];
+  const ownLook = element.getAttribute('data-lr-look');
+  let reference = explicit ?? entries.get('--lr-theme-color-surface-default') ??
+    (ownLook ? (STYLE_REFERENCE_SURFACES[ownLook] ?? STYLE_REFERENCE_SURFACES['lyra'])?.[mode] : undefined);
+  if (!reference) {
+    const slot = styleSlot('--lr-theme-color-surface-default', mode);
+    const style = (element as HTMLElement | SVGElement).style;
+    const owned = ownershipFor(element).properties.get(slot);
+    const suspend = owned && style?.getPropertyValue(slot) === owned.written && !style.getPropertyPriority(slot);
+    // Read the new inherited scope rather than the surface left by a previous runtime map.
+    // Restore the old write immediately; the ownership writer handles its replacement below.
+    try {
+      if (suspend) {
+        if (owned.before) style.setProperty(slot, owned.before, owned.priority);
+        else style.removeProperty(slot);
+      }
+      reference = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(slot).trim();
+    } finally {
+      if (suspend && owned.written !== null) style.setProperty(slot, owned.written);
+    }
+  }
+  return reference;
+}
+const stylePaintCache = new WeakMap<Element, Map<string, { key: string; tokens: Map<string, string>; accent: Map<string, string>; applied: LyraThemeAccent }>>();
+function stylePaint(state: StyleState, element: Element, wholeDocument: boolean): Map<string, string> {
+  const desired = new Map<string, string>();
+  const mode = styleResolvedMode(state.mode, element.ownerDocument.defaultView);
+  const tokens = { ...state.tokens, ...state.overrides };
+  if (wholeDocument && mode === null) for (const [name, value] of tokenEntries(tokens, null)) desired.set(name, value);
+  if (!Object.keys(tokens).length && (!state.accent || state.accentName)) {
+    stylePaintCache.delete(element);
+    return desired;
+  }
+  const resolver = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue('--_lr-style-resolver').trim() === '1';
+  let cache = stylePaintCache.get(element);
+  if (!cache) { cache = new Map(); stylePaintCache.set(element, cache); }
+  let applied = state.accent;
+  for (const branch of ['light', 'dark'] as const) {
+    const entries = tokenEntries(tokens, branch);
+    const reference = styleBackground(state, entries, branch, element);
+    const key = JSON.stringify([tokens, state.accent, state.accentName, reference]);
+    let cached = cache.get(branch);
+    if (!cached || cached.key !== key) {
+      const background = reference ? parseResolvedRgb(reference, MODE_DEFAULTS[branch].surface, element.ownerDocument) ?? MODE_DEFAULTS[branch].surface : MODE_DEFAULTS[branch].surface;
+      const accent = state.accentName ? { applied: state.accent, properties: new Map<string, string>() } : paintAccent(state.accent, branch, background, element.ownerDocument);
+      cached = { key, tokens: floorTokenEntries(entries, branch, background, element.ownerDocument), accent: accent.properties, applied: accent.applied };
+      cache.set(branch, cached);
+    }
+    if (branch === mode) applied = cached.applied;
+    const painted = cached.tokens;
+    for (const [name, value] of painted) {
+      if (STYLE_SLOTTED.includes(name) && styleTokenAllowed(name, value)) {
+        if (styleFollow(name, value)) {
+          desired.set(`--_lr-f${branch === 'light' ? 'l' : 'd'}-${name.slice(11)}`, ' ');
+          desired.set(`--_lr-o${branch === 'light' ? 'l' : 'd'}-${name.slice(11)}`, 'initial');
+        } else {
+          desired.set(styleSlot(name, branch), value);
+          if (STYLE_FOLLOW.includes(name)) {
+            desired.set(`--_lr-f${branch === 'light' ? 'l' : 'd'}-${name.slice(11)}`, 'initial');
+            desired.set(`--_lr-o${branch === 'light' ? 'l' : 'd'}-${name.slice(11)}`, ' ');
+          }
+        }
+        if (wholeDocument && branch === mode) desired.set(name, resolver ? styleResolvedInput(name) : value);
+      } else if (wholeDocument ? branch === mode : typeof tokens[name as LyraThemeTokenName] === 'string' && !STYLE_SLOTTED.includes(name)) desired.set(name, value);
+    }
+    // Named accents are stylesheet choices; only custom colors own inline ramp values.
+    if (state.accent && !state.accentName) {
+      for (const [name, value] of cached.accent) {
+        if (name === '--lr-theme-accent') { if (branch === mode) desired.set(name, value); continue; }
+        desired.set(styleSlot(name, branch, true), value);
+        if (wholeDocument && branch === mode) desired.set(name, resolver ? styleResolvedInput(name) : value);
+      }
+    }
+  }
+  state.accent = applied;
+  return desired;
+}
+interface StyleModeSubscription {
+  readonly element: WeakRef<Element>;
+  readonly callback: (element: Element) => void;
+}
+interface StyleModeGroup {
+  readonly query: MediaQueryList;
+  readonly subscriptions: Set<StyleModeSubscription>;
+  readonly detach: () => void;
+}
+const styleModeGroups = new WeakMap<Window, StyleModeGroup>();
+function attachStyleMode(element: Element, callback: (element: Element) => void): () => void {
+  const view = element.ownerDocument.defaultView;
+  if (!view?.matchMedia) return () => {};
+  let group = styleModeGroups.get(view);
+  if (!group) {
+    const query = view.matchMedia(COLOR_SCHEME_QUERY);
+    const subscriptions = new Set<StyleModeSubscription>();
+    const modern = typeof query.addEventListener === 'function' && typeof query.removeEventListener === 'function';
+    const detach = (): void => {
+      if (modern) query.removeEventListener('change', listener);
+      else query.removeListener?.(listener);
+    };
+    const listener = (): void => {
+      for (const subscription of subscriptions) {
+        const node = subscription.element.deref();
+        if (node?.ownerDocument.defaultView === view) subscription.callback(node);
+        else subscriptions.delete(subscription);
+      }
+      if (!subscriptions.size) {
+        detach();
+        styleModeGroups.delete(view);
+      }
+    };
+    group = { query, subscriptions, detach };
+    styleModeGroups.set(view, group);
+    if (modern) query.addEventListener('change', listener);
+    else query.addListener?.(listener);
+  }
+  const subscription = { element: new WeakRef(element), callback };
+  group.subscriptions.add(subscription);
+  const active = group;
+  return () => {
+    active.subscriptions.delete(subscription);
+    if (!active.subscriptions.size) {
+      active.detach();
+      styleModeGroups.delete(view);
+    }
+  };
+}
+function applyStyleState(element: Element, state: StyleState, fields?: ReadonlySet<string>): void {
+  const snapshot = styleSnapshot(state, element.ownerDocument.defaultView);
+  const attributes = { ...lyraStyleAttributes(snapshot) };
+  if (fields) for (const [field, name] of [['look', 'look'], ['surface', 'surface'], ['density', 'density'], ['mode', 'mode'], ['accent', 'accent']]) {
+    if (!fields.has(field!)) delete attributes[`data-lr-${name}`];
+  }
+  // The parsed v1 color keyword must not accidentally select the gemstone stylesheet.
+  if (state.accent && !state.accentName && (!fields || fields.has('accent'))) attributes['data-lr-accent'] = 'custom';
+  if ((!fields || fields.has('mode')) && snapshot.resolvedMode) {
+    attributes['data-lr-theme'] = snapshot.resolvedMode;
+    attributes['data-theme'] = snapshot.resolvedMode;
+  }
+  if (state.tokens || state.overrides || (state.accent && !state.accentName)) attributes['data-lr-theme-scope'] = '';
+  writeStyleAttributes(element, attributes);
+  const desired = stylePaint(state, element, !fields);
+  if (!state.accent && snapshot.accent) {
+    attributes['data-lr-accent'] = 'none';
+    if (!state.tokens && !state.overrides) delete attributes['data-lr-theme-scope'];
+    writeStyleAttributes(element, attributes);
+  }
+  writeStyleProperties(element, desired);
+  diagnoseStyleSheets(element, state, fields);
+}
+
+function diagnoseStyleSheets(element: Element, state: StyleState, fields?: ReadonlySet<string>): void {
+  if (!litDevWarnings()) return;
+  const selected = (field: string): boolean => !fields || fields.has(field);
+  const required: [string, string, string][] = [];
+  if (selected('look') && !state.tokens && state.look !== 'lyra') {
+    required.push(['--_lr-look-installed', `${state.look}-1`, `the stylesheet for look '${state.look}'`]);
+  }
+  if (selected('surface') && state.surface === 'glass') required.push(['--_lr-surface-installed', '1', 'surfaces/glass.css']);
+  if (selected('density') && state.density !== 'comfortable') required.push(['--_lr-density-installed', '1', 'density.css']);
+  if (selected('accent') && state.accentName) required.push(['--_lr-accent-installed', `${state.accentName}-1`, 'accents.css']);
+  // A scoped runtime look paints private branches that theme.css resolves at that boundary.
+  const scopedRuntime = Boolean(fields && (state.tokens || state.overrides || (state.accent && !state.accentName)));
+  if (!required.length && !scopedRuntime) return;
+  const computed = element.ownerDocument.defaultView?.getComputedStyle(element);
+  if (!computed) return;
+  if (computed.getPropertyValue('--_lr-style-resolver').trim() !== '1') {
+    devWarnOnce('lyra-style:resolver', 'Lyra style choices require theme.css in the scope that owns their attributes.');
+  }
+  for (const [property, expected, stylesheet] of required) {
+    if (computed.getPropertyValue(property).trim() !== expected) {
+      devWarnOnce(`lyra-style:${property}:${expected}`, `Lyra could not find ${stylesheet} in this style scope; import or adopt the stylesheet before selecting it.`);
+    }
+  }
+}
+function emitStyleChange(state: StyleState, changed: readonly (LyraStyleField | 'resolvedMode')[]): void {
+  const style = styleSnapshot(state, window);
+  window.dispatchEvent(new CustomEvent('lr-style-change', { detail: Object.freeze({ style, changed: Object.freeze([...changed]) }) }));
+  window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: legacyStyleSnapshot(state) }));
+}
+function legacyStyleSnapshot(state: StyleState): LyraTheme {
+  const surface = typeof state.accentBackground === 'string' ? state.accentBackground : state.accentBackground?.[styleResolvedMode(state.mode, typeof window === 'undefined' ? undefined : window) ?? 'light'] ?? null;
+  const tokens = state.tokens || state.overrides ? Object.freeze({ ...state.tokens, ...state.overrides }) : null;
+  return { mode: state.mode === 'system' ? 'auto' : state.mode, accent: state.accent, surface, ...(tokens ? { tokens } : {}) };
+}
+/** Selects independent axes on the document root. Omitted fields keep their choices; null resets. */
+export function setLyraStyle(choices: LyraStyleChoices): Readonly<LyraStyle> {
+  const before = readStyleState();
+  return commitStyle(before, normalizeStyleChoices(choices, before));
+}
+function commitStyle(before: StyleState, next: StyleState): Readonly<LyraStyle> {
+  if (typeof document !== 'undefined') {
+    next.accent = normalizeAccent(next.accent);
+    if (typeof next.accentBackground === 'string') next.accentBackground = normalizeColor(next.accentBackground);
+    if (!next.accent) next.accentName = null;
+  }
+  persistStyle(next);
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    if (next.mode !== 'system' || styleModeRoot?.deref() !== root) {
+      styleModeCleanup?.();
+      styleModeCleanup = undefined;
+      styleModeRoot = undefined;
+    }
+    root.removeAttribute('data-lr-theme-preset');
+    adoptLegacyOwnership(root);
+    const requestedAccent = next.accent;
+    applyStyleState(root, next);
+    if (!accentsEqual(requestedAccent, next.accent)) persistStyle(next);
+    if (next.mode === 'system' && !styleModeCleanup) {
+      styleModeRoot = new WeakRef(root);
+      styleModeCleanup = attachStyleMode(root, element => {
+        applyStyleState(element, lastStyle);
+        emitStyleChange(lastStyle, ['resolvedMode']);
+      });
+    }
+    const changed = STYLE_FIELDS.filter(field => field === 'look'
+      ? before.look !== next.look || !tokensEqual(before.tokens, next.tokens)
+      : field === 'accent' ? before.accentName !== next.accentName || !accentsEqual(before.accent, next.accent)
+      : JSON.stringify(before[field as keyof StyleState]) !== JSON.stringify(next[field as keyof StyleState]));
+    emitStyleChange(next, changed);
+  }
+  return styleSnapshot(next, typeof window === 'undefined' ? undefined : window);
+}
+function adoptLegacyOwnership(root: HTMLElement): void {
+  // Bootstrap v1 stored only the names it painted. Adopt once before the v2 writer takes over.
+  const symbol = Symbol.for(TOKEN_OWNERSHIP_SYMBOL);
+  const node = root as unknown as Record<symbol, unknown>;
+  try { if (!Array.isArray(node[symbol])) return; } catch { return; }
+  const ownership = ownershipFor(root).properties;
+  for (const name of [...readOwnershipList(), ...ALL_RAMP_PROPERTIES, '--lr-theme-accent']) {
+    if (ownership.has(name) || !root.style.getPropertyValue(name)) continue;
+    ownership.set(name, { before: null, priority: '', written: root.style.getPropertyValue(name) });
+  }
+  try { delete node[symbol]; } catch { /* Ownership remains available on a sealed root. */ }
+}
+/** Reads the persisted selection, falling back to the applied state if persistence failed. */
+export function getLyraStyle(): Readonly<LyraStyle> {
+  return styleSnapshot(readStyleState(), typeof window === 'undefined' ? undefined : window);
+}
+/** Resets selected fields to defaults, or all fields when no list is supplied. */
+export function resetLyraStyle(fields: readonly LyraStyleField[] = STYLE_FIELDS): Readonly<LyraStyle> {
+  return setLyraStyle(Object.fromEntries(fields.filter(field => STYLE_FIELDS.includes(field)).map(field => [field, null])));
+}
+/** Replaces one element's scoped choices. Omitted axes inherit; null restores author-owned values. */
+export function applyLyraStyleScope(element: Element, choices: LyraStyleScopeChoices | null): void {
+  scopeModes.get(element)?.(); scopeModes.delete(element);
+  if (choices === null) { writeStyleAttributes(element, {}); writeStyleProperties(element, new Map()); return; }
+  const state = normalizeStyleChoices(choices, { ...DEFAULT_STYLE });
+  const fields = new Set(STYLE_FIELDS.filter(field => ownField(choices, field) !== undefined));
+  applyStyleState(element, state, fields);
+  if (choices.mode === 'system') scopeModes.set(element, attachStyleMode(element, node => applyStyleState(node, state, fields)));
+}
+
+/** Default-key pre-paint bootstrap; importing this string does not access browser globals. */
 export const lyraThemeBootstrap = createLyraThemeBootstrap();

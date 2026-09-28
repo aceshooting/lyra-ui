@@ -16,11 +16,15 @@ export const styles = css`
     --_lr-data-grid-focus-ring: var(--lr-focus-ring-width) solid
       var(--lr-focus-ring-color);
     --_lr-data-grid-header-background: var(--lr-color-surface-raised);
-    --_lr-data-grid-header-row-height: var(--lr-size-3-5rem);
+    --_lr-data-grid-header-row-height: var(--_lr-data-grid-row-height);
     --_lr-data-grid-header-text-color: var(--lr-color-text);
     --_lr-data-grid-indent-size: var(--lr-size-1-25rem);
     --_lr-data-grid-max-height: var(--lr-size-30rem);
-    --_lr-data-grid-row-height: var(--lr-size-3-5rem);
+    --_lr-data-grid-row-size: var(--lr-size-3-5rem);
+    --_lr-data-grid-row-height: max(
+      var(--_lr-density-target-min, 0px),
+      calc(max(var(--lr-table-row-min-height), var(--_lr-data-grid-row-size)) * var(--_lr-density-control, 1))
+    );
     --_lr-data-grid-row-hover-background: color-mix(
       in srgb,
       var(--accent-color, var(--_lr-data-grid-accent-color))
@@ -30,7 +34,7 @@ export const styles = css`
     --_lr-data-grid-selected-background: var(--lr-color-brand-quiet);
     --_lr-data-grid-stripe-background: var(--lr-color-surface-raised);
     --_lr-data-grid-text-color: var(--lr-color-text);
-    --_lr-data-grid-transition-duration: var(--lr-duration-fast);
+    --_lr-data-grid-transition-duration: var(--_lr-motion-duration, var(--lr-duration-fast));
     display: block;
     min-inline-size: 0;
     color: var(--text-color, var(--_lr-data-grid-text-color));
@@ -46,25 +50,21 @@ export const styles = css`
      component's own row-height/cell-padding baseline. */
   :host([size="xs"]) {
     --_lr-data-grid-cell-padding: var(--lr-space-xs);
-    --_lr-data-grid-header-row-height: var(--lr-size-2rem);
-    --_lr-data-grid-row-height: var(--lr-size-2rem);
+    --_lr-data-grid-row-size: var(--lr-size-2rem);
   }
   :host([size="s"]),
   :host([size="small"]) {
     --_lr-data-grid-cell-padding: var(--lr-space-s);
-    --_lr-data-grid-header-row-height: var(--lr-size-2-5rem);
-    --_lr-data-grid-row-height: var(--lr-size-2-5rem);
+    --_lr-data-grid-row-size: var(--lr-size-2-5rem);
   }
   :host([size="l"]),
   :host([size="large"]) {
     --_lr-data-grid-cell-padding: var(--lr-space-l);
-    --_lr-data-grid-header-row-height: var(--lr-size-4rem);
-    --_lr-data-grid-row-height: var(--lr-size-4rem);
+    --_lr-data-grid-row-size: var(--lr-size-4rem);
   }
   :host([size="xl"]) {
     --_lr-data-grid-cell-padding: var(--lr-space-2xl);
-    --_lr-data-grid-header-row-height: var(--lr-size-5rem);
-    --_lr-data-grid-row-height: var(--lr-size-5rem);
+    --_lr-data-grid-row-size: var(--lr-size-5rem);
   }
 
   [part="data-grid"] {
@@ -75,7 +75,7 @@ export const styles = css`
     overflow: hidden;
     border: var(--border-width, var(--_lr-data-grid-border-width)) solid
       var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
-    border-radius: var(--border-radius, var(--_lr-data-grid-border-radius));
+    border-radius: var(--border-radius, var(--lr-radius-container));
     background: var(--background-color, var(--_lr-data-grid-background-color));
   }
 
@@ -326,10 +326,7 @@ export const styles = css`
     display: grid;
     grid-template-columns: var(--data-grid-columns);
     min-inline-size: max-content;
-    min-block-size: var(
-      --header-row-height,
-      var(--_lr-data-grid-header-row-height)
-    );
+    min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--header-row-height, var(--_lr-data-grid-header-row-height)));
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
       solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     background: var(
@@ -356,10 +353,7 @@ export const styles = css`
   [part~="header-cell"] {
     position: relative;
     gap: var(--lr-space-xs);
-    min-block-size: var(
-      --header-row-height,
-      var(--_lr-data-grid-header-row-height)
-    );
+    min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--header-row-height, var(--_lr-data-grid-header-row-height)));
     font-weight: var(--lr-font-weight-semibold);
     cursor: default;
     user-select: none;
@@ -405,6 +399,9 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     max-block-size: var(--max-height, var(--_lr-data-grid-max-height));
     overflow: auto;
+    /* Stable row keys own scroll anchoring while virtual spacers change. Native anchoring
+       otherwise adjusts the same offset again and can oscillate at row boundaries. */
+    overflow-anchor: none;
     overscroll-behavior: contain;
   }
 
@@ -414,7 +411,7 @@ export const styles = css`
     display: grid;
     grid-template-columns: var(--data-grid-columns);
     min-inline-size: max-content;
-    min-block-size: var(--row-height, var(--_lr-data-grid-row-height));
+    min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--row-height, var(--_lr-data-grid-row-height)));
     border-block-end: var(--border-width, var(--_lr-data-grid-border-width))
       solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
     background: var(--background-color, var(--_lr-data-grid-background-color));
@@ -466,7 +463,7 @@ export const styles = css`
   }
 
   [part~="cell"] {
-    min-block-size: var(--row-height, var(--_lr-data-grid-row-height));
+    min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--row-height, var(--_lr-data-grid-row-height)));
     color: var(--lr-data-grid-cell-color, inherit);
   }
 
@@ -525,7 +522,7 @@ export const styles = css`
   [part="header"] > [data-pin="right"],
   [part="footer-row"] > [data-pin="right"] {
     inset-inline-end: calc(
-      var(--pin-offset, 0) + var(--data-grid-body-inline-end-gutter, 0)
+      var(--pin-offset, 0px) + var(--data-grid-body-inline-end-gutter, 0px)
     );
   }
 
@@ -692,7 +689,7 @@ export const styles = css`
     z-index: var(--lr-layer-popover);
     display: grid;
     place-items: center;
-    min-block-size: var(--row-height, var(--_lr-data-grid-row-height));
+    min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--row-height, var(--_lr-data-grid-row-height)));
     padding: var(--lr-space-l);
     background: var(--background-color, var(--_lr-data-grid-background-color));
     opacity: var(--lr-opacity-muted);

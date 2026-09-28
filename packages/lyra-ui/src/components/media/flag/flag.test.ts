@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './flag.js';
@@ -47,6 +48,9 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   );
   return el.shadowRoot!.querySelector('img:not([hidden])')!;
 }
+
+expectLocaleFallback('de', ['loading']);
+expectLocaleFallback('fr', ['loading']);
 
 it('shows a loading skeleton and aria-busy while the flag package loads, and ignores a stale resolution once the code is cleared first', async () => {
   const el = (await fixture(

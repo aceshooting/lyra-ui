@@ -6,7 +6,8 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
@@ -76,6 +77,23 @@ async function hoverAndAwaitPaint(
     { timeout },
   );
 }
+
+expectLocaleFallback('ar-EG', [
+  'avPlayerLabel',
+  'avPlayerPlaybackRate',
+  'avPlayerPosition',
+  'avPlayerRateOption',
+  'avPlayerTimeline',
+  'avPlayerTranscript',
+]);
+expectLocaleFallback('tr', [
+  'avPlayerLabel',
+  'avPlayerPlaybackRate',
+  'avPlayerPosition',
+  'avPlayerRateOption',
+  'avPlayerTimeline',
+  'avPlayerTranscript',
+]);
 
 /**
  * Presses `target` and polls `predicate` for the transitioned pressed/active paint it is expected
@@ -1591,8 +1609,7 @@ describe('focus-visible feedback for keyboard-operable parts', () => {
       cueRows(el)[0],
     ] as HTMLElement[];
     for (const target of targets) {
-      await sendKeys({ press: 'Tab' });
-      target.focus();
+      await focusByKeyboard(target);
       expect(target.matches(':focus-visible'), target.getAttribute('part') ?? target.localName).to.equal(true);
       const computed = getComputedStyle(target);
       const label = target.getAttribute('part') ?? target.localName;

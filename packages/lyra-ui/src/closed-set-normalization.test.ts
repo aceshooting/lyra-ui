@@ -73,7 +73,9 @@ const CASES: readonly ClosedSetCase[] = [
 describe('shared closed-set normalization', () => {
   for (const testCase of CASES) {
     it(`${testCase.tag}.${testCase.property} normalizes invalid attribute and JavaScript writes`, async () => {
-      const el = await fixture<HTMLElement>(document.createElement(testCase.tag));
+      const host = document.createElement(testCase.tag);
+      if (testCase.tag === 'lr-table') host.setAttribute('aria-label', 'Normalization fixture');
+      const el = await fixture<HTMLElement>(host);
       const values = el as unknown as Record<string, unknown>;
 
       values[testCase.property] = testCase.valid;

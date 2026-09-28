@@ -26,12 +26,21 @@ const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
  * evidence measures the build that embeds the new version.
  */
 export const PACKAGE_GENERATORS = Object.freeze([
+  'archive-changelog',
   'package-metadata',
   'manifest',
   'component-metadata',
   'manifest',
   'component-inventory',
+  'registrations',
+  'autoloader-manifest',
+  'registration-graph',
+  'scoped-definitions',
+  'events',
+  'testing-event-registry',
   'default-string-slices',
+  'translation-slices',
+  'locale-manifest',
   'framework-types',
   'design-tokens',
   'generate-editor-data',

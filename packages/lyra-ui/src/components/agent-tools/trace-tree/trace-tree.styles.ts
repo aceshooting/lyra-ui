@@ -279,12 +279,12 @@ export const styles = css`
         calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
-    animation: lr-trace-tree-stripe var(--lr-transition-ambient) infinite;
+    animation: var(--_lr-motion-animation, lr-trace-tree-stripe var(--lr-transition-ambient) infinite);
   }
   /* background-position animates in physical coordinates, so RTL needs an explicit mirrored keyframe
      track to sweep inline-start -> inline-end too. */
   :host(:dir(rtl)) [part='bar'][data-status='running'] {
-    animation-name: lr-trace-tree-stripe-rtl;
+    animation-name: var(--_lr-motion-animation, lr-trace-tree-stripe-rtl);
   }
   @media (prefers-reduced-motion: reduce) {
     /* The RTL selector outranks the bare one: unsilenced, its animation-name would beat

@@ -207,7 +207,7 @@ function isVisuallyHidden(element: Element): boolean {
  * `appearance="link"` moves its text colour by these two shares instead of taking a background.
  * @cssprop [--lr-button-active-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  * Deprecated alias of `--lr-button-active-bg`, read only as its fallback; removal not before 23.0.0.
- * @cssprop --lr-button-hover-color - Text color of a non-disabled button while hovered.
+ * @cssprop --lr-button-hover-color - Text color of a non-disabled button while hovered or pressed.
  * **Undeclared by default**, so it falls back to whatever colour the active `appearance` already
  * paints at rest — every appearance's current hover text colour is unchanged until this is set.
  * `appearance="link"` ignores it: its own hover rule sets a higher-specificity colour mix instead.

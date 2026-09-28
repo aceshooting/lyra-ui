@@ -17,9 +17,11 @@ import {
   migrateFiles,
   migrateText,
   parseArgs,
+  readExportDeprecations,
   readRenameLedger,
 } from './migrate-wa.mjs';
 import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
+import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 import {
   analyzeMigrationCoverage,
   formatMigrationCoverageSummary,
@@ -281,12 +283,12 @@ test('free and Pro package identities share the Web Awesome ecosystem without co
 });
 
 test('the packaged runtime projection stays narrow, complete, and fail-closed', () => {
-  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger() });
+  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
   const runtimeContract = buildMigrationContract(runtimeInventory);
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
     runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
-    ['lyra-v21'],
+    ['lyra-v21', 'lyra-v22'],
     'the packaged CLI must carry every rename profile, projected from the authored ledger',
   );
   assert.throws(
@@ -295,6 +297,14 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
     'a build that forgets the ledger must fail instead of publishing empty rename profiles',
   );
   assert.equal(runtimeContract.mappings.size, checkedInventory.mappings.length);
+  for (const component of runtimeInventory.components) {
+    const needed = new Set(checkedInventory.localMigrations.filter((profile) => profile.tag === component.tag)
+      .flatMap((profile) => profile.defaults.map((rule) => rule.member)));
+    assert.deepEqual(component.surface.attributes.map((attribute) => attribute.name).sort(), [...needed].sort());
+    for (const attribute of component.surface.attributes)
+      assert.deepEqual(Object.keys(attribute).sort(), ['name', 'type']);
+  }
+
   assert.deepEqual(
     runtimeContract.packageIdentities.get('@awesome.me/webawesome-pro'),
     { ecosystem: 'webawesome', tiers: new Set(['free', 'pro']) },
@@ -321,18 +331,10 @@ test('the packaged runtime executes from its adjacent projected contract', () =>
     const sourceDir = path.join(scratch, 'consumer');
     fs.mkdirSync(cliDir);
     fs.mkdirSync(sourceDir);
-    fs.copyFileSync(migratePath, path.join(cliDir, 'migrate-wa.mjs'));
-    fs.copyFileSync(
-      path.join(scriptDir, 'component-inventory.mjs'),
-      path.join(cliDir, 'component-inventory.mjs'),
-    );
-    fs.copyFileSync(
-      path.join(scriptDir, 'lyra-rename-ledger.mjs'),
-      path.join(cliDir, 'lyra-rename-ledger.mjs'),
-    );
+    copyMigrationRuntimeModules(scriptDir, cliDir);
     fs.writeFileSync(
       path.join(cliDir, 'migration-contract.json'),
-      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger() }))}\n`,
+      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() }))}\n`,
     );
 
     const source = path.join(sourceDir, 'component.ts');
@@ -2316,39 +2318,8 @@ test('the checked-in inventory grants a Pro chart target its granular registrati
   }
 });
 
-test('the lyra-v7 profile inserts only absent defaults with canonical boolean presence syntax', () => {
-  const checkedContract = buildMigrationContract(checkedInventory);
-  const input = [
-    '<lr-popup></lr-popup>',
-    '<lr-popover></lr-popover>',
-    '<lr-tooltip></lr-tooltip>',
-    '<lr-popup strategy="absolute" placement="top" distance="9" flip shift></lr-popup>',
-    '<lr-popover placement="top" distance="9" without-arrow></lr-popover>',
-    '<lr-tooltip distance="9" without-arrow></lr-tooltip>',
-    '',
-  ].join('\n');
-  const expected = [
-    '<lr-popup strategy="fixed" placement="bottom-start" distance="4" flip shift></lr-popup>',
-    '<lr-popover placement="bottom-start" distance="4" without-arrow></lr-popover>',
-    '<lr-tooltip distance="6" without-arrow></lr-tooltip>',
-    '<lr-popup strategy="absolute" placement="top" distance="9" flip shift></lr-popup>',
-    '<lr-popover placement="top" distance="9" without-arrow></lr-popover>',
-    '<lr-tooltip distance="9" without-arrow></lr-tooltip>',
-    '',
-  ].join('\n');
-  const result = migrateText(input, checkedContract, { file: 'local.html', origin: 'lyra-v7' });
-  assert.equal(result.content, expected);
-  assert.deepEqual(result.warnings, []);
-  assert.ok(result.changes.length > 0);
-  assert.deepEqual(new Set(result.changes.map((entry) => entry.origin)), new Set(['lyra-v7']));
-  assert.deepEqual(new Set(result.changes.map((entry) => entry.action)), new Set(['insert-default']));
-  assert.ok(!result.content.includes('="true"'));
-  assert.ok(!result.content.includes('arrow="false"'));
-
-  const rerun = migrateText(result.content, checkedContract, { file: 'local.html', origin: 'lyra-v7' });
-  assert.equal(rerun.content, expected);
-  assert.deepEqual(rerun.changes, []);
-  assert.deepEqual(rerun.warnings, []);
+test('the retired lyra-v7 profile is rejected', () => {
+  assert.throws(() => parseArgs(['--origin=lyra-v7', 'src']), /Unknown migration origin/);
 });
 
 test('the default migration mode never scans or warns about existing lr-* markup', () => {
@@ -2366,61 +2337,15 @@ test('the default migration mode never scans or warns about existing lr-* markup
   assert.deepEqual(result.warnings, []);
 });
 
-test('aliased elements and opaque attribute spreads block local defaults across all files', () => {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-local-blocked-v8-'));
-  try {
-    const alias = path.join(scratch, 'alias.ts');
-    const dynamic = path.join(scratch, 'dynamic.vue');
-    const markup = path.join(scratch, 'view.html');
-    const aliasInput = "const popup = shadowRoot.querySelector('lr-popup');\n";
-    const dynamicInput = '<lr-popover v-bind="attrs"></lr-popover>\n';
-    const markupInput = '<lr-popup></lr-popup>\n<lr-popover></lr-popover>\n';
-    fs.writeFileSync(alias, aliasInput);
-    fs.writeFileSync(dynamic, dynamicInput);
-    fs.writeFileSync(markup, markupInput);
-
-    const first = migrateFiles({
-      files: [alias, dynamic, markup],
-      inventory: checkedInventory,
-      origin: 'lyra-v7',
-      cwd: scratch,
-    });
-    assert.equal(first.origin, 'lyra-v7');
-    assert.equal(first.filesChanged, 0);
-    assert.equal(fs.readFileSync(alias, 'utf8'), aliasInput);
-    assert.equal(fs.readFileSync(dynamic, 'utf8'), dynamicInput);
-    assert.equal(fs.readFileSync(markup, 'utf8'), markupInput);
-    assert.deepEqual(
-      new Set(first.warnings.map((entry) => entry.warningCode)),
-      new Set(['ALIASED_MEMBER_REVIEW', 'DYNAMIC_VALUE_REVIEW', 'MAPPING_REVIEW_BLOCKED']),
-    );
-    assert.deepEqual(first.changes, []);
-    assert.deepEqual(
-      first.warnings.map((entry) => entry.origin),
-      first.warnings.map(() => 'lyra-v7'),
-    );
-
-    const rerun = migrateFiles({
-      files: [alias, dynamic, markup],
-      inventory: checkedInventory,
-      origin: 'lyra-v7',
-      cwd: scratch,
-    });
-    assert.deepEqual(rerun, first);
-  } finally {
-    fs.rmSync(scratch, { recursive: true, force: true });
-  }
-});
-
 test('CLI argument parsing includes check mode, dry-run, and a stable report target', () => {
-  assert.deepEqual(parseArgs(['--check', '--origin=lyra-v7', '--report=out/report.json', '--ext=.ts,vue', '--', 'src']), {
+  assert.deepEqual(parseArgs(['--check', '--origin=lyra-v21', '--report=out/report.json', '--ext=.ts,vue', '--', 'src']), {
     check: true,
     diff: false,
     dryRun: true,
     help: false,
     extensions: new Set(['ts', 'vue']),
     lyraVersion: null,
-    origin: 'lyra-v7',
+    origin: 'lyra-v21',
     report: 'out/report.json',
     targets: ['src'],
   });
@@ -2573,40 +2498,16 @@ test('the public CLI dry-runs, reports, applies, and remains idempotent', () => 
   }
 });
 
-test('the public CLI requires an explicit supported origin for local defaults', () => {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-local-cli-v8-'));
+test('the public CLI rejects the retired local-default profile without editing source', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-retired-profile-'));
   try {
     const source = path.join(scratch, 'local.html');
-    const reportPath = path.join(scratch, 'report.json');
     const input = '<lr-tooltip></lr-tooltip>\n';
-    const expected = '<lr-tooltip distance="6" without-arrow></lr-tooltip>\n';
     fs.writeFileSync(source, input);
-    const invoke = (...args) =>
-      spawnSync(process.execPath, [migratePath, ...args], { cwd: scratch, encoding: 'utf8' });
-
-    const defaultRun = invoke(source);
-    assert.equal(defaultRun.status, 0, defaultRun.stderr);
-    assert.equal(fs.readFileSync(source, 'utf8'), input, 'default mode must leave Lyra markup alone');
-
-    const dry = invoke('--origin=lyra-v7', '--dry-run', `--report=${reportPath}`, source);
-    assert.equal(dry.status, 0, dry.stderr);
+    const result = spawnSync(process.execPath, [migratePath, '--origin=lyra-v7', source], { cwd: scratch, encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Unknown migration origin: lyra-v7/);
     assert.equal(fs.readFileSync(source, 'utf8'), input);
-    const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-    assert.equal(report.origin, 'lyra-v7');
-    assert.deepEqual(new Set(report.changes.map((entry) => entry.action)), new Set(['insert-default']));
-    assert.ok(report.changes.every((entry) => entry.origin === 'lyra-v7'));
-    assert.ok(report.changes.every((entry) => !['rewrite-tag', 'rewrite-import'].includes(entry.action)));
-
-    const applied = invoke('--origin=lyra-v7', source);
-    assert.equal(applied.status, 0, applied.stderr);
-    assert.equal(fs.readFileSync(source, 'utf8'), expected);
-    const rerun = invoke('--origin=lyra-v7', source);
-    assert.equal(rerun.status, 0, rerun.stderr);
-    assert.match(rerun.stdout, /0 changed, 0 rewrite\(s\), 0 warning\(s\)/);
-
-    const unknown = invoke('--origin=lyra-v6', source);
-    assert.equal(unknown.status, 1);
-    assert.match(unknown.stderr, /Unknown migration origin: lyra-v6/);
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }

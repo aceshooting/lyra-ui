@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -275,6 +276,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     retry: LYRA_DEFAULT_retry,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'items',

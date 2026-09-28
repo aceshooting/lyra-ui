@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./heatmap.js";
 import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "./heatmap.js";
@@ -73,6 +74,8 @@ async function settleLayout(): Promise<void> {
     );
   }
 }
+
+expectLocaleFallback('de-DE', ['heatmapMatrixLabel', 'heatmapValueLabel']);
 
 describe("v9 canonical heatmap data and bounded projections", () => {
   it("exposes only the discriminated data model, with no legacy mode/collection members", async () => {
@@ -453,11 +456,14 @@ it("rejects unsafe custom color ramps and discrete legend paints", async () => {
   setMatrixData(el, { rowLabels: ["A"] });
   setMatrixData(el, { colLabels: ["B"] });
   el.colorSteps = ["red", 'url("data:image/svg+xml,<svg/>")'];
-  el.legendStops = [{ value: 1, color: "red;position:fixed" }];
   await el.updateComplete;
   expect(
     el.style.getPropertyValue("--lr-heatmap-color-steps-gradient")
   ).to.equal("");
+  // Check the independent legend paint boundary without claiming it describes that ramp.
+  el.colorSteps = undefined;
+  el.legendStops = [{ value: 1, color: "red;position:fixed" }];
+  await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="legend-swatch"]') === null
   ).to.equal(true);
@@ -466,7 +472,7 @@ it("rejects unsafe custom color ramps and discrete legend paints", async () => {
     "var(--lr-color-brand)",
     "color-mix(in srgb, red 50%, blue)",
   ];
-  el.legendStops = [{ value: 1, color: "#123456" }];
+  el.legendStops = el.colorSteps.map((color, value) => ({ value, color }));
   await el.updateComplete;
   expect(
     el.style.getPropertyValue("--lr-heatmap-color-steps-gradient")

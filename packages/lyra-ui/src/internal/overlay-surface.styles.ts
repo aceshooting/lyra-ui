@@ -20,7 +20,7 @@ import { css } from 'lit';
  * overlay in that subtree. Declaring them on `:host` here would take that away, exactly as
  * `tokens.styles.ts`'s REQUIRED_MARKER note records for the required-field marker.
  *
- * - `--lr-overlay-surface` — the fill. Defaults to `--lr-color-surface-overlay`, the surface a
+ * - `--lr-overlay-surface` — the fill. Defaults to the high container role (which falls back to `--lr-color-surface-overlay`), the surface a
  *   panel floating over the page paints itself with. In light mode that resolves to the page
  *   surface, unchanged; in dark mode it is a distinctly lighter near-black than the page, so an
  *   anchored popup reads as a raised object instead of a hole.
@@ -80,7 +80,7 @@ import { css } from 'lit';
  * stays readable in one file.
  */
 export const overlaySurfaceFill = css`
-  background: var(--lr-overlay-surface, var(--lr-color-surface-overlay));
+  background: var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)));
   border: var(--lr-border-width-thin) solid
     var(--lr-overlay-border, var(--_lr-overlay-edge, var(--lr-color-border-subtle)));
 `;
@@ -101,5 +101,5 @@ export const overlaySurfaceControlEdge = css`
  */
 export const overlaySurface = css`
   ${overlaySurfaceFill}
-  border-radius: var(--lr-overlay-radius, var(--lr-radius));
+  border-radius: var(--lr-overlay-radius, var(--lr-radius-container));
 `;

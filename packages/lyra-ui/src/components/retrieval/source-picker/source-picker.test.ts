@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -38,6 +39,24 @@ const sources: LyraSourceEntry[] = [
   { id: 'doc3', label: 'notes.txt', mimeType: 'text/plain' },
 ];
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('tr', [
+  'sourceListDefaultLabel',
+  'search',
+  'selectAllSources',
+  'sourcePickerSelection',
+  'fieldRequired',
+  'fileTypeFile',
+]);
+expectLocaleFallback('ar-u-nu-arab', [
+  'sourceListDefaultLabel',
+  'search',
+  'selectAllSources',
+  'sourcePickerSelection',
+  'fieldRequired',
+  'fileTypeFile',
+  'fileTypeText',
+]);
 it('defaults to empty sources/selectedSourceIds, withoutSelectAll=false, withoutSearch=false, omitted label', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-drawer.js to register this component. */
 // <lr-drawer> extends LyraDialog, so it inherits the dialog's built-in close control -- a composed
 // <lr-icon-button> as of 16.0.0. Without this registration that control would render as an inert,
 // never-upgrading element for a consumer importing only this module. The LEAN entry is the right

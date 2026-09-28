@@ -6,7 +6,7 @@
 - **Class** `LyraHeatmap`, also available unregistered from `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated css-property** `--lr-heatmap-tooltip-text` since `21.1.0`; use css-property `--lr-heatmap-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-cell-click` since `21.1.0`; use event `addEventListener('lr-cell-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Optional peers** none

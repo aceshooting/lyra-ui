@@ -6,8 +6,8 @@
 - **Class** `LyraEvalRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
+- **Deprecated event** `lr-example-tool-approval-decide` since `unreleased`; use event `addEventListener('lr-example-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 25 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -54,16 +54,20 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
-with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
+with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request` and `lr-example-tool-approval-decide`
 (`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
 event is cancelable: calling `preventDefault()` propagates the veto to the nested
-`lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
+`lr-tool-approval-decide-request`, preserving its pending dialog and current edited arguments while the
 host resolves asynchronous validation. The component also contains and correlates other composed
 child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
 `lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
+`lr-example-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request
+with the same correlated detail. Preventing either spelling propagates the nested approval veto;
+subscribe to one spelling.
+
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,

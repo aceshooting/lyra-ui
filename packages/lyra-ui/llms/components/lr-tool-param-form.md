@@ -6,7 +6,7 @@
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -15,6 +15,15 @@
 ---
 
 ## `lr-tool-param-form`
+
+Its supported flat schema now additionally includes: `minLength`/`maxLength` (Unicode code points),
+`format: 'email' | 'uri' | 'date' | 'date-time'`, finite inclusive `minimum`/`maximum`, `enumNames`,
+string `oneOf: [{ const, title }]`, and `type:'array'` for multiple string-enum choices.
+Array items are `{ type:'string', enum:[...] }` or `{ anyOf:[{ const,title }] }`, bounded to 500
+choices. `minItems`/`maxItems` constrain selection counts; duplicate selections are invalid.
+Malformed constraints invalidate even absent optional fields. Defaults populate all supported
+shapes. Arbitrary nested objects/arrays/combinators, regex patterns, `$ref` and additionalProperties
+validation remain outside its scope. `lr-agent-question` rejects unknown keywords before rendering.
 
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
@@ -28,40 +37,49 @@ Choosing Boolean Unset keeps an explicit `undefined` value when a schema default
 that key or replacing the value with an absent key restores default materialization. Without a
 schema default, Unset removes the key.
 
-**Supported schema subset:** a _flat_ object whose properties use one primitive `type`
-(`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
-primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
-unions, `oneOf`/`anyOf`/`allOf`, `$ref`, string/numeric constraints, and schema-valued
-`additionalProperties` are not interpreted. An unsupported property type renders a visible fallback
-and makes the form invalid instead of being silently accepted. Schemas are bounded to 100 fields
-and 500 enum choices per field; exceeding either ceiling leaves only the bounded prefix mounted and
-fails the form closed with a localized form-wide error. A null, array, or other malformed property
-definition is a schema-shape error, never misreported as a value-serialization failure.
+**Supported schema subset:** a _flat_ object whose properties use string, number, integer, boolean,
+or bounded arrays of string-enum choices. String fields support `enum`/`enumNames`, titled `oneOf`
+choices, Unicode `minLength`/`maxLength`, and `email`, `uri`, `date`, or `date-time` formats;
+numeric fields support finite inclusive `minimum`/`maximum`; enum arrays support `items.enum` or
+titled `items.anyOf` plus `minItems`/`maxItems`. `required`, primitive `const`, and the
+`title`/`description`/`default` annotations are also supported. Free-form string inputs may forward
+native `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
+`enterKeyHint` hints. Nested objects, arbitrary arrays, type unions, `anyOf`/`allOf`, `$ref`, regex
+patterns, and schema-valued `additionalProperties` are not interpreted. An unsupported property
+type renders a visible fallback and makes the form invalid instead of being silently accepted.
+Schemas are bounded to 100 fields and 500 choices per field; exceeding either ceiling leaves only
+the bounded prefix mounted and fails the form closed with a localized form-wide error. A null,
+array, or other malformed property definition is a schema-shape error, never misreported as a
+value-serialization failure.
 
 **Exported types:**
 
-- `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
-  types this renderer understands
+- `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean' | 'array'` — the
+  supported leaf and string-enum-array property types
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
+- `ToolParamStringFormat = 'email' | 'uri' | 'date' | 'date-time'` — the supported string formats.
+- `ToolParamEnumOption` and `ToolParamEnumItems` — titled string constants for a single-select
+  `oneOf` or array `items.anyOf`, and the supported string-enum array item shape, respectively.
 - `ToolParamFormProperty { readonly type: ToolParamFormPropertyType; readonly enum?: readonly
-string[]; readonly description?: string; readonly title?: string; readonly default?: unknown;
-readonly const?: ToolParamFormPrimitive; readonly autocomplete?: string; readonly spellcheck?:
-boolean; readonly autocapitalize?: string; readonly autoCorrect?: string; readonly inputMode?:
-string; readonly enterKeyHint?: string }` — one `schema.properties`
-  entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
-  enforces one exact primitive value; `title` is the display label; `description` is helper text;
-  `default` pre-fills a field whenever `value` doesn't already have that key. For a `'string'`
-  (non-enum) or `'number'`/`'integer'` field, `const` also pre-fills the field (taking priority
-  over `default` when both are present) and renders its native control `readonly` — visible,
-  focusable and copyable, but not editable, and still submitted as the locked value. The
-  `'boolean'`/enum `<lr-select>` fields are unaffected: `const` there remains pure post-touch
-  validation, as before. For a free-form
-  string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
-  `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
-  `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
-- `FlatToolParamSchema { readonly type: 'object'; readonly properties:
-Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
-  (intentionally flat) schema shape this component can render.
+  string[]; readonly enumNames?: readonly string[]; readonly oneOf?: readonly ToolParamEnumOption[];
+  readonly items?: ToolParamEnumItems; readonly minLength?: number; readonly maxLength?: number;
+  readonly format?: ToolParamStringFormat; readonly minimum?: number; readonly maximum?: number;
+  readonly minItems?: number; readonly maxItems?: number; readonly description?: string;
+  readonly title?: string; readonly default?: unknown; readonly const?: ToolParamFormPrimitive;
+  readonly autocomplete?: string; readonly spellcheck?: boolean; readonly autocapitalize?: string;
+  readonly autoCorrect?: string; readonly inputMode?: string; readonly enterKeyHint?: string }` —
+  one `schema.properties` entry. `enum`/`enumNames` describe string select options; `oneOf` uses
+  titled constants, while array `items` uses `enum` or `anyOf` choices. `const` enforces one exact
+  primitive value. `title` is the display label, `description` helper text, and `default` pre-fills
+  a field when `value` has no corresponding key. String length limits count Unicode code points;
+  formats and inclusive numeric/selection bounds are validated. `const` locks string (non-enum),
+  number, and integer controls to its value, taking precedence over `default`; for boolean and enum
+  selects it is validated after the field is touched. For free-form text inputs, the native editing
+  hints are forwarded when supplied; `spellcheck` defaults to `true`.
+- `FlatToolParamSchema { readonly type: 'object'; readonly $schema?: string; readonly properties:
+  Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
+  intentionally flat schema shape this component can render; `$schema` identifies a dialect but
+  does not expand the supported keyword subset.
 - `ToolParamFormValue = Readonly<Record<string, unknown>>` — the clone-owned argument model.
 
 **Properties:**

@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -418,6 +419,7 @@ export interface LyraVirtualListEventMap {
  * @since 4.0.0
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'items',
     'source',
@@ -2041,7 +2043,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private scrollActiveIntoView(): void {
     const index = this.activeIndex;
     if (index < 0) return;
-    const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
+    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
     if (!this.performScrollTo(index, 'auto', behavior)) return;
     this.beginPendingScrollCorrection(index, 'auto', behavior, this.activeItemId);
   }
@@ -2071,7 +2073,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // position APIs (offsetForIndex/indexAtOffset) already apply.
     const clamped = finiteInteger(index, 0, 0, n - 1);
     const align = options?.align ?? 'auto';
-    const behavior: 'auto' | 'smooth' = prefersReducedMotion(this.ownerDocument.defaultView)
+    const behavior: 'auto' | 'smooth' = prefersReducedMotion(this)
       ? 'auto'
       : options?.behavior ?? 'smooth';
     if (this.performScrollTo(clamped, align, behavior))

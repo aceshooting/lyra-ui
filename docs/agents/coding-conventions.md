@@ -349,3 +349,18 @@
   referenced by path — by name or otherwise — from any tracked file, and must stay untracked via
   local git exclude config rather than the committed `.gitignore` (which would itself name them).
 - License: MIT. TypeScript strict.
+
+
+## Optional collection and overlay support
+
+A class declaring `ownedCollectionProperties` or `immutableEventDetails` explicitly imports
+`collectionSupport` from `src/internal/collection-snapshot.ts` and declares
+`protected static override collectionSupport = collectionSupport`. Mixin constructors without
+inherited static typing omit `override`. The support object owns the existing bounded clone/freeze
+policy; plain `LyraElement` subclasses do not load it. Import `snapshotPublicCollection` from that
+same module when an accessor needs the boundary directly. The collection-event ownership gate
+checks component enrollment.
+
+Top-layer reset CSS is adopted by `promoteToTopLayer()` into the surface's actual root, once per
+owner-document sheet. It is no longer part of `LyraElement.styles`; overlay consumers use the
+positioner/promoter rather than adding their own UA reset.

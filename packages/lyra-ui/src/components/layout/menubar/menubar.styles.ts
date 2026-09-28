@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   :host { display: block; min-inline-size: 0; }
@@ -10,6 +11,7 @@ export const styles = css`
     --lr-form-control-padding-block: calc(var(--lr-space-2xs) * 0);
   }
   [part='base'] {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -27,4 +29,6 @@ export const styles = css`
     border-color: transparent;
     box-shadow: none;
   }
+  ${glassSurface('[part="base"]', css`var(--lr-color-surface)`)}
+  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-color-surface)`, css`transparent`)}
 `;

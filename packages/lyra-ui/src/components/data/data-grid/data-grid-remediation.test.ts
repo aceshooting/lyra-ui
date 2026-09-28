@@ -118,7 +118,7 @@ describe('data-grid canonical output and interaction', () => {
 
 // `error` mirrors `<lr-table>`'s own contract (decision 40): a built-in failed-load state that
 // keeps the header/toolbar/pager mounted, `error` beating every empty/no-columns/no-results
-// branch, and a cancelable `lr-retry` whose default action clears `error`.
+// branch, and a cancelable `lr-retry-request` whose default action clears `error`.
 describe('error state', () => {
   const errorColumns: DataGridColumn<Row>[] = [{ field: 'value', label: 'Value' }];
 
@@ -174,7 +174,7 @@ describe('error state', () => {
     expect(empty.getAttribute('description')).to.equal('Check your connection and retry.');
   });
 
-  it('emits a cancelable lr-retry and only clears `error` when the default action runs', async () => {
+  it('emits a cancelable lr-retry-request and only clears `error` when the default action runs', async () => {
     const element = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
       label="People" .rowKey=${'id'} .columns=${errorColumns} .data=${[row]} error
     ></lr-data-grid>`);
@@ -186,12 +186,12 @@ describe('error state', () => {
       received = event as CustomEvent;
       event.preventDefault();
     };
-    element.addEventListener('lr-retry', vetoListener);
+    element.addEventListener('lr-retry-request', vetoListener);
     retryButton.click();
     expect(received?.cancelable).to.equal(true);
     expect(received?.defaultPrevented).to.equal(true);
     expect(element.error, 'a vetoed retry must not clear error').to.equal(true);
-    element.removeEventListener('lr-retry', vetoListener);
+    element.removeEventListener('lr-retry-request', vetoListener);
 
     retryButton.click();
     expect(element.error, 'the default action clears error').to.equal(false);

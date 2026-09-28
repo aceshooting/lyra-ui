@@ -1,3 +1,5 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
@@ -37,6 +39,9 @@ async function mountServerRenderedProgressRing(markup: string): Promise<LyraProg
   container.setHTMLUnsafe(markup);
   return container.firstElementChild as LyraProgressRing;
 }
+
+expectLocaleFallback('ar', ['progress']);
+expectLocaleFallback('de', ['progress']);
 
 it('reflects value on both progress components', async () => {
   const bar = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
@@ -1259,3 +1264,7 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
     });
   });
 }
+
+expectDeprecatedUsage('lr-progress-bar', 'property', 'accessibleLabel');
+
+expectDeprecatedUsage('lr-progress-ring', 'property', 'accessibleLabel');

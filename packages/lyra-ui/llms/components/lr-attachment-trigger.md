@@ -6,10 +6,11 @@
 - **Class** `LyraAttachmentTrigger`, also available unregistered from `@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated part** `menu-trigger__control` since `21.1.0`; use part `::part(menu-trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `trigger__control` since `21.1.0`; use part `::part(trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,8 +38,8 @@ capability as a row.
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
   means "any file type").
-- `multiple: boolean = true` (reflected) — forwarded to the hidden file input's own `multiple`
-  attribute.
+- `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
+  opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
 - `accessibleLabel?: string` (attribute `accessible-label`, deprecated) — overrides either trigger shape's localized
   accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the

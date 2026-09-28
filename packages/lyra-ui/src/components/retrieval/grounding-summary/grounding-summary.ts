@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-grounding-summary.js to register this component. */
 export * from './grounding-summary.class.js';
 import { LyraGroundingSummary } from './grounding-summary.class.js';
 import { defineElement } from '../../../internal/prefix.js';

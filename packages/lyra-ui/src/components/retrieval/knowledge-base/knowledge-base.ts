@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-knowledge-base.js to register this component. */
 export * from './knowledge-base.class.js';
 import { LyraKnowledgeBase } from './knowledge-base.class.js';
 import { defineElement } from '../../../internal/prefix.js';

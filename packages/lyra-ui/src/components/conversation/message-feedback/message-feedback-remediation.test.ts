@@ -13,7 +13,7 @@ describe('pending feedback settlement focus', () => {
         const feedback = wrapper.querySelector<LyraMessageFeedback>('lr-message-feedback')!;
         const outside = wrapper.querySelector<HTMLButtonElement>('#outside')!;
         let submissionId = '';
-        feedback.addEventListener('lr-feedback-submit', (event) => {
+        feedback.addEventListener('lr-feedback-submit-request', (event) => {
           event.preventDefault();
           submissionId = (event as CustomEvent<{ submissionId: string }>).detail.submissionId;
         });

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './context-meter.js';
@@ -9,6 +10,8 @@ const SEGMENTS: ContextMeterSegment[] = [
   { label: 'History', value: 5000, tone: 'brand' },
   { label: 'Tools', value: 1000, tone: 'warning' },
 ];
+
+expectLocaleFallback('de-DE', ['contextMeterSegmentLabel', 'contextMeterUsedOfTotal']);
 
 it('renders a fully-unfilled track with no segment parts when segments is empty', async () => {
   const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
@@ -785,7 +788,7 @@ it('activates a focused band from the keyboard while interactive, and never othe
   el.segments = SEGMENTS;
   await el.updateComplete;
   const indexes: number[] = [];
-  el.addEventListener('lr-segment-activate', (event) => {
+  el.addEventListener('lr-segment-activate-request', (event) => {
     indexes.push((event as CustomEvent<{ index: number }>).detail.index);
   });
 
@@ -875,7 +878,7 @@ describe('non-actionable and empty segments', () => {
     el.segments = MIXED;
     await el.updateComplete;
     const seen: number[] = [];
-    el.addEventListener('lr-segment-activate', (event) => {
+    el.addEventListener('lr-segment-activate-request', (event) => {
       seen.push((event as CustomEvent<{ index: number }>).detail.index);
     });
 
@@ -894,7 +897,7 @@ describe('non-actionable and empty segments', () => {
     el.segments = MIXED;
     await el.updateComplete;
     const seen: number[] = [];
-    el.addEventListener('lr-segment-activate', (event) => {
+    el.addEventListener('lr-segment-activate-request', (event) => {
       seen.push((event as CustomEvent<{ index: number }>).detail.index);
     });
 
@@ -910,7 +913,7 @@ describe('non-actionable and empty segments', () => {
     el.segments = MIXED;
     await el.updateComplete;
     const seen: number[] = [];
-    el.addEventListener('lr-segment-activate', (event) => {
+    el.addEventListener('lr-segment-activate-request', (event) => {
       seen.push((event as CustomEvent<{ index: number }>).detail.index);
     });
 

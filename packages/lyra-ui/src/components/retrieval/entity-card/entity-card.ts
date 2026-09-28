@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-entity-card.js to register this component. */
 export * from './entity-card.class.js';
 import { LyraEntityCard } from './entity-card.class.js';
 import { defineElement } from '../../../internal/prefix.js';

@@ -17,6 +17,7 @@ export {
   getRegisteredLyraLocaleKeys,
   getRegisteredLyraLocales,
   registerLyraLocale,
+  registerLyraLocaleDelta,
   resolveLyraDirection,
   resolveLyraLocale,
   resolveLyraString,

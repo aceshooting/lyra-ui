@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-document-compare.js to register this component. */
 export * from './document-compare.class.js';
 import { LyraDocumentCompare } from './document-compare.class.js';
 import { defineElement } from '../../../internal/prefix.js';

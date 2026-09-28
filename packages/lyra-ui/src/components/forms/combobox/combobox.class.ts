@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -81,7 +83,7 @@ import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
@@ -387,6 +389,8 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
   >;
   'lr-activate': CustomEvent<{ value: string }>;
   'lr-source-error': CustomEvent<{ error: unknown; query: string }>;
+  'lr-retry-request': CustomEvent<null>;
+  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
   'lr-retry': CustomEvent<null>;
   input: InputEvent | CustomEvent<
     LyraEventDetailSnapshot<{
@@ -507,7 +511,9 @@ export type LyraComboboxSourceErrorEvent =
  *   query, not necessarily `this.query`/`inputValue`, which may have moved on (or been cleared by
  *   closing the listbox) by the time the rejection settles. Not cancelable — the failure has
  *   already happened and the error row is already what rendered, so there is nothing to veto.
- * @event lr-retry - The failed-load state's `[part='retry-button']` was activated. Cancelable —
+ * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
+ * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
+ *   The failed-load state's `[part='retry-button']` was activated. Cancelable —
  *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
  *   a host that owns its own retry timing.
  * @method refresh - `refresh(): void` — re-runs the current `source` query without changing the
@@ -657,7 +663,7 @@ export type LyraComboboxSourceErrorEvent =
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
- * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  * on the listbox popup. This is the public arm the popup never had: retinting it no longer means
  * retinting the page surface every card and input reads.
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
@@ -713,7 +719,6 @@ export class LyraCombobox<
     noMatches: LYRA_DEFAULT_noMatches,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
@@ -724,6 +729,7 @@ export class LyraCombobox<
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-change',
@@ -3743,8 +3749,12 @@ export class LyraCombobox<
                     // comment names this exact position as the case to opt out in.
                     headingLevel: 'none',
                     onRetry: () => this.refresh(),
-                    emitRetry: (detail, init: { cancelable: true }) =>
-                      this.emit('lr-retry', detail, init),
+                    emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
+                    emitRetry: (detail, init: { cancelable: true }) => {
+                      const legacy = this.emit('lr-retry', detail, init);
+                      if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+                      return legacy;
+                    },
                     // `error` is already this form control's validation-message slot; see the
                     // renderer's `slotNames` doc for why that collision has to be renamed here.
                     slotNames: { error: 'source-error' },

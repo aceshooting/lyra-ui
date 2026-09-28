@@ -40,7 +40,7 @@ export const NarrowAllocation: Story = {
     docs: {
       description: {
         story:
-          "At an explicit 320px RTL allocation with long localized labels, the group's own container query (not the viewport) drives the @container rule that stretches and wraps the button row. :host is an inline-flex, shrink-to-fit box with container-type: inline-size always on, so the group needs its own explicit inline-size or it settles at its intrinsic fallback.",
+          "The group wraps long labels within its 320px RTL allocation and otherwise keeps its content width. For an intentionally filled row, set inline-size: 100% on ::part(base).",
       },
     },
   },

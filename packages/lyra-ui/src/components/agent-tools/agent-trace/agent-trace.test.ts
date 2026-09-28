@@ -171,7 +171,7 @@ describe('lr-agent-trace', () => {
     expect(rawEvents).to.equal(0);
   });
 
-  it('contains the child visibility proposal without canceling its eventual commit', async () => {
+  it('contains the canonical child visibility proposal without canceling its eventual commit', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
@@ -182,8 +182,8 @@ describe('lr-agent-trace', () => {
     let childProposals = 0;
     let childCommits = 0;
     let wrapperCommits = 0;
-    el.addEventListener('lr-before-visibility-change', () => leakedProposals += 1);
-    legend.addEventListener('lr-before-visibility-change', () => childProposals += 1);
+    el.addEventListener('lr-visibility-change-request', () => leakedProposals += 1);
+    legend.addEventListener('lr-visibility-change-request', () => childProposals += 1);
     legend.addEventListener('lr-visibility-change', () => childCommits += 1);
     el.addEventListener('lr-span-visibility-change', () => wrapperCommits += 1);
 
@@ -204,7 +204,7 @@ describe('lr-agent-trace', () => {
     const toolItem = [...legend.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="item"]')].find((item) =>
       item.textContent!.includes('Tool'),
     )!;
-    const proposalNames = ['lr-visibility-change-request', 'lr-before-visibility-change'];
+    const proposalNames = ['lr-visibility-change-request'];
     const leaked: string[] = [];
     const onHost = (event: Event): void => {
       leaked.push(`host:${event.type}`);

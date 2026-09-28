@@ -1,4 +1,5 @@
 import { aTimeout, expect } from '@open-wc/testing';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import type { MarkedModule } from './markdown-loader.js';
 import {
@@ -26,6 +27,9 @@ import {
   type PendingHighlight,
 } from './markdown-shared.js';
 import type { MarkdownCodeBlockRecord } from './markdown-code-header.js';
+
+// Shared fallback tests run without the optional DOMPurify peer and assert the rendered fallback.
+expectDevWarning('lyra-markdown-dompurify-unavailable');
 
 it('applies the resolved palette immediately when starting the shared theme watch', () => {
   const host = document.body.appendChild(document.createElement('div'));

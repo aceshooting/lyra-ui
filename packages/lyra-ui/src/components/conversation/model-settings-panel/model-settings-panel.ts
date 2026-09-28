@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-model-settings-panel.js to register this component. */
 export * from './model-settings-panel.class.js';
 import { LyraModelSettingsPanel } from './model-settings-panel.class.js';
 import { defineElement } from '../../../internal/prefix.js';

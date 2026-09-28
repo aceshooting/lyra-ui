@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
+import '../../../density.css';
 import type {
   DataGridColumn,
   DataGridRequest,
@@ -536,6 +537,19 @@ export const FixedAndFlexibleWidths: Story = {
         ]}
         .data=${[rows[0]!, rows[0]!, ...rows.slice(1)]}
       ></lr-data-grid>
+    </div>
+  `,
+};
+
+export const RowMinimumAndDensity: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; --lr-theme-table-row-height: 3rem">
+      ${(['compact', 'comfortable', 'touch'] as const).map(density => html`
+        <section data-lr-density=${density}>
+          <h3>${density}</h3>
+          <lr-data-grid label=${`${density} rows`} size="s" .columns=${columns} .data=${rows}></lr-data-grid>
+        </section>
+      `)}
     </div>
   `,
 };

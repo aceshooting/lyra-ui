@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import { LyraLiteChart } from './lite-chart.js';
@@ -9,11 +10,11 @@ import { resolveLyraLocale } from '../../../localization.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
-expectLocaleFallback('de-DE', [
-  'chartData', 'liteChartBarLabel',
-]);
+expectLocaleFallback('de-DE', ['chartData', 'liteChartBarLabel']);
 expectLocaleFallback('ar-EG', [
-  'chartCategory', 'chartData', 'liteChartBarLabel',
+  'chartCategory',
+  'chartData',
+  'liteChartBarLabel',
 ]);
 
 it('removes the deprecated v8 padLeft/hideAxis/selectedIndex accessors — valueAxisGutter/withoutValueAxis/selectedIndices are the only surface', () => {
@@ -4981,3 +4982,5 @@ describe('bidi isolation of formatted labels', () => {
     }
   });
 });
+
+expectDeprecatedUsage('lr-lite-chart', 'property', 'accessibleLabel');

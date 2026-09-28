@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./grounding-summary.js";
 import type { LyraGroundingSummary } from "./grounding-summary.js";
@@ -29,6 +30,28 @@ function stats(el: LyraGroundingSummary): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll("lr-stat")] as HTMLElement[];
 }
 
+// Locale/numbering fixtures intentionally use English fallback text.
+expectLocaleFallback('de-DE', [
+  'groundingSummaryLabel',
+  'groundingSummaryEmpty',
+  'groundingSummarySupportedLabel',
+  'groundingSummaryUnsupportedLabel',
+  'groundingSummaryCoverageLabel',
+  'trendUnchanged',
+]);
+expectLocaleFallback('ar-u-nu-arab', [
+  'groundingSummaryLabel',
+  'groundingSummaryEmpty',
+  'groundingSummarySupportedLabel',
+  'groundingSummaryUnsupportedLabel',
+  'groundingSummaryCoverageLabel',
+  'groundingSummaryConfidenceLabel',
+  'groundingSummaryWarningsHeading',
+  'groundingSummaryEvidenceHeading',
+  'groundingSummaryEvidenceSpan',
+  'trendUnchanged',
+  'citation',
+]);
 it("renders the groundingSummaryEmpty state when assessment is null (the default)", async () => {
   const el = (await fixture(
     html`<lr-grounding-summary></lr-grounding-summary>`

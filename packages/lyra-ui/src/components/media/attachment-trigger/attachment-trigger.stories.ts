@@ -185,3 +185,8 @@ export const AppearanceAndSize: Story = {
     </div>
   `,
 };
+
+export const MultipleFiles: Story = {
+  render: () => html`<lr-attachment-trigger multiple @lr-files=${logPick('multiple-log')}></lr-attachment-trigger>
+    <output id="multiple-log"></output>`,
+};

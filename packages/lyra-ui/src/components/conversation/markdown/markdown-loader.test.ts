@@ -1,6 +1,11 @@
 import { expect } from '@open-wc/testing';
 import { loadMarkdownDeps, loadMarkdownAndSanitizer, getMarkdownDepsIfLoaded } from './markdown-loader.js';
 import { preloadMarkdown } from './markdown.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+// These tests exercise optional-peer fallbacks; the diagnostic contract has a separate capture test.
+expectDevWarning('lyra-markdown-marked-unavailable');
+expectDevWarning('lyra-markdown-dompurify-unavailable');
 
 class UsableMarked {
   readonly defaults: Record<string, unknown> = {};

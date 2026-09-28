@@ -1,4 +1,5 @@
-import { expect, fixture, waitUntil } from '@open-wc/testing';
+import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
+import { fixtureCleanup, expect, fixture, waitUntil } from '@open-wc/testing';
 import { html, type TemplateResult } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, settlePointer } from '../../test/wtr-mouse.js';
@@ -13,6 +14,13 @@ import '../components/media/file-input/file-input.js';
 import '../components/forms/phone-input/phone-input.js';
 import '../components/forms/token-input/token-input.js';
 import '../components/forms/input/time-input.js';
+
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
+before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+after(() => {
+  fixtureCleanup();
+  setFlagUrlResolver(null);
+});
 
 /**
  * The form-field paint contract: every field-shaped control publishes the same quartet — resting fill,

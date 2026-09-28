@@ -6,7 +6,7 @@
 - **Class** `LyraAppRail`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecated css-property** `--lr-app-rail-background` since `21.1.0`; use css-property `--lr-app-rail-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-app-rail-panel-background` since `21.1.0`; use css-property `--lr-app-rail-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `hideToggle` / `hide-toggle` since `21.1.0`; use property `without-toggle`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -220,7 +220,7 @@ Also settable as a plain `aria-label` attribute (not a reactive property): overr
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle`, or
+**Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle-request`, or
 flips the full/icon-only preference. It is a no-op while disconnected. While pinned, it records
 only the preference; releasing `forceMode` applies it.
 
@@ -235,15 +235,10 @@ persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferre
 restored-on-mount case fires once, from the first `updated()` after that mount's render and
 attribute reflection have both landed, rather than synchronously during the mount itself; it is
 not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
-was persisted), `lr-toggle`
-(`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`, where `expanded` is the
-proposed overlay state and the deprecated `open` key, removed in 23.0.0, carries the same value; the
-mobile overlay is opening or closing — via
-the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
-breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
-directly. Cancelable for every trigger except the forced mode-change close, which always applies —
-vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
-`preventDefault()` to keep the overlay as it is for the other triggers),
+was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`;
+cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
+the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
+direct property writes remain silent. The `open` detail key remains a compatibility alias.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
@@ -728,9 +723,9 @@ never disagree with what is rendered inside it.
 **Properties:**
 
 - `heading: string = ''` — the section title. The `heading` slot replaces it when populated.
-- `headingLevel: number = 3` (attribute `heading-level`) — the `aria-level` the heading landmark
-  reports. Clamped to 1-6 and rounded; a non-finite value falls back to `3`. Settable because a rail
-  sits at a different depth in every page that embeds it.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — `'1'`–`'6'` set the heading
+  landmark's level; `'none'` keeps the title visible without heading semantics. Invalid values
+  fall back to `'3'`. JavaScript callers use strings, matching the other heading controls.
 - `collapsible: boolean = false` (reflected) — opts in the built-in collapse control. The heading's
   own text becomes the button carrying `aria-expanded` and `aria-controls`, which is the accordion
   pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.

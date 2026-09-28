@@ -6,7 +6,7 @@
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 22 custom properties — see `lr-app-rail.md`

@@ -4,11 +4,39 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const requireFromPackage = createRequire(path.join(packageDir, 'package.json'));
 const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
 const esbuild = requireFromLoaderHost('esbuild');
+
+// These self-contained functions are serialized with Function#toString for the pre-paint script.
+// Compact their local bindings before the ordinary module pass, which deliberately preserves
+// readable identifiers elsewhere. A script transform (no module format) retains each declaration
+// name and free identifier, so surrounding imports/exports and callback defaults stay intact.
+const serializedFunctions = new Map([
+  ['theme/theme.js', new Set(['applyStoredThemeBeforePaint', 'applyStoredStyleBeforePaint', 'styleTokenAllowed'])],
+  ['theme/style-ownership.js', new Set(['readStyleOwnership'])],
+]);
+
+async function compactSerializedFunctions(source, relativePath) {
+  const names = serializedFunctions.get(relativePath.split(path.sep).join('/'));
+  if (!names) return source;
+  const parsed = parseSync(relativePath, source);
+  if (parsed.errors.length) throw new Error(`${relativePath}: cannot parse serialized bootstrap functions`);
+  const declarations = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
+    .filter(node => node?.type === 'FunctionDeclaration' && names.has(node.id?.name));
+  if (declarations.length !== names.size) throw new Error(`${relativePath}: serialized bootstrap function inventory changed`);
+  for (const declaration of declarations.reverse()) {
+    const compact = await esbuild.transform(source.slice(declaration.start, declaration.end), {
+      loader: 'js', target: 'es2022', minifyIdentifiers: true, minifySyntax: true,
+      minifyWhitespace: true, legalComments: 'none', charset: 'utf8', sourcemap: false,
+    });
+    source = source.slice(0, declaration.start) + compact.code.trimEnd() + source.slice(declaration.end);
+  }
+  return source;
+}
 
 async function javascriptFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -32,7 +60,8 @@ export async function compactBuildJavaScript(directory) {
   await Promise.all(files.map(async (file) => {
     const source = await readFile(file, 'utf8');
     beforeBytes += Buffer.byteLength(source);
-    const result = await esbuild.transform(source, {
+    const prepared = await compactSerializedFunctions(source, path.relative(directory, file));
+    const result = await esbuild.transform(prepared, {
       format: 'esm',
       legalComments: 'none',
       loader: 'js',

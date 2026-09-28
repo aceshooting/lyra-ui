@@ -8,6 +8,25 @@ function base(el: LyraCard): HTMLElement {
   return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 }
 
+it('uses an optional inherited container radius while preserving local card radius overrides', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-theme-border-radius-m: 7px">
+      <lr-card>Default</lr-card>
+      <lr-card href="/details">Linked</lr-card>
+      <lr-card style="--border-radius: 11px">Local</lr-card>
+    </div>
+  `);
+  const cards = [...wrapper.querySelectorAll<LyraCard>('lr-card')];
+  await Promise.all(cards.map(card => card.updateComplete));
+  expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('7px');
+  wrapper.style.setProperty('--lr-theme-border-radius-container', '23px');
+  expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('23px');
+  expect(getComputedStyle(base(cards[1]!)).borderTopLeftRadius).to.equal('23px');
+  expect(getComputedStyle(base(cards[2]!)).borderTopLeftRadius).to.equal('11px');
+  wrapper.style.removeProperty('--lr-theme-border-radius-container');
+  expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('7px');
+});
+
 function key(el: HTMLElement, k: string): KeyboardEvent {
   const ev = new KeyboardEvent("keydown", {
     key: k,

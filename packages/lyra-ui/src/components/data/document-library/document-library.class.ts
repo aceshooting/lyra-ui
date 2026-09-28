@@ -1,3 +1,5 @@
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -98,11 +100,9 @@ export interface LyraDocumentLibraryEventMap {
   'lr-sort': CustomEvent<DocumentLibrarySortCommitDetail>;
   'lr-selection-change': CustomEvent<LyraEventDetailSnapshot<DocumentLibrarySelectionChangeDetail>>;
   'lr-open': CustomEvent<DocumentLibraryOpenDetail>;
-  /** The nested table's built-in `[part='retry-button']` was activated, only rendered while
-   *  `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
-   *  set instead. Mirrors `<lr-table>`'s own `lr-retry` contract exactly (decision 40) -- this
-   *  component owns the property and re-proposes its own event rather than letting the nested
-   *  table's internal state drift out of sync with it. */
+  /** Cancelable retry proposal. The default action clears the parent and nested table error. */
+  'lr-retry-request': CustomEvent<null>;
+  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
   'lr-retry': CustomEvent<null>;
 }
 
@@ -292,9 +292,10 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
  *   row). Frozen readonly `detail: { documentId }`.
- * @event lr-retry - The nested table's built-in `[part='retry-button']` was activated, only
- *   rendered while `error` is set. Cancelable: the default action clears `error`;
- *   `preventDefault()` leaves it set instead.
+ * @event lr-retry-request - Cancelable retry proposal, `detail: null`. Emitted before the
+ *   compatibility alias; either veto keeps both the parent and nested table in the error state.
+ * @event lr-retry - Deprecated cancelable veto alias of `lr-retry-request`, `detail: null`;
+ *   removal not before 24.0.0. Only vetoing this alias emits a deprecation warning.
  * @slot error - Replaces the nested table's built-in failed-load state, including its retry
  *   button, while `error` is set.
  * @csspart base - The root region.
@@ -354,6 +355,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-filter-change',
     'lr-selection-change',
@@ -453,22 +455,43 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     );
   }
 
-  /** The nested table's `lr-retry` intercepted at the boundary: this component owns `error`, so
-   *  it stops the table's own event from leaking out unmediated, re-proposes its own cancelable
-   *  `lr-retry`, and only then decides whether to clear `error` -- and whether to also veto the
-   *  nested table's own default clear, so the two never drift out of sync. Mirrors
-   *  `onTableSortRequest`'s identical intercept-and-re-propose shape. */
+  private retryRequestActive = false;
+
+  /** Translate the nested table's canonical retry request into this component's own request
+   *  and compatibility alias. Either veto keeps both error states set. The child's legacy alias
+   *  is contained separately without invoking its deprecated veto contract. */
   private onTableRetry = (event: CustomEvent<null>): void => {
     event.stopPropagation();
-    const request = requestThenCommit<null, CustomEvent>({
-      requestDetail: null,
-      emitRequest: (detail, init: { cancelable: true }) =>
-        this.emit('lr-retry', detail, init),
-      commit: () => {
-        this.error = false;
-      },
-    });
-    if (request.defaultPrevented) event.preventDefault();
+    if (this.retryRequestActive) {
+      event.preventDefault();
+      return;
+    }
+    this.retryRequestActive = true;
+    try {
+      const request = requestThenCommit<null, CustomEvent>({
+        requestDetail: null,
+        emitRequest: (detail, init: { cancelable: true }) => {
+          const request = this.emit('lr-retry-request', detail, init);
+          const legacy = this.emit('lr-retry', detail, init);
+          if (legacy.defaultPrevented) {
+            warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
+            request.preventDefault();
+          }
+          return request;
+        },
+        commit: () => {
+          this.error = false;
+        },
+      });
+      if (request.defaultPrevented) event.preventDefault();
+    } finally {
+      this.retryRequestActive = false;
+    }
+  };
+
+  /** Contain the nested table's deprecated compatibility event without using its veto contract. */
+  private stopTableRetryAlias = (event: Event): void => {
+    event.stopPropagation();
   };
 
   private _size?: LyraSize;
@@ -1054,7 +1077,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           @lr-page-change=${this.stopOwnedEvent}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}
-          @lr-retry=${this.onTableRetry}
+          @lr-retry-request=${this.onTableRetry}
+          @lr-retry=${this.stopTableRetryAlias}
           @lr-row-activate=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();
             this.openDocument(event.detail.row);

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-filter-bar.js to register this component. */
 export * from './filter-bar.class.js';
 import { LyraFilterBar } from './filter-bar.class.js';
 import { defineElement } from '../../../internal/prefix.js';

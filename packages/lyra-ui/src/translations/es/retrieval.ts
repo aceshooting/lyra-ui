@@ -5,6 +5,18 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  researchProgressLabel: 'Progreso de la investigación',
+  researchProgressEmpty: 'No hay pasos de investigación disponibles.',
+  researchProgressLimit: 'Mostrando los primeros {count} pasos de la investigación.',
+  researchProgressStatusPending: 'Pendiente',
+  researchProgressStatusRunning: 'En progreso',
+  researchProgressStatusCompleted: 'Completado',
+  researchProgressStatusFailed: 'Fallido',
+  researchProgressSources: {
+    one: '{count} fuente',
+    many: '{count} fuentes',
+    other: '{count} fuentes',
+  },
   graphLegendLabel: 'Leyenda del grafo',
   entityChipWithType: '{label}, {type}',
   showMore: 'Mostrar más',

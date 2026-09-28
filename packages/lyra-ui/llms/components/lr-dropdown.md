@@ -6,9 +6,10 @@
 - **Class** `LyraDropdown`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated part** `popup__arrow` since `21.1.0`; use part `::part(popup-arrow)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `popup__popup` since `21.1.0`; use part `::part(popup-popup)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `arrow` / `arrow` since `unreleased`; use property `Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default.`; removal not before `24.0.0` — The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window.
 - **Optional peers** none
 - **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -101,8 +102,9 @@ its surface.
   and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
-- `arrow: boolean = false` (reflected) — the dropdown's own opt-in arrow; unlike on `lr-popover`
-  it is not deprecated. `withoutArrow` (`without-arrow`) still suppresses it.
+- `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
+  pointer. `arrow: boolean = true` remains its deprecated inverse alias (removal not before
+  24.0.0). Set `without-arrow` to preserve the previous omitted-arrow appearance.
 - `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are retained from
   `lr-popover` for existing Lyra consumers.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot

@@ -1,3 +1,4 @@
+import { expectDeprecatedUsage } from '../../../test/expected-deprecations.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import '../../components/forms/button/button.js';
@@ -27,7 +28,6 @@ const probeTag = tag('preset-theme-probe');
 if (!customElements.get(probeTag)) customElements.define(probeTag, PresetThemeProbe);
 
 const MODES = ['light', 'dark'] as const satisfies readonly LyraThemeMode[];
-const OWNERSHIP_KEY = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
 
 const textCache = new Map<string, Promise<string>>();
 function loadText(path: string): Promise<string> {
@@ -59,11 +59,15 @@ async function stylesheetTokens(): Promise<Record<'light' | 'dark', Map<string, 
 }
 
 function ownershipList(): string[] {
-  const list = (document.documentElement as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
-  return Array.isArray(list) ? list.map(String) : [];
+  const owned = (document.documentElement as unknown as Record<symbol, { properties?: Map<string, unknown> }>)[Symbol.for('@aceshooting/lyra-ui.style-ownership.v1')];
+  return [...(owned?.properties?.keys() ?? [])].filter(name => name.startsWith('--lr-theme-') && name !== '--lr-theme-accent').sort();
 }
 
 let originalSheets: CSSStyleSheet[] = [];
+
+expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
+expectDeprecatedUsage('./theme.js', 'function', 'getLyraTheme');
+expectDeprecatedUsage('./theme/presets.js', 'function', 'applyLyraThemePreset');
 
 describe('LYRA_SHADCN_THEME_PRESET', () => {
   beforeEach(() => {
@@ -95,7 +99,7 @@ describe('LYRA_SHADCN_THEME_PRESET', () => {
       expect(document.documentElement.dataset['lrThemePreset'], mode).to.equal('shadcn');
       expect(getLyraTheme().tokens).to.deep.equal(presetTokens);
       // Nothing synthesized: the ownership list is exactly the map.
-      expect(ownershipList()).to.deep.equal(Object.keys(presetTokens));
+      expect(ownershipList()).to.have.members(Object.keys(presetTokens));
       // Compared through the engine's own serialization of the authored value: WebKit rewrites a
       // quoted font family with double quotes, which is not a repair.
       const scratch = document.createElement('div');

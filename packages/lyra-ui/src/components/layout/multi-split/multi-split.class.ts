@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyDeclaration, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -160,7 +161,7 @@ export interface LyraMultiSplitToggleDetail {
   /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   readonly open: boolean;
   /** Whether the floating drawer is (or, on a cancelable proposal, would be) open. */
-  readonly expanded?: boolean;
+  readonly expanded: boolean;
 }
 
 export interface LyraMultiSplitResizeDetail {
@@ -175,6 +176,7 @@ export interface LyraMultiSplitEventMap {
   'lr-resize-request': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-resize': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-multi-split-collapse-change': CustomEvent<LyraMultiSplitCollapseChangeDetail>;
+  'lr-toggle-request': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-toggle': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-multi-split-constraints-invalid': CustomEvent<LyraMultiSplitConstraintIssueDetail>;
   'lr-multi-split-orientation-change': CustomEvent<LyraMultiSplitOrientationChangeDetail>;
@@ -267,12 +269,11 @@ export interface LyraMultiSplitEventMap {
  *   Forced writes while no eligible collapsing pane exists are inert and do
  *   not fire. Not fired for a redundant reassignment to the state already in
  *   effect.
- * @event lr-toggle - An Escape/backdrop request to close the floating drawer, or the forced close
- *   when an effective collapse transition leaves `'floating'` while open. `detail:
- *   LyraMultiSplitToggleDetail`. Escape/backdrop proposals are cancelable and fire before `open`
- *   changes; the forced responsive close is non-cancelable and fires after `open` is false. Direct
- *   `open` writes and no-op dismissals do not emit this event. `expanded` is the proposed (or
- *   forced) drawer state; the deprecated `open` key carries the same value.
+ * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
+ *   Detail includes `expanded` and the compatibility `open` key. Direct property writes and
+ *   forced responsive closes do not propose an interactive change.
+ * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
+ *   Detail includes the resulting `expanded` state and the compatibility `open` key.
  * @event lr-multi-split-constraints-invalid - `detail: LyraMultiSplitConstraintIssueDetail`,
  *   fired once when the configured panel minimums/maximums cannot describe a
  *   layout that fits the track. The splitter rejects that infeasible set for
@@ -328,6 +329,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     resizeValuePercent: LYRA_DEFAULT_resizeValuePercent,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
 
@@ -1121,7 +1123,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const mutationVersion = this.toggleProposalMutationVersion;
     this.toggleProposalDepth += 1;
     try {
-      const event = this.emit('lr-toggle', { open: next, expanded: next }, { cancelable: true });
+      const event = this.emit('lr-toggle-request', { open: next, expanded: next }, { cancelable: true });
       if (
         event.defaultPrevented ||
         this.toggleProposalMutationVersion !== mutationVersion ||
@@ -1134,6 +1136,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.toggleProposalDepth -= 1;
     }
     this.open = next;
+    this.emit('lr-toggle', { open: next, expanded: next });
   }
 
   override requestUpdate(

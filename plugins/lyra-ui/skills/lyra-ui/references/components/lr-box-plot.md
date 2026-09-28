@@ -6,9 +6,8 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated event** `lr-before-legend-visibility-change` since `19.0.1`; use event `addEventListener('lr-legend-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
 - **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `legend` / `legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
@@ -94,9 +93,7 @@ toggle) and `lr-legend-visibility-change` (accepted commit). The two legend even
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
 proposal leaves state untouched and suppresses the commit event.
-`lr-before-legend-visibility-change` is a **deprecated** alias of
-`lr-legend-visibility-change-request`, fired immediately after it from the same gesture with the
-same detail; either event may veto (removal not before 21.0.0).
+
 
 `lr-point-activate` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose.

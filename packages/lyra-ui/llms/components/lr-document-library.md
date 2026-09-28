@@ -6,8 +6,8 @@
 - **Class** `LyraDocumentLibrary`, also available unregistered from `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Optional peers** none
 - **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -55,15 +55,19 @@ table. Omitted localizes the table's own `tableLoadFailed` default.
 `errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
 the nested table.
 
-**Events:** `lr-filter-change` emits a fresh frozen readonly
-`{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
-`{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`;
-`lr-open` emits frozen readonly `{ documentId }`; and `lr-retry` (`detail: null`, cancelable) — the
-nested table's built-in retry button was activated, only rendered while `error` is set; the default
-action clears `error`, `preventDefault()` leaves it set. This component intercepts the nested
-table's own `lr-retry` and re-proposes its own, so the outer `error` property never drifts out of
-sync with the table's internal state.
+**Events:**
+
+- `lr-filter-change` — non-cancelable; fresh frozen readonly `{ searchTerm, tags, matchCount }`.
+- `lr-sort-request` — cancelable; proposes frozen readonly `{ phase: 'request', sortKey, sortDir }`.
+- `lr-sort` — non-cancelable; an accepted sort commits the same fields with `phase: 'commit'`.
+- `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
+- `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
+- `lr-retry-request` and `lr-retry` — cancelable, `detail: null`; the nested table's built-in retry
+  button was activated, only rendered while `error` is set. The library contains the child's request
+  and compatibility alias, then emits its own canonical `lr-retry-request` followed by the deprecated
+  `lr-retry` alias. Preventing either parent event leaves both library and table errors set;
+  otherwise the default clears them. Subscribe to one spelling. The alias is a veto point, not a
+  completion notification, and its removal is not before 24.0.0.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.

@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
 import "./date-picker.js";
@@ -21,6 +22,11 @@ const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string
   if (item === undefined) throw new Error(`Missing ${description} at index ${index}.`);
   return item;
 };
+
+expectLocaleFallback('fa-IR', ['nextMonth', 'previousMonth']);
+expectLocaleFallback('fr', ['nextMonth', 'previousMonth']);
+expectLocaleFallback('fr-FR', ['nextMonth', 'previousMonth']);
+expectLocaleFallback('not-a-locale', ['nextMonth', 'previousMonth']);
 
 it("gates enabled previous/next hover backgrounds behind :where() (regression)", () => {
   const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");

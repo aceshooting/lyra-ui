@@ -94,13 +94,13 @@ describe('lr-combobox async source failures', () => {
     });
   });
 
-  it('recovers through the retry control, honouring a vetoed lr-retry', async () => {
+  it('recovers through the retry control, honouring a vetoed lr-retry-request', async () => {
     const el = await fixture<LyraCombobox>(
       html`<lr-combobox source-delay="0" open></lr-combobox>`
     );
     let shouldFail = true;
     const retries: boolean[] = [];
-    el.addEventListener('lr-retry', (event) => {
+    el.addEventListener('lr-retry-request', (event) => {
       retries.push(event.cancelable);
     });
     await withSilencedWarning(async () => {
@@ -110,10 +110,10 @@ describe('lr-combobox async source failures', () => {
       };
       await waitUntil(() => errorRow(el) !== null, 'the failure renders');
       const veto = (event: Event): void => event.preventDefault();
-      el.addEventListener('lr-retry', veto);
+      el.addEventListener('lr-retry-request', veto);
       retryButton(el)!.click();
       await aTimeout(30);
-      el.removeEventListener('lr-retry', veto);
+      el.removeEventListener('lr-retry-request', veto);
       expect(errorRow(el) === null).to.equal(false, 'a vetoed retry leaves the failure visible');
       shouldFail = false;
       retryButton(el)!.click();

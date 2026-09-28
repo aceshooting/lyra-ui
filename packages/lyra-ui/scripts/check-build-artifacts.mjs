@@ -45,10 +45,43 @@ function walk(dir, files = []) {
 /**
  * @param {string[]} files absolute paths of every emitted file
  * @param {(file: string) => string} read
+ * @param {{ packageDirectory?: string, exports?: Record<string, unknown> }} [options]
  * @returns {string[]} findings, one per offending file
  */
-export function findBuildArtifactFindings(files, read) {
+export function findBuildArtifactFindings(files, read, { packageDirectory, exports = {} } = {}) {
   const findings = [];
+  if (packageDirectory) {
+    const emitted = new Set(files.map((file) => path.resolve(file)));
+    for (const [route, target] of Object.entries(exports)) {
+      if (!route.endsWith('.css') || route.includes('*')) continue;
+      const stylesheet = typeof target === 'string' ? target : target?.default;
+      if (typeof stylesheet !== 'string' || !emitted.has(path.resolve(packageDirectory, stylesheet))) {
+        findings.push(`${route}: exported stylesheet is missing: ${String(stylesheet)}`);
+      }
+    }
+  }
+  const codeBlockClassDeclarations = files.filter((file) =>
+    /[\\/]components[\\/]conversation[\\/]code-block[\\/]code-block(?:-core)?\.class\.d\.ts$/u.test(file),
+  );
+  const codeBlockBaseDeclaration = files.find((file) =>
+    /[\\/]components[\\/]conversation[\\/]code-block[\\/]code-block-base\.class\.d\.ts$/u.test(file),
+  );
+  const codeBlockClassesUsingBase = codeBlockClassDeclarations.filter((file) =>
+    /\bextends\s+LyraCodeBlockBase\b/u.test(read(file)),
+  );
+  if (codeBlockClassesUsingBase.length > 0) {
+    const baseIsExported =
+      codeBlockBaseDeclaration !== undefined &&
+      /\bexport\s+declare\s+abstract\s+class\s+LyraCodeBlockBase\b/u.test(
+        read(codeBlockBaseDeclaration),
+      );
+    if (!baseIsExported) {
+      findings.push(
+        `${codeBlockBaseDeclaration ?? 'dist/components/conversation/code-block/code-block-base.class.d.ts'}: missing exported LyraCodeBlockBase required by published subclass declarations`,
+      );
+    }
+  }
+
   for (const file of files.slice().sort()) {
     if (FIXTURE_DIRECTORY.test(file)) {
       findings.push(`${file}: build-only fixture emitted into dist`);
@@ -81,7 +114,10 @@ function run() {
   }
 
   const files = walk(distDir);
-  const findings = findBuildArtifactFindings(files, (file) => readFileSync(file, 'utf8')).map((finding) =>
+  const manifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
+  const findings = findBuildArtifactFindings(files, (file) => readFileSync(file, 'utf8'), {
+    packageDirectory: packageDir, exports: manifest.exports,
+  }).map((finding) =>
     finding.replace(`${packageDir}${path.sep}`, ''),
   );
 
@@ -89,7 +125,7 @@ function run() {
     console.error(`Build artifacts failed with ${findings.length} finding(s):`);
     for (const finding of findings) console.error(`- ${finding}`);
     console.error(
-      'Build-only fixtures and source maps are excluded from the published emit in tsconfig.build.json; restore its `src/**/fixtures/**` exclusion and `sourceMap: false` / `declarationMap: false` settings rather than deleting emitted files by hand.',
+      'Restore missing exported assets and declaration dependencies in the build. Build-only fixtures and source maps are excluded from the published emit in tsconfig.build.json; restore its `src/**/fixtures/**` exclusion and `sourceMap: false` / `declarationMap: false` settings rather than deleting emitted files by hand.',
     );
     process.exitCode = 1;
     return;

@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture as renderFixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './stream-status.js';
 import '../../utility/live-region/live-region.js';
@@ -774,4 +776,79 @@ it('wires the LiveDemo story before its first Connect click', async () => {
   } finally {
     stop.click();
   }
+});
+
+it('shows interrupted state and requests controlled resume only when enabled and resumable', async () => {
+  const el = (await fixture(html`<lr-stream-status connection-state="interrupted" resumable></lr-stream-status>`)) as LyraStreamStatus;
+  expect(el.phase).to.equal('interrupted');
+  expect(el.shadowRoot!.querySelector('[part="phase"]')?.textContent).to.equal('Stream interrupted');
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  expect(Boolean(button)).to.equal(true);
+  const requested = oneEvent(el, 'lr-resume');
+  await focusByKeyboard(button);
+  await sendKeys({ press: 'Enter' });
+  const event = await requested;
+  expect(event.bubbles && event.composed).to.equal(true);
+  expect(event.detail).to.equal(null);
+  expect(el.phase).to.equal('interrupted');
+  await expect(el).to.be.accessible();
+  let calls = 0;
+  el.addEventListener('lr-resume', () => calls++);
+  el.disabled = true;
+  button.click();
+  expect(calls).to.equal(0);
+  await el.updateComplete;
+  el.resumable = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="resume"]').length).to.equal(0);
+});
+
+it('stops stall detection during interruption and localizes resume without changing defaults', async () => {
+  const el = (await fixture(html`<lr-stream-status></lr-stream-status>`)) as LyraStreamStatus;
+  expect(el.resumable).to.equal(false);
+  expect(el.disabled).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part="resume"]').length).to.equal(0);
+  el.stallThresholdMs = 20;
+  el.connectionState = 'streaming';
+  await el.updateComplete;
+  el.connectionState = 'interrupted';
+  el.resumable = true;
+  el.strings = { streamInterrupted: 'Interrompu', streamResume: 'Reprendre' };
+  await el.updateComplete;
+  el.recordActivity();
+  el.markStalled();
+  await aTimeout(80);
+  expect(el.phase).to.equal('interrupted');
+  expect(el.shadowRoot!.querySelector('[part="phase"]')?.textContent).to.equal('Interrompu');
+  expect(el.shadowRoot!.querySelector('[part="resume"]')?.textContent).to.equal('Reprendre');
+});
+
+it('keeps interrupted resume copy within a narrow RTL allocation and rejects stale activation', async () => {
+  const el = (await fixture(html`<lr-stream-status style="inline-size:320px" dir="rtl" connection-state="interrupted" resumable
+    .strings=${{ streamInterrupted: 'Interrupted'.repeat(20), streamResume: 'Resume'.repeat(20) }}></lr-stream-status>`)) as LyraStreamStatus;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(base.scrollWidth).to.be.at.most(el.clientWidth + 1);
+  expect(getComputedStyle(base).direction).to.equal('rtl');
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  let calls = 0;
+  el.addEventListener('lr-resume', () => calls++);
+  el.connectionState = 'idle';
+  button.click();
+  expect(calls).to.equal(0);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="resume"]').length).to.equal(0);
+});
+
+it('prevents synchronous resume reentry while permitting later host retries', async () => {
+  const el = await fixture(html`<lr-stream-status connection-state="interrupted" resumable></lr-stream-status>`) as LyraStreamStatus;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="resume"]')!;
+  let calls = 0;
+  el.addEventListener('lr-resume', () => {
+    calls++;
+    if (calls === 1) button.dispatchEvent(new MouseEvent('click'));
+  });
+  button.click();
+  expect(calls).to.equal(1);
+  button.click();
+  expect(calls).to.equal(2);
 });

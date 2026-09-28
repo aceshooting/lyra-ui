@@ -5046,6 +5046,28 @@ it('applies a declaratively-set maxBounds once the map exists, not only on a lat
   expect(applied, 'maxBounds never reached the peer').to.not.equal(undefined);
 });
 
+async function captureMaxBoundsWarnings(run: () => Promise<void>): Promise<string[]> {
+  const key = 'lyra-map-max-bounds-rejected';
+  const store = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  const wasWarned = store?.has(key);
+  store?.delete(key);
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].startsWith('<lr-map>: maxBounds left maplibre-gl')) {
+      warnings.push(args[0]);
+    } else originalWarn.apply(console, args);
+  };
+  try {
+    await run();
+  } finally {
+    console.warn = originalWarn;
+    if (wasWarned) store?.add(key);
+    else store?.delete(key);
+  }
+  return warnings;
+}
+
 it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-finite camera', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -5063,11 +5085,14 @@ it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-f
   };
 
   // Must not escape into the consumer's render cycle.
-  el.maxBounds = [
-    [-180, -85],
-    [180, 85],
-  ];
-  await el.updateComplete;
+  const warnings = await captureMaxBoundsWarnings(async () => {
+    el.maxBounds = [
+      [-180, -85],
+      [180, 85],
+    ];
+    await el.updateComplete;
+  });
+  expect(warnings.length, 'the reverted constraint emits its diagnostic').to.equal(1);
 
   expect(calls.length, 'the throw must be followed by a revert').to.be.at.least(2);
   expect(calls[calls.length - 1], 'the constraint must be dropped after a throw').to.equal(null);
@@ -5082,32 +5107,35 @@ it('contains failures from both defensive camera snapshot reads', async () => {
     getCenter: [],
   };
 
-  for (const throwingRead of ['getZoom', 'getCenter'] as const) {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.maxBounds = [[-10, -10], [10, 10]];
-    await el.updateComplete;
-    const calls = revertCalls[throwingRead];
-    const stub = {
-      getZoom: () => {
-        if (throwingRead === 'getZoom') throw new Error('getZoom snapshot failed');
-        return 3;
-      },
-      getCenter: () => {
-        if (throwingRead === 'getCenter') throw new Error('getCenter snapshot failed');
-        return { lng: 1, lat: 2 };
-      },
-      setMaxBounds: (bounds: unknown) => calls.push(bounds),
-      setZoom: () => {},
-      setCenter: () => {},
-    };
-    const privateMap = el as unknown as { _map: unknown; applyMaxBounds(): void };
-    privateMap._map = stub;
-    try {
-      privateMap.applyMaxBounds();
-    } catch (error) {
-      failures.push(`${throwingRead}: ${error instanceof Error ? error.message : String(error)}`);
+  const warnings = await captureMaxBoundsWarnings(async () => {
+    for (const throwingRead of ['getZoom', 'getCenter'] as const) {
+      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      el.maxBounds = [[-10, -10], [10, 10]];
+      await el.updateComplete;
+      const calls = revertCalls[throwingRead];
+      const stub = {
+        getZoom: () => {
+          if (throwingRead === 'getZoom') throw new Error('getZoom snapshot failed');
+          return 3;
+        },
+        getCenter: () => {
+          if (throwingRead === 'getCenter') throw new Error('getCenter snapshot failed');
+          return { lng: 1, lat: 2 };
+        },
+        setMaxBounds: (bounds: unknown) => calls.push(bounds),
+        setZoom: () => {},
+        setCenter: () => {},
+      };
+      const privateMap = el as unknown as { _map: unknown; applyMaxBounds(): void };
+      privateMap._map = stub;
+      try {
+        privateMap.applyMaxBounds();
+      } catch (error) {
+        failures.push(`${throwingRead}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-  }
+  });
+  expect(warnings.length, 'the shared diagnostic is deduplicated across both reads').to.equal(1);
 
   expect(
     failures,

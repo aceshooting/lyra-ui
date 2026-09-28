@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-message-actions.js to register this component. */
 export * from './message-actions.class.js';
 export * from './toolbar-actions.js';
 import { LyraMessageActions } from './message-actions.class.js';

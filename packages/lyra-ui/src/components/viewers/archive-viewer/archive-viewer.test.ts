@@ -1,3 +1,4 @@
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import { LyraResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
@@ -144,6 +145,8 @@ window.addEventListener(
   },
   true,
 );
+
+expectLocaleFallback('ar-EG', ['archiveViewerFile', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'fileSizeUnitB', 'loadingDocument']);
 
 describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
 

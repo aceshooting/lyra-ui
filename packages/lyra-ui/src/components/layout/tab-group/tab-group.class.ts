@@ -1097,7 +1097,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const physical = this.effectiveDirection === 'rtl' ? -towardEnd : towardEnd;
     tablist.scrollBy({
       left: step * physical,
-      behavior: prefersReducedMotion(this.ownerDocument.defaultView)
+      behavior: prefersReducedMotion(this)
         ? 'instant'
         : 'smooth',
     });

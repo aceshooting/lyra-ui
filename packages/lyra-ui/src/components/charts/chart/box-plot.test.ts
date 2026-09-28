@@ -12,16 +12,41 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
-  'boxPlot', 'boxPlotData', 'boxPlotMax', 'boxPlotMedian', 'boxPlotMin', 'boxPlotQ1',
-  'boxPlotQ3', 'boxPlotSeriesSummary', 'boxPlotSummaryEmpty', 'boxPlotSummaryWithData',
-  'chartCategory', 'chartPointLabel', 'chartSeriesLabel', 'chartSummarySeparator',
-  'chartTrendFlat', 'chartTrendIncreasing', 'loading',
+  'boxPlot',
+  'boxPlotData',
+  'boxPlotMax',
+  'boxPlotMedian',
+  'boxPlotMin',
+  'boxPlotQ1',
+  'boxPlotQ3',
+  'boxPlotSeriesSummary',
+  'boxPlotSummaryEmpty',
+  'boxPlotSummaryWithData',
+  'chartCategory',
+  'chartPointLabel',
+  'chartSeriesLabel',
+  'chartSummarySeparator',
+  'chartTrendFlat',
+  'chartTrendIncreasing',
+  'loading',
 ]);
 expectLocaleFallback('ar-EG', [
-  'boxPlot', 'boxPlotData', 'boxPlotMax', 'boxPlotMedian', 'boxPlotMin', 'boxPlotQ1',
-  'boxPlotQ3', 'boxPlotSeriesSummary', 'boxPlotSummaryEmpty', 'boxPlotSummaryWithData',
-  'chartCategory', 'chartPointLabel', 'chartSeriesLabel', 'chartSummarySeparator',
-  'chartTrendFlat', 'loading',
+  'boxPlot',
+  'boxPlotData',
+  'boxPlotMax',
+  'boxPlotMedian',
+  'boxPlotMin',
+  'boxPlotQ1',
+  'boxPlotQ3',
+  'boxPlotSeriesSummary',
+  'boxPlotSummaryEmpty',
+  'boxPlotSummaryWithData',
+  'chartCategory',
+  'chartPointLabel',
+  'chartSeriesLabel',
+  'chartSummarySeparator',
+  'chartTrendFlat',
+  'loading',
 ]);
 
 function assertiveSink(doc: Document = document): HTMLElement | null {
@@ -587,7 +612,7 @@ it('uses the shared cancellable legend visibility contract instead of private Ch
   const button = el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement;
   let commits = 0;
   const veto = (event: Event) => event.preventDefault();
-  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change-request', veto);
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   button.click();
@@ -596,7 +621,7 @@ it('uses the shared cancellable legend visibility contract instead of private Ch
   expect(chart.isDatasetVisible(1)).to.be.true;
   expect(commits).to.equal(0);
 
-  el.removeEventListener('lr-before-legend-visibility-change', veto);
+  el.removeEventListener('lr-legend-visibility-change-request', veto);
   button.click();
   await el.updateComplete;
   expect(el.hiddenDatasets).to.deep.equal([1]);
@@ -622,7 +647,7 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
     proposed.push((event as CustomEvent).detail);
     event.preventDefault();
   };
-  el.addEventListener('lr-before-legend-visibility-change', veto);
+  el.addEventListener('lr-legend-visibility-change-request', veto);
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   try {
@@ -635,11 +660,11 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
     expect(chart.isDatasetVisible(0)).to.be.false;
     expect(button.getAttribute('aria-pressed')).to.equal('false');
   } finally {
-    el.removeEventListener('lr-before-legend-visibility-change', veto);
+    el.removeEventListener('lr-legend-visibility-change-request', veto);
   }
 });
 
-it('fires the canonical lr-legend-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
+it('fires one canonical legend-visibility request and no removed before-alias', async () => {
   const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
@@ -647,25 +672,21 @@ it('fires the canonical lr-legend-visibility-change-request alongside the deprec
   await waitUntil(() => (el as any).chart != null);
   const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
   const requests: CustomEvent[] = [];
-  const deprecatedAliases: CustomEvent[] = [];
+  let removedAliasEvents = 0;
   let commits = 0;
   el.addEventListener('lr-legend-visibility-change-request', (event) =>
     requests.push(event as CustomEvent),
   );
-  el.addEventListener('lr-before-legend-visibility-change', (event) =>
-    deprecatedAliases.push(event as CustomEvent),
-  );
+  el.addEventListener('lr-before-legend-visibility-change', () => removedAliasEvents++);
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   button.click();
   await el.updateComplete;
 
   expect(requests.length).to.equal(1);
-  expect(deprecatedAliases.length).to.equal(1);
+  expect(removedAliasEvents).to.equal(0);
   expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
-  expect(deprecatedAliases[0]?.detail).to.deep.equal(requests[0]?.detail);
   expect(requests[0]?.cancelable).to.equal(true);
-  expect(deprecatedAliases[0]?.cancelable).to.equal(true);
   expect(commits).to.equal(1);
 });
 
@@ -687,22 +708,27 @@ it('vetoes the box-plot legend toggle when only the canonical -request name is c
   expect(el.hiddenDatasets).to.equal(undefined);
 });
 
-it('vetoes the box-plot legend toggle when only the deprecated lr-before-legend-visibility-change alias is canceled', async () => {
+it('does not dispatch the removed box-plot veto alias or let its listener veto', async () => {
   const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
+  let removedAliasEvents = 0;
   let commits = 0;
-  el.addEventListener('lr-before-legend-visibility-change', (event) => event.preventDefault());
+  el.addEventListener('lr-before-legend-visibility-change', (event) => {
+    removedAliasEvents++;
+    event.preventDefault();
+  });
   el.addEventListener('lr-legend-visibility-change', () => commits++);
 
   button.click();
   await el.updateComplete;
 
-  expect(commits).to.equal(0);
-  expect(el.hiddenDatasets).to.equal(undefined);
+  expect(removedAliasEvents).to.equal(0);
+  expect(commits).to.equal(1);
+  expect(el.hiddenDatasets).to.deep.equal([0]);
 });
 
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {

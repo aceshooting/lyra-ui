@@ -123,12 +123,20 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
    * render as absent. */
   @property() value = '';
 
-  /** Explicit item identity used to correlate this row's repeated move actions. A host
-   * `aria-label` takes precedence; when neither is present, a bounded accessible-text projection of
-   * the row content is used. In markup, name the row with the host `aria-label`: the
-   * `accessible-label` attribute is deprecated (removal not before 23.0.0) and logs a one-time
-   * development warning. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  private legacyAccessibleLabel: string | undefined = undefined;
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string | undefined {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string | undefined) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
 
   /** The host `aria-label`: names the row and, in place of its content, both move actions. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;

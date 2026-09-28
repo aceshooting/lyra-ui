@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -91,6 +92,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     transcriptFeedLabel: LYRA_DEFAULT_transcriptFeedLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 

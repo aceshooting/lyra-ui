@@ -6,14 +6,17 @@
 - **Class** `LyraTable`, also available unregistered from `@aceshooting/lyra-ui/components/data/table/table.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Deprecated attribute** `accessible-label` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecated event** `lr-retry` since `unreleased`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated event** `lr-row-click` since `21.1.0`; use event `addEventListener('lr-row-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `accessibleLabel` since `unreleased`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
 - **Deprecated property** `emptyCompact` / `empty-compact` since `21.1.0`; use property `empty-size="s" for compact, empty-size="m" for spacious (remove it to keep each branch default)`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated property** `hideColumnsLabel` / `hide-columns-label` since `21.1.0`; use property `columns-hide-label`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `noColumnsDescription` / `no-columns-description` since `21.1.0`; use property `empty-columns-description`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Deprecated property** `noColumnsHeading` / `no-columns-heading` since `21.1.0`; use property `empty-columns-heading`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 46 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,7 +55,7 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 
 **TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
 parameter for the row-key type. `K` types `rowKey`'s return value,
-`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`rowKeys`, so
+`selectedRowKeys`/`expandedRowKeys`, and every event detail's `rowKey`/`selectedRowKeys`, so
 `LyraTable<Row, number>` reads `event.detail.rowKey` as `number` with no cast. It defaults to the
 `string | number` union, so an untyped element and an existing `LyraTable<Row>` annotation compile
 unchanged.
@@ -131,7 +134,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
   exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
-  _commit_ is vetoable — see `lr-column-resize` under Events.
+  _commit_ is vetoable — see `lr-column-resize-request` under Events.
 - **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
   inline style outranks any stylesheet rule in the cascade regardless of specificity, while the heat
   tint is painted by a shadow-stylesheet rule. So a `cellStyle` returning
@@ -482,33 +485,30 @@ resolves to; under the default `expansionMode: 'none'` the table does not mutate
 while under a self-managed mode the write has already landed when it fires, and `'single'` fires it
 once more — with `expanded: false`, immediately ahead of the accepted one — for the row it closed to
 make room, unless that row is out of view), and
-`lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
+`lr-selection-change` (frozen readonly `detail: { selectedRowKeys }`, not cancelable) when selection is
 enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
 an existing multi-row selection down to one key (skipped on the very first render, since an
 already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
 live transition), `lr-filter-change`
-(frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
+(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
-keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
-pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
-the width committed at drag-end (and only when that width actually differs from the pre-drag one).
-A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
-cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
-emission reverts the column to its pre-gesture width (or removes the override entirely if the column
-had never been resized) — unless the listener also applied a width of its own during that same
-synchronous dispatch, which stands rather than being rolled back over, so a listener may refuse the
-proposed width and resolve the resize its own way in one step. Calling `preventDefault()` on a
-mid-drag step does nothing, by design — a veto is a decision
-about the final width, not about every pixel the pointer passes through.
+keyboard resize step. These notifications are non-cancelable. A final pointer width or keyboard step
+first proposes `lr-column-resize-request` with the same detail. Preventing the request preserves the
+previous accepted width; a pointer drag's live preview is discarded. A request listener that applies
+its own width keeps that value. Existing code that prevented `lr-column-resize` must move its veto
+handler to `lr-column-resize-request`.
 The internal filter input's composed native `input`/`change` events are contained; only
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
 contained while an accepted edit publishes `lr-cell-edit`. Internal filter/cell-editor native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events (the native ones
-are neither). `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
+are neither). `lr-retry-request` and `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
 `error` is set. **Cancelable**: the default action clears `error`; calling `preventDefault()` leaves
 it set, for a consumer that owns its own retry timing (e.g. it wants to keep the banner up until a
 fresh load has actually started, or failed again immediately).
+`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
+null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
+alias is not before 24.0.0.
 
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
@@ -570,7 +570,13 @@ re-exported inner parts still are).
   with a desktop page and contain itself in a 320px panel. The default remains `'self'`. Named
   `scrollMode` rather than `scroll` because a `scroll` property would shadow `Element.prototype.scroll()`
 
-**Themeable custom properties:** `--lr-table-cell-color` (default `inherit`),
+**Themeable custom properties:** `--lr-table-row-height` is an optional minimum for header, body
+and footer rows. It wins over `--lr-theme-table-row-height`, whose value follows density; the
+24px and active density target floors still apply. Both are unset by default, so content and padding
+continue to determine row height. Cell content can always grow a row beyond the minimum.
+`--lr-table-row-min-height` is the shared theme-supplied minimum used when
+`--lr-table-row-height` is unset; an explicit table-level `--lr-table-row-height` takes precedence.
+`--lr-table-cell-color` (default `inherit`),
 `--lr-table-cell-link-color` (default `var(--lr-color-brand)`) and
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
@@ -631,7 +637,7 @@ declaration to retheme every internal scroll container in the library, including
   id="t"
   sort-key="name"
   sort-dir="asc"
-  accessible-label="Items"
+  aria-label="Items"
 ></lr-table>
 <script type="module">
   const t = document.getElementById("t");
@@ -684,11 +690,10 @@ declaration to retheme every internal scroll container in the library, including
   assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- `accessibleLabel?: string` (attribute `accessible-label`) — a typed accessible name for the
-  `<table role="grid">`. Omitting it reads back `undefined`; a plain `aria-label` HTML attribute on
-  the host is then forwarded instead (read via `this.getAttribute('aria-label')` at render time). An
-  explicitly empty string is a real override — it renders `aria-label=""` rather than falling back to
-  the host attribute. Consumer-supplied text, so neither is run through `this.localize()`.
+- A host `aria-label` (or native `ariaLabel` property) names the internal `<table role="grid">`.
+  Presence wins, including an explicitly empty string. `accessibleLabel?: string` (attribute
+  `accessible-label`) remains a deprecated fallback, with removal not before 24.0.0; an explicit
+  empty fallback stays empty when the host name is absent. Caller text bypasses localization.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.

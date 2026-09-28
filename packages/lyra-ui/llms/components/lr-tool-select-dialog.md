@@ -6,7 +6,7 @@
 - **Class** `LyraToolSelectDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 26 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -42,9 +42,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
   `OptionFilter` convention).
-- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change` detail
+- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change-request` and `lr-change` detail
   shape.
-- `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail;
+- `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail.reason;
   `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss triggers, any other string is
   whatever a caller passes to `close()` directly.
 
@@ -81,14 +81,17 @@ void` performs the reasoned API dismissal;
 `close(reason: ToolSelectDialogCloseReason = 'api'): void` closes the dialog, emits `lr-close` with
 `reason`, and returns focus to whatever had it before the dialog opened.
 
-**Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
+**Events:** `lr-change-request` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
 `preventDefault()` retains the current `selectedToolIds`/`useDefaults` values, and the built-in
 checkbox or switch never flips at all — the proposal is raised from that control's own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request`, before it writes its `checked` state, so a
 refused change shows no flip-and-snap-back. A host can prevent a proposal while it validates or
-persists it, then assign the desired detail values after that work succeeds. `lr-close`
-(`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
+persists it, then assign the desired detail values after that work succeeds. After acceptance,
+noncancelable `lr-change` carries the same complete state, with the host properties already
+updated. A synchronous host replacement of the selection, defaults, or catalog takes precedence
+over the request; recursive requests are ignored. `lr-close`
+(`detail: { reason: ToolSelectDialogCloseReason }` — fired exactly once per dismissal, via Escape, a backdrop
 click when `lightDismiss` is enabled, or a `close()` call; not dialog-scoped — nesting this dialog
 inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes this
 event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters and the
@@ -97,7 +100,7 @@ re-dispatched when the internal search input gains or loses focus.
 Native `input`/`change` and prefixed `lr-input`/`lr-change` events from the built-in checkbox and
 switch controls stop at the dialog boundary, as do their own
 `lr-checkbox-toggle-request`/`lr-switch-toggle-request` proposals; listen for the single aggregate
-`lr-change` proposal.
+`lr-change-request` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has

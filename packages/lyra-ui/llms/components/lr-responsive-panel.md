@@ -6,7 +6,7 @@
 - **Class** `LyraResponsivePanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -52,20 +52,16 @@ First-party invention (no `wa-*`/`sl-*` counterpart).
   is `'overlay'`.
 
 **Methods:** `close(reason: LyraResponsivePanelCloseReason = 'api'): void` — requests a close by
-emitting `lr-close` with `reason` before changing `open`. A listener can call `preventDefault()` to
+emitting `lr-close-request` with `{ reason }` before changing `open`. A listener can call `preventDefault()` to
 keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
 returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay
 triggers call this with `'escape'`/`'backdrop'`; a consumer's own close affordance (a footer button,
 a docked panel's own toggle) should call it directly with its own reason string.
 
-**Events:** `lr-close` (`detail: LyraResponsivePanelCloseReason` = `'escape'|'backdrop'|'api'|string`;
-cancelable pre-close veto, fired by the overlay presentation's built-in dismiss triggers — Escape,
-backdrop click — and by any `close()` call, in either presentation; calling `preventDefault()` keeps
-the panel open and leaves active overlay chrome/focus trapping intact. A plain `open = false`
-property write does **not** fire it, only going through `close()` counts as a dismissal). This name
-is not dialog-scoped: nesting this panel inside a consumer's own `<lr-dialog>` means that dialog's
-`lr-close` listener also observes this event — see `<lr-dialog>`'s `lr-close` section (in
-`overlays.md`) for the full list of emitters and the target-filtering guard. `lr-mode-change`
+**Events:** cancelable `lr-close-request` (`detail: { reason: LyraResponsivePanelCloseReason }`),
+followed by non-cancelable `lr-close` with the same detail after `open` becomes false. `close()`
+and overlay controls use this lifecycle; direct `open` writes remain state assignments. Filter
+by event target when the panel contains other components that emit `lr-close`. `lr-mode-change`
 (`detail: LyraResponsivePanelModeChangeDetail` = `{ mode: LyraResponsivePanelEffectiveMode }`; fired whenever
 the _effective_ mode — not the `mode` prop's possibly-`'auto'` literal value — changes between
 `'inline'` and `'overlay'`; never fired on the initial render, only for a live change thereafter).

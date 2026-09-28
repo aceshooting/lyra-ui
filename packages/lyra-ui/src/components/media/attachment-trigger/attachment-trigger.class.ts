@@ -1,3 +1,4 @@
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -12,10 +13,10 @@ import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.j
 import { styles } from './attachment-trigger.styles.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -252,11 +253,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'capabilities',
@@ -285,9 +286,20 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  /** Accessible-name override for the semantic trigger button. The `accessible-label` attribute
-   *  spelling is deprecated in favour of the host `aria-label`; removal not before 23.0.0. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+  private legacyAccessibleLabel: string | undefined = undefined;
+
+  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
+   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
+  @property({ attribute: 'accessible-label' })
+  get accessibleLabel(): string | undefined {
+    return this.legacyAccessibleLabel;
+  }
+  set accessibleLabel(value: string | undefined) {
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
+    this.legacyAccessibleLabel = value;
+  }
 
   /** The host `aria-label`: names either trigger shape ahead of `accessibleLabel`, by presence, so
    *  an explicitly empty value stays empty. */
@@ -301,7 +313,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property({ attribute: 'trigger-title' }) triggerTitle?: string;
 
   /** Forwarded to the hidden file input's own `multiple` attribute. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) multiple = true;
+  @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
 
   @property({ type: Boolean, reflect: true }) disabled = false;
 
@@ -525,7 +537,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     const addLabel = this.localize('attachmentAdd');
     const accessibleLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? addLabel;
     return html`
-      <lr-dropdown
+      <lr-dropdown without-arrow
         part="menu"
         @lr-show=${this.stopInternalEvent}
         @lr-after-show=${this.stopInternalEvent}

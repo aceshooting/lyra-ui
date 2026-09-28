@@ -408,3 +408,37 @@ describe('ancestorZoom', () => {
     }
   });
 });
+
+it('installs one top-layer reset only in a root that promotes a surface', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  const root = host.attachShadow({ mode: 'open' });
+  const surface = document.createElement('div');
+  surface.textContent = 'Popup';
+  root.append(surface);
+  expect(root.adoptedStyleSheets.length).to.equal(0);
+  expect(promoteToTopLayer(surface)).to.equal(true);
+  expect(getComputedStyle(surface).borderTopWidth).to.equal('0px');
+  expect(getComputedStyle(surface).paddingTop).to.equal('0px');
+  expect(root.adoptedStyleSheets.length).to.equal(1);
+  releaseTopLayer(surface);
+  expect(promoteToTopLayer(surface)).to.equal(true);
+  expect(root.adoptedStyleSheets.length).to.equal(1);
+  releaseTopLayer(surface);
+});
+
+it('keeps zero-specificity component styling above the lazy top-layer reset', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  const root = host.attachShadow({ mode: 'open' });
+  const componentSheet = new CSSStyleSheet();
+  componentSheet.replaceSync(':where(.surface) { padding: 17px; }');
+  root.adoptedStyleSheets = [componentSheet];
+  const surface = document.createElement('div');
+  surface.className = 'surface';
+  root.append(surface);
+  try {
+    expect(promoteToTopLayer(surface)).to.equal(true);
+    expect(getComputedStyle(surface).paddingTop).to.equal('17px');
+  } finally {
+    releaseTopLayer(surface);
+  }
+});

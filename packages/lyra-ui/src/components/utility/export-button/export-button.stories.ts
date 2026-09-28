@@ -63,7 +63,7 @@ export const LazyRowSource: Story = {
     docs: {
       description: {
         story:
-          'The callback runs only after a non-prevented lr-export, so the export carries a fresh timestamp every time the button is used -- the same seam a consumer uses to export an <lr-table>\'s current viewRows without copying them into this element.',
+          'The callback runs only after a non-prevented lr-export-request, so the export carries a fresh timestamp every time the button is used -- the same seam a consumer uses to export an <lr-table>\'s current viewRows without copying them into this element.',
       },
     },
   },
@@ -153,7 +153,7 @@ export const CustomFormats: Story = {
           open
           label="Download report"
           .formats=${formats}
-          @lr-export=${handleCustomExport}
+          @lr-export-request=${handleCustomExport}
         ></lr-export-button>
         <output aria-live="polite">Custom formats emit an event for the application to handle.</output>
       </div>

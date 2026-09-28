@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraLocalePicker } from './locale-picker.js';
 import './locale-picker.js';
+import { loadLyraLocale } from '../../../locale-loader.js';
 // lr-locale-picker composes lr-flag, whose country/language resolution is inert until the optional
 // peer entry is registered. Without this the docs page rendered flag-less rows and (since 11.0.0)
 // logged the missing-resolver warning -- flag.stories.ts already imports it for the same reason.
@@ -15,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A single-select picker over the library's locale registry: a closed-list dropdown that offers every locale registered via `registerLyraLocale()` (plus `en`) by default, or an explicit `locales` catalog. Selecting a row calls `setLyraLocale()` unless the `lr-change` event is cancelled. Trigger focus/blur relay once each as native FocusEvents.",
+          "A single-select picker over the library's locale registry: a closed-list dropdown that offers every locale registered via `registerLyraLocale()` (plus `en`) by default, or an explicit `locales` catalog. Selecting a row calls `setLyraLocale()` unless the `lr-change-request` event is cancelled. Trigger focus/blur relay once each as native FocusEvents.",
       },
     },
   },
@@ -34,7 +35,7 @@ export const CompactHeader: Story = {
       <span>Workspace</span>
       <lr-locale-picker size="s" value="en" trigger-display="flag" aria-label="Language"
         .locales=${[{ tag: 'en', country: 'gb' }, { tag: 'fr' }, { tag: 'he' }]}
-        @lr-change=${(event: Event) => event.preventDefault()}></lr-locale-picker>
+        @lr-change-request=${(event: Event) => event.preventDefault()}></lr-locale-picker>
     </div>
   `,
 };
@@ -232,4 +233,11 @@ export const ExternalDescription: StoryObj = {
       <lr-locale-picker label="Language" hint="Choose the language used for the interface" aria-describedby="lr-locale-picker-external-guidance"></lr-locale-picker>
     </div>
   `,
+};
+
+
+export const LazyCatalogs: Story = {
+  parameters: { docs: { description: { story: 'Import a catalog only after its selection request is accepted. Loading leaves the previous selection active; a failed import offers Retry. English is built in.' } } },
+  render: () => html`<lr-locale-picker label="Language" value="en" without-flags
+    .locales=${['en', 'fr', 'de']} .localeLoader=${loadLyraLocale}></lr-locale-picker>`,
 };
