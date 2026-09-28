@@ -234,6 +234,14 @@ const coreRawBudget = {
   // granular per-entry gzip budget plus the button canary stays green. Maintainer-approved
   // 2026-09-26.
   shadcnV21ProgrammeAllowanceBytes: 120_000,
+  // 21.1.0 measured 4693.0 KiB raw, 16.2 KiB past the 21.0.0 measurement and 0.6 KiB past the
+  // ceiling. It is new registered surface, not a leak: lr-map fitBounds and view-change reporting,
+  // tool-call display names and the incomplete status, the popover/dropdown top-layer opt-in, the
+  // app-rail focus fallback, deprecation records and development warnings, script-aware locale
+  // fallback, and right-to-left isolation of formatted chart labels. The peer graph still reports
+  // no eager or bundled optional peer. Sized to the measurement plus the same ~16 KiB headroom
+  // 21.0.0 received (ceiling 4709.0 KiB). Maintainer-approved 2026-09-28.
+  v211ReleaseAllowanceBytes: 17_000,
 };
 
 /**
@@ -350,7 +358,8 @@ const bundleEntries = {
     // and 1073 eager modules, with zero eager and zero physically bundled optional peers. That term
     // is now 0 and every other term is unchanged, so the ceiling was 4,685,000 B (4575.2 KiB)
     // against a 4178.8 KiB measurement. The 21.0.0 programme term then raises it to 4,805,000 B
-    // (4692.4 KiB) against a 4676.8 KiB measurement.
+    // (4692.4 KiB) against a 4676.8 KiB measurement, and the 21.1.0 term to 4,822,000 B (4709.0 KiB)
+    // against a 4693.0 KiB measurement.
     maxRawBytes:
       coreRawBudget.establishedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
@@ -364,7 +373,8 @@ const bundleEntries = {
       coreRawBudget.devModeDiagnosticsAllowanceBytes +
       coreRawBudget.publicContractV10AllowanceBytes +
       coreRawBudget.v10RemediationSweepAllowanceBytes +
-      coreRawBudget.shadcnV21ProgrammeAllowanceBytes,
+      coreRawBudget.shadcnV21ProgrammeAllowanceBytes +
+      coreRawBudget.v211ReleaseAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
