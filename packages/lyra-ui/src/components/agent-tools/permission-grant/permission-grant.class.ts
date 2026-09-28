@@ -40,7 +40,7 @@ const DECISION_LABEL_KEY: Record<PermissionGrantDecision, string> = {
  * @csspart actions - The decision button group, rendered only while pending.
  * @csspart decision - One native decision button.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

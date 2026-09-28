@@ -53,7 +53,7 @@ const STATUS_LABEL_KEY: Record<ResearchStepStatus, string> = {
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid steps are supplied.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraResearchProgress extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

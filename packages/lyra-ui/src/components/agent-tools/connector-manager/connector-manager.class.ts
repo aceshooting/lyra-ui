@@ -78,7 +78,7 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid connectors are supplied.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

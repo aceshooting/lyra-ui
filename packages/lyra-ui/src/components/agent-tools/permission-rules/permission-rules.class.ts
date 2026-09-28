@@ -58,7 +58,7 @@ const DECISION_LABEL_KEY: Record<PermissionRuleDecision, string> = {
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid rules are supplied.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

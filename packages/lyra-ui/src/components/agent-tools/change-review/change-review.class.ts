@@ -55,7 +55,7 @@ const MAX_CHANGES = 200;
  * @csspart empty - Empty review copy.
  * @csspart limit - Render-limit notice.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

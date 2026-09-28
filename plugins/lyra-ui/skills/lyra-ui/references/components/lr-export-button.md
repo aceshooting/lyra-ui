@@ -10,7 +10,7 @@
 - **Deprecated css-property** `--lr-export-button-active-background` since `21.1.0`; use css-property `--lr-export-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-export-button-background` since `21.1.0`; use css-property `--lr-export-button-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated css-property** `--lr-export-button-hover-background` since `21.1.0`; use css-property `--lr-export-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated event** `lr-export` since `unreleased`; use event `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })`; removal not before `24.0.0` — The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior.
+- **Deprecated event** `lr-export` since `22.0.0`; use event `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })`; removal not before `24.0.0` — The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior.
 - **Optional peers** none
 - **Themeable via** 6 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -27,7 +27,7 @@ import { LYRA_DEFAULT_budgetMeterExceeded, LYRA_DEFAULT_budgetMeterLabel, LYRA_D
  * @csspart unavailable - The unavailable state for a zero or invalid limit.
  * @csspart exceeded - The localized over-budget state.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraBudgetMeter extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

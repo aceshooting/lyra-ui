@@ -61,7 +61,7 @@ const CANCELLABLE_STATUSES: ReadonlySet<BackgroundRunStatus> = new Set(['queued'
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid runs are supplied.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

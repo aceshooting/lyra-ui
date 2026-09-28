@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecated part** `popup__arrow` since `21.1.0`; use part `::part(popup-arrow)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `popup__popup` since `21.1.0`; use part `::part(popup-popup)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `arrow` / `arrow` since `unreleased`; use property `Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default.`; removal not before `24.0.0` — The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window.
+- **Deprecated property** `arrow` / `arrow` since `22.0.0`; use property `Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default.`; removal not before `24.0.0` — The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window.
 - **Optional peers** none
 - **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -57,7 +57,7 @@ const PROPERTY_KEYS = new Set(['type', 'enum', 'description', 'title', 'default'
  * @csspart status - The submitted-state message.
  * @csspart error - Unsupported-schema explanation.
  * @status experimental
- * @since unreleased
+ * @since 22.0.0
  */
 export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

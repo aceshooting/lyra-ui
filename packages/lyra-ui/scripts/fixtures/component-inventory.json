@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "21.2.0",
+    "lyraVersion": "22.0.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -3209,7 +3209,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -8568,7 +8568,7 @@
             "tag": "lr-approval-queue",
             "kind": "event",
             "name": "lr-approval-decision",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-approval-decision-request",
@@ -8788,7 +8788,7 @@
               "tag": "lr-approval-queue",
               "kind": "event",
               "name": "lr-approval-decision",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-approval-decision-request",
@@ -10643,7 +10643,7 @@
             "tag": "lr-attachment-trigger",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -10797,7 +10797,7 @@
               "tag": "lr-attachment-trigger",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -12674,7 +12674,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -17827,7 +17827,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -20213,7 +20213,7 @@
             "tag": "lr-callout",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -20390,7 +20390,7 @@
               "tag": "lr-callout",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -21223,7 +21223,7 @@
             "tag": "lr-carousel",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -21426,7 +21426,7 @@
               "tag": "lr-carousel",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -21983,7 +21983,7 @@
       ],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -33028,7 +33028,7 @@
             "tag": "lr-combobox",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -34260,7 +34260,7 @@
               "tag": "lr-combobox",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -36225,7 +36225,7 @@
             "tag": "lr-compare-panel",
             "kind": "event",
             "name": "lr-vote",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-vote-request",
@@ -36418,7 +36418,7 @@
               "tag": "lr-compare-panel",
               "kind": "event",
               "name": "lr-vote",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-vote-request",
@@ -36813,7 +36813,7 @@
             "tag": "lr-confirm-bar",
             "kind": "event",
             "name": "lr-approve",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-approve-request",
@@ -36826,7 +36826,7 @@
             "tag": "lr-confirm-bar",
             "kind": "event",
             "name": "lr-deny",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-deny-request",
@@ -37254,7 +37254,7 @@
               "tag": "lr-confirm-bar",
               "kind": "event",
               "name": "lr-approve",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-approve-request",
@@ -37284,7 +37284,7 @@
               "tag": "lr-confirm-bar",
               "kind": "event",
               "name": "lr-deny",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-deny-request",
@@ -37439,7 +37439,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -38582,7 +38582,7 @@
             "tag": "lr-context-meter",
             "kind": "event",
             "name": "lr-segment-activate",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-segment-activate-request",
@@ -38840,7 +38840,7 @@
               "tag": "lr-context-meter",
               "kind": "event",
               "name": "lr-segment-activate",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-segment-activate-request",
@@ -41173,7 +41173,7 @@
             "tag": "lr-data-grid",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -42117,7 +42117,7 @@
               "tag": "lr-data-grid",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -46933,7 +46933,7 @@
             "tag": "lr-dialog",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -47164,7 +47164,7 @@
               "tag": "lr-dialog",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -49348,7 +49348,7 @@
             "tag": "lr-document-library",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -49649,7 +49649,7 @@
               "tag": "lr-document-library",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -52672,7 +52672,7 @@
             "tag": "lr-drawer",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -52923,7 +52923,7 @@
               "tag": "lr-dialog",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -54241,7 +54241,7 @@
             "kind": "property",
             "name": "arrow",
             "attribute": "arrow",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "property",
               "name": "withoutArrow",
@@ -54306,7 +54306,7 @@
               "kind": "property",
               "name": "arrow",
               "attribute": "arrow",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "property",
                 "name": "withoutArrow",
@@ -54551,7 +54551,7 @@
               "kind": "property",
               "name": "arrow",
               "attribute": "arrow",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "property",
                 "name": "withoutArrow",
@@ -60033,7 +60033,7 @@
             "tag": "lr-eval-run",
             "kind": "event",
             "name": "lr-example-tool-approval-decide",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-example-tool-approval-decide-request",
@@ -60190,7 +60190,7 @@
               "tag": "lr-eval-run",
               "kind": "event",
               "name": "lr-example-tool-approval-decide",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-example-tool-approval-decide-request",
@@ -60391,7 +60391,7 @@
             "tag": "lr-export-button",
             "kind": "event",
             "name": "lr-export",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-export-request",
@@ -60661,7 +60661,7 @@
               "tag": "lr-export-button",
               "kind": "event",
               "name": "lr-export",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-export-request",
@@ -61228,7 +61228,7 @@
             "tag": "lr-file-input",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -61664,7 +61664,7 @@
               "tag": "lr-file-input",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -68222,7 +68222,7 @@
             "tag": "lr-graph",
             "kind": "event",
             "name": "lr-link-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-edge-activate",
@@ -68261,7 +68261,7 @@
             "tag": "lr-graph",
             "kind": "event",
             "name": "lr-node-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-node-activate",
@@ -68995,7 +68995,7 @@
               "tag": "lr-graph",
               "kind": "event",
               "name": "lr-link-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-edge-activate",
@@ -69058,7 +69058,7 @@
               "tag": "lr-graph",
               "kind": "event",
               "name": "lr-node-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-node-activate",
@@ -80109,7 +80109,7 @@
             "tag": "lr-knowledge-base",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -80433,7 +80433,7 @@
               "tag": "lr-knowledge-base",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -80974,7 +80974,7 @@
             "tag": "lr-knowledge-graph-explorer",
             "kind": "event",
             "name": "lr-link-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-edge-activate",
@@ -80987,7 +80987,7 @@
             "tag": "lr-knowledge-graph-explorer",
             "kind": "event",
             "name": "lr-node-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-node-activate",
@@ -81472,7 +81472,7 @@
               "tag": "lr-knowledge-graph-explorer",
               "kind": "event",
               "name": "lr-link-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-edge-activate",
@@ -81501,7 +81501,7 @@
               "tag": "lr-knowledge-graph-explorer",
               "kind": "event",
               "name": "lr-node-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-node-activate",
@@ -82629,7 +82629,7 @@
             "tag": "lr-lightbox",
             "kind": "event",
             "name": "lr-lightbox-close",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-close",
@@ -83024,7 +83024,7 @@
               "tag": "lr-lightbox",
               "kind": "event",
               "name": "lr-lightbox-close",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-close",
@@ -84589,7 +84589,7 @@
             "tag": "lr-lite-chart",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -85016,7 +85016,7 @@
               "tag": "lr-lite-chart",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -87481,7 +87481,7 @@
             "tag": "lr-markdown",
             "kind": "event",
             "name": "lr-link-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-link-activate",
@@ -88114,7 +88114,7 @@
               "tag": "lr-markdown",
               "kind": "event",
               "name": "lr-link-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-link-activate",
@@ -88447,7 +88447,7 @@
             "tag": "lr-markdown-core",
             "kind": "event",
             "name": "lr-link-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-link-activate",
@@ -89074,7 +89074,7 @@
               "tag": "lr-markdown-core",
               "kind": "event",
               "name": "lr-link-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-link-activate",
@@ -91969,7 +91969,7 @@
             "tag": "lr-message-actions",
             "kind": "event",
             "name": "lr-feedback-submit",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-feedback-submit-request",
@@ -92218,7 +92218,7 @@
               "tag": "lr-message-actions",
               "kind": "event",
               "name": "lr-feedback-submit",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-feedback-submit-request",
@@ -92374,7 +92374,7 @@
             "tag": "lr-message-feedback",
             "kind": "event",
             "name": "lr-feedback-submit",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-feedback-submit-request",
@@ -92624,7 +92624,7 @@
               "tag": "lr-message-feedback",
               "kind": "event",
               "name": "lr-feedback-submit",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-feedback-submit-request",
@@ -92858,7 +92858,7 @@
             "tag": "lr-message-parts",
             "kind": "event",
             "name": "lr-link-click",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-link-activate",
@@ -92871,7 +92871,7 @@
             "tag": "lr-message-parts",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -93094,7 +93094,7 @@
               "tag": "lr-message-parts",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -93301,7 +93301,7 @@
               "tag": "lr-message-parts",
               "kind": "event",
               "name": "lr-link-click",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-link-activate",
@@ -105811,7 +105811,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -106051,7 +106051,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -112419,7 +112419,7 @@
             "tag": "lr-progress-bar",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -112619,7 +112619,7 @@
               "tag": "lr-progress-bar",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -112892,7 +112892,7 @@
             "tag": "lr-progress-ring",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -113092,7 +113092,7 @@
               "tag": "lr-progress-ring",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -122639,7 +122639,7 @@
             "tag": "lr-reorder-item",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -122741,7 +122741,7 @@
               "tag": "lr-reorder-item",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -123222,7 +123222,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "22.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -130796,7 +130796,7 @@
             "tag": "lr-sequence-strip",
             "kind": "attribute",
             "name": "accessible-label",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -130809,7 +130809,7 @@
             "tag": "lr-sequence-strip",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -130860,7 +130860,7 @@
               "tag": "lr-sequence-strip",
               "kind": "attribute",
               "name": "accessible-label",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -130955,7 +130955,7 @@
               "tag": "lr-sequence-strip",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -141833,7 +141833,7 @@
             "tag": "lr-table",
             "kind": "attribute",
             "name": "accessible-label",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -141846,7 +141846,7 @@
             "tag": "lr-table",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -141872,7 +141872,7 @@
             "tag": "lr-table",
             "kind": "property",
             "name": "accessibleLabel",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "attribute",
               "name": "aria-label",
@@ -141970,7 +141970,7 @@
               "tag": "lr-table",
               "kind": "attribute",
               "name": "accessible-label",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -142520,7 +142520,7 @@
               "tag": "lr-table",
               "kind": "property",
               "name": "accessibleLabel",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "attribute",
                 "name": "aria-label",
@@ -143277,7 +143277,7 @@
               "tag": "lr-table",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -144953,7 +144953,7 @@
             "tag": "lr-terminal",
             "kind": "event",
             "name": "lr-download",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-download-request",
@@ -145456,7 +145456,7 @@
               "tag": "lr-terminal",
               "kind": "event",
               "name": "lr-download",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-download-request",
@@ -148005,7 +148005,7 @@
             "tag": "lr-thread-list",
             "kind": "event",
             "name": "lr-retry",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-retry-request",
@@ -148019,7 +148019,7 @@
             "kind": "property",
             "name": "compact",
             "attribute": "compact",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "property",
               "name": "size",
@@ -148100,7 +148100,7 @@
               "kind": "property",
               "name": "compact",
               "attribute": "compact",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "property",
                 "name": "size",
@@ -148299,7 +148299,7 @@
               "kind": "property",
               "name": "compact",
               "attribute": "compact",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "property",
                 "name": "size",
@@ -148655,7 +148655,7 @@
               "tag": "lr-thread-list",
               "kind": "event",
               "name": "lr-retry",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-retry-request",
@@ -154038,7 +154038,7 @@
             "tag": "lr-tool-approval-dialog",
             "kind": "event",
             "name": "lr-approve",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-approve-request",
@@ -154051,7 +154051,7 @@
             "tag": "lr-tool-approval-dialog",
             "kind": "event",
             "name": "lr-deny",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-deny-request",
@@ -154535,7 +154535,7 @@
               "tag": "lr-tool-approval-dialog",
               "kind": "event",
               "name": "lr-approve",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-approve-request",
@@ -154565,7 +154565,7 @@
               "tag": "lr-tool-approval-dialog",
               "kind": "event",
               "name": "lr-deny",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-deny-request",
@@ -157426,7 +157426,7 @@
             "tag": "lr-tool-timeline",
             "kind": "event",
             "name": "lr-tool-approval-decide",
-            "since": "unreleased",
+            "since": "22.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-tool-approval-decide-request",
@@ -157613,7 +157613,7 @@
               "tag": "lr-tool-timeline",
               "kind": "event",
               "name": "lr-tool-approval-decide",
-              "since": "unreleased",
+              "since": "22.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-tool-approval-decide-request",
