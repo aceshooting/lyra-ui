@@ -2094,6 +2094,25 @@ test('release workflows verify tagged-source bytes without exposing protected cr
   );
 });
 
+test('checkout-free publishing uses the Node version exported by tagged-source verification', () => {
+  const verification = readFileSync(
+    path.join(repoRoot, '.github/workflows/release-verification.yml'), 'utf8',
+  );
+  const publish = readFileSync(path.join(repoRoot, '.github/workflows/publish.yml'), 'utf8');
+  const protectedPublish = publish.slice(publish.indexOf('\n  publish:\n'));
+  const workflowOutputs = verification.slice(0, verification.indexOf('\njobs:'));
+  const verificationJob = verification.slice(verification.indexOf('\n  verify:\n'));
+
+  assert.match(workflowOutputs, /node_version:\n\s+description: [^\n]+\n\s+value: \$\{\{ jobs\.verify\.outputs\.node_version \}\}/u);
+  assert.match(verificationJob, /node_version: \$\{\{ steps\.node\.outputs\['node-version'\] \}\}/u);
+  assert.match(verificationJob, /- uses: actions\/setup-node@[^\n]+\n\s+id: node\n\s+with:\n\s+node-version-file: \.nvmrc/u);
+  assert.ok(verificationJob.indexOf('actions/checkout@') < verificationJob.indexOf('actions/setup-node@'));
+  assert.match(protectedPublish, /node-version: \$\{\{ needs\.verify\.outputs\.node_version \}\}/u);
+  assert.doesNotMatch(protectedPublish, /node-version-file:|actions\/checkout@|pnpm\/action-setup|pnpm install/u);
+  assert.doesNotMatch(protectedPublish, /node-version: ['"]?v?\d/u,
+    'publishing must inherit the verified runtime, not duplicate the repository version pin');
+});
+
 test('release workflow qualifies the exact main commit before tagging, releasing, and publishing', () => {
   const releaseWorkflow = readFileSync(
     path.join(repoRoot, '.github/workflows/release.yml'),
@@ -2598,7 +2617,7 @@ test('primary CI and release qualification use the exact Node file while compati
     path.join(repoRoot, '.github/workflows/publish.yml'),
     'utf8',
   );
-  assert.match(publishWorkflow, /node-version-file: \.nvmrc/u);
+  assert.match(publishWorkflow, /node-version: \$\{\{ needs\.verify\.outputs\.node_version \}\}/u);
   const protectedStart = publishWorkflow.indexOf('\n  publish:');
   assert.ok(protectedStart >= 0, 'publish workflow must retain its protected signer job');
   const protectedSigner = publishWorkflow.slice(protectedStart);
