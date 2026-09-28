@@ -91,10 +91,26 @@ export function validatePackageBudgets(budgets) {
       unpackedBudget.reviewedMeasurementBytes + unpackedBudget.headroomBytes,
       'package budget maximum.unpackedBytes must equal the reviewed measurement plus tight headroom',
     );
-    assert.ok(
-      budgets.maximum.unpackedBytes < budgets.baseline.unpackedBytes,
-      'package budget maximum.unpackedBytes must remain below the pre-8 baseline',
-    );
+    // Like the packed ceiling, the unpacked one may pass the pre-8 baseline only through a named
+    // maintainer review bound to its own byte ceiling (21.2.0: deprecated-alias metadata that
+    // 23.0.0 removes).
+    if (budgets.maximum.unpackedBytes >= budgets.baseline.unpackedBytes) {
+      const review = unpackedBudget.baselineExceptionReview;
+      assert.ok(
+        typeof review?.approvedBy === 'string' &&
+          review.approvedBy.length > 0 &&
+          typeof review?.approvedOn === 'string' &&
+          /^\d{4}-\d{2}-\d{2}$/.test(review.approvedOn) &&
+          typeof review?.reason === 'string' &&
+          review.reason.length >= 40 &&
+          Number.isInteger(review?.approvedMaximumUnpackedBytes),
+        'package budget maximum.unpackedBytes at or above the pre-8 baseline requires unpackedBudgetPolicy.baselineExceptionReview with approvedBy, approvedOn, a substantive reason and an approvedMaximumUnpackedBytes ceiling',
+      );
+      assert.ok(
+        budgets.maximum.unpackedBytes <= review.approvedMaximumUnpackedBytes,
+        'package budget maximum.unpackedBytes must stay at or below the approved baseline-exception ceiling',
+      );
+    }
   }
 
   const packedBudget = budgets.packedBudgetPolicy;

@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-27 on the version-bumped 21.1.0 release tree (CHANGELOG section and release metadata included): 9,118,643 packed bytes, 4,189 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling. 2026-09-28: 21.1.0 ships 4,193 files; the maintainer approved raising the measured entrypoint remainder to 1,101 (the rename-ledger CLI, chart bidi isolation, the slotted top-layer overlay controller, and the theme-token length and theme-observation modules), keeping the next-component headroom.",
+  "$comment": "Hard npm-tarball budgets. Required public docs, editor/CEM data, declarations, runtime, compatibility metadata, and generated references remain shipped. Re-measured on 2026-09-27 on the version-bumped 21.1.0 release tree (CHANGELOG section and release metadata included): 9,118,643 packed bytes, 4,189 files. Measure on the release commit, never before the version bump -- the bump adds the release's CHANGELOG section (a shipped file) and the new version/release history in package-metadata.ts, so a pre-bump measurement is always short. The approved exception still fails closed above this exact reviewed ceiling. 2026-09-28: 21.1.0 ships 4,193 files; the maintainer approved raising the measured entrypoint remainder to 1,101 (the rename-ledger CLI, chart bidi isolation, the slotted top-layer overlay controller, and the theme-token length and theme-observation modules), keeping the next-component headroom. 2026-09-28: 21.2.0 re-measured at 9,348,799 packed and 38,651,210 unpacked bytes; the unpacked ceiling now passes the pre-8 baseline under a maintainer-approved baseline exception (deprecated-alias metadata, reversed in 23.0.0; trimming is on the roadmap).",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,24 +10,30 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 9118643,
+    "reviewedMeasurementBytes": 9348799,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928,
     "baselineExceptionReview": {
       "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-27",
-      "reason": "Re-measured on the version-bumped 21.1.0 release tree: 9118643 packed bytes, 4189 files. The growth over 21.0.0 is the lyra-v21 migration profile (the rename ledger and its CLI module shipped in dist/cli, and the generated migration reference), the deprecation records and development warnings for the aliases removed in 23.0.0, the new lr-map fitBounds, tool-call display name and incomplete status, popover top-layer and chart right-to-left label isolation surfaces, and the 21.1.0 CHANGELOG section. The maintainer approved raising the ceiling to this measurement with the usual drift headroom.",
-      "approvedMaximumPackedBytes": 9152643
+      "approvedOn": "2026-09-28",
+      "reason": "Re-measured for 21.2.0: 9348799 packed and 38651210 unpacked bytes. The growth is the metadata of the roughly 340 deprecated aliases that keep every harmonized Lyra-only name working until 23.0.0 (manifest, editor data, framework declarations, the lyra-v21 migration contract and generated references). The maintainer approved raising the ceilings to pass and scheduled trimming this metadata on the roadmap; it reverses when 23.0.0 removes the aliases.",
+      "approvedMaximumPackedBytes": 9382799
     }
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 36903298,
+    "reviewedMeasurementBytes": 38651210,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-26"
+    "reviewedOn": "2026-09-28",
+    "baselineExceptionReview": {
+      "approvedBy": "maintainer (Ace Shooting)",
+      "approvedOn": "2026-09-28",
+      "reason": "Re-measured for 21.2.0: 9348799 packed and 38651210 unpacked bytes. The growth is the metadata of the roughly 340 deprecated aliases that keep every harmonized Lyra-only name working until 23.0.0 (manifest, editor data, framework declarations, the lyra-v21 migration contract and generated references). The maintainer approved raising the ceilings to pass and scheduled trimming this metadata on the roadmap; it reverses when 23.0.0 removes the aliases.",
+      "approvedMaximumUnpackedBytes": 38791210
+    }
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
@@ -38,8 +44,8 @@
     "entrypointHeadroom": 1108
   },
   "maximum": {
-    "packedBytes": 9152643,
-    "unpackedBytes": 37043298,
+    "packedBytes": 9382799,
+    "unpackedBytes": 38791210,
     "fileCount": 4200
   }
 }

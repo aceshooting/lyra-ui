@@ -126,7 +126,26 @@ test('accepts only an honest measured unpacked exception that mirrors the packed
   );
   assert.throws(
     () => validatePackageBudgets(withPolicy({ reviewedMeasurementBytes: 3_999, headroomBytes: 1 }, 4_000)),
-    /maximum\.unpackedBytes must remain below the pre-8 baseline/,
+    /maximum\.unpackedBytes at or above the pre-8 baseline requires unpackedBudgetPolicy\.baselineExceptionReview/,
+  );
+  const review = {
+    approvedBy: 'maintainer',
+    approvedOn: '2026-09-28',
+    reason: 'Deprecated-alias metadata that the next major removes, reviewed at an exact ceiling.',
+    approvedMaximumUnpackedBytes: 4_000,
+  };
+  assert.doesNotThrow(() =>
+    validatePackageBudgets(withPolicy({ reviewedMeasurementBytes: 3_999, headroomBytes: 1, baselineExceptionReview: review }, 4_000)),
+  );
+  assert.throws(
+    () =>
+      validatePackageBudgets(
+        withPolicy(
+          { reviewedMeasurementBytes: 3_999, headroomBytes: 1, baselineExceptionReview: { ...review, approvedMaximumUnpackedBytes: 3_999 } },
+          4_000,
+        ),
+      ),
+    /maximum\.unpackedBytes must stay at or below the approved baseline-exception ceiling/,
   );
   const summary = formatPackageSummary(
     { packedBytes: 884, unpackedBytes: 3_015, fileCount: 26, files: [] },

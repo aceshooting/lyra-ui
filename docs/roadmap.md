@@ -161,7 +161,13 @@ or a rename onto a name another component already uses, lands in v22.
 34. Raise the supported Node floor to 22.
 35. Raise the browser floor to the Popover API (Firefox 125, Safari 17).
 36. Shrink the published tarball: stop shipping `llms-full.txt`, trim editor hover descriptions to a
-    summary plus a documentation link, and ship only the current major's changelog section.
+    summary plus a documentation link, and ship only the current major's changelog section. Also
+    trim the metadata of the 21.x deprecated aliases (about 1.7 MB unpacked in 21.2.0): leave
+    deprecated members out of `web-types.json` and `vscode-html-data.json` so editors stop suggesting
+    old names, compact their entries in `custom-elements.json`, and slim the migration CLI's
+    `migration-contract.json`. Return the unpacked size below the pre-8 baseline, where 21.2.0's
+    reviewed exception lets it sit, and remove that exception in 23.0.0 at the latest, when the
+    aliases go.
 37. Make `LyraElement`'s collection-snapshot support opt-in, and move development-only diagnostics
     behind a `development` export condition.
 38. Also: a shared decorator helper, a faster parallel lint chain, test-title-keyed quality evidence,
