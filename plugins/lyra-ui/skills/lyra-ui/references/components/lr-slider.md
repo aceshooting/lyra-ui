@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `with-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 26 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -110,16 +110,17 @@ single numeric string entry.
   `with-tooltip` bubble's text. The second argument identifies which handle is being formatted
   (`'value'` on a single-handle slider). A nullish result omits `aria-valuetext`. Leaving the
   property unset preserves the numeric `aria-valuetext`.
-- `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
+- `withValue: boolean = false` (attribute `with-value`) — opt-in numeric readout next to the track;
   a range readout joins both values with an en dash. The explicit HTML spelling
-  `show-value="false"` stays false.
+  `with-value="false"` stays false. Deprecated alias: `show-value`/`showValue` (use `with-value`; kept in step,
+  last write wins; removed in 23.0.0).
 - `valueDisplay: SliderValueDisplay = 'numeric'` (attribute `value-display`) — `'numeric' |
   'formatted'`. Opt into `formatted` to reuse `valueFormatter` (or `tooltipFormatter` when no
   value formatter is supplied) for the visible readout too. Each range handle is formatted
   separately; nullish results fall back to localized numbers. Existing ARIA and tooltip behavior
   is unchanged. The callback owns its unit labels and locale formatting.
 - `valuePlacement: SliderValuePlacement = 'inline'` (attribute `value-placement`) — `'inline' |
-  'label'`. With `showValue`, `label` places the readout opposite the label in a wrapping row that
+  'label'`. With `withValue`, `label` places the readout opposite the label in a wrapping row that
   follows RTL. The readout stays outside the accessible label. These presentation options update
   on live `lr-input` changes without changing the commit-only `lr-change` contract.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
@@ -175,7 +176,7 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
-nodes when `showValue` and `valuePlacement="label"` are enabled.
+nodes when `withValue` and `valuePlacement="label"` are enabled.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so

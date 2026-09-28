@@ -179,8 +179,8 @@ export const Collapsible: Story = {
       collapsed
       .timestamp=${new Date()}
       style="max-width: 32rem; display: block;"
-      @lr-toggle=${(e: CustomEvent<{ collapsed: boolean }>) =>
-        console.log("collapsed:", e.detail.collapsed)}
+      @lr-toggle=${(e: CustomEvent<{ expanded: boolean }>) =>
+        console.log("expanded:", e.detail.expanded)}
     >
       This is a long tool-output-style message that starts collapsed — click the
       chevron to reveal it. Lorem ipsum dolor sit amet, consectetur adipiscing

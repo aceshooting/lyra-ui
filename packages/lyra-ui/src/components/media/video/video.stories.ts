@@ -129,7 +129,7 @@ export const CustomControlTheme: Story = {
   render: () => html`
     <lr-video
       controls="full"
-      style="--controls-background: color-mix(in oklab, var(--lr-color-brand), transparent 25%); --controls-color: var(--lr-color-on-brand); --poster-play-button-background: var(--lr-color-brand); --lr-video-poster-play-button-hover-background: var(--lr-color-success); --lr-video-poster-play-button-hover-border-color: var(--lr-color-success);"
+      style="--controls-background: color-mix(in oklab, var(--lr-color-brand), transparent 25%); --controls-color: var(--lr-color-on-brand); --poster-play-button-background: var(--lr-color-brand); --lr-video-poster-play-button-hover-bg: var(--lr-color-success); --lr-video-poster-play-button-hover-border-color: var(--lr-color-success);"
       src=${VIDEO_SRC}
       poster=${POSTER}
       title="Custom control hooks"

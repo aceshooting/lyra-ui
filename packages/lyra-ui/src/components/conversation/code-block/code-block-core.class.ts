@@ -1,6 +1,7 @@
 import { type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -36,6 +37,7 @@ import {
   tokenizeCodeBlock,
 } from './code-block-shared.js';
 import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
+export type { LyraCodeBlockToggleDetail } from './code-block-shared.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -52,8 +54,8 @@ export interface LyraCodeBlockCoreEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-toggle-request': CustomEvent<{ collapsed: boolean }>;
-  'lr-toggle': CustomEvent<{ collapsed: boolean }>;
+  'lr-toggle-request': CustomEvent<{ collapsed: boolean; expanded?: boolean }>;
+  'lr-toggle': CustomEvent<{ collapsed: boolean; expanded?: boolean }>;
   'lr-line-activate': CustomEvent<{ line: number }>;
   'lr-text-select': CustomEvent<{
     readonly text: string;
@@ -83,7 +85,7 @@ export interface LyraCodeBlockCoreEventMap {
  * is the *default* rendering path, not a degraded one, same as `<lr-code-block>`'s own plain-text
  * fallback.
  *
- * Everything else — `code`/`language`/`filename`/`copyable`/`collapsible`/
+ * Everything else — `code`/`language`/`filename`/`without-copy-button`/`collapsible`/
  * `collapsed`/`maxHeight`, the copy button, the collapse header toggle, the
  * loading-skeleton behavior while the fine-grained highlighter itself
  * resolves — matches `<lr-code-block>` exactly. A host `aria-label` (or
@@ -115,10 +117,12 @@ export interface LyraCodeBlockCoreEventMap {
  *   `{ ok: false, text, reason, error }`, where `reason` is
  *   `'unsupported' | 'denied' | 'failed'`.
  * @event lr-toggle-request - Cancelable request emitted before collapse state changes.
- *   `detail: { collapsed }` is the proposed next state.
+ *   `detail: { expanded, collapsed }` is the proposed next state; `expanded` is the canonical key
+ *   and the deprecated `collapsed` its inverse.
  * @event lr-toggle - The collapse/expand header button was activated.
- *   `detail: { collapsed }` — same event name and shape convention as
- *   `<lr-thinking-panel>`'s own `lr-toggle`.
+ *   `detail: { expanded, collapsed }` — same event name and shape convention as
+ *   `<lr-thinking-panel>`'s own `lr-toggle`; `expanded` is the resulting state and the deprecated
+ *   `collapsed` its inverse.
  * @event lr-line-activate - A gutter line number was activated (click, or Enter/Space while
  *   focused) while `activatable-lines` is set. `detail: { line }`.
  * @event lr-text-select - Fired when a text selection inside the code body ends. `detail: {
@@ -130,15 +134,17 @@ export interface LyraCodeBlockCoreEventMap {
  * @csspart language - The `language` badge, when set, so the language is
  *   exposed to assistive tech as visible text rather than only a `language`
  *   attribute a screen reader would never announce.
- * @csspart copy-button - The copy-to-clipboard control, when `copyable`. A composed
+ * @csspart copy-button - The copy-to-clipboard control, unless `without-copy-button`. A composed
  *   `<lr-icon-button>` as of 16.0.0: it still owns the accessible name, the activation and the part
  *   names, while its background, radius, hover/press mixes, focus ring and hit-area floor now come
  *   from `--lr-icon-button-*`. Also carries `copy-button-text` or `copy-button-icon` for the active
  *   `copyAppearance`, since a state cannot be selected with `::part(copy-button)[attr]`.
  * @csspart copy-button-text - The copy control while `copyAppearance` is `'text'`.
  * @csspart copy-button-icon - The copy control while `copyAppearance` is `'icon'`.
- * @csspart copy-button__control - The copy control's own native `<button>`, forwarded because the
+ * @csspart copy-button-control - The copy control's own native `<button>`, forwarded because the
  *   painted surface sits one shadow boundary deeper than `copy-button`.
+ * @csspart copy-button__control - Deprecated alias of `copy-button-control`, on the same node;
+ *   removal not before 23.0.0.
  * @csspart header-actions - The wrapper around the `header-actions` slot, at the trailing end of
  *   the header row.
  * @slot header-actions - Extra controls for the header row, rendered after the copy control. Their
@@ -211,6 +217,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['languages']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+  };
 
   /** The raw source text. Removing the attribute renders an empty code block. */
   @property() code = '';
@@ -236,7 +245,17 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  while `collapsible` is also true. */
   @property({ type: Boolean, reflect: true }) collapsed = false;
 
-  /** Shows a copy-to-clipboard button in the header. */
+  /** Hides the copy-to-clipboard button in the header. */
+  @property({ type: Boolean, attribute: 'without-copy-button', reflect: true })
+  withoutCopyButton = false;
+
+  /**
+   * Deprecated inverted alias of `without-copy-button` (`withoutCopyButton`): `copyable="false"`
+   * equals `without-copy-button`, and removing it restores the default. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-copy-button`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -361,9 +380,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     emitError: () => this.emit('lr-error', null),
     emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
     requestToggle: (collapsed) =>
-      !this.emit('lr-toggle-request', { collapsed }, { cancelable: true })
+      !this.emit('lr-toggle-request', { expanded: !collapsed, collapsed }, { cancelable: true })
         .defaultPrevented,
-    emitToggle: (collapsed) => this.emit('lr-toggle', { collapsed }),
+    emitToggle: (collapsed) => this.emit('lr-toggle', { expanded: !collapsed, collapsed }),
     emitTextSelect: (selection) => this.emit('lr-text-select', selection),
   });
 
@@ -665,7 +684,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     return renderCodeBlockShell({
       filename: this.filename,
       language: this.language,
-      copyable: this.copyable,
+      copyable: !this.withoutCopyButton,
       copyAppearance: this.copyAppearance,
       hasHeaderActions: this.hasHeaderActions,
       collapsible: this.collapsible,

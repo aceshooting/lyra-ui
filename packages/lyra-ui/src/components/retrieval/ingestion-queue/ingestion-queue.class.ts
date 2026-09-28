@@ -539,7 +539,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               part="item-progress"
               .value=${item.progress ?? 0}
               ?indeterminate=${indeterminate}
-              accessible-label=${this.localize(
+              aria-label=${this.localize(
                 'ingestionItemProgressLabel',
                 undefined,
                 {

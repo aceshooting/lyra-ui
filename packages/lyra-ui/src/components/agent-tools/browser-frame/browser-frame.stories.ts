@@ -58,7 +58,7 @@ export const NoControls: Story = {
       style="max-width:36rem"
       url="https://example.com"
       phase="streaming"
-      .controls=${false}
+      without-controls
     ></lr-browser-frame>
   `,
 };

@@ -21,7 +21,7 @@ interface MarkdownChromeElement extends HTMLElement {
   codeBlockChrome: boolean;
   codeBlockHeader: boolean;
   content: string;
-  highlightCode: boolean;
+  withoutSyntaxHighlighting: boolean;
   htmlMode: 'sanitize' | 'escape' | 'trusted';
   languages: Record<string, unknown>;
   streaming: boolean;
@@ -33,7 +33,7 @@ interface MarkdownChromeElement extends HTMLElement {
 
 async function mount(
   tagName: (typeof tags)[number],
-  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'codeBlockHeader' | 'highlightCode' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
+  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'codeBlockHeader' | 'withoutSyntaxHighlighting' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
 ): Promise<MarkdownChromeElement> {
   await loadMarkdownDeps();
   const wrapper = await fixture<HTMLElement>(html`<div></div>`);
@@ -88,7 +88,7 @@ for (const tagName of tags) {
       const el = await mount(tagName, {
         content: fencedContent,
         codeBlockChrome: true,
-        highlightCode: false,
+        withoutSyntaxHighlighting: true,
         strings: {
           codeRegionWithLanguage: '{language} source',
           copyCode: 'Copy source',
@@ -120,7 +120,7 @@ for (const tagName of tags) {
         '',
         '<pre data-fenced="true"><code>authored HTML</code></pre>',
       ].join('\n');
-      const el = await mount(tagName, { content, codeBlockChrome: true, highlightCode: false, htmlMode: 'trusted' });
+      const el = await mount(tagName, { content, codeBlockChrome: true, withoutSyntaxHighlighting: true, htmlMode: 'trusted' });
       await waitForMarkdown(el, '[part="code-block-header"]');
       expect(headers(el)).to.have.length(2);
       const blocks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="code-block"]')];
@@ -135,7 +135,7 @@ for (const tagName of tags) {
       const el = await mount(tagName, {
         content: '```json\n{"open":true}',
         codeBlockChrome: true,
-        highlightCode: false,
+        withoutSyntaxHighlighting: true,
         streaming: true,
         streamingRender: 'progressive',
       });
@@ -152,7 +152,7 @@ for (const tagName of tags) {
       const el = await mount(tagName, {
         content: fencedContent,
         codeBlockChrome: true,
-        highlightCode: false,
+        withoutSyntaxHighlighting: true,
       });
       await waitForMarkdown(el, '[part="code-block-header"]');
       expect(headers(el)).to.have.length(1);
@@ -202,10 +202,10 @@ for (const tagName of tags) {
     it('warns once, naming code-block-header, and still renders the header', async () => {
       let headerCount = 0;
       const warnings = await captureDeprecationWarnings(usage, async () => {
-        const el = await mount(tagName, { content: fencedContent, codeBlockChrome: true, highlightCode: false });
+        const el = await mount(tagName, { content: fencedContent, codeBlockChrome: true, withoutSyntaxHighlighting: true });
         await waitForMarkdown(el, '[part="code-block-header"]');
         headerCount = headers(el).length;
-        const second = await mount(tagName, { content: fencedContent, codeBlockChrome: true, highlightCode: false });
+        const second = await mount(tagName, { content: fencedContent, codeBlockChrome: true, withoutSyntaxHighlighting: true });
         await second.updateComplete;
       });
       expect(headerCount).to.equal(1);
@@ -225,17 +225,37 @@ for (const tagName of tags) {
       expect(warnings).to.have.length(1);
     });
 
-    it('never warns for code-block-header or an unset alias', async () => {
+    it('never warns for code-block-header, whose value the alias follows silently', async () => {
       let headerCount = 0;
+      let aliasValue = false;
       const warnings = await captureDeprecationWarnings(usage, async () => {
-        const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, highlightCode: false });
+        const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
         await waitForMarkdown(el, '[part="code-block-header"]');
         headerCount = headers(el).length;
-        el.codeBlockChrome = false;
+        aliasValue = el.codeBlockChrome;
+        // Re-writing the value the alias already holds is not a change and never warns.
+        el.codeBlockChrome = true;
         await el.updateComplete;
       });
       expect(headerCount).to.equal(1);
+      expect(aliasValue).to.equal(true);
       expect(warnings).to.have.length(0);
+    });
+
+    it('keeps code-block-chrome and code-block-header in step, the last write winning', async () => {
+      let el!: MarkdownChromeElement;
+      await captureDeprecationWarnings(usage, async () => {
+        el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
+        await waitForMarkdown(el, '[part="code-block-header"]');
+        el.codeBlockChrome = false;
+        await el.updateComplete;
+      });
+      expect(el.codeBlockHeader, 'the later alias write wins').to.equal(false);
+      await waitUntil(() => headers(el).length === 0, 'the alias write never removed the header');
+      el.codeBlockHeader = true;
+      await el.updateComplete;
+      expect(el.codeBlockChrome, 'a canonical write syncs back to the alias').to.equal(true);
+      await waitUntil(() => headers(el).length === 1, 'the canonical write never restored the header');
     });
   });
 }

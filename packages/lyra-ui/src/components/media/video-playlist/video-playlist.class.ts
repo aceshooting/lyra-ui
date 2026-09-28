@@ -1,6 +1,8 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -157,15 +159,15 @@ function trackSnapshot(
  * `<lr-video-playlist>` — a direct-child `<lr-video>` playlist with a navigable current-item
  * list. It mirrors the public `<wa-video-playlist>` surface under the `lr-` prefix.
  *
- * Lyra additionally exposes `autoAdvance` and `repeat`. `autoAdvance` defaults to `true` to
- * preserve the mirrored ended behavior; `repeat="one"` restarts the current video and
- * `repeat="all"` wraps the final video to the first.
+ * Lyra additionally exposes `without-auto-advance` and `repeat`. An ended video advances by
+ * default, preserving the mirrored ended behavior, until `without-auto-advance` is set;
+ * `repeat="one"` restarts the current video and `repeat="all"` wraps the final video to the first.
  * `items` can seed deterministic playlist-row metadata for server rendering. Seeded rows are
  * visible but disabled until the browser can adopt the indexed direct video children; live child
  * metadata is authoritative after that corrective update.
  *
  * A child marked `inert` is unavailable: it never becomes the active video,
- * `next()`/`previous()`/auto-advance step past it, and its playlist row renders `disabled` so the
+ * `next()`/`previous()`/automatic advancement step past it, and its playlist row renders `disabled` so the
  * row cannot enter the sequential or arrow-key path. Only the child's *own* `inert` counts — a
  * playlist inerted wholesale by an open modal keeps playing. `<lr-video>` has no `disabled`
  * contract; use the native `inert` property to make a child unavailable.
@@ -193,8 +195,10 @@ function trackSnapshot(
  * @csspart playlist-item - An individual playlist item button.
  * @csspart playlist-thumbnail - Thumbnail within a playlist item.
  * @csspart playlist-title - Title text within a playlist item.
- * @cssprop [--lr-video-playlist-item-current-background=var(--lr-color-brand-fill-quiet)] - Current
+ * @cssprop [--lr-video-playlist-item-current-bg=var(--lr-color-brand-fill-quiet)] - Current
  *   playlist-item background, kept under the pointer.
+ * @cssprop [--lr-video-playlist-item-current-background=var(--lr-color-brand-fill-quiet)] - Deprecated alias of
+ *   `--lr-video-playlist-item-current-bg`; removal not before 23.0.0.
  * @cssprop [--lr-video-playlist-item-current-border-color=var(--lr-color-brand)] - Current
  *   playlist-item border color, kept under the pointer.
  * @status experimental
@@ -215,6 +219,9 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    autoAdvance: ['withoutAutoAdvance', invertAlias, invertAlias],
+  };
 
   /** Controls preset forwarded to every direct child video. */
   @property({ reflect: true }) controls: LyraVideoControls = 'full';
@@ -222,7 +229,12 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** Icon library forwarded to every direct child video. */
   @property({ attribute: 'icon-library' }) iconLibrary = 'system';
 
-  /** Whether an ended current video advances automatically. Errors never change selection. */
+  /** Stops an ended current video from advancing automatically; `repeat` then has no effect.
+   *  Errors never change selection either way. */
+  @property({ type: Boolean, attribute: 'without-auto-advance' }) withoutAutoAdvance = false;
+
+  /** Whether an ended current video advances automatically. Errors never change selection.
+   *  @deprecated Use `without-auto-advance` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'auto-advance',
@@ -660,7 +672,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   }
 
   private handleCompletion(video: LyraVideo): void {
-    if (video !== this.activeVideo || !this.autoAdvance) return;
+    if (video !== this.activeVideo || this.withoutAutoAdvance) return;
     if (this.repeat === 'one') {
       video.seek(0);
       const generation = this.activationGeneration;

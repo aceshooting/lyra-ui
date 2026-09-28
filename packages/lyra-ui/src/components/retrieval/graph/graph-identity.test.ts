@@ -12,7 +12,7 @@ import type { LyraGraph } from './graph.js';
 import { graphLinkIdentity, normalizeGraphModel } from './graph-model.js';
 import type {
   LyraGraphCommunity,
-  LyraGraphLink,
+  LyraGraphEdge,
 } from './graph-model.js';
 import type { LyraKnowledgeGraphExplorer } from '../knowledge-graph-explorer/knowledge-graph-explorer.js';
 import type { LyraNeighborList } from '../neighbor-list/neighbor-list.js';
@@ -83,7 +83,7 @@ it('normalizes every keyed graph collection with nonblank first-wins identities'
 it('normalizes malformed runtime links and missing community membership', () => {
   const malformedLinks = normalizeGraphModel(
     [],
-    null as unknown as readonly LyraGraphLink[],
+    null as unknown as readonly LyraGraphEdge[],
     [],
     []
   );
@@ -91,7 +91,7 @@ it('normalizes malformed runtime links and missing community membership', () => 
 
   const mixedLinks = normalizeGraphModel(
     [],
-    [null, 42, { source: 'node-a', target: 'node-b' }] as unknown as readonly LyraGraphLink[],
+    [null, 42, { source: 'node-a', target: 'node-b' }] as unknown as readonly LyraGraphEdge[],
     [],
     [{ id: 'empty-members' } as LyraGraphCommunity]
   );
@@ -130,7 +130,7 @@ it('projects the same canonical graph model through the explorer and graph', asy
     { id: 'node-a', label: 'Later' },
     { id: '', label: 'Blank' },
   ];
-  explorer.links = [
+  explorer.edges = [
     { source: 'node-a', target: 'node-a' },
     { source: 'node-a', target: 'node-a' },
   ];
@@ -145,7 +145,7 @@ it('projects the same canonical graph model through the explorer and graph', asy
   await explorer.updateComplete;
   const graph = explorer.shadowRoot!.querySelector('lr-graph') as LyraGraph;
   expect(graph.nodes.map((node) => node.label)).to.deep.equal(['First']);
-  expect(graph.links).to.have.length(1);
+  expect(graph.edges).to.have.length(1);
   expect(graph.nodeTypes.map((type) => type.label)).to.deep.equal([
     'First type',
   ]);

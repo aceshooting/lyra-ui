@@ -99,7 +99,7 @@ export const Disabled: Story = {
 export const SubmitOnEnterDisabled: Story = {
   render: () => html`
     <lr-chat-composer
-      .submitOnEnter=${false}
+      without-enter-submit
       placeholder="Enter always inserts a newline here — use the button to send."
       style="max-width: 32rem; display: block;"
       @lr-submit=${(e: CustomEvent<{ value: string }>) => alert(`lr-submit: ${JSON.stringify(e.detail)}`)}

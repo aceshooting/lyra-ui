@@ -63,7 +63,7 @@ for (const axis of ['domain', 'midpoint'] as const) {
       expect(cells()[0]!.getAttribute('aria-label')).to.contain('no data');
       expect(callbackValues.at(-1)).to.equal(-1);
       const events: number[] = [];
-      element.addEventListener('lr-cell-click', (event) => events.push((event as CustomEvent<{ value: number }>).detail.value));
+      element.addEventListener('lr-cell-activate', (event) => events.push((event as CustomEvent<{ value: number }>).detail.value));
       cells()[0]!.click();
       expect(events.at(-1)).to.equal(-1);
       if (axis === 'domain') element.domain = [-5, 5];

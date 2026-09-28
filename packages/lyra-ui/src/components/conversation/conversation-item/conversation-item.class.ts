@@ -8,6 +8,8 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 import {
@@ -98,6 +100,12 @@ function defaultFormatTimestamp(
       : { month: 'short', day: 'numeric', year: 'numeric' }
   ).format(date);
 }
+
+/** Whether a `size` sits on the dense tier (`s` or smaller) the deprecated `compact` reads as. */
+const isDenseSize = (value: unknown): boolean => {
+  const step = normalizeSize(value as LyraSize);
+  return step === 's' || step === 'xs' || step === '2xs';
+};
 
 export interface LyraConversationItemEventMap {
   'lr-select': CustomEvent<ConversationItemSelectDetail>;
@@ -194,7 +202,7 @@ export interface LyraConversationItemEventMap {
  * @csspart content - Wrapper around the label and excerpt.
  * @csspart label - The visible label, shown while not renaming.
  * @csspart label-input - The in-place rename `<input>`, shown only while renaming.
- * @csspart rename-button - The pencil/edit affordance that starts a rename (only rendered while `renamable` and not already renaming).
+ * @csspart rename-button - The pencil/edit affordance that starts a rename (only rendered while `without-rename` is unset and not already renaming).
  * @csspart excerpt - The last-message preview snippet. Only rendered when `excerpt` is non-empty.
  * @csspart meta - The wrapper around the `meta` slot. Only rendered in the built-in content path (not when the `content` slot is used), and `hidden` while the `meta` slot is empty.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element. Only rendered when `timestamp` is set and valid.
@@ -215,9 +223,9 @@ export interface LyraConversationItemEventMap {
  * @cssprop [--lr-conversation-item-active-indicator-inset-inline=0 auto] - Logical inline-start
  *   and inline-end insets for `[part="active-indicator"]`; set `auto 0` to place it at inline-end.
  * @cssprop [--lr-conversation-item-compact-padding=var(--lr-space-xs) var(--lr-space-s)] -
- *   `[part="base"]` padding while `compact`.
+ *   `[part="base"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-conversation-item-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s
- *   columns while `compact`.
+ *   columns while `size` is `s` or smaller.
  * @cssprop [--lr-conversation-item-align=flex-start] - Cross-axis alignment of `[part="base"]` and
  *   `[part="select-button"]`. `flex-start` (the default) suits the common multi-line row (a title
  *   plus an `excerpt`); `center` reads better for a reliably single-line row with a taller trailing
@@ -239,6 +247,10 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), isDenseSize],
+    renamable: ['withoutRename', invertAlias, invertAlias],
+  };
 
   /** Stable domain identity included in selection and rename request details. */
   @property({ attribute: 'conversation-id' }) conversationId = '';
@@ -268,20 +280,39 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    *  brand-quiet background treatment. */
   @property({ type: Boolean, reflect: true }) active = false;
 
-  /** Tighter row padding and gaps, for the dense history sidebars these rows usually render in --
-   *  same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full row padding.
-   *  Purely a density knob: it tightens `[part="base"]`'s padding and gap and collapses
-   *  `[part="content"]`'s inter-line gap, and changes nothing else. In particular it does **not**
-   *  shrink `[part="rename-button"]` below the shared `--lr-icon-button-size` target floor, hide the
-   *  excerpt (bind `excerpt`/the `excerpt` slot per row for that), or reduce the excerpt/timestamp
-   *  font sizes -- so a row with a rename button or slotted `actions` still floors at roughly that
-   *  icon size plus the compact padding. */
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) gives the tighter row
+   * padding and gaps of the dense history sidebars these rows usually render in; `m` (the default)
+   * and larger keep the full row padding. Purely a density knob: the dense tier tightens
+   * `[part="base"]`'s padding and gap and collapses `[part="content"]`'s inter-line gap, and changes
+   * nothing else. In particular it does **not** shrink `[part="rename-button"]` below the shared
+   * `--lr-icon-button-size` target floor, hide the excerpt (bind `excerpt`/the `excerpt` slot per
+   * row for that), or reduce the excerpt/timestamp font sizes -- so a row with a rename button or
+   * slotted `actions` still floors at roughly that icon size plus the dense padding.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
+  /**
+   * Deprecated boolean spelling of `size="s"`: setting it applies `size="s"`, and clearing it
+   * restores `size="m"`; it reads `true` while `size` is `s` or smaller. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `size="s"`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** Whether inline-rename is available at all. When `false`, the rename
-   *  button never renders and the row can never enter its editing state. If
-   *  flipped to `false` while a rename is already open, the in-progress edit
-   *  is cancelled (discarded, like Escape) rather than left committable. */
+  /** Turns off inline rename: the rename button never renders and the row can never enter its
+   *  editing state. Set while a rename is already open, the in-progress edit is cancelled
+   *  (discarded, like Escape) rather than left committable. */
+  @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
+
+  /**
+   * Deprecated inverted alias of `without-rename` (`withoutRename`): `renamable="false"` equals
+   * `without-rename`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-rename`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -348,11 +379,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
         (el) => el.getAttribute('slot') === 'excerpt'
       );
     }
-    // `renamable` documents that flipping it false can never leave a rename
+    // `without-rename` documents that setting it can never leave a rename
     // committable -- without this, toggling it mid-edit would strand the
     // input mounted (and still submittable via Enter/blur) since nothing
-    // else observes `renamable` while `renaming` is already true.
-    if (changed.has('renamable') && !this.renamable && this.renaming) {
+    // else observes `withoutRename` while `renaming` is already true.
+    if (changed.has('withoutRename') && this.withoutRename && this.renaming) {
       this.cancelRename();
     }
     setCustomState(this.internals, 'menu-open', this.actionsOverlay.open);
@@ -392,7 +423,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   }
 
   private startRename(): void {
-    if (!this.renamable || this.renaming) return;
+    if (this.withoutRename || this.renaming) return;
     this.draftLabel = this.label;
     this.renaming = true;
   }
@@ -538,7 +569,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
       this.formatTimestamp ??
       ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
     const displayLabel = this.label || this.localize('untitledConversation');
-    const showRenameButton = this.renamable && !this.renaming;
+    const showRenameButton = !this.withoutRename && !this.renaming;
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific
     // accessible name (not a generic one) to disambiguate which row a

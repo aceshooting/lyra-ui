@@ -8,6 +8,7 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 installFormControlLabelSupport();
 import {
   deferredPlaceReady as place,
@@ -353,7 +354,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @csspart option-label - An option row's label/sub wrapper.
  * @csspart option-sub - An option row's secondary line (when `sub` is set).
  * @csspart option-badge - The localized "not in catalog" badge on a synthetic unmatched-value row
- *   (`show-unknown-option` only).
+ *   (`with-unknown-option` only).
  * @csspart unknown-value - Badge shown next to the trigger label or a `multiple`-mode tag when the
  *   committed value matches no current `<lr-option>` (see `isUnknownValue()`).
  * @csspart expand-icon - The dropdown indicator.
@@ -491,6 +492,7 @@ export class LyraSelect<
   // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
   // spellings of every tier (`s` and `small`, ...) work with no per-component rule.
   static override styles = [LyraElement.styles, sizes, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { showUnknownOption: 'withUnknownOption' };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -654,6 +656,21 @@ export class LyraSelect<
    * is currently suppressing -- see that property -- since it is not yet known to be unmatched.
    * @default false
    */
+  @property({ type: Boolean, attribute: 'with-unknown-option', reflect: true })
+  withUnknownOption = false;
+  /**
+   * Appends every committed value that no `<lr-option>` claims to the end of the listbox as a
+   * synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
+   * `<lr-model-select>` already ships.
+   *
+   * Off by default, because it adds a row to a listbox that has always rendered only real options.
+   * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
+   * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
+   * has no way back to the value they arrived with. No synthetic row appears for a value `loading`
+   * is currently suppressing -- see that property -- since it is not yet known to be unmatched.
+   * @default false
+   * @deprecated Use `with-unknown-option`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
   showUnknownOption = false;
   /**
@@ -676,7 +693,7 @@ export class LyraSelect<
    * tests) renders the localized `loading` placeholder in the trigger label or the relevant
    * `multiple` tag instead of the raw value, and is not flagged with the dashed/italic
    * `notInCatalog`/`[part='unknown-value']` badge a genuinely unmatched value gets, nor added to the
-   * synthetic `showUnknownOption` listbox row -- "not yet resolved" is a different state from "known
+   * synthetic `withUnknownOption` listbox row -- "not yet resolved" is a different state from "known
    * to be missing". With nothing selected at all -- a create form whose catalog is still being
    * fetched, or an edit form whose saved selection is legitimately empty -- the trigger shows that
    * same localized `loading` text in place of `placeholder`, so one property covers the whole
@@ -1858,7 +1875,7 @@ export class LyraSelect<
   private unknownOptionCache = new Map<string, LyraOption>();
 
   private get unknownValues(): string[] {
-    if (!this.showUnknownOption) return [];
+    if (!this.withUnknownOption) return [];
     return this._selected.filter((value, index) => this.isUnknownValue(value, index));
   }
 

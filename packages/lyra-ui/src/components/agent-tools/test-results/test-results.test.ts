@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import './test-results.js';
 // Registers the shipped `ar` catalog slices the `lang="ar-EG"` locale-formatting test resolves
 // against, so it renders real catalog text instead of tripping the dev-mode locale-fallback
@@ -22,17 +23,17 @@ const suites: TestSuiteResult[] = [
 ];
 
 describe('lr-test-results', () => {
-  it('defaults to autoExpandFailures=true, an empty filter, and an idle uncorrelated run', async () => {
+  it('defaults to withoutAutoExpandFailures=false, an empty filter, and an idle uncorrelated run', async () => {
     const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
-    expect(el.autoExpandFailures).to.be.true;
+    expect(el.withoutAutoExpandFailures).to.be.false;
     expect(el.statusFilter).to.deep.equal([]);
     expect(el.runId).to.equal(null);
     expect(el.runState).to.equal('idle');
   });
 
-  it('accepts auto-expand-failures="false" as a plain-HTML attribute string', async () => {
-    const el = (await fixture(html`<lr-test-results auto-expand-failures="false"></lr-test-results>`)) as LyraTestResults;
-    expect(el.autoExpandFailures).to.be.false;
+  it('accepts without-auto-expand-failures as a plain-HTML presence attribute', async () => {
+    const el = (await fixture(html`<lr-test-results without-auto-expand-failures></lr-test-results>`)) as LyraTestResults;
+    expect(el.withoutAutoExpandFailures).to.be.true;
   });
 
   it('rebinds its bounded-result announcement sink after adoption', async () => {
@@ -259,7 +260,7 @@ describe('lr-test-results', () => {
     const el = await fixture<LyraTestResults>(html`
       <lr-test-results
         .suites=${suites}
-        .autoExpandFailures=${false}
+        .withoutAutoExpandFailures=${true}
         .strings=${{
           accessibleLabelSeparator: ' / ',
           testResultsExpandTest: 'Open {name}',
@@ -275,7 +276,7 @@ describe('lr-test-results', () => {
 
   it('emits lr-toggle when a failure row is manually collapsed/expanded', async () => {
     const el = (await fixture(
-      html`<lr-test-results .suites=${suites} .autoExpandFailures=${false}></lr-test-results>`,
+      html`<lr-test-results .suites=${suites} .withoutAutoExpandFailures=${true}></lr-test-results>`,
     )) as LyraTestResults;
     await el.updateComplete;
     const toggleButton = el.shadowRoot!.querySelector(
@@ -343,7 +344,7 @@ describe('lr-test-results', () => {
     const unitSlot = testResultDetailSlotName('unit', 'same');
     const integrationSlot = testResultDetailSlotName('integration', 'same');
     const el = (await fixture(html`
-      <lr-test-results .suites=${duplicateSuites} .autoExpandFailures=${false}>
+      <lr-test-results .suites=${duplicateSuites} .withoutAutoExpandFailures=${true}>
         <div slot=${unitSlot}>unit detail</div>
         <div slot=${integrationSlot}>integration detail</div>
       </lr-test-results>
@@ -393,7 +394,7 @@ describe('lr-test-results', () => {
 
   it('ignores the removed legacy detail-{suiteId}-{testId} and detail-{testId} slot spellings', async () => {
     const el = (await fixture(html`
-      <lr-test-results .suites=${suites} .autoExpandFailures=${false}>
+      <lr-test-results .suites=${suites} .withoutAutoExpandFailures=${true}>
         <div slot="detail-s1-t1">legacy scoped detail</div>
         <div slot="detail-t3">legacy generic detail</div>
       </lr-test-results>
@@ -481,7 +482,7 @@ describe('lr-test-results', () => {
       { id: 'suite-three', name: 'Three', tests: [{ id: 'dup', name: 'third', status: 'failed', message: 'z' }] },
     ];
     const el = (await fixture(
-      html`<lr-test-results .suites=${duplicateSuites} .autoExpandFailures=${false}></lr-test-results>`,
+      html`<lr-test-results .suites=${duplicateSuites} .withoutAutoExpandFailures=${true}></lr-test-results>`,
     )) as LyraTestResults;
     await el.updateComplete;
 
@@ -691,7 +692,7 @@ describe('lr-test-results', () => {
       { id: 'suite', name: 'suite', tests: [{ id: 'reused', name: 'test', status: 'failed', message: 'x' }] },
     ];
     const el = await fixture<LyraTestResults>(html`
-      <lr-test-results .suites=${failed} .autoExpandFailures=${false}></lr-test-results>
+      <lr-test-results .suites=${failed} .withoutAutoExpandFailures=${true}></lr-test-results>
     `);
     const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="test-expand-toggle"]')!;
     toggle.click();
@@ -760,7 +761,7 @@ describe('lr-test-results', () => {
     }));
     const detailSlot = testResultDetailSlotName('suite', 'test-999');
     const el = await fixture<LyraTestResults>(html`
-      <lr-test-results .suites=${[{ id: 'suite', name: 'suite', tests: initial }]} .autoExpandFailures=${false}>
+      <lr-test-results .suites=${[{ id: 'suite', name: 'suite', tests: initial }]} .withoutAutoExpandFailures=${true}>
         <span slot=${detailSlot}>Late detail</span>
       </lr-test-results>
     `);
@@ -982,4 +983,81 @@ it('reads each failure-message line in its own direction under RTL', async () =>
   // WebKit resolves `unicode-bidi: plaintext` once from the block's first strong character rather
   // than per line, so the per-line right-to-left behavior is asserted only where engines implement it.
   if (!isWebKit) expect(glyphRect(message, 'فشل').left).to.be.greaterThan(glyphRect(message, 'الاختبار').left);
+});
+
+describe('lr-test-results deprecated auto-expand-failures alias', () => {
+  const AUTO_EXPAND: readonly DeprecatedUsage[] = [
+    { tag: 'lr-test-results', kind: 'property', name: 'autoExpandFailures' },
+  ];
+  const expandedRows = (el: LyraTestResults): string[] =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]'), (toggle) => toggle.getAttribute('aria-expanded') ?? '');
+
+  it('auto-expands a failure by default and keeps it collapsed with without-auto-expand-failures, without warning', async () => {
+    let byDefault: string[] = [];
+    let without: string[] = [];
+    const warnings = await captureDeprecationWarnings(AUTO_EXPAND, async () => {
+      byDefault = expandedRows(await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`));
+      without = expandedRows(
+        await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites} without-auto-expand-failures></lr-test-results>`),
+      );
+    });
+    expect(byDefault).to.include('true');
+    expect(without).to.not.include('true');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('treats auto-expand-failures="false" and .autoExpandFailures=false exactly like the canonical attribute, warning once', async () => {
+    let canonical: string[] = [];
+    let attribute: string[] = [];
+    let property: string[] = [];
+    let reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(AUTO_EXPAND, async () => {
+      canonical = expandedRows(
+        await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites} without-auto-expand-failures></lr-test-results>`),
+      );
+      const aliased = await fixture<LyraTestResults>(
+        html`<lr-test-results .suites=${suites} auto-expand-failures="false"></lr-test-results>`,
+      );
+      attribute = expandedRows(aliased);
+      const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
+      el.autoExpandFailures = false;
+      await el.updateComplete;
+      property = expandedRows(el);
+      reads = [aliased.autoExpandFailures, aliased.withoutAutoExpandFailures, el.autoExpandFailures, el.withoutAutoExpandFailures];
+    });
+    expect(attribute).to.deep.equal(canonical);
+    expect(property).to.deep.equal(canonical);
+    expect(reads).to.deep.equal([false, true, false, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-test-results:property:autoExpandFailures']);
+  });
+
+  it('applies the last authored spelling when auto-expand-failures and without-auto-expand-failures are both present', async () => {
+    let reads: boolean[] = [];
+    await captureDeprecationWarnings(AUTO_EXPAND, async () => {
+      const canonicalLast = await fixture<LyraTestResults>(
+        html`<lr-test-results auto-expand-failures without-auto-expand-failures></lr-test-results>`,
+      );
+      const aliasLast = await fixture<LyraTestResults>(
+        html`<lr-test-results without-auto-expand-failures auto-expand-failures></lr-test-results>`,
+      );
+      reads = [canonicalLast.withoutAutoExpandFailures, aliasLast.withoutAutoExpandFailures, aliasLast.autoExpandFailures];
+    });
+    expect(reads).to.deep.equal([true, false, true]);
+  });
+
+  it('syncs autoExpandFailures back from the canonical property without warning', async () => {
+    const reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(AUTO_EXPAND, async () => {
+      const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
+      reads.push(el.autoExpandFailures);
+      el.withoutAutoExpandFailures = true;
+      await el.updateComplete;
+      reads.push(el.autoExpandFailures);
+      el.withoutAutoExpandFailures = false;
+      await el.updateComplete;
+      reads.push(el.autoExpandFailures);
+    });
+    expect(reads).to.deep.equal([true, false, true]);
+    expect(warnings).to.have.length(0);
+  });
 });

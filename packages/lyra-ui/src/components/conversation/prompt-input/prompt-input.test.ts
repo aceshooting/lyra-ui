@@ -16,6 +16,7 @@ import type {
 } from "./prompt-input.class.js";
 import { styles } from "./prompt-input.styles.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-prompt-input', 'name');
@@ -1441,7 +1442,7 @@ it("gates every composed interaction while disabled and forwards host click to t
   el.addEventListener("lr-attachments-add", () => additions++);
   el.addEventListener("lr-attachment-remove", () => removals++);
 
-  expect(attachment.removable).to.be.false;
+  expect(attachment.withoutRemoveButton).to.be.true;
   expect(sources.inert).to.be.true;
   expect(popover.open).to.be.false;
 
@@ -1898,12 +1899,12 @@ it("keeps the text editing facade inert before the composed textarea renders", (
   expect(detached.value).to.equal("");
 });
 
-it("forwards status, placeholder and submitOnEnter to the composed chat composer", async () => {
+it("forwards status, placeholder and withoutEnterSubmit to the composed chat composer", async () => {
   const el = (await fixture(html`
     <lr-prompt-input
       status="sending"
       placeholder="Ask anything"
-      submit-on-enter="false"
+      without-enter-submit
     ></lr-prompt-input>
   `)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector(
@@ -1914,7 +1915,7 @@ it("forwards status, placeholder and submitOnEnter to the composed chat composer
   // `status` is not cosmetic: the composer gates Enter-to-submit and its send/stop button on it.
   expect(composer.status).to.equal("sending");
   expect(composer.placeholder).to.equal("Ask anything");
-  expect(composer.submitOnEnter).to.equal(false);
+  expect(composer.withoutEnterSubmit).to.equal(true);
 });
 
 it('normalizes hostile status without rewriting the prompt host’s authored attribute', async () => {
@@ -1940,7 +1941,7 @@ it('normalizes hostile status without rewriting the prompt host’s authored att
   expect(composer.status).to.equal('idle');
 });
 
-it("forwards the unset defaults of status, placeholder and submitOnEnter unchanged", async () => {
+it("forwards the unset defaults of status, placeholder and withoutEnterSubmit unchanged", async () => {
   const el = (await fixture(
     html`<lr-prompt-input></lr-prompt-input>`
   )) as LyraPromptInput;
@@ -1951,15 +1952,15 @@ it("forwards the unset defaults of status, placeholder and submitOnEnter unchang
 
   expect(el.status).to.equal("idle");
   expect(el.placeholder).to.equal("");
-  expect(el.submitOnEnter).to.equal(true);
+  expect(el.withoutEnterSubmit).to.equal(false);
   expect(composer.status).to.equal("idle");
   expect(composer.placeholder).to.equal("");
-  expect(composer.submitOnEnter).to.equal(true);
+  expect(composer.withoutEnterSubmit).to.equal(false);
 });
 
-it("suppresses Enter-to-submit end to end when submit-on-enter is false, and restores it when true", async () => {
+it("suppresses Enter-to-submit end to end while without-enter-submit is set, and restores it when cleared", async () => {
   const el = (await fixture(html`
-    <lr-prompt-input submit-on-enter="false" value="drafted"></lr-prompt-input>
+    <lr-prompt-input without-enter-submit value="drafted"></lr-prompt-input>
   `)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector(
     "lr-chat-composer"
@@ -1982,10 +1983,10 @@ it("suppresses Enter-to-submit end to end when submit-on-enter is false, and res
   );
   expect(
     submits,
-    "Enter must not submit while submit-on-enter is false"
+    "Enter must not submit while without-enter-submit is set"
   ).to.equal(0);
 
-  el.submitOnEnter = true;
+  el.withoutEnterSubmit = false;
   await el.updateComplete;
   await composer.updateComplete;
   textarea.dispatchEvent(
@@ -1997,8 +1998,53 @@ it("suppresses Enter-to-submit end to end when submit-on-enter is false, and res
   );
   expect(
     submits,
-    "Enter submits again once submit-on-enter is restored"
+    "Enter submits again once without-enter-submit is cleared"
   ).to.equal(1);
+});
+
+it('keeps the deprecated submit-on-enter="false" alias equal to without-enter-submit, warning once', async () => {
+  let el!: LyraPromptInput;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-prompt-input", kind: "property", name: "submitOnEnter" }],
+    async () => {
+      el = (await fixture(html`
+        <lr-prompt-input submit-on-enter="false" value="drafted"></lr-prompt-input>
+      `)) as LyraPromptInput;
+      el.submitOnEnter = true;
+      await el.updateComplete;
+      el.submitOnEnter = false;
+      await el.updateComplete;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    "lyra-deprecated:lr-prompt-input:property:submitOnEnter",
+  ]);
+  const composer = el.shadowRoot!.querySelector(
+    "lr-chat-composer"
+  ) as LyraChatComposer;
+  await composer.updateComplete;
+  expect(el.withoutEnterSubmit).to.equal(true);
+  expect(composer.withoutEnterSubmit).to.equal(true);
+});
+
+it("syncs the deprecated submitOnEnter alias back from without-enter-submit, and the last write wins", async () => {
+  let aliasLast!: LyraPromptInput;
+  await captureDeprecationWarnings(
+    [{ tag: "lr-prompt-input", kind: "property", name: "submitOnEnter" }],
+    async () => {
+      aliasLast = (await fixture(html`
+        <lr-prompt-input without-enter-submit submit-on-enter="true"></lr-prompt-input>
+      `)) as LyraPromptInput;
+    }
+  );
+  expect(aliasLast.withoutEnterSubmit, "the later submit-on-enter attribute wins").to.equal(false);
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  el.withoutEnterSubmit = true;
+  await el.updateComplete;
+  expect(el.submitOnEnter).to.equal(false);
+  el.withoutEnterSubmit = false;
+  await el.updateComplete;
+  expect(el.submitOnEnter).to.equal(true);
 });
 
 it("gates Enter-to-submit on the forwarded status, so a sending prompt cannot submit again", async () => {

@@ -33,8 +33,10 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
   arrays accept HTTP(S) origins only. The resource and nested CSP arrays are clone-owned, bounded,
   and frozen; reassign a new resource record after changes. Permissions are optional booleans for
   camera, microphone, geolocation, clipboard read, and clipboard write.
-- `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
-  frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
+- `height: number | string = 320`, `maxHeight: number | string = 800` (attribute `max-height`) —
+  requested and maximum frame heights: a number of pixels, or a CSS length in `px`, `rem`, `em`,
+  `vw` or `vh` (resolved when set; a numeric attribute stays a number). Runtime values and resize
+  requests clamp to 120–10,000 pixels; an unresolvable length uses the default.
 - `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
   host `aria-label` stays on the custom-element host as its overall name instead of being cloned
   inward. The iframe title uses `label`, then resource title, then the localized fallback; an

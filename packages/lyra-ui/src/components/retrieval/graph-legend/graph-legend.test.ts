@@ -4,6 +4,10 @@ import './graph-legend.js';
 import type { LyraGraphLegend } from './graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -27,14 +31,14 @@ const types = [
   },
 ];
 
-it('defaults to empty types/counts/hiddenTypes, interactive=true, empty label', async () => {
+it('defaults to empty types/counts/hiddenTypes, withoutInteraction=false, empty label', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
   )) as LyraGraphLegend;
   expect(el.types).to.deep.equal([]);
   expect(el.counts).to.equal(undefined);
   expect(el.hiddenTypes).to.deep.equal([]);
-  expect(el.interactive).to.be.true;
+  expect(el.withoutInteraction).to.be.false;
   expect(el.label).to.equal('');
 });
 
@@ -369,12 +373,12 @@ it('releases and reacquires its shared announcement sink across disconnect and r
   expect(sinkElement() === null).to.be.true;
 });
 
-it('renders plain (non-interactive) items with no button and no toggling when interactive=false', async () => {
+it('renders plain (non-interactive) items with no button and no toggling when withoutInteraction is set', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
   )) as LyraGraphLegend;
   el.types = types;
-  el.interactive = false;
+  el.withoutInteraction = true;
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelectorAll('button[part~="item"]').length
@@ -469,11 +473,11 @@ it('honors a .strings override of legendTypeHidden/legendTypeShown in the live-r
   expect(sinkTexts()).to.deep.equal(['Person masqué', 'Person affiché']);
 });
 
-it('interactive="false" (plain HTML attribute) renders a read-only legend, matching the .interactive=false property path', async () => {
+it('without-interaction (plain HTML attribute) renders a read-only legend, matching the property path', async () => {
   const el = (await fixture(
-    html`<lr-graph-legend interactive="false"></lr-graph-legend>`
+    html`<lr-graph-legend without-interaction></lr-graph-legend>`
   )) as LyraGraphLegend;
-  expect(el.interactive).to.be.false;
+  expect(el.withoutInteraction).to.be.true;
   el.types = types;
   await el.updateComplete;
   expect(
@@ -597,4 +601,82 @@ it('resolves each distinct palette slot once per render, not once per legend ent
   } finally {
     window.getComputedStyle = original;
   }
+});
+
+describe('lr-graph-legend deprecated interactive alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-graph-legend', kind: 'property', name: 'interactive' }];
+  const observe = (el: LyraGraphLegend): string => String(el.shadowRoot!.querySelectorAll('button[part~="item"]').length);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraGraphLegend>(markup);
+
+  it('applies without-interaction without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
+      plain = observe(await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps interactive="false" equal to without-interaction, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
+      alias = observe(await mount(html`<lr-graph-legend .types=${types} interactive="false"></lr-graph-legend>`));
+      const el = await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+      el.interactive = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutInteraction, el.interactive, el.getAttribute('interactive')];
+      // The canonical property syncs back into the alias.
+      el.withoutInteraction = false;
+      await el.updateComplete;
+      readback.push(el.interactive, el.hasAttribute('interactive'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, 'false', true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-graph-legend:property:interactive',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-interaction');
+  });
+
+  it('restores the default when interactive is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`));
+      const el = await mount(html`<lr-graph-legend .types=${types} interactive="false"></lr-graph-legend>`);
+      el.interactive = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.interactive = false;
+      await el.updateComplete;
+      el.removeAttribute('interactive');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
+      const el = await mount(html`<lr-graph-legend .types=${types} interactive without-interaction></lr-graph-legend>`);
+      expect(el.withoutInteraction).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-graph-legend .types=${types} without-interaction interactive></lr-graph-legend>`);
+      expect(reversed.withoutInteraction, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
+  });
 });

@@ -30,7 +30,7 @@ export const Default: Story = {
 };
 
 export const Compact: Story = {
-  render: () => html`<lr-chunk-inspector .chunks=${chunks} compact></lr-chunk-inspector>`,
+  render: () => html`<lr-chunk-inspector .chunks=${chunks} size="s"></lr-chunk-inspector>`,
 };
 
 export const Empty: Story = {

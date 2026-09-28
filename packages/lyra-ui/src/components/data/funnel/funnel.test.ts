@@ -1,4 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import type { LyraFunnel, LyraFunnelStage } from './funnel.class.js';
 import './funnel.js';
 
@@ -62,16 +63,16 @@ describe('<lr-funnel>', () => {
     // No drop-off row above the first stage; one above each later stage.
     expect(parts(el, 'dropoff').map(text)).to.deep.equal(['decreased 60%', 'decreased 75%']);
 
-    el.dropoff = false;
+    el.withoutDropoff = true;
     await el.updateComplete;
     expect(parts(el, 'dropoff').length).to.equal(0);
   });
 
-  it('accepts dropoff="false" as a plain-HTML attribute string, not just a property binding', async () => {
+  it('omits the drop-off rows with the plain-HTML without-dropoff attribute', async () => {
     const el = (await fixture(
-      html`<lr-funnel dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+      html`<lr-funnel without-dropoff .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
     )) as LyraFunnel;
-    expect(el.dropoff).to.be.false;
+    expect(el.withoutDropoff).to.be.true;
     await el.updateComplete;
     expect(parts(el, 'dropoff').length).to.equal(0);
   });
@@ -376,5 +377,82 @@ describe('<lr-funnel> grid/flex stretch', () => {
     // [part="base"] must fill its own host's full measured height, not shrink-wrap to its own
     // (shorter) content and leave visible blank grid-track space below the host.
     expect(baseRect.height).to.be.closeTo(hostRect.height, 1);
+  });
+});
+
+describe('<lr-funnel> deprecated dropoff alias', () => {
+  const DROPOFF: readonly DeprecatedUsage[] = [{ tag: 'lr-funnel', kind: 'property', name: 'dropoff' }];
+
+  it('treats dropoff="false" exactly like without-dropoff and warns once, naming without-dropoff', async () => {
+    const canonical = await fixture<LyraFunnel>(
+      html`<lr-funnel without-dropoff .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+    );
+    let aliased!: LyraFunnel;
+    const warnings = await captureDeprecationWarnings(DROPOFF, async () => {
+      aliased = await fixture<LyraFunnel>(html`<lr-funnel dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+      const second = await fixture<LyraFunnel>(html`<lr-funnel dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+      await second.updateComplete;
+    });
+    expect(parts(aliased, 'dropoff').length).to.equal(0);
+    expect(parts(aliased, 'stage').map(text)).to.deep.equal(parts(canonical, 'stage').map(text));
+    expect(aliased.withoutDropoff).to.be.true;
+    expect(aliased.dropoff).to.be.false;
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-funnel:property:dropoff']);
+    expect(warnings[0]!.message).to.contain('without-dropoff');
+  });
+
+  it('never warns for without-dropoff or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(DROPOFF, async () => {
+      const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+      expect(el.dropoff).to.be.true;
+      el.withoutDropoff = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('forwards alias writes, restores the rows when the alias attribute is removed, and yields to without-dropoff', async () => {
+    await captureDeprecationWarnings(DROPOFF, async () => {
+      const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+      el.dropoff = false;
+      await el.updateComplete;
+      expect(parts(el, 'dropoff').length).to.equal(0);
+      el.dropoff = true;
+      await el.updateComplete;
+      expect(parts(el, 'dropoff').length).to.equal(2);
+
+      const attr = await fixture<LyraFunnel>(html`<lr-funnel dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`);
+      attr.removeAttribute('dropoff');
+      await attr.updateComplete;
+      expect(parts(attr, 'dropoff').length).to.equal(2);
+      expect(attr.hasAttribute('without-dropoff')).to.be.false;
+
+      const both = await fixture<LyraFunnel>(
+        html`<lr-funnel dropoff without-dropoff .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+      );
+      expect(parts(both, 'dropoff').length).to.equal(0);
+    });
+  });
+
+  it('syncs the alias back from without-dropoff and lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(DROPOFF, async () => {
+      const canonicalLast = await fixture<LyraFunnel>(
+        html`<lr-funnel dropoff="false" without-dropoff .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+      );
+      canonicalLast.removeAttribute('without-dropoff');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.dropoff).to.be.true;
+      expect(canonicalLast.hasAttribute('dropoff')).to.be.false;
+      expect(parts(canonicalLast, 'dropoff').length).to.equal(2);
+
+      const aliasLast = await fixture<LyraFunnel>(
+        html`<lr-funnel without-dropoff dropoff="false" .stages=${SIGNUP_FUNNEL}></lr-funnel>`,
+      );
+      aliasLast.dropoff = true;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withoutDropoff).to.be.false;
+      expect(aliasLast.hasAttribute('without-dropoff')).to.be.false;
+      expect(parts(aliasLast, 'dropoff').length).to.equal(2);
+    });
   });
 });

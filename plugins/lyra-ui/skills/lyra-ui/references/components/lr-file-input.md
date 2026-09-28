@@ -7,8 +7,11 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated part** `base` since `8.2.3`; use part `::part(file-input)`; removal not before `10.0.0` — The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Deprecated part** `label` since `8.2.3`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `paste` / `paste` since `21.1.0`; use property `without-paste`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 22 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -83,13 +86,12 @@ enabled buttons retain pointer feedback.
   `required` validity and the `blank` state reflect externally-held files. Ignored while
   `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
-- `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
-- `compact: boolean = false` (reflected) — tighter dropzone padding, gap and dropzone instruction font for
-  constrained spaces (a toolbar, a table cell) — the same convention as `lr-empty`'s `compact`. The
-  dashed border stays; only the internal spacing shrinks. `false` (the default) keeps the full
-  `--lr-space-l` dropzone.
+- `withoutPaste: boolean = false` (reflected, attribute `without-paste`) — ignores files pasted
+  into the dropzone, which are otherwise accepted. Deprecated alias: `paste` (use `without-paste`,
+  which `paste="false"` equals; removing `paste` restores the default; removed in 23.0.0). The alias
+  keeps its presence reflection; the two stay in sync and the last write wins.
 - `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
-  button (unless `accessible-label`/host `aria-label` is set). It never replaces the dropzone
+  button (unless a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone
   instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
   Omitted, `''` and whitespace-only values render identically: no visible label, and the button is
   named by the localized instruction. `hint: string = ''`
@@ -102,7 +104,14 @@ enabled buttons retain pointer feedback.
   (attributes `with-label`, `with-hint`, and `with-error`) — SSR slot-presence hints. Use
   `with-error` when the rich `error` slot is populated in initial declarative-shadow-DOM output,
   before hydration can observe the assigned light-DOM content.
-- `size: LyraSize = 'm'` (reflected)
+- `size: LyraSize = 'm'` (reflected) — tier for the whole dropzone (see the custom properties
+  below); `s` and the steps below it give a denser dropzone for constrained spaces (a toolbar, a
+  table cell). Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it keeps its own
+  tighter padding, gap and instruction font, and keeps reflecting, until its removal. `size="s"` is
+  the closest tier but not pixel-identical, so review the result when migrating; for an identical
+  dropzone keep the current size and set `--lr-file-input-dropzone-padding: var(--lr-space-s)`,
+  `--lr-file-input-dropzone-font-size: var(--lr-font-size-sm)` and
+  `--lr-file-input-gap: var(--lr-space-2xs)` instead.
 - `validators: LyraFileInputValidator[] = []` (attribute: false) — additional JavaScript
   constraints, run after the intrinsic `required` check. **Fixed in 9.0.0:** the property was
   previously declared (typed `unknown[]`) and read by nothing, so an assigned validator silently
@@ -132,10 +141,12 @@ enabled buttons retain pointer feedback.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — accessible name forwarded to the
-  semantic dropzone and native file input, without changing visible copy. A host `aria-label` wins
-  over it. When neither is set, the form label (`label` or the `label` slot) names the dropzone,
-  then the localized instruction
+- `accessibleLabel: string = ''` (attribute `accessible-label`, deprecated) — accessible name forwarded to the semantic
+  dropzone and native file input, without changing visible copy. A host `aria-label` wins over it.
+  When neither is set, the form label (`label` or the `label` slot) names the dropzone, then the
+  localized instruction. In markup, name the dropzone with the host `aria-label`. The
+  `accessible-label` attribute spelling is deprecated (use `aria-label`; removed in 23.0.0) — it
+  still sets `accessibleLabel`, so a host `aria-label` wins over it
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
   singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
@@ -186,7 +197,7 @@ the region is cleared (and unrendered) as soon as a subsequent selection rejects
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
-control: the semantic button's accessible name comes from a host `aria-label`/`accessible-label`,
+control: the semantic button's accessible name comes from a host `aria-label` (or `accessibleLabel`),
 then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
 content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
@@ -256,11 +267,11 @@ here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-fi
 **Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
 the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner
 radius of `[part='base']`; `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
-`[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
-`var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact`; and
-`--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font size while
-`compact`. `--lr-file-input-font-size` (default `var(--lr-form-control-font-size)`) controls the
-label and selected-filename text size.
+`[part='base']`'s padding while the deprecated `compact` is set; `--lr-file-input-compact-gap`
+(default `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact` is
+set; and `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font
+size while `compact` is set. `--lr-file-input-font-size` (default
+`var(--lr-form-control-font-size)`) controls the label and selected-filename text size.
 
 `size` retunes the whole dropzone, not just its label: `--lr-file-input-dropzone-font-size`
 (default `var(--lr-font-size-md-sm)`) for the instructional text,
@@ -269,10 +280,12 @@ label and selected-filename text size.
 `--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
 each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
-while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. `compact`
-still overrides the dropzone padding and font size independently of the tier. The compact gap falls back to `--lr-file-input-gap` when its compact-specific
-property is unset. The compact properties apply only while `compact` is set, so they are the way to tune a dense dropzone
-without re-pointing shared spacing tokens for everything else on the page. The drag accept/reject
+while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The
+deprecated `compact` still overrides the dropzone padding and font size independently of the tier.
+The compact gap falls back to `--lr-file-input-gap` when its compact-specific property is unset. The
+compact properties apply only while `compact` is set; to tune a dense dropzone without re-pointing
+shared spacing tokens for everything else on the page, prefer `size` with the per-tier
+`--lr-file-input-dropzone-*` properties. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
 `--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
@@ -324,7 +337,7 @@ an extension-only `accept` list.
 
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
-  Set `paste="false"` (or `.paste = false`) to opt out.
+  Set `without-paste` (or `.withoutPaste = true`) to opt out.
 - Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. A read
   failure or over-budget traversal rejects the complete drop atomically and emits one `lr-files`
   result with `rejected[].reason === 'read'` or `'limit'`, plus dedicated visible and assertive

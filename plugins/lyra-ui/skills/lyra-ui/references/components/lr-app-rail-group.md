@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `open` / `open` since `21.1.0`; use property `collapsed (the inverse: open="false" becomes collapsed)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Optional peers** none
 - **Themeable via** 8 parts, 8 custom properties — see `lr-app-rail.md`
 - **Documented with** `lr-app-rail`: see [lr-app-rail.md](./lr-app-rail.md).

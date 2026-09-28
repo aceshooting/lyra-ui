@@ -100,7 +100,7 @@ export const EmptyStateAddressability: Story = {
     docs: {
       description: {
         story:
-          'The built-in empty state carries `part="empty"` and re-exports its inner parts as `empty-heading`/`empty-description`/`empty-icon`/`empty-actions`/`empty-base`, so it can be restyled without replacing it. `empty-compact` overrides each branch’s built-in density. The `empty` slot replaces it wholesale on the two data-empty branches; the no-columns branch keeps its own configuration-problem copy.',
+          'The built-in empty state carries `part="empty"` and re-exports its inner parts as `empty-heading`/`empty-description`/`empty-icon`/`empty-actions`/`empty-base`, so it can be restyled without replacing it. `empty-size` overrides each branch’s built-in density. The `empty` slot replaces it wholesale on the two data-empty branches; the no-columns branch keeps its own configuration-problem copy.',
       },
     },
   },
@@ -111,7 +111,7 @@ export const EmptyStateAddressability: Story = {
       }
     </style>
     <lr-table class="styled-empty" .columns=${columns} .rows=${[]} empty-heading="Nothing to show"></lr-table>
-    <lr-table .columns=${columns} .rows=${[]} empty-compact></lr-table>
+    <lr-table .columns=${columns} .rows=${[]} empty-size="s"></lr-table>
     <lr-table .columns=${columns} .rows=${[]}>
       <div slot="empty" style="padding: 1rem; text-align: center">
         <p>No scores recorded yet.</p>
@@ -900,7 +900,7 @@ export const LiveLocalePage: Story = {
         .rowKey=${(row: { id: string }) => row.id}
         .rows=${[{ id: 'ä', name: 'ä' }, { id: 'z', name: 'z' }]}
         .columns=${[{ key: 'name', label: 'Name', sortable: true, cell: (row: { name: string }) => row.name, editTrigger: 'double-click', editValue: (row: { name: string }) => row.name }]}
-        @lr-row-click=${(event: CustomEvent<{ row: { name: string } }>) => {
+        @lr-row-activate=${(event: CustomEvent<{ row: { name: string } }>) => {
           const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
           if (output) output.textContent = `Activated ${event.detail.row.name}`;
         }}

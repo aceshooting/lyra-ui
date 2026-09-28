@@ -10,7 +10,7 @@ import { select } from 'd3-selection';
 import './graph.js';
 import {
   LyraGraph as LyraGraphElement,
-  type LyraGraphLink,
+  type LyraGraphEdge,
   type LyraGraphNode,
   type LyraGraphNodeLabelsMode,
 } from './graph.js';
@@ -24,7 +24,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 type GraphSimulationNode = LyraGraphNode & D3SimulationNodeDatum;
-type GraphSimulationLink = Omit<LyraGraphLink, 'source' | 'target'> &
+type GraphSimulationLink = Omit<LyraGraphEdge, 'source' | 'target'> &
   D3SimulationLinkDatum<GraphSimulationNode> & { dangling?: boolean };
 
 /** The graph simulation is intentionally private production state. These tests exercise its
@@ -332,7 +332,7 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
   expect(el.shadowRoot!.querySelector('svg') == null).to.equal(true);
 
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -351,7 +351,7 @@ it('announces graph navigation through one light-DOM sink without speaking the i
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.strings = { graphItemAnnouncement: '{item}, position {index} of {total}' };
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -402,7 +402,7 @@ it('releases and reacquires its announcement sink when adopted into another docu
   el.seed = 7;
   el.selectionMode = 'single';
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   document.body.appendChild(el);
 
   try {
@@ -473,7 +473,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
   el.renderer = 'canvas';
   el.seed = 7;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   document.body.appendChild(el);
   await el.updateComplete;
   await waitUntil(
@@ -627,7 +627,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
 it('renders an svg with a circle per node once d3 loads', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -653,7 +653,7 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
     { id: 'a', label: 'A', communityId: 'team', radius: 6 },
     { id: 'b', label: 'B', communityId: 'team', radius: 6 },
   ];
-  el.links = [{ id: 'ab', source: 'a', target: 'b', width: 1 }];
+  el.edges = [{ id: 'ab', source: 'a', target: 'b', width: 1 }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -720,7 +720,7 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   const activations: string[] = [];
   el.addEventListener('lr-node-click', () => activations.push('node'));
   el.addEventListener('lr-link-click', () => activations.push('link'));
-  el.addEventListener('lr-community-click', () => activations.push('hull'));
+  el.addEventListener('lr-community-activate', () => activations.push('hull'));
   hits.node[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   hits.link[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   hits.hull[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -732,7 +732,7 @@ it('uses the named host as the sole graph owner and restores the inner owner whe
     <lr-graph aria-label="Citation relationships"></lr-graph>
   `)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -763,7 +763,7 @@ it('uses the named host as the sole graph owner and restores the inner owner whe
 it('remembers an author-set role and never overwrites it with the default group/aria-label-driven sync', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   expect(el.hasAttribute('role')).to.equal(false);
 
@@ -795,7 +795,7 @@ it('shares one bounded description-first tooltip model across SVG titles and the
     },
     { id: 'b', label: 'B' },
   ];
-  el.links = [
+  el.edges = [
     {
       id: 'ab',
       source: 'a',
@@ -848,7 +848,7 @@ it('fails closed on malformed node and link text without coercion while retainin
     },
   };
   const el = (await fixture(
-    html`<lr-graph seed="7" show-edge-labels></lr-graph>`
+    html`<lr-graph seed="7" with-edge-labels></lr-graph>`
   )) as LyraGraph;
   (el as unknown as { nodes: unknown }).nodes = [
     {
@@ -864,7 +864,7 @@ it('fails closed on malformed node and link text without coercion while retainin
       description: 'Valid node detail',
     },
   ];
-  (el as unknown as { links: unknown }).links = [
+  (el as unknown as { edges: unknown }).edges = [
     {
       id: 'malformed',
       source: 'numeric',
@@ -939,7 +939,7 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
     html`<lr-graph style="--transparent-link: transparent"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [
+  el.edges = [
     { id: 'zero', source: 'a', target: 'b', width: 0, label: 'Zero width' },
     {
       id: 'clear',
@@ -1038,7 +1038,7 @@ it('treats a link as visible when the canvas-based paint-visibility probe itself
   try {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ id: 'probe-throws', source: 'a', target: 'b' }];
+    el.edges = [{ id: 'probe-throws', source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1058,10 +1058,10 @@ it('treats a link as visible when the canvas-based paint-visibility probe itself
 
 it('uses the effective default link paint when deciding whether a link is operable', async () => {
   const el = (await fixture(
-    html`<lr-graph style="--lr-link-color: transparent"></lr-graph>`
+    html`<lr-graph style="--lr-graph-edge-color: transparent"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ id: 'default-paint', source: 'a', target: 'b' }];
+  el.edges = [{ id: 'default-paint', source: 'a', target: 'b' }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1073,7 +1073,7 @@ it('uses the effective default link paint when deciding whether a link is operab
   expect(link.getAttribute('tabindex')).to.equal(null);
   expect(link.getAttribute('aria-hidden')).to.equal('true');
 
-  el.style.setProperty('--lr-link-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-graph-edge-color', 'rgb(1, 2, 3)');
   el.requestUpdate();
   await el.updateComplete;
   expect(link.getAttribute('role')).to.equal('button');
@@ -1084,7 +1084,7 @@ it('uses the effective default link paint when deciding whether a link is operab
 it('emits lr-node-click when a node is activated', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1110,7 +1110,7 @@ it('emits lr-node-click when a node is activated', async () => {
 it('emits lr-link-click with the source/target ids when a link is activated', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1133,7 +1133,7 @@ it('emits lr-link-click with the source/target ids when a link is activated', as
 it('exposes resolved node coordinates for click-anchored overlays', async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1154,7 +1154,7 @@ describe('hover events', () => {
   it('emits lr-node-enter/lr-node-leave and toggles data-hovered on the node element', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1185,10 +1185,10 @@ describe('hover events', () => {
     expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
   });
 
-  it('emits lr-link-enter/lr-link-leave with source/target ids and toggles data-hovered on the link element', async () => {
+  it('emits lr-edge-enter/lr-edge-leave with source/target ids and toggles data-hovered on the link element', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1201,7 +1201,7 @@ describe('hover events', () => {
 
     let enterDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      'lr-edge-enter',
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
 
@@ -1216,7 +1216,7 @@ describe('hover events', () => {
   it('suppresses hover events and the data-hovered attribute while a drag is in progress', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1238,7 +1238,7 @@ describe('hover events', () => {
   it('suppresses hover events while panning', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1259,7 +1259,7 @@ describe('hover events', () => {
   it('suppresses hover events during a programmatic camera tween (regression)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1277,14 +1277,14 @@ describe('hover events', () => {
     expect(fired).to.be.false;
   });
 
-  it('does not fire lr-link-enter/lr-link-leave or set data-hovered for a dangling-stub link', async () => {
+  it('does not fire lr-edge-enter/lr-edge-leave or set data-hovered for a dangling-stub link', async () => {
     // A dangling stub's `target` is a synthetic stand-in that never resolves to a real node (see
     // SimLink.dangling) -- emitting a link-identity hover event for it would hand a consumer an id
     // guaranteed to never match anything in `nodes`, so the stub is deliberately excluded from
     // hover wiring the same way it's excluded from click/focus/keydown/tooltip/accessible-list.
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes; // ids: a, b
-    el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+    el.edges = [...links, { source: 'a', target: 'does-not-exist' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1299,8 +1299,8 @@ describe('hover events', () => {
     expect(stub != null).to.equal(true);
 
     let fired = false;
-    el.addEventListener('lr-link-enter', () => (fired = true));
-    el.addEventListener('lr-link-leave', () => (fired = true));
+    el.addEventListener('lr-edge-enter', () => (fired = true));
+    el.addEventListener('lr-edge-leave', () => (fired = true));
 
     stub.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
@@ -1311,10 +1311,10 @@ describe('hover events', () => {
     expect(stub.hasAttribute('data-hovered')).to.be.false;
   });
 
-  it('suppresses lr-link-enter/lr-link-leave and data-hovered while dragging (onLinkEnter/onLinkLeave twin of the node guard)', async () => {
+  it('suppresses lr-edge-enter/lr-edge-leave and data-hovered while dragging (onLinkEnter/onLinkLeave twin of the node guard)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1327,8 +1327,8 @@ describe('hover events', () => {
 
     (el as unknown as { isDragging: boolean }).isDragging = true;
     let fired = false;
-    el.addEventListener('lr-link-enter', () => (fired = true));
-    el.addEventListener('lr-link-leave', () => (fired = true));
+    el.addEventListener('lr-edge-enter', () => (fired = true));
+    el.addEventListener('lr-edge-leave', () => (fired = true));
 
     linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
@@ -1339,10 +1339,10 @@ describe('hover events', () => {
     expect(linkEl.hasAttribute('data-hovered')).to.be.false;
   });
 
-  it("includes the link's explicit id in lr-link-enter/lr-link-leave detail when the link has one", async () => {
+  it("includes the link's explicit id in lr-edge-enter/lr-edge-leave detail when the link has one", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ id: 'e1', source: 'a', target: 'b' }];
+    el.edges = [{ id: 'e1', source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1360,11 +1360,11 @@ describe('hover events', () => {
       | { sourceNodeId: string; targetNodeId: string; linkId?: string }
       | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      'lr-edge-enter',
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
     el.addEventListener(
-      'lr-link-leave',
+      'lr-edge-leave',
       (e) => (leaveDetail = (e as CustomEvent).detail)
     );
 
@@ -1389,7 +1389,7 @@ it('renders directed links with arrowheads shortened to the target radius', asyn
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', directed: true }];
+  el.edges = [{ source: 'a', target: 'b', directed: true }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1420,7 +1420,7 @@ it('uses rich accessible labels/descriptions and carries a stable link id throug
     },
     { id: 'b', label: 'B' },
   ];
-  el.links = [
+  el.edges = [
     {
       id: 'citation-7',
       source: 'a',
@@ -1472,7 +1472,7 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', color: '#ff0000', dash: [4, 2] }];
+  el.edges = [{ source: 'a', target: 'b', color: '#ff0000', dash: [4, 2] }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1485,7 +1485,7 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
   expect(getComputedStyle(link).stroke).to.equal('rgb(255, 0, 0)');
   expect(link.getAttribute('stroke-dasharray')).to.equal('4 2');
 
-  el.links = [
+  el.edges = [
     {
       source: 'a',
       target: 'b',
@@ -1508,7 +1508,7 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
 it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1533,7 +1533,7 @@ it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', as
 it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1556,7 +1556,7 @@ it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', as
 it('gives the svg an accessible name summarizing the diagram, and hides duplicate node labels from assistive tech', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1579,7 +1579,7 @@ it('uses one roving tab stop with arrow/Home/End navigation and a data-list alte
     graphItemAnnouncement: '{item}, position {index} sur {total}',
   };
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1629,7 +1629,7 @@ it('uses one roving tab stop with arrow/Home/End navigation and a data-list alte
 it('preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1647,7 +1647,7 @@ it('preserves existing node positions across an incremental nodes/links update i
 
   // Append a new node — e.g. a live/streaming data feed pushing one incremental update.
   el.nodes = [...nodes, { id: 'c', label: 'C' }];
-  el.links = [...links, { source: 'a', target: 'c' }];
+  el.edges = [...links, { source: 'a', target: 'c' }];
   await el.updateComplete;
 
   const afterA = (
@@ -1662,7 +1662,7 @@ it('applies a per-node LyraGraphNode.color as the actual rendered fill', async (
     { id: 'a', label: 'A', color: '#ff0000' },
     { id: 'b', label: 'B' },
   ];
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1707,7 +1707,7 @@ describe('node typing', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = nodeTypes;
     el.nodes = typedNodes;
-    el.links = typedLinks;
+    el.edges = typedLinks;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 5,
@@ -1735,14 +1735,14 @@ describe('node typing', () => {
       ...el.shadowRoot!.querySelectorAll('[part="node"]'),
     ] as SVGElement[];
     expect(items[1]!.getAttribute('style')).to.include(
-      '--lr-node-fill:#112233'
+      '--lr-graph-node-fill:#112233'
     ); // b: doc.color
     expect(items[2]!.getAttribute('style') ?? '').to.include(
       '--lr-graph-cat-3'
     ); // c: concept is nodeTypes[2]
     expect(items[3]!.hasAttribute('style')).to.be.false; // d: unknown type -> no inline fill override
     expect(items[4]!.getAttribute('style')).to.include(
-      '--lr-node-fill:#ff0000'
+      '--lr-graph-node-fill:#ff0000'
     ); // e: node.color wins over type
   });
 
@@ -1756,7 +1756,7 @@ describe('node typing', () => {
       { id: 'first', type: 't0' },
       { id: 'ninth', type: 't8' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1783,7 +1783,7 @@ describe('node typing', () => {
       { id: 'valid', label: 'Valid type' }, // legend's first (only) row -> index 0 -> cat-1
     ];
     el.nodes = [{ id: 'a', type: 'valid' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -1801,10 +1801,10 @@ describe('node typing', () => {
       ></lr-graph>
     `)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.selectionMode = 'single';
     el.selectedNodeIds = ['a'];
-    el.selectedLinkIds = ['a->b'];
+    el.selectedEdgeIds = ['a->b'];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1855,7 +1855,7 @@ describe('node typing', () => {
   it('existing graph usage unaffected: no type/nodeTypes set renders identical circles and unwrapped labels', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1883,7 +1883,7 @@ describe('node typing', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'concept', label: 'Concept' }]; // no shape -> defaults to circle
     el.nodes = [{ id: 'a', label: 'A', type: 'concept' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -1920,11 +1920,11 @@ describe('node typing', () => {
 describe('drawn edge labels', () => {
   const labeledLinks = [{ source: 'a', target: 'b', label: 'cites' }];
 
-  async function mountLabeled(showEdgeLabels = true): Promise<LyraGraph> {
+  async function mountLabeled(withEdgeLabels = true): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.showEdgeLabels = showEdgeLabels;
+    el.withEdgeLabels = withEdgeLabels;
     el.nodes = nodes;
-    el.links = labeledLinks;
+    el.edges = labeledLinks;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1936,13 +1936,13 @@ describe('drawn edge labels', () => {
     return el;
   }
 
-  it('defaults showEdgeLabels to false and renders no link-label text', async () => {
+  it('defaults withEdgeLabels to false and renders no link-label text', async () => {
     const el = await mountLabeled(false);
     expect(el.shadowRoot!.querySelector('[part="link-label"]') == null).to.be
       .true;
   });
 
-  it('draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
+  it('draws a link-label per labeled link when withEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
     const el = await mountLabeled(true);
     const label = el.shadowRoot!.querySelector(
       '[part="link-label"]'
@@ -1955,10 +1955,10 @@ describe('drawn edge labels', () => {
 
   it('does not draw a link-label for a link with no label text', async () => {
     const el = (await fixture(
-      html`<lr-graph show-edge-labels></lr-graph>`
+      html`<lr-graph with-edge-labels></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links; // no .label set
+    el.edges = links; // no .label set
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -1990,10 +1990,10 @@ describe('drawn edge labels', () => {
     // applied by the time the graph first paints, not only reactively after the user's first
     // pan/zoom gesture (see updateEdgeLabelZoomGate()'s own doc comment).
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.showEdgeLabels = true;
+    el.withEdgeLabels = true;
     el.edgeLabelMinZoom = 2;
     el.nodes = nodes;
-    el.links = labeledLinks;
+    el.edges = labeledLinks;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2007,7 +2007,7 @@ describe('drawn edge labels', () => {
     expect(g.hasAttribute('data-edge-labels-hidden')).to.be.true;
   });
 
-  it('spoken output (link accessible name) is identical whether showEdgeLabels is on or off', async () => {
+  it('spoken output (link accessible name) is identical whether withEdgeLabels is on or off', async () => {
     const off = await mountLabeled(false);
     const on = await mountLabeled(true);
     const offLink = off.shadowRoot!.querySelector(
@@ -2026,10 +2026,10 @@ describe('drawn edge labels', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: showEdgeLabels unset draws nothing and every existing link/node assertion still holds', async () => {
+  it('existing graph usage unaffected: withEdgeLabels unset draws nothing and every existing link/node assertion still holds', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2046,13 +2046,13 @@ describe('drawn edge labels', () => {
     ).to.be.false;
   });
 
-  it('does not wrap a link in an extra per-link <g> when showEdgeLabels is unset (byte-for-byte link DOM, regression)', async () => {
+  it('does not wrap a link in an extra per-link <g> when withEdgeLabels is unset (byte-for-byte link DOM, regression)', async () => {
     // The link must remain a direct child of the outer zoomed <g transform=""> (the only <g> in
     // this part of the template that carries a transform attribute) -- not nested inside a
     // per-link <g> introduced for the (here, unused) drawn-edge-label <text> sibling.
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2068,10 +2068,10 @@ describe('drawn edge labels', () => {
     expect(linkEl.parentElement?.getAttribute('transform')).to.equal('');
   });
 
-  it('refreshes the cached linkLabelEls when showEdgeLabels toggles true post-mount (regression)', async () => {
-    // Flipping showEdgeLabels false -> true without reassigning nodes/links triggers a normal
+  it('refreshes the cached linkLabelEls when withEdgeLabels toggles true post-mount (regression)', async () => {
+    // Flipping withEdgeLabels false -> true without reassigning nodes/links triggers a normal
     // Lit re-render that creates the <text part="link-label"> element, but applyInteractions()'s
-    // node/link/label DOM cache must be refreshed for a showEdgeLabels-only change too -- or
+    // node/link/label DOM cache must be refreshed for a withEdgeLabels-only change too -- or
     // linkLabelEls stays stuck at its pre-toggle (all-null) snapshot and onTick() silently skips
     // repositioning the label on every subsequent tick (e.g. a node drag) forever. See this
     // file's nodeEls regression test above for the analogous nodeTypes-only case.
@@ -2079,7 +2079,7 @@ describe('drawn edge labels', () => {
     expect(el.shadowRoot!.querySelector('[part="link-label"]') == null).to.be
       .true;
 
-    el.showEdgeLabels = true;
+    el.withEdgeLabels = true;
     await el.updateComplete;
     await waitUntil(
       () => !!el.shadowRoot!.querySelector('[part="link-label"]'),
@@ -2104,7 +2104,7 @@ describe('nodeLabels', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     expect(el.nodeLabels).to.be.undefined;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2124,7 +2124,7 @@ describe('nodeLabels', () => {
       html`<lr-graph node-labels="none"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2141,7 +2141,7 @@ describe('nodeLabels', () => {
       html`<lr-graph node-labels="zoom"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2165,7 +2165,7 @@ describe('nodeLabels', () => {
       html`<lr-graph node-labels="always"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2184,7 +2184,7 @@ describe('nodeLabels', () => {
       html`<lr-graph node-labels="always"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2229,7 +2229,7 @@ describe('nodeLabels', () => {
       )) as LyraGraph;
       if (nodeLabels) el.nodeLabels = nodeLabels;
       el.nodes = nodes;
-      el.links = links;
+      el.edges = links;
       await el.updateComplete;
       await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
         timeout: NODE_COUNT_TIMEOUT,
@@ -2301,7 +2301,7 @@ describe('expand affordance', () => {
   it('dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2332,7 +2332,7 @@ describe('expand affordance', () => {
   it('background dblclick (not on a node) still reaches the svg for d3-zoom default zoom-in (event not stopped)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2363,7 +2363,7 @@ describe('expand affordance', () => {
   it('double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2397,7 +2397,7 @@ describe('expand affordance', () => {
       { id: 'a', label: 'A', expandable: true },
       { id: 'b', label: 'B' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2423,7 +2423,7 @@ describe('expand affordance', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'doc', label: 'Document' }];
     el.nodes = [{ id: 'a', label: 'A', type: 'doc', expandable: true }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -2440,10 +2440,10 @@ describe('expand affordance', () => {
 
   it('a new node linked to an already-settled node spawns near that neighbor instead of a random position', async () => {
     const el = (await fixture(
-      html`<lr-graph seed="7" link-distance="100"></lr-graph>`
+      html`<lr-graph seed="7" edge-distance="100"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -2460,15 +2460,15 @@ describe('expand affordance', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     // Reduced-motion / seeded settles happen synchronously inside rebuildSimulation(), so the new
     // node's spawn position is assigned before this await resolves; assert immediately.
     const spawnedB = el.simNodes.find((n) => n.id === 'b')!;
     const distance = Math.hypot(spawnedB.x! - aX, spawnedB.y! - aY);
-    // Within a small multiple of linkDistance/2 (the documented jitter radius) -- nowhere close to
+    // Within a small multiple of edgeDistance/2 (the documented jitter radius) -- nowhere close to
     // a fully random position across the whole width/height canvas.
-    expect(distance).to.be.lessThan(el.linkDistance);
+    expect(distance).to.be.lessThan(el.edgeDistance);
     // 'a' itself must not have moved (only nodes with no carried-over position are affected).
     expect(el.simNodes.find((n) => n.id === 'a')!.x).to.equal(aX);
     expect(el.simNodes.find((n) => n.id === 'a')!.y).to.equal(aY);
@@ -2477,7 +2477,7 @@ describe('expand affordance', () => {
   it('is accessible with an expandable node', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A', expandable: true }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -2492,7 +2492,7 @@ describe('expand affordance', () => {
   it('existing graph usage unaffected: no expandable set never emits lr-node-expand and renders no indicator', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2527,7 +2527,7 @@ describe('focus and camera fit', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2732,7 +2732,7 @@ describe('focus and camera fit', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2763,7 +2763,7 @@ describe('focus and camera fit', () => {
       html`<lr-graph focus-node-id="a"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -2789,7 +2789,7 @@ describe('selection', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.selectionMode = mode;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2804,7 +2804,7 @@ describe('selection', () => {
   it('defaults selectionMode to none: no aria-pressed/data-selected, no lr-selection-change on click', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -2907,7 +2907,7 @@ describe('selection', () => {
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
   });
 
-  it('reflects controlled selectedNodeIds/selectedLinkIds as data-selected + aria-pressed, and never self-mutates them', async () => {
+  it('reflects controlled selectedNodeIds/selectedEdgeIds as data-selected + aria-pressed, and never self-mutates them', async () => {
     const el = await mountSelectable('single');
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
@@ -2927,7 +2927,7 @@ describe('selection', () => {
     ).to.contain('1 selected');
   });
 
-  it('does not spuriously announce "0 selected" when an equivalent-but-fresh empty selectedNodeIds/selectedLinkIds array arrives on an unrelated re-render', async () => {
+  it('does not spuriously announce "0 selected" when an equivalent-but-fresh empty selectedNodeIds/selectedEdgeIds array arrives on an unrelated re-render', async () => {
     // A host that recomputes `.selectedNodeIds=${...}` inline on every render (the ordinary,
     // correct Lit pattern for a controlled prop -- e.g. <lr-knowledge-graph-explorer>'s own
     // `.selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}`) hands down a BRAND
@@ -2944,7 +2944,7 @@ describe('selection', () => {
     expect(announcementTexts(), 'mount must stay silent').to.deep.equal([]);
 
     el.selectedNodeIds = []; // fresh reference, still empty -- no real selection change
-    el.selectedLinkIds = [];
+    el.selectedEdgeIds = [];
     await el.updateComplete;
     expect(
       announcementTexts(),
@@ -2960,7 +2960,7 @@ describe('selection', () => {
   });
 
   it('keeps the initial item only in the aria-hidden mirror without announcing a mount-time selection', async () => {
-    // selectedNodeIds/selectedLinkIds both default to `[]`, a non-undefined default -- Lit marks
+    // selectedNodeIds/selectedEdgeIds both default to `[]`, a non-undefined default -- Lit marks
     // a property "changed" on the component's very first update whenever it has one, so an
     // unguarded willUpdate() would set graphLiveText to the localized "0 selected" immediately on
     // mount and permanently block render()'s `this.graphLiveText || graphItemAnnouncement(...)`
@@ -3017,7 +3017,7 @@ describe('type filtering', () => {
       <lr-graph
         .hiddenTypes=${hiddenTypes}
         .nodes=${typedFilterNodes}
-        .links=${typedFilterLinks}
+        .edges=${typedFilterLinks}
       ></lr-graph>
     `)) as LyraGraph;
     await el.updateComplete;
@@ -3120,7 +3120,7 @@ describe('type filtering', () => {
     const el = await mountFiltered();
     await aTimeout(400);
     el.nodes = typedFilterNodes.filter((n) => n.id !== 'a');
-    el.links = typedFilterLinks.filter(
+    el.edges = typedFilterLinks.filter(
       (l) => l.source !== 'a' && l.target !== 'a'
     );
     await el.updateComplete;
@@ -3209,7 +3209,7 @@ describe('type filtering', () => {
       html`<lr-graph focus-node-id="a"></lr-graph>`
     )) as LyraGraph;
     el.nodes = typedFilterNodes;
-    el.links = typedFilterLinks;
+    el.edges = typedFilterLinks;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -3281,7 +3281,7 @@ describe('type filtering', () => {
   it('existing graph usage unaffected: no hiddenTypes set renders every node/link exactly as before', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3309,7 +3309,7 @@ describe('community hulls', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.communities = communities;
     el.nodes = communityNodes;
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -3336,7 +3336,7 @@ describe('community hulls', () => {
     )) as LyraGraph;
     el.communities = communities;
     el.nodes = communityNodes;
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -3379,7 +3379,7 @@ describe('community hulls', () => {
   it('renders no hull when communities is empty', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3409,7 +3409,7 @@ describe('community hulls', () => {
       { id: 'a', label: 'A', type: 'x' },
       { id: 'b', label: 'B', type: 'x' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 0,
@@ -3425,7 +3425,7 @@ describe('community hulls', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.communities = [{ id: 'solo', memberIds: ['a'] }];
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -3455,14 +3455,14 @@ describe('community hulls', () => {
     expect(hullIndex).to.be.lessThan(nodeIndex);
   });
 
-  it('click and Enter/Space on a hull emit lr-community-click', async () => {
+  it('click and Enter/Space on a hull emit lr-community-activate', async () => {
     const el = await mountHulls();
     const hull = el.shadowRoot!.querySelector(
       '[part="hull"]'
     ) as SVGPathElement;
     let detail: { communityId: string } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      'lr-community-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     hull.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -3506,7 +3506,7 @@ describe('community hulls', () => {
   it('existing graph usage unaffected: no communities set renders no hulls and an unchanged roving ring', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3576,7 +3576,7 @@ describe('layered layout', () => {
       { id: 'b', label: 'B' },
       { id: 'c', label: 'C' },
     ];
-    el.links = chainLinks;
+    el.edges = chainLinks;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -3597,7 +3597,7 @@ describe('layered layout', () => {
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -3639,11 +3639,11 @@ describe('layered layout', () => {
     expect(nodeEl.getAttribute('cy')).to.equal(before.y);
   });
 
-  it('linkDistance retunes the layer gap in layered mode', async () => {
+  it('edgeDistance retunes the layer gap in layered mode', async () => {
     const tight = (await fixture(
       html`<lr-graph
         layout="layered"
-        link-distance="20"
+        edge-distance="20"
         width="800"
         height="600"
       ></lr-graph>`
@@ -3652,7 +3652,7 @@ describe('layered layout', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    tight.links = [{ source: 'a', target: 'b' }];
+    tight.edges = [{ source: 'a', target: 'b' }];
     await tight.updateComplete;
     await waitUntil(
       () => tight.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3664,7 +3664,7 @@ describe('layered layout', () => {
     const gapBefore =
       tight.simNodes.find((n) => n.id === 'b')!.y! -
       tight.simNodes.find((n) => n.id === 'a')!.y!;
-    tight.linkDistance = 300;
+    tight.edgeDistance = 300;
     await tight.updateComplete;
     await waitUntil(
       () =>
@@ -3688,7 +3688,7 @@ describe('layered layout', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3714,7 +3714,7 @@ describe('layered layout', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3729,7 +3729,7 @@ describe('layered layout', () => {
         { id: 'b', width: 30, height: 30 },
       ],
       edges: [{ source: 'a', target: 'b' }],
-      options: { gapX: 12, gapY: el.linkDistance },
+      options: { gapX: 12, gapY: el.edgeDistance },
     });
     const a = el.simNodes.find((n) => n.id === 'a')!;
     const b = el.simNodes.find((n) => n.id === 'b')!;
@@ -3745,7 +3745,7 @@ describe('layered layout', () => {
       html`<lr-graph layout="layered"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -3766,7 +3766,7 @@ describe('layered layout', () => {
       { id: 'a', label: 'A', type: 'person' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -3783,7 +3783,7 @@ describe('layered layout', () => {
   it('existing graph usage unaffected: layout unset uses the untouched force-directed path', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3807,7 +3807,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -3833,7 +3833,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -3859,11 +3859,11 @@ describe('canvas renderer — static draw', () => {
     expect(canvas.height).to.equal(Math.round(canvas.clientHeight * dpr));
   });
 
-  it('every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, showEdgeLabels)', async () => {
+  it('every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, withEdgeLabels)', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
-        show-edge-labels
+        with-edge-labels
         selection-mode="single"
         width="400"
         height="300"
@@ -3871,7 +3871,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ source: 'a', target: 'b', label: 'cites' }];
+    el.edges = [{ source: 'a', target: 'b', label: 'cites' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -3899,7 +3899,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -3935,7 +3935,7 @@ describe('canvas renderer — static draw', () => {
   it('existing graph usage unaffected: renderer unset renders the untouched svg path', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -3947,7 +3947,7 @@ describe('canvas renderer — static draw', () => {
     expect(el.shadowRoot!.querySelector('canvas') == null).to.equal(true);
   });
 
-  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async () => {
+  it('feeds dimmedNodeIds/dimmedEdgeIds into the drawn canvas scene', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -3958,7 +3958,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.dimmedNodeIds = ['a'];
     el.style.setProperty('--lr-graph-dimmed-opacity', '0');
     await el.updateComplete;
@@ -3998,7 +3998,7 @@ describe('canvas renderer — static draw', () => {
       { id: 'a', label: 'A', expandable: true },
       { id: 'b', label: 'B' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -4041,7 +4041,7 @@ describe('canvas renderer — static draw', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.communities = [{ id: 'c1', memberIds: ['a', 'b'] }];
     el.style.setProperty('--lr-graph-hull-opacity', '0.5');
     await el.updateComplete;
@@ -4071,7 +4071,7 @@ describe('canvas renderer — interaction and a11y', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -4202,7 +4202,7 @@ describe('canvas renderer — interaction and a11y', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
@@ -4270,7 +4270,7 @@ describe('canvas renderer — interaction and a11y', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -4336,7 +4336,7 @@ describe('canvas renderer — interaction and a11y', () => {
     `)) as HTMLElement;
     const el = asTestGraph(container.querySelector('lr-graph')!);
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -4398,9 +4398,9 @@ describe('canvas renderer — interaction and a11y', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.selectedNodeIds = ['a'];
-    el.selectedLinkIds = ['a->b'];
+    el.selectedEdgeIds = ['a->b'];
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
@@ -4492,7 +4492,7 @@ describe('canvas renderer — interaction and a11y', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
@@ -4522,7 +4522,7 @@ it('does not let a LyraGraphNode.color value inject extra CSS declarations via t
     { id: 'a', label: 'A', color: 'red; position: fixed; top: 0px' },
     { id: 'b', label: 'B' },
   ];
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4550,7 +4550,7 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
     { id: 'a', label: 'A', type: 'unsafe', communityId: 'team' },
     { id: 'b', label: 'B', color: paintServer, communityId: 'team' },
   ];
-  el.links = [{ source: 'a', target: 'b', color: paintServer }];
+  el.edges = [{ source: 'a', target: 'b', color: paintServer }];
   el.communities = [{ id: 'team', memberIds: [], color: paintServer }];
   await el.updateComplete;
   await waitUntil(
@@ -4563,14 +4563,14 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
   for (const node of el.shadowRoot!.querySelectorAll<SVGElement>(
     '[part="node"]'
   )) {
-    expect(node.style.getPropertyValue('--lr-node-fill')).to.not.contain(
+    expect(node.style.getPropertyValue('--lr-graph-node-fill')).to.not.contain(
       'url('
     );
   }
   expect(
     (
       el.shadowRoot!.querySelector('[part="link"]') as SVGElement
-    ).style.getPropertyValue('--lr-link-color')
+    ).style.getPropertyValue('--lr-graph-edge-color')
   ).to.equal('');
   expect(
     (
@@ -4582,7 +4582,7 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
 it('wires up d3-drag on each draggable node', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4600,7 +4600,7 @@ it('wires up d3-drag on each draggable node', async () => {
 it('wires up d3-zoom pan/zoom on the svg', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4630,7 +4630,7 @@ it('wires up d3-zoom pan/zoom on the svg', async () => {
 it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4662,7 +4662,7 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
 it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg has already been bound', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4698,10 +4698,10 @@ it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg 
   expect(Number(match![1])).to.be.at.most(2);
 });
 
-it('updates the charge/link forces in place when chargeStrength/linkDistance change after mount', async () => {
+it('updates the charge/link forces in place when chargeStrength/edgeDistance change after mount', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4712,7 +4712,7 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
   );
 
   el.chargeStrength = -900;
-  el.linkDistance = 250;
+  el.edgeDistance = 250;
   await el.updateComplete;
 
   const chargeForce = (el as any).chargeForce as {
@@ -4723,10 +4723,10 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
   expect(linkForce.distance()()).to.equal(250);
 });
 
-it('still retunes chargeStrength/linkDistance when width/height change in the same update batch', async () => {
+it('still retunes chargeStrength/edgeDistance when width/height change in the same update batch', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4758,7 +4758,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
   this.timeout(20_000);
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4793,7 +4793,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
 });
 
 // Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)
-// not previously wired up for width/height/min-zoom/max-zoom/charge-strength/link-distance -- an
+// not previously wired up for width/height/min-zoom/max-zoom/charge-strength/edge-distance -- an
 // invalid attribute value used to flow straight into forceCenter()/d3-force's strength()/
 // distance()/scaleExtent() and the SVG viewBox, poisoning the simulation and rendered geometry
 // with NaN instead of being clamped like every other numeric property in this library.
@@ -4802,7 +4802,7 @@ it('normalizes non-finite/non-positive width or height so the viewBox and force-
     html`<lr-graph width="NaN" height="-100"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4828,7 +4828,7 @@ it('normalizes public link widths before SVG, canvas, and picking geometry consu
     html`<lr-graph layout="layered"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [
+  el.edges = [
     { id: 'nan', source: 'a', target: 'b', width: NaN },
     { id: 'negative', source: 'a', target: 'b', width: -4 },
     { id: 'infinite', source: 'a', target: 'b', width: Infinity },
@@ -4860,14 +4860,14 @@ it('normalizes public link widths before SVG, canvas, and picking geometry consu
     (el as unknown as Internals).canvasScene!.links.map((link) => link.width)
   ).to.deep.equal([1.5, 0, 1.5, 2.25]);
   expect(
-    el.links.map((link) => (el as unknown as Internals).safeLinkWidth(link))
+    el.edges.map((link) => (el as unknown as Internals).safeLinkWidth(link))
   ).to.deep.equal([1.5, 0, 1.5, 2.25]);
 });
 
 it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4918,7 +4918,7 @@ it('orders inverted zoom bounds before configuring d3 and imperative camera oper
     html`<lr-graph min-zoom="10" max-zoom="2"></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4944,10 +4944,10 @@ it('orders inverted zoom bounds before configuring d3 and imperative camera oper
   expect(scale).to.be.within(2, 10);
 });
 
-it('normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN', async () => {
+it('normalizes non-finite charge-strength and non-finite/negative edge-distance so the live d3-force objects never receive NaN', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4958,7 +4958,7 @@ it('normalizes non-finite charge-strength and non-finite/negative link-distance 
   );
 
   el.chargeStrength = NaN;
-  el.linkDistance = -250; // a negative link distance has no sane geometric meaning
+  el.edgeDistance = -250; // a negative link distance has no sane geometric meaning
   await el.updateComplete;
 
   const chargeForce = (el as any).chargeForce as {
@@ -4979,7 +4979,7 @@ it('normalizes a non-finite seed to a finite integer instead of poisoning the de
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.seed = Number.NaN;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -4997,7 +4997,7 @@ it('normalizes a non-finite seed to a finite integer instead of poisoning the de
   }
 
   el.seed = Infinity;
-  el.links = [...links];
+  el.edges = [...links];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5022,10 +5022,10 @@ it('leaves seed undefined (unseeded/random) alone -- only a defined-but-non-fini
 
 it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibility gate keeps working instead of never hiding', async () => {
   const el = (await fixture(
-    html`<lr-graph show-edge-labels></lr-graph>`
+    html`<lr-graph with-edge-labels></lr-graph>`
   )) as LyraGraph;
   el.nodes = nodes;
-  el.links = [{ source: 'a', target: 'b', label: 'A to B' }];
+  el.edges = [{ source: 'a', target: 'b', label: 'A to B' }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5060,7 +5060,7 @@ it('normalizes a non-finite edge-label-min-zoom so the live edge-label visibilit
 it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5104,7 +5104,7 @@ it('skips the settle animation under prefers-reduced-motion (jumps straight to a
   try {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5145,7 +5145,7 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
     html`<lr-graph seed="42"></lr-graph>`
   )) as LyraGraph;
   elA.nodes = seededNodes;
-  elA.links = seededLinks;
+  elA.edges = seededLinks;
   await elA.updateComplete;
   await waitUntil(
     () => elA.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -5161,7 +5161,7 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
   // Deliberately reorder the nodes array between the two instances — a
   // reproducible seeded layout must be keyed by node id, not array index.
   elB.nodes = [seededNodes[2]!, seededNodes[0]!, seededNodes[1]!];
-  elB.links = seededLinks;
+  elB.edges = seededLinks;
   await elB.updateComplete;
   await waitUntil(
     () => elB.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -5212,7 +5212,7 @@ it('seeded layout: different seeds produce different final positions', async () 
     html`<lr-graph seed="1"></lr-graph>`
   )) as LyraGraph;
   elA.nodes = seededNodes;
-  elA.links = seededLinks;
+  elA.edges = seededLinks;
   await elA.updateComplete;
   await waitUntil(
     () => elA.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -5226,7 +5226,7 @@ it('seeded layout: different seeds produce different final positions', async () 
     html`<lr-graph seed="2"></lr-graph>`
   )) as LyraGraph;
   elB.nodes = seededNodes;
-  elB.links = seededLinks;
+  elB.edges = seededLinks;
   await elB.updateComplete;
   await waitUntil(
     () => elB.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -5248,7 +5248,7 @@ it('seeded layout: different seeds produce different final positions', async () 
 it('seeded layout: settles synchronously (like prefers-reduced-motion) so the layout is reproducible without waiting on animation frames', async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5268,7 +5268,7 @@ it('seeded layout: settles synchronously (like prefers-reduced-motion) so the la
 it('seed unset: layout is unaffected (still uses forceSimulation()s own random initial start, not the deterministic PRNG)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5290,7 +5290,7 @@ it('seed unset: layout is unaffected (still uses forceSimulation()s own random i
 it('user-initiated drag still works normally after a seeded synchronous settle', async () => {
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5315,7 +5315,7 @@ it('changing seed after nodes/links already have positions is a documented no-op
 
   const el = (await fixture(html`<lr-graph seed="1"></lr-graph>`)) as LyraGraph;
   el.nodes = seededNodes;
-  el.links = seededLinks;
+  el.edges = seededLinks;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5347,7 +5347,7 @@ it('clamps an out-of-range LyraGraphNode.radius so the node still renders visibl
     { id: 'b', label: 'B', radius: -50 },
     { id: 'c', label: 'C', radius: 1000 },
   ];
-  el.links = [];
+  el.edges = [];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -5372,7 +5372,7 @@ it('clamps an out-of-range LyraGraphNode.radius so the node still renders visibl
 it('stops the force simulation on disconnect so a detached instance stops ticking', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5409,7 +5409,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
   // the entire per-test budget waiting for ~300 requestAnimationFrame-driven decay ticks.
   const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5452,7 +5452,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
 it('renders a dangling-target link as a stub off the source instead of dropping it', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  el.edges = [...links, { source: 'a', target: 'does-not-exist' }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5473,7 +5473,7 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
 it('keeps a dangling stub synced to its source node across ticks, instead of freezing at its initial position', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  el.edges = [...links, { source: 'a', target: 'does-not-exist' }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5520,7 +5520,7 @@ it('keeps a dangling stub synced to its source node across ticks, instead of fre
 it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
-  el.links = [...links, { source: 'does-not-exist', target: 'b' }];
+  el.edges = [...links, { source: 'does-not-exist', target: 'b' }];
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5541,7 +5541,7 @@ it('silently drops a link whose source id has no matching node, without throwing
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   await el.updateComplete;
   await waitUntil(
     () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5557,7 +5557,7 @@ describe('data-list aria-label localization', () => {
   it('defaults the data-list aria-label to the built-in English "Graph data"', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5579,7 +5579,7 @@ describe('data-list aria-label localization', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5606,7 +5606,7 @@ describe('RTL keyboard navigation', () => {
     )) as HTMLDivElement;
     const el = asTestGraph(wrapper.querySelector('lr-graph')!);
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5650,7 +5650,7 @@ describe('dimming (adjacency highlight)', () => {
   async function mountDimmable(): Promise<LyraGraph> {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -5662,10 +5662,10 @@ describe('dimming (adjacency highlight)', () => {
     return el;
   }
 
-  it('defaults dimmedNodeIds/dimmedLinkIds to empty arrays: no data-dimmed anywhere', async () => {
+  it('defaults dimmedNodeIds/dimmedEdgeIds to empty arrays: no data-dimmed anywhere', async () => {
     const el = await mountDimmable();
     expect(el.dimmedNodeIds).to.deep.equal([]);
-    expect(el.dimmedLinkIds).to.deep.equal([]);
+    expect(el.dimmedEdgeIds).to.deep.equal([]);
     expect(el.shadowRoot!.querySelector('[data-dimmed]') === null).to.be.true;
   });
 
@@ -5694,7 +5694,7 @@ describe('dimming (adjacency highlight)', () => {
 
   it('applies data-dimmed to a matching link via its linkKey (id, else source->target)', async () => {
     const el = await mountDimmable();
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedEdgeIds = ['a->b'];
     await el.updateComplete;
     const linkEl = el.shadowRoot!.querySelector(
       '[part="link"]:not([data-dangling])'
@@ -5702,15 +5702,15 @@ describe('dimming (adjacency highlight)', () => {
     expect(linkEl.hasAttribute('data-dimmed')).to.be.true;
   });
 
-  it('never self-mutates dimmedNodeIds/dimmedLinkIds -- purely controlled, like selectedNodeIds', async () => {
+  it('never self-mutates dimmedNodeIds/dimmedEdgeIds -- purely controlled, like selectedNodeIds', async () => {
     const el = await mountDimmable();
     el.dimmedNodeIds = ['a'];
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedEdgeIds = ['a->b'];
     await el.updateComplete;
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(el.dimmedNodeIds).to.deep.equal(['a']);
-    expect(el.dimmedLinkIds).to.deep.equal(['a->b']);
+    expect(el.dimmedEdgeIds).to.deep.equal(['a->b']);
   });
 
   it('data-dimmed and data-selected can coexist on the same element independently', async () => {
@@ -5724,7 +5724,7 @@ describe('dimming (adjacency highlight)', () => {
     expect(nodeEl.hasAttribute('data-dimmed')).to.be.true;
   });
 
-  it('existing rendering is byte-identical when dimmedNodeIds/dimmedLinkIds are left unset', async () => {
+  it('existing rendering is byte-identical when dimmedNodeIds/dimmedEdgeIds are left unset', async () => {
     const el = await mountDimmable();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     expect(nodeEl.hasAttribute('data-dimmed')).to.be.false;
@@ -5734,7 +5734,7 @@ describe('dimming (adjacency highlight)', () => {
   it('is accessible with dimming applied', async () => {
     const el = await mountDimmable();
     el.dimmedNodeIds = ['a'];
-    el.dimmedLinkIds = ['a->b'];
+    el.dimmedEdgeIds = ['a->b'];
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -5758,7 +5758,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -5796,7 +5796,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -5842,7 +5842,7 @@ describe('canvas visibility gating (perf)', () => {
         ></lr-graph>`
       )) as LyraGraph;
       el.nodes = nodes;
-      el.links = links;
+      el.edges = links;
       await el.updateComplete;
       await waitUntil(
         () => !!el.shadowRoot!.querySelector('canvas'),
@@ -5981,7 +5981,7 @@ describe('coverage: private-helper direct branches', () => {
   it('falls back nodeRadius to the clamped default average when radius is non-finite (NaN)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A', radius: Number.NaN }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -6045,7 +6045,7 @@ describe('coverage: private-helper direct branches', () => {
 
     let enterDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener(
-      'lr-link-enter',
+      'lr-edge-enter',
       (e) => (enterDetail = (e as CustomEvent).detail)
     );
     (
@@ -6059,7 +6059,7 @@ describe('coverage: private-helper direct branches', () => {
 
     let leaveDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener(
-      'lr-link-leave',
+      'lr-edge-leave',
       (e) => (leaveDetail = (e as CustomEvent).detail)
     );
     (
@@ -6182,7 +6182,7 @@ describe('coverage: private-helper direct branches', () => {
   it('graphItemText returns an empty string for an out-of-range index (past every node/link/hull)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -6202,7 +6202,7 @@ describe('coverage: private-helper direct branches', () => {
     el.nodeTypes = [{ id: 'x', label: 'X' }];
     el.hiddenTypes = ['x'];
     el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 0,
@@ -6239,7 +6239,7 @@ describe('coverage: private-helper direct branches', () => {
   it('an unhandled key on a node/link falls through onGraphKeyDown without moving the roving tab stop', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -6266,7 +6266,7 @@ describe('coverage: private-helper direct branches', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6281,7 +6281,7 @@ describe('coverage: private-helper direct branches', () => {
   it('graphItemText returns an empty string for a negative index (simNodes[-1] is undefined despite -1 < simNodes.length)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -6299,7 +6299,7 @@ describe('coverage: private-helper direct branches', () => {
   it('graphItemText returns an empty string for a fractional index landing past simNodes but short of simLinks.length', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -6337,7 +6337,7 @@ describe('coverage: private-helper direct branches', () => {
       { id: 'b', label: 'B' },
       { id: 'c', label: 'C' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3,
@@ -6378,10 +6378,10 @@ describe('coverage: private-helper direct branches', () => {
 
   it("rebuildSimulation defaults a neighbor-jitter spawn anchor's missing y to 0 (x is guarded by the search predicate, y is not)", async () => {
     const el = (await fixture(
-      html`<lr-graph link-distance="100"></lr-graph>`
+      html`<lr-graph edge-distance="100"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'existing', label: 'Existing' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -6403,7 +6403,7 @@ describe('coverage: private-helper direct branches', () => {
       { id: 'existing', label: 'Existing' },
       { id: 'newbie', label: 'Newbie' },
     ];
-    el.links = [{ source: 'existing', target: 'newbie' }];
+    el.edges = [{ source: 'existing', target: 'newbie' }];
     await el.updateComplete;
 
     const newbie = el.simNodes.find((n) => n.id === 'newbie')!;
@@ -6419,7 +6419,7 @@ describe('coverage: private-helper direct branches', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B', type: 'sq' },
     ];
-    el.links = [
+    el.edges = [
       { source: 'a', target: 'b' },
       { source: 'a', target: 'ghost' }, // dangling -- "ghost" has no matching node
     ];
@@ -6499,7 +6499,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6538,7 +6538,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'a', label: 'A', type: 'person' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b', color: 'var(--lr-color-danger)' }];
+    el.edges = [{ source: 'a', target: 'b', color: 'var(--lr-color-danger)' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6577,7 +6577,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'a', label: 'A', communityId: 'team', color: 'inherit' },
       { id: 'b', label: 'B', communityId: 'team' },
     ];
-    el.links = [{ source: 'a', target: 'b', color: 'unset' }];
+    el.edges = [{ source: 'a', target: 'b', color: 'unset' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6610,7 +6610,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'c' },
       { id: 'd' },
     ];
-    el.links = [
+    el.edges = [
       { source: 'a', target: 'b', color: 'inherit' },
       { source: 'b', target: 'c', color: 'unset' },
       { source: 'c', target: 'd', color: 'initial' },
@@ -6655,7 +6655,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6696,7 +6696,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6760,7 +6760,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6843,7 +6843,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6900,7 +6900,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6943,7 +6943,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(detail).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b' });
   });
 
-  it('canvas pointer click resolves a community hull (not a node/link) and emits lr-community-click', async () => {
+  it('canvas pointer click resolves a community hull (not a node/link) and emits lr-community-activate', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -6958,7 +6958,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'b', label: 'B', communityId: 'team-1' },
       { id: 'c', label: 'C', communityId: 'team-1' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -6977,7 +6977,7 @@ describe('coverage: canvas renderer internals', () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { communityId: string } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      'lr-community-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     const cx = rect.left + 200;
@@ -7012,7 +7012,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7052,7 +7052,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7086,7 +7086,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7113,7 +7113,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ id: 'ab', source: 'a', target: 'b' }];
+    el.edges = [{ id: 'ab', source: 'a', target: 'b' }];
     el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
     await el.updateComplete;
     await waitUntil(
@@ -7201,7 +7201,7 @@ describe('coverage: canvas renderer internals', () => {
     el.nodeTypes = [{ id: 'x', label: 'X' }];
     el.hiddenTypes = ['x'];
     el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7239,7 +7239,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes; // a, b
-    el.links = links; // one link a->b
+    el.edges = links; // one link a->b
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7259,7 +7259,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(items()[2]!.getAttribute('tabindex')).to.equal('0'); // the link cursor-item is now active
   });
 
-  it('canvas mode renders one cursor-item per community, driving lr-community-click via click and Enter, with an id fallback when unlabeled', async () => {
+  it('canvas mode renders one cursor-item per community, driving lr-community-activate via click and Enter, with an id fallback when unlabeled', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -7273,7 +7273,7 @@ describe('coverage: canvas renderer internals', () => {
       { id: 'a', label: 'A', communityId: 'team-1' },
       { id: 'b', label: 'B', communityId: 'team-1' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7286,7 +7286,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(hullItem.getAttribute('aria-label')).to.contain('team-1');
     let detail: { communityId: string } | undefined;
     el.addEventListener(
-      'lr-community-click',
+      'lr-community-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     hullItem.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -7309,7 +7309,7 @@ describe('coverage: selection/drag/hover edge cases', () => {
       { id: 'b', label: 'B' },
       { id: 'c', label: 'C' },
     ];
-    el.links = [
+    el.edges = [
       { source: 'a', target: 'b' },
       { source: 'b', target: 'c' },
     ];
@@ -7335,14 +7335,14 @@ describe('coverage: selection/drag/hover edge cases', () => {
     );
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['a->b'] });
 
-    el.selectedLinkIds = ['a->b'];
+    el.selectedEdgeIds = ['a->b'];
     await el.updateComplete;
     linkEls[1]!.dispatchEvent(
       new MouseEvent('click', { bubbles: true, ctrlKey: true })
     );
     expect(detail).to.deep.equal({ nodeIds: [], linkIds: ['a->b', 'b->c'] });
 
-    el.selectedLinkIds = ['a->b', 'b->c'];
+    el.selectedEdgeIds = ['a->b', 'b->c'];
     await el.updateComplete;
     linkEls[0]!.dispatchEvent(
       new MouseEvent('click', { bubbles: true, ctrlKey: true })
@@ -7353,7 +7353,7 @@ describe('coverage: selection/drag/hover edge cases', () => {
   it('dragging a node (svg mode) sets fx/fy live and clears them + isDragging on release (d3-drag start/drag/end)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7396,7 +7396,7 @@ describe('coverage: selection/drag/hover edge cases', () => {
   it('suppresses lr-node-leave and leaves data-hovered untouched while panning (mouseleave, mirrors the existing mouseenter suppression tests)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7417,10 +7417,10 @@ describe('coverage: selection/drag/hover edge cases', () => {
 
   it('an unseeded new node linked to an existing neighbor still spawns near it (Math.random() jitter branch)', async () => {
     const el = (await fixture(
-      html`<lr-graph link-distance="100"></lr-graph>`
+      html`<lr-graph edge-distance="100"></lr-graph>`
     )) as LyraGraph;
     el.nodes = [{ id: 'a', label: 'A' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -7437,21 +7437,21 @@ describe('coverage: selection/drag/hover edge cases', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     const spawnedB = el.simNodes.find((n) => n.id === 'b')!;
     const distance = Math.hypot(spawnedB.x! - aX, spawnedB.y! - aY);
-    expect(distance).to.be.lessThan(el.linkDistance);
+    expect(distance).to.be.lessThan(el.edgeDistance);
   });
 });
 
 describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () => {
-  it('a labelless link with showEdgeLabels on does not throw across a real tick (edgeLabelWidth("") fallback)', async () => {
+  it('a labelless link with withEdgeLabels on does not throw across a real tick (edgeLabelWidth("") fallback)', async () => {
     const el = (await fixture(
-      html`<lr-graph show-edge-labels></lr-graph>`
+      html`<lr-graph with-edge-labels></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links; // no .label
+    el.edges = links; // no .label
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7468,14 +7468,14 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
   it('hides a drawn edge label once its measured width exceeds the length-declutter gate (visibility toggle)', async () => {
     const el = (await fixture(
       html`<lr-graph
-        show-edge-labels
-        link-distance="10"
+        with-edge-labels
+        edge-distance="10"
         width="200"
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [
+    el.edges = [
       {
         source: 'a',
         target: 'b',
@@ -7517,7 +7517,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7563,7 +7563,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7593,7 +7593,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7627,7 +7627,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
   it("onGraphKeyDown's double-activate timer falls back to 0 instead of throwing when ownerWindow is unavailable", async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7654,7 +7654,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7717,7 +7717,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7750,7 +7750,7 @@ describe('coverage: canvas surface setup edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7777,7 +7777,7 @@ describe('coverage: canvas surface setup edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7799,13 +7799,13 @@ describe('coverage: canvas surface setup edge cases', () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
-        show-edge-labels
+        with-edge-labels
         width="200"
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = [{ source: 'a', target: 'b', label: 'edge' }];
+    el.edges = [{ source: 'a', target: 'b', label: 'edge' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7855,7 +7855,7 @@ describe('coverage: canvas surface setup edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -7906,7 +7906,7 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
     el.nodeTypes = [{ id: 'x', label: 'X' }];
     el.hiddenTypes = ['x'];
     el.nodes = [{ id: 'a', label: 'A', type: 'x' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 0,
@@ -7924,7 +7924,7 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
       html`<lr-graph seed="1" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -7948,7 +7948,7 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
       { id: 'b', label: 'B' },
       { id: 'c', label: 'C' },
     ];
-    el.links = [
+    el.edges = [
       { source: 'a', target: 'b', color: '#ff0000' },
       { source: 'a', target: 'c', color: 'var(--totally-unset-token-xyz)' },
     ];
@@ -7974,7 +7974,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
   it('redrawPickCanvas/hitTest/nodeAtCanvasPoint/updateCanvasTooltip no-op when there is no canvas surface at all (svg renderer)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8013,7 +8013,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8029,7 +8029,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8073,7 +8073,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8082,7 +8082,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const rect = canvas.getBoundingClientRect();
     let clicked = false;
     el.addEventListener('lr-node-click', () => (clicked = true));
-    el.addEventListener('lr-community-click', () => (clicked = true));
+    el.addEventListener('lr-community-activate', () => (clicked = true));
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
         bubbles: true,
@@ -8107,7 +8107,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8157,7 +8157,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8204,7 +8204,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8244,7 +8244,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8291,7 +8291,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8321,7 +8321,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph; // no seed -- a real, multi-hundred-tick settle animation
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8353,7 +8353,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
       { id: 'a', label: 'A', expandable: true },
       { id: 'b', label: 'B', type: 'sq' },
     ];
-    el.links = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node, stub hangs off 'a'
+    el.edges = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node, stub hangs off 'a'
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8414,7 +8414,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     )) as LyraGraph;
     el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
     el.nodes = [{ id: 'a', label: 'A', type: 'sq' }];
-    el.links = [];
+    el.edges = [];
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
     await waitUntil(
@@ -8455,7 +8455,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
     el.nodes = [{ id: 'a', label: 'A', type: 'sq' }];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
@@ -8487,7 +8487,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
       { id: 'a', label: 'A', communityId: 'team' },
       { id: 'b', label: 'B', communityId: 'team' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8509,7 +8509,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.style.setProperty('--lr-graph-dimmed-opacity', 'not-a-number');
     el.style.setProperty('--lr-graph-hull-opacity', 'not-a-number');
     await el.updateComplete;
@@ -8542,7 +8542,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b' }];
+    el.edges = [{ source: 'a', target: 'b' }];
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8584,7 +8584,7 @@ describe('coverage: selection and keyboard edge cases', () => {
       html`<lr-graph selection-mode="single"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links; // a -> b, no explicit id
+    el.edges = links; // a -> b, no explicit id
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8606,7 +8606,7 @@ describe('coverage: selection and keyboard edge cases', () => {
   it('background click is a no-op when selectionMode is none, and again in single mode once nothing is selected (clearSelection early returns)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph; // selectionMode defaults to 'none'
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8637,7 +8637,7 @@ describe('coverage: selection and keyboard edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8661,7 +8661,7 @@ describe('coverage: selection and keyboard edge cases', () => {
   it('clearing every node while one is DOM-focused resolves the pending base-focus fallback without throwing (all items removed)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8679,7 +8679,7 @@ describe('coverage: selection and keyboard edge cases', () => {
     ).to.equal(true);
 
     el.nodes = [];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete; // must not throw resolving the 'base' pendingGraphItemFocus branch
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
   });
@@ -8691,7 +8691,7 @@ describe('coverage: remaining branch gaps', () => {
       html`<lr-graph width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     el.style.setProperty('--lr-transition-base', '0');
     await el.updateComplete;
     await waitUntil(
@@ -8714,7 +8714,7 @@ describe('coverage: remaining branch gaps', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8738,7 +8738,7 @@ describe('coverage: remaining branch gaps', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8779,7 +8779,7 @@ describe('coverage: remaining branch gaps', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8836,7 +8836,7 @@ describe('coverage: remaining branch gaps', () => {
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8860,7 +8860,7 @@ describe('coverage: remaining branch gaps', () => {
       ></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
@@ -8896,7 +8896,7 @@ describe('coverage: remaining branch gaps', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B', type: 'x' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8935,7 +8935,7 @@ describe('coverage: remaining branch gaps', () => {
       { id: 'a', label: 'A', communityId: 'team' },
       { id: 'b', label: 'B', communityId: 'team' },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.edges = [{ source: 'a', target: 'b', id: 'ab' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8952,7 +8952,7 @@ describe('coverage: remaining branch gaps', () => {
 
     internal.onGraphItemFocus(2); // simNodes.length(2) + linkIndex(0) -- the link is the active item
     expect(internal.activeGraphItem).to.equal(2);
-    el.links = []; // the focused link is now entirely gone
+    el.edges = []; // the focused link is now entirely gone
     await el.updateComplete;
     expect(internal.activeGraphItem).to.be.at.least(0); // re-clamped instead of throwing/going negative
 
@@ -8971,7 +8971,7 @@ describe('coverage: focus-node-identity retention across structural change', () 
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.edges = [{ source: 'a', target: 'b', id: 'ab' }];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -8993,7 +8993,7 @@ describe('coverage: focus-node-identity retention across structural change', () 
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ];
-    el.links = [{ source: 'a', target: 'b', id: 'ab' }];
+    el.edges = [{ source: 'a', target: 'b', id: 'ab' }];
     await el.updateComplete;
     // simNodes.length is now 3 -- the SAME link ('ab') must be retained at its NEW computed index
     // (3 + 0), not left pointing at the stale raw index 2 (which would now land on a node).
@@ -9007,7 +9007,7 @@ describe('coverage: focus-node-identity retention across structural change', () 
       { id: 'a', label: 'A', communityId: 'team' },
       { id: 'b', label: 'B', communityId: 'team' },
     ];
-    el.links = [];
+    el.edges = [];
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -9040,7 +9040,7 @@ describe('coverage: dangling link DOM-cache shrink', () => {
       html`<lr-graph seed="3"></lr-graph>`
     )) as LyraGraph;
     el.nodes = nodes; // a, b
-    el.links = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node
+    el.edges = [{ source: 'a', target: 'ghost' }]; // dangling -- ghost has no matching node
     await el.updateComplete;
     await waitUntil(
       () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
@@ -9227,7 +9227,7 @@ describe('optional d3 peer failure', () => {
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
       () => Promise.resolve(null);
     el.nodes = nodes;
-    el.links = links;
+    el.edges = links;
     document.body.appendChild(el);
     try {
       await waitUntil(
@@ -9308,7 +9308,7 @@ it('does not invalidate a canvas scene that has not been rendered yet (regressio
     new Promise<unknown>(() => {});
   el.renderer = 'canvas';
   el.nodes = nodes;
-  el.links = links;
+  el.edges = links;
   document.body.appendChild(el);
   try {
     await el.updateComplete;
@@ -9356,7 +9356,7 @@ it('observes the host exactly once for a canvas mount (regression: the surface s
         width="200"
         height="200"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-graph>
     `)) as LyraGraph;
     await waitUntil(
@@ -9396,7 +9396,7 @@ describe('fit-to="container"', () => {
       <div style="inline-size: 300px">
         <lr-graph
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9412,7 +9412,7 @@ describe('fit-to="container"', () => {
         <lr-graph
           fit-to="container"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9438,7 +9438,7 @@ describe('fit-to="container"', () => {
             fit-to="container"
             height="420"
             .nodes=${nodes}
-            .links=${links}
+            .edges=${links}
           ></lr-graph>
         </div>
       `)) as HTMLDivElement;
@@ -9459,7 +9459,7 @@ describe('fit-to="container"', () => {
         <lr-graph
           fit-to="container"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9480,7 +9480,7 @@ describe('fit-to="container"', () => {
           fit-to="container"
           seed="7"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9525,7 +9525,7 @@ describe('fit-to="container"', () => {
         <lr-graph
           fit-to="container"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 180px"
         ></lr-graph>
       </div>
@@ -9541,7 +9541,7 @@ describe('fit-to="container"', () => {
           <lr-graph
             fit-to="container"
             .nodes=${nodes}
-            .links=${links}
+            .edges=${links}
             style="--lr-canvas-reserved-height: 200px"
           ></lr-graph>
         </div>
@@ -9568,7 +9568,7 @@ describe('fit-to="container"', () => {
           <lr-graph
             fit-to="container"
             .nodes=${nodes}
-            .links=${links}
+            .edges=${links}
             style="--lr-canvas-reserved-height: 160px"
           ></lr-graph>
         </div>
@@ -9593,7 +9593,7 @@ describe('fit-to="container"', () => {
           fit-to="container"
           seed="7"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9627,7 +9627,7 @@ describe('fit-to="container"', () => {
           renderer="canvas"
           fit-to="container"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 200px"
         ></lr-graph>
       </div>
@@ -9650,7 +9650,7 @@ describe('fit-to="container"', () => {
       <lr-graph
         fit-to="container"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-graph>
     `)) as LyraGraph;
     const privates = el as unknown as {

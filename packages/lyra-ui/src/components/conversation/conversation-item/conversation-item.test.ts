@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./conversation-item.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 import type {
   LyraConversationItem,
   LyraConversationItemEventMap,
@@ -26,16 +27,16 @@ async function fixtureItem(
   return (await fixture(item)) as LyraConversationItem;
 }
 
-it('defaults to label="", excerpt="", active=false, renamable=true', async () => {
+it('defaults to label="", excerpt="", active=false, withoutRename=false', async () => {
   const el = (await fixture(
     html`<lr-conversation-item></lr-conversation-item>`
   )) as LyraConversationItem;
   expect(el.label).to.equal("");
   expect(el.excerpt).to.equal("");
   expect(el.active).to.be.false;
-  expect(el.renamable).to.be.true;
+  expect(el.withoutRename).to.be.false;
   expect(el.hasAttribute("active")).to.be.false;
-  expect(el.hasAttribute("renamable")).to.be.true;
+  expect(el.hasAttribute("without-rename")).to.be.false;
 });
 
 it('renders a standalone role="button" and a tabindex of 0', async () => {
@@ -560,7 +561,6 @@ describe("inline rename", () => {
     const el = (await fixture(html`
       <lr-conversation-item
         conversation-id="conversation-a"
-        renamable
         label="Original"
       >
         <span slot="content">Custom conversation layout</span>
@@ -595,7 +595,7 @@ describe("inline rename", () => {
     });
   });
 
-  it("renders the rename button only while renamable and not already renaming", async () => {
+  it("renders the rename button only while without-rename is unset and not already renaming", async () => {
     const renamable = (await fixture(
       html`<lr-conversation-item label="A"></lr-conversation-item>`
     )) as LyraConversationItem;
@@ -605,7 +605,7 @@ describe("inline rename", () => {
     const notEditable = (await fixture(
       html`<lr-conversation-item
         label="A"
-        .renamable=${false}
+        without-rename
       ></lr-conversation-item>`
     )) as LyraConversationItem;
     expect(
@@ -613,18 +613,37 @@ describe("inline rename", () => {
     ).to.be.true;
   });
 
-  it('honors a plain renamable="false" attribute (not just a .renamable=${false} property binding)', async () => {
-    const el = (await fixture(
-      html`<lr-conversation-item
-        label="A"
-        renamable="false"
-      ></lr-conversation-item>`
-    )) as LyraConversationItem;
+  it('keeps the deprecated renamable="false" alias equal to without-rename, warning once', async () => {
+    let el!: LyraConversationItem;
+    let both!: LyraConversationItem;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "renamable" }],
+      async () => {
+        el = (await fixture(
+          html`<lr-conversation-item
+            label="A"
+            renamable="false"
+          ></lr-conversation-item>`
+        )) as LyraConversationItem;
+        both = (await fixture(
+          html`<lr-conversation-item label="A" without-rename renamable></lr-conversation-item>`
+        )) as LyraConversationItem;
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-conversation-item:property:renamable",
+    ]);
+    expect(el.withoutRename).to.be.true;
     expect(el.renamable).to.be.false;
-    expect(el.hasAttribute("renamable")).to.be.false;
     expect(
       el.shadowRoot!.querySelectorAll('[part="rename-button"]')
     ).to.have.lengthOf(0);
+    expect(both.withoutRename, "the later renamable attribute wins").to.be.false;
+    expect(both.renamable).to.be.true;
+    both.withoutRename = true;
+    await both.updateComplete;
+    expect(both.renamable, "the alias syncs back from the canonical").to.be.false;
+    expect(both.hasAttribute("renamable"), "the alias keeps its presence reflection").to.be.false;
   });
 
   it("gives the rename button the shared minimum hit area", async () => {
@@ -712,18 +731,18 @@ describe("inline rename", () => {
     );
   });
 
-  it("does not activate rename when renamable is false", async () => {
+  it("does not activate rename while without-rename is set", async () => {
     const el = (await fixture(
       html`<lr-conversation-item
         label="A"
-        .renamable=${false}
+        without-rename
       ></lr-conversation-item>`
     )) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="label-input"]') == null).to.be
       .true;
   });
 
-  it("cancels an in-progress rename (discarding the draft) when renamable flips to false", async () => {
+  it("cancels an in-progress rename (discarding the draft) when without-rename is set", async () => {
     const el = (await fixture(
       html`<lr-conversation-item label="Old name"></lr-conversation-item>`
     )) as LyraConversationItem;
@@ -742,10 +761,10 @@ describe("inline rename", () => {
     let renameFired = false;
     el.addEventListener("lr-rename", () => (renameFired = true));
 
-    el.renamable = false;
+    el.withoutRename = true;
     await el.updateComplete;
 
-    expect(renameFired, "flipping renamable false must not commit the draft").to
+    expect(renameFired, "setting without-rename must not commit the draft").to
       .be.false;
     expect(
       el.shadowRoot!.querySelector('[part="label-input"]') == null,
@@ -754,7 +773,7 @@ describe("inline rename", () => {
     expect(
       el.shadowRoot!.querySelector('[part="label"]')!.textContent
     ).to.equal("Old name");
-    // The now-renamable=false row must also not silently expose a rename
+    // The now-without-rename row must also not silently expose a rename
     // button that could reopen a fresh edit.
     expect(el.shadowRoot!.querySelector('[part="rename-button"]') == null).to.be
       .true;
@@ -1298,7 +1317,7 @@ describe("active-state cssprop escape hatch", () => {
   });
 });
 
-describe("compact", () => {
+describe("dense size tier", () => {
   const rowChrome = (el: LyraConversationItem) => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const content = el.shadowRoot!.querySelector(
@@ -1325,7 +1344,7 @@ describe("compact", () => {
       el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement
     );
 
-  it("defaults to compact=false with no compact attribute, rendering identically to .compact=${false} restated", async () => {
+  it('defaults to size="m", rendering identically to size="m" restated', async () => {
     const implicit = await fixtureItem(
       html`<lr-conversation-item
         label="Session"
@@ -1338,12 +1357,12 @@ describe("compact", () => {
         label="Session"
         excerpt="Last message"
         .timestamp=${new Date()}
-        .compact=${false}
+        size="m"
       ></lr-conversation-item>`
     );
 
-    expect(implicit.compact).to.be.false;
-    expect(implicit.hasAttribute("compact")).to.be.false;
+    expect(implicit.size).to.equal("m");
+    expect(implicit.getAttribute("size")).to.equal("m");
     expect(rowChrome(explicit)).to.deep.equal(rowChrome(implicit));
 
     const chrome = rowChrome(implicit);
@@ -1353,16 +1372,16 @@ describe("compact", () => {
     expect(chrome.contentRowGap).to.equal("2px"); // --lr-size-0-125rem
   });
 
-  it("reflects compact and tightens the base padding/gap and the content gap", async () => {
+  it('reflects size="s" and tightens the base padding/gap and the content gap', async () => {
     const el = await fixtureItem(
       html`<lr-conversation-item
-        compact
+        size="s"
         label="Session"
         excerpt="Last message"
         .timestamp=${new Date()}
       ></lr-conversation-item>`
     );
-    expect(el.hasAttribute("compact")).to.be.true;
+    expect(el.getAttribute("size")).to.equal("s");
     const chrome = rowChrome(el);
     expect(chrome.paddingTop).to.equal("4px"); // --lr-space-xs
     expect(chrome.paddingBottom).to.equal("4px");
@@ -1373,10 +1392,10 @@ describe("compact", () => {
     expect(chrome.contentRowGap).to.equal("0px");
   });
 
-  it("lets a consumer retune the compact values through --lr-conversation-item-compact-*", async () => {
+  it("lets a consumer retune the dense values through --lr-conversation-item-compact-*", async () => {
     const el = await fixtureItem(
       html`<lr-conversation-item
-        compact
+        size="s"
         label="Session"
         excerpt="Last message"
       ></lr-conversation-item>`
@@ -1390,13 +1409,13 @@ describe("compact", () => {
     expect(chrome.columnGap).to.equal("5px");
   });
 
-  it("keeps the rename button at the shared --lr-icon-button-size floor under compact", async () => {
+  it("keeps the rename button at the shared --lr-icon-button-size floor at the dense size", async () => {
     const comfortable = await fixtureItem(
       html`<lr-conversation-item label="Session"></lr-conversation-item>`
     );
     const el = await fixtureItem(
       html`<lr-conversation-item
-        compact
+        size="s"
         label="Session"
       ></lr-conversation-item>`
     );
@@ -1416,7 +1435,7 @@ describe("compact", () => {
     expect(compactButton.minBlockSize).to.equal(comfortableButton.minBlockSize);
   });
 
-  it("keeps the active background and the promoted excerpt/timestamp color when compact and active are combined", async () => {
+  it("keeps the active background and the promoted excerpt/timestamp color when the dense size and active are combined", async () => {
     const ts = new Date();
     const activeOnly = await fixtureItem(
       html`<lr-conversation-item
@@ -1431,7 +1450,7 @@ describe("compact", () => {
         label="Session"
         excerpt="Last message"
         .timestamp=${ts}
-        compact
+        size="s"
       ></lr-conversation-item>`
     );
     const both = await fixtureItem(
@@ -1439,12 +1458,12 @@ describe("compact", () => {
         label="Session"
         excerpt="Last message"
         .timestamp=${ts}
-        compact
+        size="s"
         active
       ></lr-conversation-item>`
     );
 
-    // `:host([compact]) [part='base']` and `:host([active]) [part='base']` have equal specificity,
+    // The dense-size `[part='base']` rule and `:host([active]) [part='base']` have equal specificity,
     // so this asserts the source order that lets `active` keep its statement-of-appearance.
     const bothBg = partStyle(both, "base").backgroundColor;
     expect(bothBg).to.equal(partStyle(activeOnly, "base").backgroundColor);
@@ -1456,14 +1475,60 @@ describe("compact", () => {
     expect(partStyle(both, "timestamp").color).to.equal(labelColor);
     expect(partStyle(compactOnly, "excerpt").color).to.not.equal(labelColor);
 
-    // ...and compact still tightened the box.
+    // ...and the dense size still tightened the box.
     expect(rowChrome(both).paddingTop).to.equal("4px");
   });
 
-  it("is accessible in a populated compact state", async () => {
+  it("keeps the deprecated compact alias equal to size=\"s\", warning once", async () => {
+    let el!: LyraConversationItem;
+    let both!: LyraConversationItem;
+    let aliasLast!: LyraConversationItem;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "compact" }],
+      async () => {
+        el = await fixtureItem(
+          html`<lr-conversation-item compact label="Session" excerpt="Last message"></lr-conversation-item>`
+        );
+        both = await fixtureItem(
+          html`<lr-conversation-item compact size="xs" label="Session"></lr-conversation-item>`
+        );
+        aliasLast = await fixtureItem(
+          html`<lr-conversation-item size="l" compact label="Session"></lr-conversation-item>`
+        );
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-conversation-item:property:compact",
+    ]);
+    const canonical = await fixtureItem(
+      html`<lr-conversation-item size="s" label="Session" excerpt="Last message"></lr-conversation-item>`
+    );
+    expect(el.size).to.equal("s");
+    expect(el.compact).to.be.true;
+    expect(rowChrome(el)).to.deep.equal(rowChrome(canonical));
+    expect(both.size, "the later size attribute wins").to.equal("xs");
+    expect(both.compact, "xs reads as compact").to.be.true;
+    expect(aliasLast.size, "the later compact attribute wins").to.equal("s");
+    both.size = "m";
+    await both.updateComplete;
+    expect(both.compact, "the alias syncs back from size").to.be.false;
+    expect(both.hasAttribute("compact")).to.be.false;
+
+    await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "compact" }],
+      async () => {
+        el.compact = false;
+        await el.updateComplete;
+      }
+    );
+    expect(el.size).to.equal("m");
+    expect(rowChrome(el).paddingTop).to.equal("8px");
+  });
+
+  it("is accessible in a populated dense state", async () => {
     const el = await fixtureItem(html`
       <lr-conversation-item
-        compact
+        size="s"
         label="Session"
         excerpt="Last message"
         .timestamp=${new Date()}

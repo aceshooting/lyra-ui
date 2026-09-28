@@ -203,7 +203,7 @@ for (const tag of ['lr-chart', 'lr-line-chart']) {
 it('retains a primitive scatter id on real pointer, keyboard, table, and family activation paths', async () => {
   const el = mountChart('lr-chart') as LyraChart;
   el.type = 'scatter';
-  el.showDataTable = true;
+  el.withDataTable = true;
   el.config = { options: { devicePixelRatio: 2 } };
   el.datasets = [{
     label: 'Listings',
@@ -226,7 +226,7 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
       detail: (event as CustomEvent).detail,
     });
   };
-  el.addEventListener('lr-point-click', receive);
+  el.addEventListener('lr-point-activate', receive);
   el.addEventListener('lr-datum-activate', receive);
 
   try {
@@ -249,18 +249,18 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
     tableButtons[1]!.click();
     tableButtons[2]!.click();
   } finally {
-    el.removeEventListener('lr-point-click', receive);
+    el.removeEventListener('lr-point-activate', receive);
     el.removeEventListener('lr-datum-activate', receive);
     await resetMouse();
   }
 
   expect(activations.map(({ event }) => event)).to.deep.equal([
-    'lr-datum-activate', 'lr-point-click',
-    'lr-datum-activate', 'lr-point-click',
-    'lr-datum-activate', 'lr-point-click',
-    'lr-datum-activate', 'lr-point-click',
-    'lr-datum-activate', 'lr-point-click',
-    'lr-datum-activate', 'lr-point-click',
+    'lr-datum-activate', 'lr-point-activate',
+    'lr-datum-activate', 'lr-point-activate',
+    'lr-datum-activate', 'lr-point-activate',
+    'lr-datum-activate', 'lr-point-activate',
+    'lr-datum-activate', 'lr-point-activate',
+    'lr-datum-activate', 'lr-point-activate',
   ]);
   expect(activations.map(({ detail }) => (detail as { value: unknown }).value)).to.deep.equal([
     { x: 1, y: 2, id: 'listing-7', label: 'Listing 7' },
@@ -283,7 +283,7 @@ it('retains a primitive scatter id on real pointer, keyboard, table, and family 
 it('does not evaluate or expose accessor-backed and structured ids from admitted scatter data', async () => {
   const el = mountChart('lr-chart') as LyraChart;
   el.type = 'scatter';
-  el.showDataTable = true;
+  el.withDataTable = true;
   let getterCalls = 0;
   const largeMetadata = Object.fromEntries(
     Array.from({ length: 100 }, (_, index) => [`field${index}`, `value${index}`]),
@@ -304,7 +304,7 @@ it('does not evaluate or expose accessor-backed and structured ids from admitted
   expect(getterCalls).to.equal(0);
 
   const details: unknown[] = [];
-  el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+  el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
   el.addEventListener('lr-datum-activate', (event) => details.push((event as CustomEvent).detail));
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="data-table"] tbody button')!.click();
 

@@ -6,6 +6,7 @@ import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/number
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './span-waterfall.styles.js';
@@ -100,7 +101,7 @@ export interface LyraSpanWaterfallEventMap {
  * @customElement lr-span-waterfall
  * @event lr-span-select - `detail: { spanId }` — a bar/row was activated (click, Enter, Space).
  * @csspart base - The root wrapper.
- * @csspart axis - The time-ruler row, hidden when `hideAxis`.
+ * @csspart axis - The time-ruler row, hidden when `without-axis` is set.
  * @csspart tick - One axis tick mark.
  * @csspart tick-label - An axis tick's formatted duration label.
  * @csspart row - One span's row.
@@ -176,6 +177,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideAxis: 'withoutAxis',
+  };
+
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
    *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
    *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
@@ -187,6 +192,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
    *  `null` by `viewWindow()` rather than poisoning the axis/bar math with NaN. */
   @property({ type: Number, attribute: 'view-start-ms' }) viewStartMs: number | null = null;
   @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
+  /** Hides the time-ruler row (`[part="axis"]`). */
+  @property({ type: Boolean, attribute: 'without-axis' }) withoutAxis = false;
+  /** Hides the time-ruler row (`[part="axis"]`).
+   *  @deprecated Use `without-axis`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
   @property() label = '';
 
@@ -489,7 +498,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
         aria-label=${hostAriaLabel(this) ?? (this.label || this.localize('spanWaterfall'))}
         @keydown=${this.onKeyDown}
       >
-        ${!this.hideAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
+        ${!this.withoutAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}

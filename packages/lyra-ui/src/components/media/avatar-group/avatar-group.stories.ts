@@ -35,13 +35,13 @@ export const Overflow: Story = {
     docs: {
       description: {
         story:
-          'When there are more `<lr-avatar>` children than `max`, the excess collapse behind a "+N" badge. Clicking the badge fires `lr-overflow-click` with the hidden count/avatars -- it does not itself reveal the hidden avatars (see the class doc for why this deliberately diverges from `<lr-chip-group>`\'s toggle behavior).',
+          'When there are more `<lr-avatar>` children than `max`, the excess collapse behind a "+N" badge. Clicking the badge fires `lr-overflow-activate` with the hidden count/avatars -- it does not itself reveal the hidden avatars (see the class doc for why this deliberately diverges from `<lr-chip-group>`\'s toggle behavior).',
       },
     },
   },
   render: () => html`
-    <lr-avatar-group max="3" label="Team members" @lr-overflow-click=${(e: CustomEvent) =>
-      console.log('lr-overflow-click', e.detail)}>
+    <lr-avatar-group max="3" label="Team members" @lr-overflow-activate=${(e: CustomEvent) =>
+      console.log('lr-overflow-activate', e.detail)}>
       <lr-avatar initials="AB"></lr-avatar>
       <lr-avatar initials="CD"></lr-avatar>
       <lr-avatar initials="EF"></lr-avatar>

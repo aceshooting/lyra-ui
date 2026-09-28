@@ -67,7 +67,7 @@ export const NotEditable: Story = {
       .open=${context.viewMode !== 'docs'}
       tool-name="delete_file"
       .args=${{ path: '/workspace/report-draft.md' }}
-      .editable=${false}
+      readonly
     ></lr-tool-approval-dialog>
   `,
 };
@@ -196,7 +196,7 @@ export const PendingApprovalChrome: Story = {
     <lr-tool-approval-dialog
       .open=${context.viewMode !== 'docs'}
       tool-name="send_email"
-      pending="approve"
+      pending-action="approve"
       .args=${{ to: 'ops@example.com', subject: 'Nightly build failed' }}
     ></lr-tool-approval-dialog>
   `,

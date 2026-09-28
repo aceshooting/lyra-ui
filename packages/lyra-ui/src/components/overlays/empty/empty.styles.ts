@@ -17,15 +17,23 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     inline-size: 100%;
   }
-  :host([compact]) [part='base'] {
+  /* The compact density: size s and the steps below it, or the deprecated compact attribute. One
+     :host([x]) selector per spelling keeps every branch at the same specificity. An authored size
+     outranks compact, so compact only applies while size is absent; that qualifier sits in
+     :where() to add no specificity. */
+  :host([compact]:where(:not([size]))) [part='base'],
+  :host([size='2xs']) [part='base'],
+  :host([size='xs']) [part='base'],
+  :host([size='s']) [part='base'],
+  :host([size='small']) [part='base'] {
     /* One custom property feeds both declarations from different fallback literals; 'center', the
        one realistic override, is valid for both align-items and text-align, so a consumer sets it
        once. */
     align-items: var(--lr-empty-compact-align, flex-start);
     text-align: var(--lr-empty-compact-align, start);
     padding: var(--lr-empty-compact-padding, var(--lr-space-xs));
-    /* Same density-reduction convention as lr-file-input's :host([compact]) rule, modelled on
-       this one: compact must shrink every dimension the base rule sets for this part, not just
+    /* Same density-reduction convention as lr-file-input's compact rule, modelled on this one:
+       the compact density must shrink every dimension the base rule sets for this part, not just
        padding, or the icon/heading/description gap stays pinned at the spacious default. */
     gap: var(--lr-empty-compact-gap, var(--lr-space-2xs));
   }
@@ -48,7 +56,11 @@ export const styles = css`
   [part='heading'][hidden] {
     display: none;
   }
-  :host([compact]) [part='heading'] {
+  :host([compact]:where(:not([size]))) [part='heading'],
+  :host([size='2xs']) [part='heading'],
+  :host([size='xs']) [part='heading'],
+  :host([size='s']) [part='heading'],
+  :host([size='small']) [part='heading'] {
     font-weight: var(--lr-font-weight-normal);
     /* Deliberately no fallback: unset, the declaration is invalid at computed-value time and
        font-size inherits, as it did before this token existed. A var(--lr-font-size-sm) fallback

@@ -7,9 +7,18 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-docx-viewer-highlight-accent-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-highlight-active-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-highlight-danger-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-highlight-neutral-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-highlight-success-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-highlight-warning-background` since `21.1.0`; use css-property `--lr-docx-viewer-highlight-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-search-match-active-background` since `21.1.0`; use css-property `--lr-docx-viewer-search-match-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-search-match-active-foreground` since `21.1.0`; use css-property `--lr-docx-viewer-search-match-active-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-search-match-background` since `21.1.0`; use css-property `--lr-docx-viewer-search-match-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-docx-viewer-table-header-background` since `21.1.0`; use css-property `--lr-docx-viewer-table-header-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,22 +93,29 @@ while the viewer and its composed ancestors are exposed to the accessibility tre
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
-`--lr-docx-viewer-table-header-background` (default `var(--lr-color-brand-quiet)`) retints a
+`--lr-docx-viewer-table-header-bg` (default `var(--lr-color-brand-quiet)`) retints a
 rendered document table's header row (`th`), independent of the highlight backgrounds below.
 Highlight backgrounds are independently themeable with
-`--lr-docx-viewer-highlight-accent-background`,
-`--lr-docx-viewer-highlight-success-background`,
-`--lr-docx-viewer-highlight-warning-background`,
-`--lr-docx-viewer-highlight-danger-background`, and
-`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens --
+`--lr-docx-viewer-highlight-accent-bg`,
+`--lr-docx-viewer-highlight-success-bg`,
+`--lr-docx-viewer-highlight-warning-bg`,
+`--lr-docx-viewer-highlight-danger-bg`, and
+`--lr-docx-viewer-highlight-neutral-bg`, defaulting to the matching quiet color tokens --
 except neutral, which defaults to `var(--lr-color-surface-raised)`: `[part='content']` paints no
 background of its own and therefore shows `[part='base']`'s `--lr-color-surface`, so a neutral
 highlight falling back to that same token would render as unhighlighted.
-`--lr-docx-viewer-highlight-active-background` and
+`--lr-docx-viewer-highlight-active-bg` and
 `--lr-docx-viewer-highlight-active-outline` style the active host highlight.
-`--lr-docx-viewer-search-match-background`,
-`--lr-docx-viewer-search-match-active-background`, and
-`--lr-docx-viewer-search-match-active-foreground` style resting and active search matches.
+`--lr-docx-viewer-search-match-bg`,
+`--lr-docx-viewer-search-match-active-bg`, and
+`--lr-docx-viewer-search-match-active-color` style resting and active search matches.
+Deprecated aliases: `--lr-docx-viewer-table-header-background`,
+`--lr-docx-viewer-highlight-accent-background`, `--lr-docx-viewer-highlight-success-background`,
+`--lr-docx-viewer-highlight-warning-background`, `--lr-docx-viewer-highlight-danger-background`,
+`--lr-docx-viewer-highlight-neutral-background`, `--lr-docx-viewer-highlight-active-background`,
+`--lr-docx-viewer-search-match-background` and `--lr-docx-viewer-search-match-active-background`
+(use the matching `-bg` names) and `--lr-docx-viewer-search-match-active-foreground` (use
+`--lr-docx-viewer-search-match-active-color`); removed in 23.0.0.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`

@@ -6202,7 +6202,7 @@ describe('unknown committed value presentation', () => {
 
   it('retints the open-listbox "not in catalog" badge from --lr-select-option-badge-bg', async () => {
     const el = (await fixture(html`
-      <lr-select value="ghost" show-unknown-option style="--lr-select-option-badge-bg: rgb(1, 2, 3);">
+      <lr-select value="ghost" with-unknown-option style="--lr-select-option-badge-bg: rgb(1, 2, 3);">
         <lr-option value="a">Apple</lr-option>
       </lr-select>
     `)) as LyraSelect;

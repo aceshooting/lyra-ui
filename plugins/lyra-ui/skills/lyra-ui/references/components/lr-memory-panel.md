@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-memory-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -56,8 +56,10 @@ localized `limit` notice after that section's list rather than mounting an unbou
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
+- `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
+'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
+collapsing it. Deprecated alias: `lr-expand` (use `lr-memory-toggle`; fired right after it with an
+equal detail; removed in 23.0.0).
 
 **Slots:** none.
 

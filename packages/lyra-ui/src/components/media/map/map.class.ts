@@ -9,7 +9,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarnOnce, warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
@@ -2596,7 +2596,17 @@ export interface LyraMapLegendPanelToggleDetail {
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-marker-activate': CustomEvent<LyraMapMarkerActivationDetail>;
+  /** Cancelable proposal to change one legend category's visibility. */
+  'lr-map-legend-toggle-request': CustomEvent<LyraMapLegendToggleDetail>;
+  /** @deprecated Use `lr-map-legend-toggle-request`; removal not before 23.0.0. Fired unchanged
+   *  right after it from the same activation, with an equal detail; either event's
+   *  `preventDefault()` vetoes the change. */
   'lr-map-legend-toggle': CustomEvent<LyraMapLegendToggleDetail>;
+  /** Cancelable proposal to open or collapse the legend panel. */
+  'lr-map-legend-panel-toggle-request': CustomEvent<LyraMapLegendPanelToggleDetail>;
+  /** @deprecated Use `lr-map-legend-panel-toggle-request`; removal not before 23.0.0. Fired
+   *  unchanged right after it from the same activation, with an equal detail; either event's
+   *  `preventDefault()` vetoes the change. */
   'lr-map-legend-panel-toggle': CustomEvent<LyraMapLegendPanelToggleDetail>;
   'lr-map-view-change': CustomEvent<LyraMapViewChangeDetail>;
   'lr-map-click': CustomEvent<{
@@ -2648,8 +2658,8 @@ export interface LyraMapEventMap {
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
- * @event lr-map-legend-toggle - **Cancelable.** Fired once when an interactive legend row is
- *   activated by pointer or by Enter/Space, carrying the immutable
+ * @event lr-map-legend-toggle-request - **Cancelable.** Fired once when an interactive legend row
+ *   is activated by pointer or by Enter/Space, carrying the immutable
  *   `detail: { value, visible, hiddenCategories }` -- the activated category key, its proposed
  *   visibility, and the complete proposed hidden set in the order it would be committed.
  *   `preventDefault()` is a real veto: `hiddenCategories` is not written, the row's `aria-pressed`
@@ -2658,15 +2668,24 @@ export interface LyraMapEventMap {
  *   the committed state is `hiddenCategories`, which the host already observes, so a paired
  *   before/after vocabulary would be permanent public surface nobody asked for. A programmatic
  *   `hiddenCategories` assignment reconciles without emitting anything -- this event is a
- *   DOM-interaction proposal only.
- * @event lr-map-legend-panel-toggle - **Cancelable.** Fired once when the `legendCollapsible`
- *   disclosure is activated by pointer or by Enter/Space, carrying the immutable
- *   `detail: { open }` -- the proposed `legendOpen` value. It is the *panel's* disclosure, not a
- *   *category's* visibility, so it deliberately does not reuse `lr-map-legend-toggle`.
- *   `preventDefault()` is a real veto: `legendOpen` is not written, the rendered rows and the
- *   disclosure's `aria-expanded` do not change, which is what lets a host own the open state and
- *   write it itself. A programmatic `legendOpen` assignment reconciles without emitting anything,
- *   so a controlled host cannot loop.
+ *   DOM-interaction proposal only. Fires before `lr-map-legend-toggle`, from the same activation;
+ *   either event may veto.
+ * @event lr-map-legend-toggle - Deprecated cancelable alias of `lr-map-legend-toggle-request`,
+ *   kept firing unchanged right after it with an equal detail; either event may veto, and a veto
+ *   through this alias logs a one-time development warning. Removal not before 23.0.0.
+ * @event lr-map-legend-panel-toggle-request - **Cancelable.** Fired once when the
+ *   `legendCollapsible` disclosure is activated by pointer or by Enter/Space, carrying the
+ *   immutable `detail: { open }` -- the proposed `legendOpen` value. It is the *panel's*
+ *   disclosure, not a *category's* visibility, so it deliberately does not reuse
+ *   `lr-map-legend-toggle-request`. `preventDefault()` is a real veto: `legendOpen` is not
+ *   written, the rendered rows and the disclosure's `aria-expanded` do not change, which is what
+ *   lets a host own the open state and write it itself. A programmatic `legendOpen` assignment
+ *   reconciles without emitting anything, so a controlled host cannot loop. Fires before
+ *   `lr-map-legend-panel-toggle`, from the same activation; either event may veto.
+ * @event lr-map-legend-panel-toggle - Deprecated cancelable alias of
+ *   `lr-map-legend-panel-toggle-request`, kept firing unchanged right after it with an equal
+ *   detail; either event may veto, and a veto through this alias logs a one-time development
+ *   warning. Removal not before 23.0.0.
  * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
  *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
  *   `lngLat`, accepted marker snapshot, and activation `source`.
@@ -2765,10 +2784,10 @@ export interface LyraMapEventMap {
  * author never marked. Each toggle is a native `button`, so it is one independent tab stop per row
  * (a 100-row legend contributes 100, exactly as a 100-series `lr-chart` legend does) and it grows
  * to the shared `--lr-icon-button-size` hit-area floor. Activation emits the cancelable
- * `lr-map-legend-toggle`; there is deliberately no confirmation event, because the committed state
- * is `hiddenCategories` and the host already observes it. A hidden category mutes its points,
- * point strokes and point icons through `--lr-map-hidden-category-opacity`; a `kind: 'heatmap'`
- * entry is deliberately out of scope, having no per-category field to mute.
+ * `lr-map-legend-toggle-request`; there is deliberately no confirmation event, because the
+ * committed state is `hiddenCategories` and the host already observes it. A hidden category mutes
+ * its points, point strokes and point icons through `--lr-map-hidden-category-opacity`; a
+ * `kind: 'heatmap'` entry is deliberately out of scope, having no per-category field to mute.
  *
  * No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection;
  * this prevents a bare component from making an undeclared third-party request.
@@ -2801,7 +2820,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-map-click',
     'lr-map-legend-panel-toggle',
+    'lr-map-legend-panel-toggle-request',
     'lr-map-legend-toggle',
+    'lr-map-legend-toggle-request',
     'lr-map-marker-activate',
     'lr-map-view-change',
   ]);
@@ -3086,7 +3107,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * disconnect and reconnect: the "reset transient open-state in `disconnectedCallback()`" rule
    * covers dropdown/preview/tooltip `@state`, not a documented property a host owns and re-reads.
    * A programmatic assignment reconciles the rendered panel without emitting
-   * `lr-map-legend-panel-toggle`, so a controlled host cannot loop.
+   * `lr-map-legend-panel-toggle-request`, so a controlled host cannot loop.
    */
   @property({ attribute: 'legend-open', reflect: true, converter: trueDefaultBooleanConverter })
   legendOpen = true;
@@ -3107,8 +3128,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private toggleLegendPanel(): void {
     if (!this.legendCollapsible) return;
     const open = !this.legendOpen;
-    const proposal = this.emit('lr-map-legend-panel-toggle', { open }, { cancelable: true });
-    if (proposal.defaultPrevented) return;
+    const proposal = this.emit('lr-map-legend-panel-toggle-request', { open }, { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-map-legend-panel-toggle', { open }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-map-legend-panel-toggle', 'lr-map-legend-panel-toggle-request');
+    }
+    if (proposal.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.legendOpen = open;
   }
 
@@ -5161,13 +5188,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const wasHidden = hidden.includes(value);
     const next = wasHidden ? hidden.filter((key) => key !== value) : [...hidden, value];
     const proposal = this.emit(
-      'lr-map-legend-toggle',
-      { value, visible: wasHidden, hiddenCategories: next },
+      'lr-map-legend-toggle-request',
+      { value, visible: wasHidden, hiddenCategories: [...next] },
       { cancelable: true },
     );
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit(
+      'lr-map-legend-toggle',
+      { value, visible: wasHidden, hiddenCategories: [...next] },
+      { cancelable: true },
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-map-legend-toggle', 'lr-map-legend-toggle-request');
+    }
     // The veto is the absence of a write, not a write that is undone afterwards: a listener that
     // owns the set can assign its own `hiddenCategories` without this handler clobbering it.
-    if (proposal.defaultPrevented) return;
+    if (proposal.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.hiddenCategories = next;
     this.announceLegendVisibility(entry, wasHidden);
   }

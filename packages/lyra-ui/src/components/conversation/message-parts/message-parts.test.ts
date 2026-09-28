@@ -353,21 +353,76 @@ it("a renderPart override for an interactive part type fully replaces its built-
   expect(el.shadowRoot!.querySelectorAll("lr-button").length).to.equal(0);
 });
 
-it("honors false literals for true-default rendering options", async () => {
+it("omits reasoning parts while without-reasoning is set", async () => {
   const el = (await fixture(
     html`<lr-message-parts
       content-mode="plain"
-      show-reasoning="false"
+      without-reasoning
       .parts=${parts.slice(0, 2)}
     ></lr-message-parts>`
   )) as LyraMessageParts;
   expect(el.contentMode).to.equal("plain");
-  expect(el.showReasoning).to.be.false;
+  expect(el.withoutReasoning).to.be.true;
   expect(el.shadowRoot!.querySelectorAll("lr-markdown").length).to.equal(0);
   expect(
     el.shadowRoot!.querySelector('[data-type="text"]')?.textContent
   ).to.contain("Answer");
   expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
+});
+
+it('keeps the deprecated show-reasoning="false" alias equal to without-reasoning, warning once', async () => {
+  let el!: LyraMessageParts;
+  let both!: LyraMessageParts;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-message-parts", kind: "property", name: "showReasoning" }],
+    async () => {
+      el = (await fixture(
+        html`<lr-message-parts
+          content-mode="plain"
+          show-reasoning="false"
+          .parts=${parts.slice(0, 2)}
+        ></lr-message-parts>`
+      )) as LyraMessageParts;
+      both = (await fixture(
+        html`<lr-message-parts show-reasoning without-reasoning .parts=${parts.slice(0, 2)}></lr-message-parts>`
+      )) as LyraMessageParts;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    "lyra-deprecated:lr-message-parts:property:showReasoning",
+  ]);
+  expect(el.withoutReasoning).to.be.true;
+  expect(el.showReasoning).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
+  expect(both.withoutReasoning, "the later without-reasoning attribute wins").to.be.true;
+  expect(both.showReasoning).to.be.false;
+});
+
+it("forwards a showReasoning write, syncs back from without-reasoning, and lets the last write win", async () => {
+  let el!: LyraMessageParts;
+  let both!: LyraMessageParts;
+  await captureDeprecationWarnings(
+    [{ tag: "lr-message-parts", kind: "property", name: "showReasoning" }],
+    async () => {
+      el = (await fixture(
+        html`<lr-message-parts content-mode="plain" .parts=${parts.slice(0, 2)}></lr-message-parts>`
+      )) as LyraMessageParts;
+      el.showReasoning = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-message-parts without-reasoning show-reasoning .parts=${parts.slice(0, 2)}></lr-message-parts>`
+      )) as LyraMessageParts;
+    }
+  );
+  expect(el.withoutReasoning).to.be.true;
+  expect(el.hasAttribute("without-reasoning")).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
+  el.withoutReasoning = false;
+  await el.updateComplete;
+  expect(el.showReasoning).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(1);
+  expect(both.withoutReasoning, "the later show-reasoning attribute wins").to.be.false;
+  expect(both.showReasoning).to.be.true;
 });
 
 it("canonicalizes unsupported content modes to reflected markdown across direct, attribute, and lifecycle writes", async () => {
@@ -477,7 +532,7 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
     attachmentId: string;
     mimeType: string;
     previewSrc: string;
-    previewable: boolean;
+    withoutPreview: boolean;
     status: string;
   };
   const renderer = el.shadowRoot!.querySelector(
@@ -499,9 +554,9 @@ it("uses safe public fallbacks for optional part fields and media sources", asyn
     attachment.attachmentId,
     attachment.mimeType,
     attachment.previewSrc,
-    attachment.previewable,
+    attachment.withoutPreview,
     attachment.status,
-  ]).to.deep.equal(["bare-document", "", "", false, "success"]);
+  ]).to.deep.equal(["bare-document", "", "", true, "success"]);
   expect(renderer.document).to.deep.equal({ version: "2", root: widget });
   await renderer.updateComplete;
   expect(renderer.shadowRoot!.querySelectorAll("lr-stat").length).to.equal(1);
@@ -735,7 +790,7 @@ it("inherits independently rethemeable streaming, transcript, and error state lo
         --lr-message-parts-streaming-color: rgb(1, 2, 3);
         --lr-message-parts-audio-transcript-color: rgb(4, 5, 6);
         --lr-message-parts-error-border-color: rgb(7, 8, 9);
-        --lr-message-parts-error-background: rgb(10, 11, 12);
+        --lr-message-parts-error-bg: rgb(10, 11, 12);
         --lr-message-parts-error-color: rgb(13, 14, 15);
       "
     >
@@ -758,6 +813,22 @@ it("inherits independently rethemeable streaming, transcript, and error state lo
   expect(getComputedStyle(error).borderTopColor).to.equal("rgb(7, 8, 9)");
   expect(getComputedStyle(error).backgroundColor).to.equal("rgb(10, 11, 12)");
   expect(getComputedStyle(error).color).to.equal("rgb(13, 14, 15)");
+});
+
+it("still reads the deprecated --lr-message-parts-error-background alias below -error-bg", async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-message-parts-error-background: rgb(10, 11, 12);">
+      <lr-message-parts .parts=${[parts[8]!]}></lr-message-parts>
+      <lr-message-parts
+        style="--lr-message-parts-error-bg: rgb(1, 2, 3);"
+        .parts=${[parts[8]!]}
+      ></lr-message-parts>
+    </div>
+  `)) as HTMLDivElement;
+  const [alias, both] = [...wrapper.querySelectorAll("lr-message-parts")] as LyraMessageParts[];
+  const errorOf = (el: LyraMessageParts) => el.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+  expect(getComputedStyle(errorOf(alias!)).backgroundColor).to.equal("rgb(10, 11, 12)");
+  expect(getComputedStyle(errorOf(both!)).backgroundColor).to.equal("rgb(1, 2, 3)");
 });
 
 it("announces only newly added error parts through the shared assertive light-DOM sink", async () => {
@@ -1371,10 +1442,33 @@ describe('lr-message-parts deprecated code-block-chrome spelling', () => {
       'lyra-deprecated:lr-message-parts:property:codeBlockChrome',
     ]);
     expect(warnings[0]!.message).to.contain('code-block-header');
+    // The inner lr-markdown receives only the canonical codeBlockHeader; its own deprecated
+    // codeBlockChrome follows silently.
     expect(forwarded).to.deep.equal([
-      { chrome: false, header: true },
-      { chrome: false, header: true },
+      { chrome: true, header: true },
+      { chrome: true, header: true },
     ]);
+  });
+
+  it('keeps code-block-chrome and code-block-header in step, the last write winning', async () => {
+    let el!: Parts;
+    let both!: Parts;
+    await captureDeprecationWarnings(usages, async () => {
+      el = await fixture<Parts>(html`<lr-message-parts .parts=${fencedParts}></lr-message-parts>`);
+      el.codeBlockChrome = true;
+      await el.updateComplete;
+      both = await fixture<Parts>(
+        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
+      );
+      both.codeBlockHeader = false;
+      await both.updateComplete;
+    });
+    expect(el.codeBlockHeader, 'an alias write reaches the canonical').to.equal(true);
+    el.codeBlockHeader = false;
+    await el.updateComplete;
+    expect(el.codeBlockChrome, 'a canonical write syncs back to the alias').to.equal(false);
+    expect(both.codeBlockChrome, 'the later canonical write wins').to.equal(false);
+    await waitUntil(() => headerCounts(both).join() === '0,0', 'headers were never removed', { timeout: 5000 });
   });
 
   it('never warns for code-block-header', async () => {

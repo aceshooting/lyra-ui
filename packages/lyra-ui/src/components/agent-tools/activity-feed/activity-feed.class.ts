@@ -3,7 +3,8 @@ import { property, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraVariant, type LyraSize } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -72,6 +73,12 @@ export interface LyraActivityFeedEventMap {
  *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /** The variant dot's `part` list: the shared `variant-dot` name plus a variant-specific one. Shadow
  *  Parts forbids an attribute selector after `::part()`, so
  *  `::part(variant-dot)[data-variant='success']` is invalid CSS and the variant would be unstylable
@@ -128,11 +135,11 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * back to `renderText`, so a host needing the original source record behind a rendered line does
  * not have to re-derive it by re-scanning its own source array on every render.
  *
- * `compact` tightens the header and entry-row padding for dense transcript rows. `frame="plain"`
+ * `size="s"` tightens the header and entry-row padding for dense transcript rows. `frame="plain"`
  * removes the outside card chrome when a containing message or panel already supplies it; the
  * header/body divider remains, so the disclosure keeps its internal structure -- the same two-knob
  * convention `<lr-thinking-panel>` and `<lr-confirm-bar>` already establish. The card's own paint
- * is retunable without a `::part(base)` override through `--lr-activity-feed-background`,
+ * is retunable without a `::part(base)` override through `--lr-activity-feed-bg`,
  * `--lr-activity-feed-border-color` and `--lr-activity-feed-radius`; each is an inline `var()`
  * fallback at its point of use, so an unset feed renders exactly as before and any of the three can
  * be set on the feed or on an ancestor transcript.
@@ -174,27 +181,28 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart variant-dot-danger - A `danger`-variant entry's dot (also carries `variant-dot`).
  * @csspart entry-text - The entry's text styling wrapper. `renderText`, when set, supplies rich
  *   content inside this stable part instead of replacing the part itself.
- * @csspart entry-timestamp - The formatted timestamp, only rendered while `showTimestamps` and a
+ * @csspart entry-timestamp - The formatted timestamp, only rendered while `with-timestamps` and a
  *   valid `timestamp` is set.
  * @cssprop [--lr-activity-feed-max-height=16rem] - Cap on how tall the expanded body grows
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
  * @cssprop [--lr-activity-feed-live-status-color=var(--lr-color-brand)] - Background color of
  *   `status-dot` while `mode="live"`.
  * @cssprop [--lr-activity-feed-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
- *   `[part="header"]` padding while `compact`.
+ *   `[part="header"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-activity-feed-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
- *   toggle, status dot, label, and summary while `compact`.
+ *   toggle, status dot, label, and summary while `size` is `s` or smaller.
  * @cssprop [--lr-activity-feed-compact-entry-padding=var(--lr-space-2xs) var(--lr-space-s)] -
- *   `[part="entry"]` padding while `compact`.
+ *   `[part="entry"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-activity-feed-compact-entry-gap=var(--lr-space-2xs)] - Gap between an entry's
- *   icon/dot and its label/timestamp while `compact`.
+ *   icon/dot and its label/timestamp while `size` is `s` or smaller.
  * @cssprop [--lr-activity-feed-entry-text-link-color=var(--lr-color-brand)] - Colour of an anchor
  *   returned from `renderText`. Such an anchor renders inside this component's shadow root (or
  *   the internal `<lr-virtual-list>`'s, once virtualized), so page CSS cannot reach it and
  *   `::part()` cannot select past the first compound selector to reach it either; without this
  *   hook it computes to the UA default link blue. Set `revert` for the UA default.
- * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Fill of the outer card
+ * @cssprop [--lr-activity-feed-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Deprecated alias of `--lr-activity-feed-bg`; removal not before 23.0.0.
  * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-activity-feed-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -228,6 +236,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+    showTimestamps: 'withTimestamps',
+  };
 
   /** Append-only: stable ids, new entries at the end. Entries never change state once added.
    *  Empty/blank ids are omitted and duplicates normalize first-wins before summary,
@@ -269,18 +282,31 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  `activityFeedLabel` fallback, while this remains the visible header text. */
   @property() label?: string;
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the header and
+   * entry-row padding and gap for dense transcript contexts; `m` (the default) and larger keep the
+   * regular density. This changes density only; the outer border and surface remain, so use
+   * `frame="plain"` to remove card chrome.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   /** Tighter header and entry-row padding and gap for dense transcript contexts. Defaults to
    *  `false`, preserving the regular-density treatment. This changes density only; the outer
-   *  border and surface remain, so use `frame="plain"` to remove card chrome. */
+   *  border and surface remain, so use `frame="plain"` to remove card chrome.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
    *  and corner radius so a feed nested inside existing message chrome does not double it. Plain
-   *  preserves the header/body divider and whichever regular or compact padding applies. */
+   *  preserves the header/body divider and whichever regular or dense padding applies. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
+  @property({ type: Boolean, attribute: 'with-timestamps' }) withTimestamps = false;
+
+  /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`.
+   *  @deprecated Use `with-timestamps`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
 
   /** Overrides the default `hour:minute` rendering of every entry's `timestamp`. */
@@ -743,7 +769,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
           >${entry.icon ? entry.icon : html`<span part=${dotPart} data-variant=${variant}></span>`}</span
         >
         <span part="entry-text">${this.renderText ? this.renderText(entry) : entry.text}</span>
-        ${this.showTimestamps && ts
+        ${this.withTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
           : nothing}
       </div>

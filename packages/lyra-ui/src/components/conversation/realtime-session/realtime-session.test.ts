@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './realtime-session.js';
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
   return Array.from(
@@ -283,7 +284,7 @@ it('moves focus from a nested capture control when the connected controls are re
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
 });
 
-it('moves focus from the capture control when showCapture removes it without a state change', async () => {
+it('moves focus from the capture control when withoutCapture removes it without a state change', async () => {
   const el = (await fixture(
     html`<lr-realtime-session state="connected"></lr-realtime-session>`
   )) as LyraRealtimeSession;
@@ -295,10 +296,64 @@ it('moves focus from the capture control when showCapture removes it without a s
   trigger.disabled = false;
   trigger.focus();
 
-  el.showCapture = false;
+  el.withoutCapture = true;
   await el.updateComplete;
 
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
+});
+
+it('keeps the deprecated show-capture alias equal to without-capture, warning once', async () => {
+  let el!: LyraRealtimeSession;
+  let both!: LyraRealtimeSession;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: 'lr-realtime-session', kind: 'property', name: 'showCapture' }],
+    async () => {
+      el = (await fixture(
+        html`<lr-realtime-session state="connected" show-capture="false"></lr-realtime-session>`
+      )) as LyraRealtimeSession;
+      both = (await fixture(
+        html`<lr-realtime-session state="connected" show-capture without-capture></lr-realtime-session>`
+      )) as LyraRealtimeSession;
+      expect(el.withoutCapture).to.be.true;
+      expect(el.showCapture).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="capture"]') === null).to.equal(true);
+      el.removeAttribute('show-capture');
+      await el.updateComplete;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    'lyra-deprecated:lr-realtime-session:property:showCapture',
+  ]);
+  expect(both.withoutCapture, 'the later without-capture attribute wins').to.be.true;
+  expect(both.showCapture).to.be.false;
+  expect(el.withoutCapture).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="capture"]') !== null).to.equal(true);
+});
+
+it('forwards a showCapture write, syncs back from withoutCapture, and lets the last write win', async () => {
+  let el!: LyraRealtimeSession;
+  let both!: LyraRealtimeSession;
+  await captureDeprecationWarnings(
+    [{ tag: 'lr-realtime-session', kind: 'property', name: 'showCapture' }],
+    async () => {
+      el = (await fixture(
+        html`<lr-realtime-session state="connected"></lr-realtime-session>`
+      )) as LyraRealtimeSession;
+      el.showCapture = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-realtime-session without-capture show-capture></lr-realtime-session>`
+      )) as LyraRealtimeSession;
+    }
+  );
+  expect(el.withoutCapture).to.be.true;
+  expect(el.hasAttribute('without-capture')).to.equal(true);
+  el.withoutCapture = false;
+  await el.updateComplete;
+  expect(el.showCapture).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="capture"]') !== null).to.equal(true);
+  expect(both.withoutCapture, 'the later show-capture attribute wins').to.be.false;
+  expect(both.showCapture).to.be.true;
 });
 
 it('moves focus from capture to the visible Unmute action when muting disables capture', async () => {
@@ -337,13 +392,13 @@ it('does not move foreign focus when mute state changes', async () => {
   expect(el.ownerDocument.activeElement?.id).to.equal('outside');
 });
 
-it('does not move a surviving session action when showCapture changes', async () => {
+it('does not move a surviving session action when withoutCapture changes', async () => {
   const el = (await fixture(
     html`<lr-realtime-session state="connected"></lr-realtime-session>`
   )) as LyraRealtimeSession;
   (el.shadowRoot!.querySelector('[part="mute"]') as HTMLButtonElement).focus();
 
-  el.showCapture = false;
+  el.withoutCapture = true;
   await el.updateComplete;
 
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('mute');
@@ -354,7 +409,7 @@ it('preserves action focus from a genuinely foreign descendant after adoption', 
   document.body.append(iframe);
   const frameDocument = iframe.contentDocument!;
   const el = (await fixture(
-    html`<lr-realtime-session state="connected" .showCapture=${false}></lr-realtime-session>`
+    html`<lr-realtime-session state="connected" without-capture></lr-realtime-session>`
   )) as LyraRealtimeSession;
 
   try {

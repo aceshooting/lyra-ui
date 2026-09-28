@@ -4,6 +4,10 @@ import type { LyraEntityCard, LyraEntity } from './entity-card.js';
 import { styles } from './entity-card.styles.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const entity: LyraEntity = {
   id: 'e1',
@@ -157,27 +161,27 @@ it('fires lr-entity-select exactly once from one click', async () => {
   expect(selectCount).to.equal(1);
 });
 
-it('hides the focus button when showFocusButton is false', async () => {
+it('hides the focus button when withoutFocusButton is set', async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
   el.entity = entity;
-  el.showFocusButton = false;
+  el.withoutFocusButton = true;
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelectorAll('[part="focus-button"]').length
   ).to.equal(0);
 });
 
-it('show-focus-button="false" (plain HTML attribute) also hides the focus button', async () => {
+it('without-focus-button (plain HTML attribute) also hides the focus button', async () => {
   const el = (await fixture(
     html`<lr-entity-card
-      show-focus-button="false"
+      without-focus-button
       .entity=${entity}
     ></lr-entity-card>`
   )) as LyraEntityCard;
   await el.updateComplete;
-  expect(el.showFocusButton).to.be.false;
+  expect(el.withoutFocusButton).to.be.true;
   expect(
     el.shadowRoot!.querySelectorAll('[part="focus-button"]').length
   ).to.equal(0);
@@ -209,21 +213,21 @@ const baseChrome = (el: LyraEntityCard) => {
   };
 };
 
-it('defaults to compact=false and frame="card", rendering identically to those values restated', async () => {
+it('defaults to size="m" and frame="card", rendering identically to those values restated', async () => {
   const implicit = (await fixture(
     html`<lr-entity-card .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
   const explicit = (await fixture(
     html`<lr-entity-card
       frame="card"
-      .compact=${false}
+      size="m"
       .entity=${entity}
     ></lr-entity-card>`
   )) as LyraEntityCard;
 
-  expect(implicit.compact).to.be.false;
+  expect(implicit.size).to.equal('m');
   expect(implicit.frame).to.equal('card');
-  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(implicit.getAttribute('size')).to.equal('m');
   expect(implicit.getAttribute('frame')).to.equal('card');
 
   expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
@@ -235,11 +239,11 @@ it('defaults to compact=false and frame="card", rendering identically to those v
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+it('reflects size="s" and tightens the base padding/gap, keeping the card border', async () => {
   const el = (await fixture(
-    html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`
+    html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
-  expect(el.hasAttribute('compact')).to.be.true;
+  expect(el.getAttribute('size')).to.equal('s');
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s
   expect(chrome.rowGap).to.equal('4px'); // --lr-space-xs
@@ -247,9 +251,9 @@ it('reflects compact and tightens the base padding/gap, keeping the card border'
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('lets a consumer retune the compact values through --lr-entity-card-compact-*', async () => {
+it('lets a consumer retune the dense-tier values through --lr-entity-card-compact-*', async () => {
   const el = (await fixture(
-    html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`
+    html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`
   )) as LyraEntityCard;
   el.style.setProperty('--lr-entity-card-compact-padding', '3px');
   el.style.setProperty('--lr-entity-card-compact-gap', '5px');
@@ -319,10 +323,10 @@ it('ignores a stale appearance="plain", leaving the card chrome intact', async (
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('lets plain win over compact when both are set', async () => {
+it('lets plain win over size="s" when both are set', async () => {
   const el = (await fixture(
     html`<lr-entity-card
-      compact
+      size="s"
       frame="plain"
       .entity=${entity}
     ></lr-entity-card>`
@@ -332,10 +336,10 @@ it('lets plain win over compact when both are set', async () => {
   expect(chrome.borderTopWidth).to.equal('0px');
 });
 
-it('is accessible in the populated compact and plain states', async () => {
+it('is accessible in the populated size="s" and plain states', async () => {
   const compactEl = (await fixture(
     html`<lr-entity-card
-      compact
+      size="s"
       .entity=${entity}
       .types=${types}
       community-label="Nobel laureates"
@@ -466,4 +470,145 @@ it('routes forced-color badge paint back through the system-owned semantic token
   } finally {
     await setForcedColors('none');
   }
+});
+
+describe('lr-entity-card deprecated show-focus-button alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'showFocusButton' }];
+  const observe = (el: LyraEntityCard): string => String(el.shadowRoot!.querySelectorAll('[part="focus-button"]').length);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
+
+  it('applies without-focus-button without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
+      plain = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-focus-button="false" equal to without-focus-button, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
+      alias = observe(await mount(html`<lr-entity-card .entity=${entity} show-focus-button="false"></lr-entity-card>`));
+      const el = await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`);
+      el.showFocusButton = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutFocusButton, el.showFocusButton, el.hasAttribute('show-focus-button')];
+      // The canonical property syncs back into the alias.
+      el.withoutFocusButton = false;
+      await el.updateComplete;
+      readback.push(el.showFocusButton, el.hasAttribute('show-focus-button'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-entity-card:property:showFocusButton',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-focus-button');
+  });
+
+  it('restores the default when show-focus-button is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
+      const el = await mount(html`<lr-entity-card .entity=${entity} show-focus-button="false"></lr-entity-card>`);
+      el.showFocusButton = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showFocusButton = false;
+      await el.updateComplete;
+      el.removeAttribute('show-focus-button');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
+      const el = await mount(html`<lr-entity-card .entity=${entity} show-focus-button without-focus-button></lr-entity-card>`);
+      expect(el.withoutFocusButton).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-entity-card .entity=${entity} without-focus-button show-focus-button></lr-entity-card>`);
+      expect(reversed.withoutFocusButton, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
+  });
+});
+
+describe('lr-entity-card size and the deprecated compact alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'compact' }];
+  const observe = (el: LyraEntityCard): string => {
+    const chrome = baseChrome(el);
+    return `${chrome.paddingTop}|${chrome.rowGap}`;
+  };
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
+
+  it('applies size="s" without a deprecation warning', async () => {
+    let dense = '';
+    let regular = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      dense = observe(await mount(html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`));
+      regular = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
+    });
+    expect(dense).to.equal('8px|4px');
+    expect(regular).to.equal('12px|8px');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`));
+      alias = observe(await mount(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`));
+      const el = await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-entity-card:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
+      const el = await mount(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-entity-card compact size="m" .entity=${entity}></lr-entity-card>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
+  });
 });

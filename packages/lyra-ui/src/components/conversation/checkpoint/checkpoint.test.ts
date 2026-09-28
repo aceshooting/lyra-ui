@@ -2,13 +2,14 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './checkpoint.js';
 import type { LyraCheckpoint } from './checkpoint.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
-it('defaults to checkpointId="", label="", restorable=true, confirmRestore=true, restoring=false', async () => {
+it('defaults to checkpointId="", label="", withoutRestore=false, withoutRestoreConfirmation=false, restoring=false', async () => {
   const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
   expect(el.checkpointId).to.equal('');
   expect(el.label).to.equal('');
-  expect(el.restorable).to.be.true;
-  expect(el.confirmRestore).to.be.true;
+  expect(el.withoutRestore).to.be.false;
+  expect(el.withoutRestoreConfirmation).to.be.false;
   expect(el.restoring).to.be.false;
 });
 
@@ -59,16 +60,81 @@ it('formats timestamps with the component locale', async () => {
   expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal(expected);
 });
 
-it('renders no restore button when restorable=false, as a plain marker', async () => {
-  const el = (await fixture(html`<lr-checkpoint restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
-  expect(el.restorable).to.be.false;
+it('renders no restore button while without-restore is set, as a plain marker', async () => {
+  const el = (await fixture(html`<lr-checkpoint without-restore></lr-checkpoint>`)) as LyraCheckpoint;
+  expect(el.withoutRestore).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
 });
 
-it('accepts confirm-restore="false" as a plain-HTML attribute string', async () => {
-  const el = (await fixture(html`<lr-checkpoint confirm-restore="false"></lr-checkpoint>`)) as LyraCheckpoint;
-  expect(el.confirmRestore).to.be.false;
+describe('deprecated restorable / confirm-restore aliases', () => {
+  it('restorable="false" equals without-restore and warns once', async () => {
+    let el!: LyraCheckpoint;
+    let both!: LyraCheckpoint;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-checkpoint', kind: 'property', name: 'restorable' }],
+      async () => {
+        el = (await fixture(html`<lr-checkpoint restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
+        both = (await fixture(html`<lr-checkpoint without-restore restorable="true"></lr-checkpoint>`)) as LyraCheckpoint;
+      },
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      'lyra-deprecated:lr-checkpoint:property:restorable',
+    ]);
+    expect(el.withoutRestore).to.be.true;
+    expect(el.restorable).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="restore-button"]') == null).to.be.true;
+    expect(both.withoutRestore, 'the later restorable attribute wins').to.be.false;
+    expect(both.restorable).to.be.true;
+  });
+
+  it('restorable syncs back from without-restore, and the last write wins', async () => {
+    let el!: LyraCheckpoint;
+    await captureDeprecationWarnings([{ tag: 'lr-checkpoint', kind: 'property', name: 'restorable' }], async () => {
+      el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+      el.restorable = false;
+      await el.updateComplete;
+    });
+    expect(el.withoutRestore).to.be.true;
+    expect(el.hasAttribute('without-restore')).to.be.false;
+    el.withoutRestore = false;
+    await el.updateComplete;
+    expect(el.restorable).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="restore-button"]') == null).to.be.false;
+  });
+
+  it('confirm-restore="false" equals without-restore-confirmation and warns once', async () => {
+    let el!: LyraCheckpoint;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-checkpoint', kind: 'property', name: 'confirmRestore' }],
+      async () => {
+        el = (await fixture(
+          html`<lr-checkpoint checkpoint-id="ck_2" label="Snapshot" confirm-restore="false"></lr-checkpoint>`,
+        )) as LyraCheckpoint;
+      },
+    );
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.withoutRestoreConfirmation).to.be.true;
+    expect(el.confirmRestore).to.be.false;
+    const firing = oneEvent(el, 'lr-restore');
+    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+    const event = await firing;
+    expect((event as CustomEvent).detail).to.deep.equal({ checkpointId: 'ck_2', label: 'Snapshot' });
+  });
+
+  it('confirmRestore syncs back from without-restore-confirmation, and the last write wins', async () => {
+    let el!: LyraCheckpoint;
+    await captureDeprecationWarnings([{ tag: 'lr-checkpoint', kind: 'property', name: 'confirmRestore' }], async () => {
+      el = (await fixture(html`<lr-checkpoint without-restore-confirmation></lr-checkpoint>`)) as LyraCheckpoint;
+      expect(el.confirmRestore).to.be.false;
+      el.confirmRestore = true;
+      await el.updateComplete;
+    });
+    expect(el.withoutRestoreConfirmation, 'the later alias write wins').to.be.false;
+    el.withoutRestoreConfirmation = true;
+    await el.updateComplete;
+    expect(el.confirmRestore).to.be.false;
+  });
 });
 
 it('has an accessible name with context distinct from its visible text', async () => {
@@ -137,7 +203,7 @@ describe('restoring state', () => {
   });
 });
 
-describe('confirm flow (confirmRestore=true, the default)', () => {
+describe('confirm flow (the default)', () => {
   it('swaps to a confirm prompt on Restore click, instead of immediately firing lr-restore', async () => {
     const el = (await fixture(html`<lr-checkpoint checkpoint-id="ck_1" label="Before refactor"></lr-checkpoint>`)) as LyraCheckpoint;
     let fired = false;
@@ -175,10 +241,10 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
   it('abandons confirmation when configuration becomes incompatible', async () => {
     const cases: Array<(element: LyraCheckpoint) => void> = [
       (element) => {
-        element.restorable = false;
+        element.withoutRestore = true;
       },
       (element) => {
-        element.confirmRestore = false;
+        element.withoutRestoreConfirmation = true;
       },
       (element) => {
         element.restoring = true;
@@ -341,7 +407,7 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
 
 it('forwards host click to Restore only while the primary action is available', async () => {
   const immediate = (await fixture(
-    html`<lr-checkpoint confirm-restore="false"></lr-checkpoint>`,
+    html`<lr-checkpoint without-restore-confirmation></lr-checkpoint>`,
   )) as LyraCheckpoint;
   let count = 0;
   immediate.addEventListener('lr-restore', () => count++);
@@ -351,7 +417,7 @@ it('forwards host click to Restore only while the primary action is available', 
   immediate.restoring = true;
   immediate.click();
   immediate.restoring = false;
-  immediate.restorable = false;
+  immediate.withoutRestore = true;
   immediate.click();
   expect(count).to.equal(1);
 
@@ -363,10 +429,10 @@ it('forwards host click to Restore only while the primary action is available', 
   expect(count).to.equal(1);
 });
 
-describe('confirmRestore=false', () => {
+describe('without-restore-confirmation', () => {
   it('fires lr-restore immediately on Restore click, with no confirm swap at all', async () => {
     const el = (await fixture(
-      html`<lr-checkpoint checkpoint-id="ck_2" label="Snapshot" confirm-restore="false"></lr-checkpoint>`,
+      html`<lr-checkpoint checkpoint-id="ck_2" label="Snapshot" without-restore-confirmation></lr-checkpoint>`,
     )) as LyraCheckpoint;
     const firing = oneEvent(el, 'lr-restore');
     (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
@@ -413,6 +479,6 @@ it('is accessible mid-confirm', async () => {
 });
 
 it('is accessible non-restorable', async () => {
-  const el = (await fixture(html`<lr-checkpoint label="Before refactor" restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
+  const el = (await fixture(html`<lr-checkpoint label="Before refactor" without-restore></lr-checkpoint>`)) as LyraCheckpoint;
   await expect(el).to.be.accessible();
 });

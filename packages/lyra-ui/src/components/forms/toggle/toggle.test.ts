@@ -347,7 +347,7 @@ describe('<lr-toggle>', () => {
     const neutral = await fixture<LyraToggle>(html`<lr-toggle pressed>Neutral</lr-toggle>`);
     const brand = await fixture<LyraToggle>(html`<lr-toggle pressed variant="brand">Brand</lr-toggle>`);
     const probe = await fixture<LyraToggle>(
-      html`<lr-toggle style="--lr-toggle-background: var(--lr-color-brand-fill-quiet)">Probe</lr-toggle>`,
+      html`<lr-toggle style="--lr-toggle-bg: var(--lr-color-brand-fill-quiet)">Probe</lr-toggle>`,
     );
     const neutralFill = getComputedStyle(control(neutral)).backgroundColor;
     const brandFill = getComputedStyle(control(brand)).backgroundColor;
@@ -404,12 +404,49 @@ describe('<lr-toggle>', () => {
           html`<lr-toggle pressed variant=${variant} data-lr-theme=${theme}>Bold</lr-toggle>`,
         );
         const surface = await fixture<LyraToggle>(
-          html`<lr-toggle data-lr-theme=${theme} style="--lr-toggle-background: var(--lr-color-surface)">S</lr-toggle>`,
+          html`<lr-toggle data-lr-theme=${theme} style="--lr-toggle-bg: var(--lr-color-surface)">S</lr-toggle>`,
         );
         const border = getComputedStyle(control(el)).borderTopColor;
         const background = getComputedStyle(control(surface)).backgroundColor;
         expect(contrast(border, background), `${variant} ${theme}: ${border} on ${background}`).to.be.at.least(3);
       }
+    });
+  }
+
+  for (const [name, style] of [
+    ['canonical -bg', '--lr-toggle-bg: rgb(1, 2, 3); --lr-toggle-hover-bg: rgb(4, 5, 6);'],
+    ['deprecated -background', '--lr-toggle-background: rgb(1, 2, 3); --lr-toggle-hover-background: rgb(4, 5, 6);'],
+    [
+      'canonical over deprecated',
+      '--lr-toggle-bg: rgb(1, 2, 3); --lr-toggle-hover-bg: rgb(4, 5, 6); --lr-toggle-background: rgb(9, 9, 9); --lr-toggle-hover-background: rgb(8, 8, 8);',
+    ],
+  ] as const) {
+    it(`paints the resting and hover fills from the ${name} properties`, async () => {
+      const el = await fixture<LyraToggle>(
+        html`<lr-toggle style=${`--lr-transition-fast: 0s; ${style}`}>Bold</lr-toggle>`,
+      );
+      const button = control(el);
+      expect(getComputedStyle(button).backgroundColor).to.equal('rgb(1, 2, 3)');
+      try {
+        await hoverUntilMatched(button, 'the pointer never hovered the toggle');
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === 'rgb(4, 5, 6)',
+          `${name} hover fill never rendered`,
+        );
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  for (const [name, style] of [
+    ['canonical --lr-toggle-pressed-bg', '--lr-toggle-pressed-bg: rgb(1, 2, 3)'],
+    ['deprecated --lr-toggle-pressed-background', '--lr-toggle-pressed-background: rgb(1, 2, 3)'],
+    ['canonical over deprecated', '--lr-toggle-pressed-bg: rgb(1, 2, 3); --lr-toggle-pressed-background: rgb(9, 9, 9)'],
+  ] as const) {
+    it(`paints the pressed fill from the ${name} property`, async () => {
+      const el = await fixture<LyraToggle>(html`<lr-toggle pressed style=${style}>Bold</lr-toggle>`);
+      expect(getComputedStyle(control(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
     });
   }
 

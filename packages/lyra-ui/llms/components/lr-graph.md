@@ -7,9 +7,18 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-link-color` since `21.1.0`; use css-property `--lr-graph-edge-color`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated css-property** `--lr-node-fill` since `21.1.0`; use css-property `--lr-graph-node-fill`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated event** `lr-link-enter` since `21.1.0`; use event `addEventListener('lr-edge-enter', ...)`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated event** `lr-link-leave` since `21.1.0`; use event `addEventListener('lr-edge-leave', ...)`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `dimmedLinkIds` since `21.1.0`; use property `dimmedEdgeIds`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `linkDistance` / `link-distance` since `21.1.0`; use property `edge-distance`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `selectedLinkIds` since `21.1.0`; use property `selectedEdgeIds`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `showEdgeLabels` / `show-edge-labels` since `21.1.0`; use property `with-edge-labels`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,11 +27,11 @@
 
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
-A zero-width canvas link paints neither a stroke nor an arrowhead; its relationship remains in the
+A zero-width canvas edge paints neither a stroke nor an arrowhead; its relationship remains in the
 nonvisual topology summary.
 
-In both renderers, roving navigation transfers real focus through nodes, operable links, then
-community hulls; zero-width, fully transparent, and dangling links remain outside that focus order.
+In both renderers, roving navigation transfers real focus through nodes, operable edges, then
+community hulls; zero-width, fully transparent, and dangling edges remain outside that focus order.
 
 **Properties:**
 
@@ -41,30 +50,32 @@ color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraG
   Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
   `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
   `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
-  `--lr-node-fill` default; both data-driven color sources are sanitized the same way as
+  `--lr-graph-node-fill` default; both data-driven color sources are sanitized the same way as
   `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
 - `hiddenTypes: string[] = []` (attribute: false) — hides nodes whose raw `type` is listed and every
-  incident link from rendering, layout, keyboard navigation, the data-list alternative, and the
+  incident edge from rendering, layout, keyboard navigation, the data-list alternative, and the
   accessible counts. Hidden positions are retained by id, so showing a type restores its prior
   layout even when no matching `nodeTypes` entry exists
-- `links: LyraGraphLink[] = []` (attribute: false) — readonly `LyraGraphLink { id?: string; source: string; target:
+- `edges: LyraGraphEdge[] = []` (attribute: false) — readonly `LyraGraphEdge { id?: string; source: string; target:
 string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
 boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
-  value uses `1.5`. A zero-width or fully transparent link remains in the nonvisual topology
+  value uses `1.5`. A zero-width or fully transparent edge remains in the nonvisual topology
   summary but is excluded from pointer picking and keyboard navigation, so invisible geometry never
-  becomes an operable control. A link whose `source` id doesn't resolve to a real node is still dropped entirely
-  (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
+  becomes an operable control. An edge whose `source` id doesn't resolve to a real node is still dropped entirely
+  (there's no position to draw a stub from). An edge whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
-  `d3-force`'s own simulation input and from click/keyboard interaction.
+  `d3-force`'s own simulation input and from click/keyboard interaction. Deprecated alias: `links`
+  (use `edges`; removed in 23.0.0). The exported `LyraGraphLink` interface is likewise deprecated
+  in favor of the structurally identical `LyraGraphEdge`
 - `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
-  `'none'` uses the numeric `width`/`height` below, unchanged. `'container'` measures the host's own
+  `'none'` uses the requested `width`/`height` below, unchanged. `'container'` measures the host's own
   content box and feeds that to the SVG `viewBox`, the layout's centring force,
   `focusNode()`/`fit()`'s camera math and the loading skeleton, so the drawing always matches the box
   it is rendered into and no host-side `ResizeObserver` is needed. The first measurement is taken
@@ -78,44 +89,48 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   **not** change how the host itself is sized — an outer `block-size`,
   `--lr-canvas-reserved-height` and `height` still do that, and `'container'` simply follows
   whichever of them won
-- `width: number = 800` — ignored while `fitTo` is `'container'`
-- `height: number = 600` — also sizes the rendered host itself (see
+- `width: number | string = 800` — a number of CSS pixels, or a CSS length in `px`, `rem`, `em`,
+  `vw` or `vh` resolved to pixels when the drawing space is laid out (`rem` against the root font
+  size, `em` against the element's own); any other value uses the default. Ignored while `fitTo` is
+  `'container'`
+- `height: number | string = 600` — the same forms as `width`; also sizes the rendered host itself (see
   `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
   `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
   host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
-- `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
+- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas). Deprecated
+  alias: `link-distance`/`linkDistance` (use `edge-distance`; removed in 23.0.0)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
   inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
-  its localized node/link-count fallback
+  its localized node/edge-count fallback
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
-- `showEdgeLabels: boolean = false` (attribute `show-edge-labels`) — draws each resolved
-  (non-dangling) link's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
-  Off by default: `LyraGraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
-  this is set
+- `withEdgeLabels: boolean = false` (attribute `with-edge-labels`) — draws each resolved
+  (non-dangling) edge's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
+  Off by default: `LyraGraphEdge.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
+  this is set. Deprecated alias: `show-edge-labels`/`showEdgeLabels` (use `with-edge-labels`; removed in 23.0.0)
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
-  not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `showEdgeLabels` is
+  not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `withEdgeLabels` is
   `false`
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
   `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
   canvas-declutter zoom threshold used before this property existed (toggled via a
   `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
-  `showEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
+  `withEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
   them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —
   `'always'` for `renderer="svg"`, `'zoom'` for `renderer="canvas"` — so this is purely additive
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
   reversed only for layering, never mutating caller data): positions are computed synchronously
-  with no settle animation, sized from each node's own radius and spaced by `linkDistance` (the
+  with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
   layer gap) and a fixed 12px in-layer gap. Node drag is disabled in this mode (dragging would fight
   a computed layout) and `chargeStrength` becomes a documented no-op; pan/zoom, keyboard roving,
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
@@ -141,20 +156,23 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 
 **Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
-linkId? }`; the optional `linkId` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
+linkId? }`; the optional `linkId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-link-enter`/`lr-link-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
+`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
-Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
-(`detail: { communityId }`, a hull was activated), `lr-selection-change`
+Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
+(`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
+right after its canonical event with an equal detail: `lr-link-enter`/`lr-link-leave` (use
+`lr-edge-enter`/`lr-edge-leave`; removed in 23.0.0) and `lr-community-click` (use
+`lr-community-activate`; removed in 23.0.0)
 
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
 `label` (`renderer="svg"` only; not rendered at all when `nodeLabels` is `'none'`), `link-label` (a
-drawn edge label, only rendered when `showEdgeLabels` is set),
+drawn edge label, only rendered when `withEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
 `live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
@@ -170,9 +188,11 @@ the offscreen keyboard-roving items)
 reservation stylesheet. Below it in the fallback chain, the normalized `height` property sizes the
 host too (through a private, not-directly-settable custom property) — setting
 `--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
-wins over both. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
-falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
-`LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
+wins over both. `--lr-graph-node-fill` (set inline per-node from `LyraGraphNode.color`,
+falls back to `--lr-color-brand`) and `--lr-graph-edge-color` (set inline per-edge from
+`LyraGraphEdge.color`, falling back to `--lr-color-border`). Deprecated aliases, read as their
+fallbacks: `--lr-node-fill` (use `--lr-graph-node-fill`; removed in 23.0.0) and `--lr-link-color`
+(use `--lr-graph-edge-color`; removed in 23.0.0). Also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
 The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
@@ -190,7 +210,7 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` and canvas keyboard-focus cue stroke.
 `--lr-graph-selected-color` (default `var(--lr-color-success)`) — selected node/link stroke.
 `--lr-graph-dimmed-opacity` (default `0.35`) — opacity of a node/link listed in
-`dimmedNodeIds`/`dimmedLinkIds`.
+`dimmedNodeIds`/`dimmedEdgeIds`.
 `--lr-graph-hull-fill` (default `var(--lr-color-brand)`) — community hull fill/stroke color
 (overridden inline per hull from `LyraGraphCommunity.color`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
@@ -221,7 +241,7 @@ localized `part="error"` alert. Install with
     },
     { id: "b", label: "B", description: "The cited document" },
   ];
-  g.links = [
+  g.edges = [
     {
       id: "citation-a-b",
       source: "a",
@@ -247,12 +267,12 @@ localized `part="error"` alert. Install with
   continuously while dragging via `alphaTarget(0.3)`) writes node/link positions straight onto the
   already-rendered DOM via `setAttribute()` rather than reassigning `simNodes`/`simLinks` (that
   reassignment — and the Lit re-render/`applyInteractions()` re-scan it used to force on every tick —
-  now only happens once per structural `nodes`/`links` change). Still a noticeable cost building up
+  now only happens once per structural `nodes`/`edges` change). Still a noticeable cost building up
   the initial layout or while a node is actively being dragged, just no longer once per tick on an
   otherwise-settled graph.
-- `chargeStrength`/`linkDistance` **are** live-reactive post-mount now (retuned on the existing
+- `chargeStrength`/`edgeDistance` **are** live-reactive post-mount now (retuned on the existing
   force objects and the simulation nudged via `alpha(0.3).restart()`) — no need to also touch
-  `nodes`/`links` to see the effect.
+  `nodes`/`edges` to see the effect.
 - `width`/`height` are also live-reactive post-mount: changing either re-centers the `forceCenter`
   force on the new midpoint and nudges the simulation via `alpha(0.1).restart()`, in addition to
   resizing the rendered `viewBox` — both branches apply independently, so setting `width` and
@@ -266,16 +286,16 @@ localized `part="error"` alert. Install with
   load (for example, because they are not installed), the graph fails closed with a localized
   neutral `part="error"` message and announces the transition through a shared assertive light-DOM
   region instead of leaving an empty SVG.
-- `LyraGraphNode.color`, node-type colors, `LyraGraphLink.color`, and community colors are accepted only
+- `LyraGraphNode.color`, node-type colors, `LyraGraphEdge.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
-  ignored in favor of the normal token/palette fallback. `LyraGraphLink.dash` is used only when every
+  ignored in favor of the normal token/palette fallback. `LyraGraphEdge.dash` is used only when every
   entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
   than partially applying malformed SVG stroke data.
-- a structural `nodes`/`links` change now carries over each already-settled node's position (and any
+- a structural `nodes`/`edges` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
   fresh start. Handy for a streaming/incrementally-updated graph, whose existing layout no longer
-  jumps every time a node/link is appended.
+  jumps every time a node/edge is appended.
 - under `prefers-reduced-motion: reduce`, or whenever `seed` is set, the simulation converges
   synchronously (ticked in a loop down to `alphaMin` before first paint) instead of animating over
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
@@ -285,11 +305,11 @@ localized `part="error"` alert. Install with
   node/link-count name (e.g. "Node-link diagram with 5 nodes and 4 links"). An authored host label
   moves that one graph role/name to the host instead of duplicating it. Node `<text part="label">`s
   stay `aria-hidden="true"` because each node control already owns its label.
-- `nodeTypes` and `showEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
-  cached per-node and per-link DOM element arrays, alongside the existing `simNodes`/`simLinks`
-  structural-change trigger — no need to also touch `nodes`/`links` to see a type/shape/color or
+- `nodeTypes` and `withEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
+  cached per-node and per-edge DOM element arrays, alongside the existing `simNodes`/`simLinks`
+  structural-change trigger — no need to also touch `nodes`/`edges` to see a type/shape/color or
   edge-label change take effect.
-- when `showEdgeLabels` is `false` (the default), a resolved link renders as a bare `<line
+- when `withEdgeLabels` is `false` (the default), a resolved edge renders as a bare `<line
 part="link">` with no extra wrapping element, so existing consumers who never set it see
   byte-for-byte identical link DOM; setting it wraps each link's `<line>` and its
   `[part="link-label"]` `<text>` together. `edgeLabelMinZoom`'s hide/show gate is applied once at
@@ -298,23 +318,25 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 
 **Selection & focus:** `selectionMode: 'none' | 'single' | 'multiple' = 'none'` (attribute
 `selection-mode`) gates click/keyboard selection; the component never mutates
-`selectedNodeIds: string[] = []` / `selectedLinkIds: string[] = []` (both attribute: false) itself,
+`selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
 only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
-mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedLinkIds:
+mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
 `[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
 of the box with no host styling required); a host typically computes the set from a
-`lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
+`lr-node-enter`/`lr-edge-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
-built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
-`nodes`, `links`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
-layout, rendering, selection, or events. A link uses its explicit `id`, or `source->target` when
+built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
+Deprecated aliases: `selectedLinkIds` (use `selectedEdgeIds`; removed in 23.0.0) and
+`dimmedLinkIds` (use `dimmedEdgeIds`; removed in 23.0.0).
+`nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
+layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow
-parallel links between the same endpoints. Retained identity spelling is not trimmed or rewritten.
+parallel edges between the same endpoints. Retained identity spelling is not trimmed or rewritten.
 Community `memberIds` and controlled id arrays follow the same nonblank first-wins rule.
 `communities: LyraGraphCommunity[] = []` (attribute: false) draws one translucent convex-hull blob per
-entry behind links/nodes. Each entry is `LyraGraphCommunity { id: string; label?: string; memberIds:
+entry behind edges/nodes. Each entry is `LyraGraphCommunity { id: string; label?: string; memberIds:
 string[]; color?: string }`; membership is the union of `memberIds` and nodes whose `communityId`
 matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node-id`) tracks a persistent
 focus ring (`[part="focus-halo"]`) around one node;

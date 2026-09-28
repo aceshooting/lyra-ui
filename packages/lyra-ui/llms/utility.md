@@ -94,9 +94,9 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 `format-label`, `format-description`
 
 **Themeable custom properties:** the trigger's paint is settable per state. At rest,
-`--lr-export-button-background`, `--lr-export-button-color` and `--lr-export-button-border`; on
-hover, `--lr-export-button-hover-background`, `--lr-export-button-hover-color` and
-`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-background`,
+`--lr-export-button-bg`, `--lr-export-button-color` and `--lr-export-button-border`; on
+hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
+`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-bg`,
 `--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
@@ -108,6 +108,8 @@ corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
+Deprecated aliases: `--lr-export-button-background`, `--lr-export-button-hover-background` and
+`--lr-export-button-active-background` (use the `-bg` names; removed in 23.0.0).
 
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
@@ -291,8 +293,9 @@ the built-in button. Exactly one named icon is rendered at a time.
 - `base` / `button` — the built-in trigger, a composed `<lr-icon-button>` as of 16.0.0. It owns the
   accessible name, the activation and every state part below; its background, radius, hover/press
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
-- `base__control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
+- `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
   `background`/`border`/`padding` through `::part(base)` moves here, or onto the token.
+  Deprecated alias: `base__control` (use `base-control`; removed in 23.0.0).
 - `base-success` — added to the button's part list while the confirmation shows
   (`part="base button base-success"`).
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
@@ -393,7 +396,7 @@ import type {
   `--lr-icon-button-size` floor (2.5rem/40px). For a dense action row, lower
   `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every `LyraElement` re-declares
   on its own `:host` and so never reaches a composed child) on this element or an ancestor, or reach
-  the composed native control directly through `::part(base__control)`. A coarse-pointer/no-hover
+  the composed native control directly through `::part(base-control)`. A coarse-pointer/no-hover
   media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
   override lowered it, so the shrink is safe on a touch device.
 
@@ -456,8 +459,10 @@ adds no layout.
 needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
-mapped attributes reflect. Plus `subtree: boolean = true`, and programmatic
-`attributeFilter: string[] = []` (neither reflects).
+mapped attributes reflect. Plus `withoutSubtree: boolean = false` (attribute `without-subtree`;
+observes only the slotted elements themselves, not their descendants), and programmatic
+`attributeFilter: string[] = []` (neither reflects). Deprecated alias: `subtree` (use
+`without-subtree`; `subtree="false"` equals `without-subtree`; removed in 23.0.0).
 
 **Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
 23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)
@@ -498,30 +503,34 @@ being patched in place. A container value that self-references (directly or thro
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
-Removing `search` clears matches while retaining null property readback. Before any match is active,
+Removing `query` clears matches while retaining null property readback. Before any match is active,
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
-- `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
-  (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
+- `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
+  (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
+  means nothing auto-collapses. Deprecated alias: `collapsed-depth` (`collapsedDepth`; use
+  `expand-depth`, same value and meaning; removed in 23.0.0)
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `search: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+- `query: string = ''` — case-insensitive substring match against keys/values; matches are
+  highlighted and their ancestors auto-expanded. Deprecated alias: `search` (use `query`; removed in
+  23.0.0)
 
-**Methods:** `runSearch(query)` sets the declarative `search` property and awaits the recompute,
+**Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
 resolving the match count — named distinctly from `search` because a class member can't share a name
-with a reactive property. `searchNext()`/`searchPrevious()` advance/step back a match cursor
+with a reactive property (the deprecated `search` alias). `searchNext()`/`searchPrevious()`
+advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
 mark it as the active `aria-current` result, announce its position, and scroll it into view;
-they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
+they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
 **Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
@@ -534,7 +543,7 @@ announce localized `copyFailed`; the raw platform error is never rendered. Copyi
 renders, instead of throwing. `lr-search-change`
 (`detail: { query, matchCount, matchCountExact, activeIndex }`) —
 fired whenever the search query, match count, or active-match cursor changes, from
-`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `search`/`data`
+`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `query`/`data`
 property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
 the rendered count uses an “at least” prefix in the same case.
 
@@ -543,11 +552,11 @@ the rendered count uses an “at least” prefix in the same case.
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
 tree; a host `aria-label` is forwarded here), `row` (every structural opening/value and
-closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `search`,
+closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `query`,
 `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
 `string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
-while it matches `search`, and `data-active` while it is the current cursor position), `bracket` (a
+while it matches `query`, and `data-active` while it is the current cursor position), `bracket` (a
 `{`, `}`, `[`, or `]` delimiter), `toggle` (a container node's expand/collapse button; hidden but
 present for row alignment on leaf/empty nodes),
 `copy-button` (a copy-to-clipboard button — the top-level one in `toolbar` (aria-label "Copy JSON to
@@ -570,7 +579,7 @@ motion preferences and best-effort clipboard writes use the viewer's current own
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
-box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
+box-shadow, of a key/value that currently matches `query`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
 without repainting every other warning-toned surface that reads the same shared token;
 `--lr-json-viewer-row-hover-bg` (default `var(--lr-color-brand-quiet)`) — structural-row hover
@@ -596,7 +605,7 @@ html`<lr-json-viewer
   .data=${apiResponse}
   copyable
   max-height="24rem"
-  search=${query}
+  query=${query}
 ></lr-json-viewer>`;
 ```
 
@@ -617,7 +626,7 @@ html`<lr-json-viewer
 - Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
-  `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
+  `expandDepth` and declarative search-driven auto-expansion for that path. Imperative
   `searchNext()`/`searchPrevious()` navigation may reopen the ancestors of the selected result so
   the active match is never hidden; otherwise the override persists until `data` is reassigned with
   a different shape.
@@ -1215,11 +1224,11 @@ settable scroll cap on `[part="base"]`; the `maxHeight` property writes the same
 inline on `[part="base"]`), `--lr-diff-view-font` (default `var(--lr-font-mono)`),
 `--lr-diff-view-match-color`/`--lr-diff-view-active-match-color` (default
 `var(--lr-color-warning)` for both — outline of a line carrying a non-active/active search match),
-`--lr-diff-view-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
-`--lr-diff-view-highlight-success-background` (default `var(--lr-color-success-quiet)`),
-`--lr-diff-view-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-diff-view-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
-`--lr-diff-view-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) —
+`--lr-diff-view-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-diff-view-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-diff-view-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-diff-view-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
+`--lr-diff-view-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) —
 background of a `highlights` line by tone,
 `--lr-diff-view-highlight-active-outline` (default `var(--lr-color-brand)` — outline of the line
 whose covering highlight is `activeHighlightId`), plus
@@ -1265,12 +1274,17 @@ consumer can compute or unit-test the same alignment without instantiating the e
 
 **Additional API surface:**
 
-- `--lr-diff-view-add-background` — Added-line background.
+- `--lr-diff-view-add-bg` — Added-line background.
 - `--lr-diff-view-add-color` — Added-line text color.
-- `--lr-diff-view-remove-background` — Removed-line background.
+- `--lr-diff-view-remove-bg` — Removed-line background.
 - `--lr-diff-view-remove-color` — Removed-line text color.
 - `--lr-diff-view-fold-color` — Fold-marker text color.
-- `--lr-diff-view-fold-background` — Fold-marker background.
+- `--lr-diff-view-fold-bg` — Fold-marker background.
+- Deprecated aliases: `--lr-diff-view-add-background`, `--lr-diff-view-remove-background`,
+  `--lr-diff-view-fold-background`, `--lr-diff-view-highlight-accent-background`,
+  `--lr-diff-view-highlight-success-background`, `--lr-diff-view-highlight-warning-background`,
+  `--lr-diff-view-highlight-danger-background` and `--lr-diff-view-highlight-neutral-background`
+  (use the matching `-bg` names; removed in 23.0.0).
 
 ---
 
@@ -1965,12 +1979,16 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   step; resolved through `rtlAwarePlacement()`
 - `distance: number = 12` — px offset between target and popover. Tour-level only (no per-step
   override); may be negative for overlap
-- `spotlightPadding: number = 4` (attribute `spotlight-padding`) — extra px between the target's box
-  and the cutout/ring; overridable per step
+- `spotlightPadding: number | string = 4` (attribute `spotlight-padding`) — extra space between the
+  target's box and the cutout/ring: a number of px, or a CSS length in `px`, `rem`, `em`, `vw` or
+  `vh`, resolved to px on every paint (`rem` against the root font size, `em` against the tour's
+  own); any other value uses the 4px default. Overridable per step (in px)
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
   `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
-- `showProgress: boolean = true` (attribute `show-progress`) — renders the "Step X of Y" text + dots
+- `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
+  dots. Deprecated alias: `show-progress` (`showProgress`; use `without-progress`;
+  `show-progress="false"` equals `without-progress`; removed in 23.0.0)
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
@@ -1995,10 +2013,12 @@ and capped at 10,000px. Provider mutation after assignment cannot change renderi
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
 `skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
-**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change`
+**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
-departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end`
+departure from `lr-carousel`'s non-cancelable `lr-slide-change`). Deprecated alias:
+`lr-tour-step-change` (use `lr-tour-step-change-request`; still fires right after it with an equal
+detail and can still veto; removed in 23.0.0); `lr-tour-end`
 (`detail: LyraTourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
 element is removed while still open by something other than its own `end()`);
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
@@ -2006,7 +2026,7 @@ it renders that step viewport-centered with no spotlight).
 
 **Slots:** default — rich content replacing the active step's plain-text `content`. Not scoped per
 step: a consumer needing different rich content per step swaps the slotted children itself (e.g. on
-`lr-tour-step-change`).
+`lr-tour-step-change-request`).
 
 **CSS parts:** `backdrop` (the full-viewport `<svg>` scrim with the cutout, `aria-hidden`),
 `spotlight` (the decorative ring around the padded target rect, `pointer-events: none`),

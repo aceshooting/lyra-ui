@@ -254,9 +254,9 @@ while pressed:
   --lr-gemstone-selected-blur: .42rem;
 }
 .gemstone-accent-picker lr-icon-button {
-  --lr-icon-button-background: transparent;
-  --lr-icon-button-background-hover: transparent;
-  --lr-icon-button-background-active: transparent;
+  --lr-icon-button-bg: transparent;
+  --lr-icon-button-bg-hover: transparent;
+  --lr-icon-button-bg-active: transparent;
   --lr-icon-button-border: none;
 }
 .gem { display: inline-flex; inline-size: 1.15rem; block-size: 1.15rem; }

@@ -69,7 +69,7 @@ panel.addEventListener('lr-chunk-open', (event) => {
   void chunkId;
   void sourceId;
 });
-panel.addEventListener('lr-expand', (event) => {
+panel.addEventListener('lr-chunk-toggle', (event) => {
   const chunkId: string = event.detail.chunkId;
   const expanded: boolean = event.detail.expanded;
   void chunkId;

@@ -32,7 +32,7 @@ export const styles = css`
   :host([mode="mobile"]) [part="toggle"] {
     display: inline-flex;
   }
-  :host([hide-toggle][mode="mobile"]) [part="toggle"] {
+  :host([without-toggle][mode="mobile"]) [part="toggle"] {
     display: none;
   }
   :host([mode="mobile"][open]) [part="toggle"] {
@@ -49,13 +49,13 @@ export const styles = css`
     margin-block-start: var(--lr-space-s);
     margin-inline-end: var(--lr-space-s);
   }
-  /* hide-toggle only suppresses the OUTSIDE trigger (redundant once a consumer wires an external
+  /* without-toggle only suppresses the OUTSIDE trigger (redundant once a consumer wires an external
      trigger via the trigger/for properties) -- once reparented inside the trapped panel it is the
-     ONLY in-panel dismiss control, so it has to survive hide-toggle instead of leaving the open
+     ONLY in-panel dismiss control, so it has to survive without-toggle instead of leaving the open
      panel with no in-panel close affordance at all. This selector out-specifies the hiding rule
      above by one compound (adding [part="panel"] >), so it always wins while both conditions
      hold. */
-  :host([hide-toggle][mode="mobile"]) [part="panel"] > [part="toggle"] {
+  :host([without-toggle][mode="mobile"]) [part="panel"] > [part="toggle"] {
     display: inline-flex;
   }
   [part="toggle"]:hover {
@@ -104,7 +104,10 @@ export const styles = css`
     inline-size: var(--lr-app-rail-width, var(--_lr-app-rail-width));
     block-size: 100%;
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    background: var(--lr-app-rail-background, var(--lr-color-surface));
+    background: var(
+      --lr-app-rail-bg,
+      var(--lr-app-rail-background, var(--lr-color-surface))
+    );
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
     /* Pin the cross axis: with only overflow-y set, overflow-x computes from visible to auto and
@@ -209,7 +212,10 @@ export const styles = css`
     /* [part="panel"] is this element's mobile OVERLAY promotion (see the [part="base"] note) -- a
        modal drawer over a scrim, hence the modal-panel surface. Docked in the page's flow,
        [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
-    background: var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay));
+    background: var(
+      --lr-app-rail-panel-bg,
+      var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay))
+    );
     padding-block-end: var(--lr-safe-area-bottom);
     /* Both axes are tokenized together, unlike [part="base"]/[part="nav"]'s plain overflow-x:clip:
        a position: fixed descendant (a popup opened by a slotted/nav-item control, e.g. a slotted
@@ -386,7 +392,7 @@ export const styles = css`
   }
   :host([frame="plain"]) [part="base"] {
     border-inline-end: 0;
-    background: var(--lr-app-rail-background, transparent);
+    background: var(--lr-app-rail-bg, var(--lr-app-rail-background, transparent));
   }
   @media (forced-colors: active) {
     :host([frame="plain"]) [part="base"] {

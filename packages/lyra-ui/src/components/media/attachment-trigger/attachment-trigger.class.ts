@@ -2,7 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -213,10 +213,14 @@ export interface LyraAttachmentTriggerEventMap {
  *   rendered when `capabilities.length === 1`. It still owns the accessible name, the activation
  *   and the `title`; its background, radius, hover/press mixes, focus ring and hit-area floor now
  *   come from `--lr-icon-button-*`, retuned by `appearance`/`size`.
- * @csspart trigger__control - The single-capability action's own native `<button>`, forwarded
+ * @csspart trigger-control - The single-capability action's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `trigger`.
- * @csspart menu-trigger__control - The multi-capability action's own native `<button>`, forwarded
+ * @csspart trigger__control - Deprecated alias of `trigger-control` on the same node; removal not
+ *   before 23.0.0.
+ * @csspart menu-trigger-control - The multi-capability action's own native `<button>`, forwarded
  *   for the same reason.
+ * @csspart menu-trigger__control - Deprecated alias of `menu-trigger-control` on the same node;
+ *   removal not before 23.0.0.
  * @csspart menu - The `<lr-dropdown>` shell. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-dropdown>`'s `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
@@ -224,8 +228,8 @@ export interface LyraAttachmentTriggerEventMap {
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
  *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
- * `accessibleLabel` supplies an accessible-name override for either trigger shape. A host
- * `aria-label`, including an explicit empty value, wins over it.
+ * The host `aria-label` names either trigger shape; an explicit empty value is kept as-is. The
+ * `accessibleLabel` property is a programmatic fallback that the host `aria-label` wins over.
  * @status stable
  * @since 4.0.0
  */
@@ -259,6 +263,13 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   ]);
 
   static override styles = [LyraElement.styles, sizes, styles];
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
   ]);
@@ -274,8 +285,13 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  /** Accessible-name override for the semantic trigger button. */
+  /** Accessible-name override for the semantic trigger button. The `accessible-label` attribute
+   *  spelling is deprecated in favour of the host `aria-label`; removal not before 23.0.0. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+
+  /** The host `aria-label`: names either trigger shape ahead of `accessibleLabel`, by presence, so
+   *  an explicitly empty value stays empty. */
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
    *  user's hover tooltip, distinct from `accessibleLabel`'s accessible-name (`aria-label`) role.
@@ -487,12 +503,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const hostLabel = hostAriaLabel(this);
-    const label = hostLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
+    const label = this.hostAccessibleLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
     return html`
       <lr-icon-button
         part="trigger"
-        exportparts="button:trigger__control"
+        exportparts="button:trigger-control, button:trigger__control"
         class="trigger-button"
         aria-label=${label}
         title=${this.triggerTitle ?? nothing}
@@ -508,8 +523,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const hostLabel = hostAriaLabel(this);
-    const accessibleLabel = hostLabel ?? this.accessibleLabel ?? addLabel;
+    const accessibleLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? addLabel;
     return html`
       <lr-dropdown
         part="menu"
@@ -521,7 +535,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         <lr-icon-button
           slot="trigger"
           part="menu-trigger"
-          exportparts="button:menu-trigger__control"
+          exportparts="button:menu-trigger-control, button:menu-trigger__control"
           class="trigger-button"
           aria-label=${accessibleLabel}
           title=${this.triggerTitle ?? nothing}

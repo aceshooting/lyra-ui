@@ -7,9 +7,13 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-typing-dot-size` since `21.1.0`; use css-property `--lr-typing-indicator-dot-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-dot-stagger-1` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-1`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-dot-stagger-2` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-2`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-duration` since `21.1.0`; use css-property `--lr-typing-indicator-duration`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-gap` since `21.1.0`; use css-property `--lr-typing-indicator-gap`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,19 +67,24 @@ never exposed as a second, redundant accessibility-tree node for the same text.
 variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible, `aria-hidden`,
 label, rendered only while `label-placement="after"`)
 
-**Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
-`0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
-`var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact, `var(--lr-space-s)` roomy),
+**Themeable custom properties:** `--lr-typing-indicator-dot-size` (default `var(--lr-space-s)`, i.e.
+`0.5rem`; `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one),
+`--lr-typing-indicator-gap` (default `var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact,
+`var(--lr-space-s)` roomy),
 `--lr-inline-cursor-width` (shared inline-cursor hook; default `var(--lr-size-0-125rem)`, compact
 `0.09375rem`, roomy `0.1875rem`), `--lr-inline-cursor-height` (shared inline-cursor hook; default
 `var(--lr-size-1em)`, unaffected by `size`),
-`--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
-`1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
-animation cycle. `--lr-typing-duration` is a dedicated alias: it defaults to the library-wide
+`--lr-typing-indicator-dot-stagger-1` (default `600ms`, second dot),
+`--lr-typing-indicator-dot-stagger-2` (default `1200ms`, third dot), and
+`--lr-typing-indicator-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) —
+the compound duration/timing-function token every variant uses as its animation cycle.
+`--lr-typing-indicator-duration` is a dedicated alias: it defaults to the library-wide
 `--lr-transition-ambient` token (shared by every other ambient-looping component), but overriding
 it retimes only this component, leaving `--lr-transition-ambient` itself — and anything else keyed
-off it — untouched.
+off it — untouched. Deprecated aliases: `--lr-typing-dot-size`, `--lr-typing-gap`,
+`--lr-typing-dot-stagger-1`, `--lr-typing-dot-stagger-2` and `--lr-typing-duration` (use the
+`--lr-typing-indicator-*` name of each; removed in 23.0.0) — each is still read as its namespaced
+name's fallback.
 
 **Optional peer deps:** none.
 
@@ -88,7 +97,7 @@ off it — untouched.
 <lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator shape="cursor"></lr-typing-indicator>
 <lr-typing-indicator
-  style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
+  style="--lr-typing-indicator-duration: 900ms ease-in-out; --lr-typing-indicator-dot-stagger-1: 300ms; --lr-typing-indicator-dot-stagger-2: 600ms"
 ></lr-typing-indicator>
 ```
 
@@ -108,7 +117,7 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
   freezing on its invisible ("off") blink half.
-- `--lr-typing-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
+- `--lr-typing-indicator-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
   compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
   override both stagger properties alongside it to preserve the default one-third/two-thirds dot
   phasing, as shown above.

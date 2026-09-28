@@ -16,6 +16,7 @@ import {
   literalSetConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
@@ -178,7 +179,7 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  * own. This component adds exactly two minimal, purpose-built coordination mechanisms for that
  * case (mirroring `<lr-compare-panel>`'s own proven proportional-scroll algorithm rather than
  * inventing a new one):
- * - **Continuous scroll sync** (`syncScroll`, default `true`): scrolling either pane
+ * - **Continuous scroll sync** (on unless `without-sync-scroll` is set): scrolling either pane
  *   proportionally scrolls the other to the same *fraction* of its own scrollable range, not the
  *   same pixel offset -- the two versions can have very different lengths. A re-entrancy guard
  *   stops the mirrored write from bouncing back.
@@ -192,9 +193,9 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  *   `<lr-document-preview>` already documents.
  * - A shared `anchor` property (same declarative shape as `<lr-document-viewer>`'s own `anchor`)
  *   drives both panes to the same target at once via their own `scrollToAnchor()`.
- * - Replacing a pane with a different source identity resets that pane to the top (both panes while
- *   `syncScroll` is true). Re-rendering the same identity preserves reading position, and an active
- *   shared `anchor` always wins over the reset.
+ * - Replacing a pane with a different source identity resets that pane to the top (both panes
+ *   unless `without-sync-scroll` is set). Re-rendering the same identity preserves reading
+ *   position, and an active shared `anchor` always wins over the reset.
  *
  * A nonempty host `aria-label` makes the host the sole named semantic owner. An explicitly empty
  * host label remains on the shadow group, and absence restores its localized comparison label.
@@ -238,6 +239,11 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    syncScroll: ['withoutSyncScroll', invertAlias, invertAlias],
+  };
 
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
@@ -322,8 +328,12 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     Record<string, ShikiLanguageInput>
   >;
 
+  /** Stops scrolling one `view="side-by-side"` pane from proportionally scrolling the other. See
+   *  the class doc's "Synchronized anchors" section. */
+  @property({ type: Boolean, attribute: 'without-sync-scroll' }) withoutSyncScroll = false;
   /** Whether scrolling one `view="side-by-side"` pane proportionally scrolls the other. See the
-   *  class doc's "Synchronized anchors" section. */
+   *  class doc's "Synchronized anchors" section.
+   *  @deprecated Use `without-sync-scroll`; removal not before 23.0.0. */
   @property({ attribute: 'sync-scroll', converter: trueDefaultBooleanConverter }) syncScroll = true;
 
   /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-document-compare-pane-max-height` --
@@ -411,17 +421,17 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     }
     if (this.view !== 'side-by-side' || (!oldSourceChanged && !newSourceChanged)) return;
     this.cancelSyncRelease();
-    if (this.syncScroll || oldSourceChanged) {
+    if (!this.withoutSyncScroll || oldSourceChanged) {
       if (this.paneOldEl) this.paneOldEl.scrollTop = 0;
     }
-    if (this.syncScroll || newSourceChanged) {
+    if (!this.withoutSyncScroll || newSourceChanged) {
       if (this.paneNewEl) this.paneNewEl.scrollTop = 0;
     }
   }
 
   private onPaneScroll = (source: DocumentComparePaneSide): (() => void) => {
     return () => {
-      if (!this.syncScroll || this.suppressSync) return;
+      if (this.withoutSyncScroll || this.suppressSync) return;
       const from = source === 'old' ? this.paneOldEl : this.paneNewEl;
       const to = source === 'old' ? this.paneNewEl : this.paneOldEl;
       if (!from || !to) return;

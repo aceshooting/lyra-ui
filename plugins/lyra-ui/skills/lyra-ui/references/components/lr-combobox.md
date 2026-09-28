@@ -7,9 +7,10 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-combobox-text-color` since `21.1.0`; use css-property `--lr-combobox-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `showUnknownOption` / `show-unknown-option` since `21.1.0`; use property `with-unknown-option`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -141,13 +142,14 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
-- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+- `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no option or async row claims to the end of the listbox as a synthetic,
   badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by
   the active query exactly like the `allow-create` row is, so a query it does not match neither
   shows it nor suppresses the "no matches" copy; re-picking it re-commits the same value and
   deliberately does **not** reclassify it as known — the badge and the row both survive, and the row
-  never appears in `selectedRows`
+  never appears in `selectedRows`. Deprecated alias: `show-unknown-option`/`showUnknownOption` (use
+  `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
   tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
@@ -530,10 +532,11 @@ here wins over every treatment. `--lr-combobox-open-border-color` (default
 border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
 it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
 an Escape dismissal, say. It is named for symmetry with `lr-select`'s
-`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-text-color`
+`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-color`
 (default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
 instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
-loud brand fill.
+loud brand fill. Deprecated alias: `--lr-combobox-text-color` (use `--lr-combobox-color`; removed in
+23.0.0).
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a
@@ -568,7 +571,7 @@ form control it opens from and keeps that control's boundary contrast (see `<lr-
 `[part='unknown-value']` badge described above under "Unknown committed values".
 `--lr-combobox-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
 `[part='option-badge']` trailing metadata badge on an async row, and the "not in catalog" badge
-`show-unknown-option` renders on the synthetic unmatched-value listbox row — the same
+`with-unknown-option` renders on the synthetic unmatched-value listbox row — the same
 per-component indirection `lr-select`'s `--lr-select-option-badge-bg` uses.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),

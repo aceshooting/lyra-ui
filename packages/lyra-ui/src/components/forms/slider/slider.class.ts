@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import {
@@ -217,8 +218,8 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @csspart tooltip__content - Tooltip text wrapper.
  * @csspart tooltip__arrow - Decorative tooltip arrow.
  * @csspart tooltip-visible - Added to `tooltip` while that handle is focused or being dragged.
- * @csspart value - The visible readout, rendered when `show-value` is true.
- * @csspart label-row - Label and readout row, rendered with showValue and valuePlacement="label".
+ * @csspart value - The visible readout, rendered when `with-value` is true.
+ * @csspart label-row - Label and readout row, rendered with withValue and valuePlacement="label".
  * @csspart error - The error region, hidden while neither `errorText` nor the `error` slot has content.
  * @csspart hint - The hint region, hidden while neither `hint` nor the `hint` slot has content.
  * @method focus - Focuses the first thumb, or the lower thumb in range mode.
@@ -301,6 +302,7 @@ export class LyraSlider extends LyraSliderBase {
   }
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { showValue: 'withValue' };
 
   // These accessors sanitize the live value synchronously when a range
   // setting changes. Keeping the properties `noAccessor` prevents Lit's
@@ -726,14 +728,17 @@ export class LyraSlider extends LyraSliderBase {
   /** Shoelace-compatible single-argument tooltip formatter. */
   @property({ attribute: false }) tooltipFormatter?: (value: number) => string;
 
+  /** Renders the visible value readout (`part="value"`). `with-value="false"` is accepted as off. */
+  @property({ type: Boolean, attribute: 'with-value', converter: falseDefaultBooleanConverter }) withValue = false;
+  /** @deprecated Use `with-value`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-value', converter: falseDefaultBooleanConverter }) showValue = false;
 
   /** Visible readout text. `formatted` reuses valueFormatter (then tooltipFormatter when absent)
    * for each handle, with localized numeric fallback for nullish results. The numeric default
-   * preserves the existing showValue contract. Does not change ARIA, tooltip or event behavior. */
+   * preserves the existing withValue contract. Does not change ARIA, tooltip or event behavior. */
   @property({ attribute: 'value-display' }) valueDisplay: SliderValueDisplay = 'numeric';
 
-  /** Position of the showValue readout. `label` places it at the inline end of a separate label
+  /** Position of the withValue readout. `label` places it at the inline end of a separate label
    * row without including its text in the control's accessible name. */
   @property({ attribute: 'value-placement' }) valuePlacement: SliderValuePlacement = 'inline';
 
@@ -1726,10 +1731,10 @@ export class LyraSlider extends LyraSliderBase {
       <div id=${LABEL_ID} part="label form-control-label" ?hidden=${!hasLabel}>
         ${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>
       </div>`;
-    const value = this.showValue
+    const value = this.withValue
       ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
       : nothing;
-    const labelValue = this.showValue && this.valuePlacement === 'label';
+    const labelValue = this.withValue && this.valuePlacement === 'label';
     return html`
       ${labelValue ? html`<div part="label-row">${label}${value}</div>` : label}
       <div part="references" ?hidden=${!hasReference}>

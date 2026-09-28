@@ -194,15 +194,19 @@ function isVisuallyHidden(element: Element): boolean {
  * (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill` for `accent`); the
  * chrome-less tiers (`outlined`, `plain`, `quiet`, `link`) paint nothing, so they mix from the page
  * surface. Set it alongside `--lr-button-outlined-fill` when you tint an outlined button.
- * @cssprop [--lr-button-hover-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ * @cssprop [--lr-button-hover-bg=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  * Background of a non-disabled button while hovered. Replaced the pre-8.0.0
  * `--lr-button-hover-brightness` multiplier: a `filter` multiplies every channel, so it moved a
  * mid-toned fill but did nothing at all to a pure white or pure black one, and it dimmed the label
  * and icons along with the box.
- * @cssprop [--lr-button-active-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * @cssprop [--lr-button-hover-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ * Deprecated alias of `--lr-button-hover-bg`, read only as its fallback; removal not before 23.0.0.
+ * @cssprop [--lr-button-active-bg=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  * Background while a non-disabled button is pressed — the same mix at the stronger
  * `--lr-color-mix-active` share, so the pressed state reads as more than the hover.
  * `appearance="link"` moves its text colour by these two shares instead of taking a background.
+ * @cssprop [--lr-button-active-background=color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * Deprecated alias of `--lr-button-active-bg`, read only as its fallback; removal not before 23.0.0.
  * @cssprop --lr-button-hover-color - Text color of a non-disabled button while hovered.
  * **Undeclared by default**, so it falls back to whatever colour the active `appearance` already
  * paints at rest — every appearance's current hover text colour is unchanged until this is set.
@@ -241,8 +245,10 @@ function isVisuallyHidden(element: Element): boolean {
  * page surface, so set both together when you tint an outlined button.
  * @cssprop [--lr-button-quiet-border=var(--lr-color-border)] - Border color of
  * `appearance="quiet"`.
- * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Text color of
+ * @cssprop [--lr-button-quiet-color=var(--lr-color-text-quiet)] - Text color of
  * `appearance="quiet"`.
+ * @cssprop [--lr-button-quiet-text=var(--lr-color-text-quiet)] - Deprecated alias of
+ * `--lr-button-quiet-color`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-button-size-2xs=var(--lr-form-control-height-2xs)] - `min-block-size` at
  * `size="2xs"`. Since 8.0.0 the whole scale comes from the shared form-control ladder
  * (`internal/sizes.styles.ts`), so ordinary single-row controls share the same minimum-height

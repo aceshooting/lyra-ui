@@ -134,7 +134,7 @@ export const CompactLinearMeter: Story = {
             <lr-gauge
               shape="linear"
               size="xs"
-              show-value="false"
+              without-value
               value=${row.value}
               max="100"
               aria-label=${row.label}

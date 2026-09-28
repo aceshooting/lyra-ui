@@ -7,9 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated part** `copy-button__control` since `21.1.0`; use part `::part(copy-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,10 +55,10 @@ highlighted markup.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
-  `copyable="false"` disables it; use a property binding such as `.copyable=${false}` when binding a
-  value. A `?copyable=${false}` boolean-attribute binding only removes the attribute and cannot
-  override the true default.
+- `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
+  copy-to-clipboard button, which is shown by default. Deprecated alias: `copyable` (use
+  `without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+  `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -106,8 +107,10 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
 fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
 `'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
-`detail: { collapsed }` is the proposed next state and canceling leaves `collapsed` unchanged),
-`lr-toggle` (`detail: { collapsed: boolean }` — the committed state after the request is accepted),
+`detail: { expanded, collapsed }` is the proposed next state —
+`expanded` is the canonical key, the deprecated `collapsed` key is its inverse and is removed in
+23.0.0 — and canceling leaves `collapsed` unchanged), `lr-toggle` (`detail: { expanded: boolean,
+collapsed: boolean }` — the committed state after the request is accepted),
 `lr-line-activate` (`detail: { line: number }` — a gutter line number was activated while
 `activatableLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
@@ -122,7 +125,8 @@ property write is needed).
 `copy-button` (the copy control, a composed `<lr-icon-button>` as of 16.0.0; it also carries
 `copy-button-text` or `copy-button-icon` for the active `copyAppearance`, so match it by token —
 `[part~="copy-button"]` — not by exact value), `copy-button-text` / `copy-button-icon` (the copy
-control in each appearance), `copy-button__control` (the copy control's own native `<button>`),
+control in each appearance), `copy-button-control` (the copy control's own native `<button>`;
+deprecated alias: `copy-button__control`, use `copy-button-control`, removed in 23.0.0),
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
@@ -135,7 +139,7 @@ are both set)
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
@@ -238,8 +242,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 
-- `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
-  property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
+- The copy button is on by default; hide it with the `without-copy-button` presence attribute
+  (`?without-copy-button=${hidden}` works in a Lit template).
 - if `code` or `language` changes while highlighting is loading, only the result matching the
   current values is rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to

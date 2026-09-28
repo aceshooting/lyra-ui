@@ -10,6 +10,7 @@ import './csv-viewer.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 const CSV =
   'Name,Role\nAda Lovelace,Mathematician\nGrace Hopper,Computer scientist';
@@ -155,7 +156,7 @@ describe('lr-csv-viewer', () => {
     const el = (await fixture(
       html`<lr-csv-viewer></lr-csv-viewer>`
     )) as LyraCsvViewer;
-    expect(el.hasHeaderRow).to.be.true;
+    expect(el.withoutHeaderRow).to.be.false;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal(
       'No document to display.'
     );
@@ -464,9 +465,9 @@ describe('lr-csv-viewer', () => {
       window.fetch = original;
     }
   });
-  it('can treat every row as data through a false property binding', async () => {
+  it('treats every row as data with without-header-row', async () => {
     const el = (await fixture(
-      html`<lr-csv-viewer .hasHeaderRow=${false}></lr-csv-viewer>`
+      html`<lr-csv-viewer without-header-row></lr-csv-viewer>`
     )) as LyraCsvViewer;
     const restore = fetchText(CSV);
     try {
@@ -487,15 +488,83 @@ describe('lr-csv-viewer', () => {
       restore();
     }
   });
-  it('accepts has-header-row="false" as a plain-HTML attribute string, not only a property binding', async () => {
-    // Regression test: Lit's default presence-based Boolean converter treats ANY attribute value,
-    // including the literal string "false", as true -- a true-defaulting property needs a
-    // custom converter (mirrors lr-task-list's trueDefaultBooleanConverter) for plain markup to be
-    // able to turn it off at all.
-    const el = (await fixture(
-      html`<lr-csv-viewer has-header-row="false"></lr-csv-viewer>`
-    )) as LyraCsvViewer;
-    expect(el.hasHeaderRow).to.be.false;
+  describe('deprecated has-header-row alias', () => {
+    const usage = { tag: 'lr-csv-viewer', kind: 'property', name: 'hasHeaderRow' } as const;
+
+    async function renderedRows(el: LyraCsvViewer): Promise<{ header: boolean; body: number }> {
+      const restore = fetchText(CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
+          items: unknown[][];
+        };
+        return {
+          header: el.shadowRoot!.querySelector('[part="header-row"]') !== null,
+          body: list.items.length,
+        };
+      } finally {
+        restore();
+      }
+    }
+
+    it('has-header-row="false" (plain HTML attribute) equals without-header-row and warns once', async () => {
+      // Lit's presence-based Boolean converter would read the literal string "false" as true; the
+      // alias keeps its true-default converter so plain markup can still turn it off.
+      const canonical = await renderedRows(
+        (await fixture(html`<lr-csv-viewer without-header-row></lr-csv-viewer>`)) as LyraCsvViewer
+      );
+      let alias!: LyraCsvViewer;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        alias = (await fixture(html`<lr-csv-viewer has-header-row="false"></lr-csv-viewer>`)) as LyraCsvViewer;
+        alias.hasHeaderRow = false;
+        await alias.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        'lyra-deprecated:lr-csv-viewer:property:hasHeaderRow',
+      ]);
+      expect(alias.hasHeaderRow).to.be.false;
+      expect(alias.withoutHeaderRow).to.be.true;
+      expect(await renderedRows(alias)).to.deep.equal(canonical);
+      expect(canonical).to.deep.equal({ header: false, body: 3 });
+    });
+
+    it('a false property binding still works and restores the header when set back to true', async () => {
+      let el!: LyraCsvViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        el = (await fixture(html`<lr-csv-viewer .hasHeaderRow=${false}></lr-csv-viewer>`)) as LyraCsvViewer;
+      });
+      expect(el.withoutHeaderRow).to.be.true;
+      await captureDeprecationWarnings([usage], async () => {
+        el.hasHeaderRow = true;
+        await el.updateComplete;
+      });
+      expect(el.withoutHeaderRow).to.be.false;
+      expect(await renderedRows(el)).to.deep.equal({ header: true, body: 2 });
+    });
+
+    it('never warns for the default or the canonical name, syncs back, and follows the last write', async () => {
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const plain = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+        expect(plain.hasHeaderRow).to.be.true;
+        const canonical = (await fixture(html`<lr-csv-viewer without-header-row></lr-csv-viewer>`)) as LyraCsvViewer;
+        expect(canonical.hasHeaderRow).to.be.false;
+      });
+      expect(warnings).to.have.length(0);
+
+      let aliasLast!: LyraCsvViewer;
+      let canonicalLast!: LyraCsvViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        aliasLast = (await fixture(
+          html`<lr-csv-viewer without-header-row has-header-row></lr-csv-viewer>`
+        )) as LyraCsvViewer;
+        canonicalLast = (await fixture(
+          html`<lr-csv-viewer has-header-row without-header-row></lr-csv-viewer>`
+        )) as LyraCsvViewer;
+      });
+      expect(aliasLast.withoutHeaderRow).to.be.false;
+      expect(canonicalLast.withoutHeaderRow).to.be.true;
+    });
   });
   it('is accessible', async () => {
     const el = await fixture(html`<lr-csv-viewer></lr-csv-viewer>`);

@@ -6,6 +6,7 @@ import { registerToolRenderer } from '../tool-result-view/registry.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -241,7 +242,7 @@ describe('<lr-tool-call-block>', () => {
       expanded
       .args=${args}
       .result=${result}
-      error="partial failure"
+      error-text="partial failure"
     ></lr-tool-call-block>`);
     await settleChildren(el);
     const order = [...part(el, 'body')!.children].map((child) => child.getAttribute('part'));
@@ -265,7 +266,7 @@ describe('<lr-tool-call-block>', () => {
       await el.updateComplete;
       expect(part(el, 'args') === null, String(args)).to.equal(true);
     }
-    el.error = '';
+    el.errorText = '';
     await el.updateComplete;
     expect(part(el, 'error') === null).to.equal(true);
 
@@ -283,7 +284,7 @@ describe('<lr-tool-call-block>', () => {
       expect(text(part(el, 'empty')), status).to.equal(message);
     }
 
-    el.error = 'boom';
+    el.errorText = 'boom';
     el.result = { partial: true };
     await el.updateComplete;
     expect(part(el, 'empty') === null).to.equal(true);
@@ -296,7 +297,7 @@ describe('<lr-tool-call-block>', () => {
       expanded
       .args=${{ apiKey: 'secret', query: 'q' }}
       .result=${{ rows: [{ ssn: '123' }] }}
-      error="token=abc"
+      error-text="token=abc"
       .redactedFields=${['args.apiKey', 'result.rows.0.ssn', 'error', 'args.missing.deep']}
     ></lr-tool-call-block>`);
     await settleChildren(el);
@@ -321,7 +322,7 @@ describe('<lr-tool-call-block>', () => {
       expanded
       .args=${{ apiKey: 'secret' }}
       .result=${{ ok: true }}
-      error="boom"
+      error-text="boom"
     ></lr-tool-call-block>`);
     const hostile: string[] = [];
     Object.defineProperty(hostile, 'length', { value: 1, writable: true });
@@ -460,7 +461,7 @@ describe('<lr-tool-call-block>', () => {
       .durationMs=${1500}
       .args=${{ q: 1 }}
       .result=${{ ok: true }}
-      error="e"
+      error-text="e"
     ></lr-tool-call-block>`);
     expect(text(header(el))).to.equal('Used web_search 1.5s');
     const body = part(el, 'body')!;
@@ -740,13 +741,13 @@ describe('<lr-tool-call-block>', () => {
   });
 
   it('routes every custom property and defaults both edges to the regular border colour', async () => {
-    const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded status="success" error="e"></lr-tool-call-block>`);
+    const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded status="success" error-text="e"></lr-tool-call-block>`);
     const base = part(el, 'base')!;
     const border = resolvedToken(el, '--lr-color-border');
     expect(getComputedStyle(base).borderTopColor).to.equal(border);
     expect(getComputedStyle(part(el, 'body')!).borderBlockStartColor).to.equal(border);
 
-    el.style.setProperty('--lr-tool-call-block-background', 'rgb(1, 2, 3)');
+    el.style.setProperty('--lr-tool-call-block-bg', 'rgb(1, 2, 3)');
     el.style.setProperty('--lr-tool-call-block-border-color', 'rgb(4, 5, 6)');
     el.style.setProperty('--lr-tool-call-block-radius', '7px');
     el.style.setProperty('--lr-tool-call-block-accent', 'rgb(8, 9, 10)');
@@ -765,7 +766,7 @@ describe('<lr-tool-call-block>', () => {
       expanded
       .args=${{ a: 1 }}
       .result=${{ b: 2 }}
-      error="e"
+      error-text="e"
     ></lr-tool-call-block>`);
     expect([text(part(el, 'args-label')), text(part(el, 'error-label')), text(part(el, 'result-label'))]).to.deep.equal([
       'Arguments',
@@ -792,12 +793,84 @@ describe('<lr-tool-call-block>', () => {
     await expect(el).to.be.accessible();
     el.args = { q: 'lyra' };
     el.result = { hits: 1 };
-    el.error = 'partial';
+    el.errorText = 'partial';
     el.expanded = true;
     await settleChildren(el);
     await expect(el).to.be.accessible();
     el.label = 'Search the web';
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-tool-call-block deprecated error alias', () => {
+  const ERROR: readonly DeprecatedUsage[] = [{ tag: 'lr-tool-call-block', kind: 'property', name: 'error' }];
+  const errorText = (el: Block): string | null => {
+    const section = part(el, 'error');
+    return section === null ? null : text(section.querySelector('p'));
+  };
+
+  it('renders error-text without a deprecation warning', async () => {
+    let shown: string | null = null;
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      shown = errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error-text="boom"></lr-tool-call-block>`));
+    });
+    expect(shown).to.equal('boom');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps the error attribute and property working as error-text, warning once', async () => {
+    let attribute: string | null = null;
+    let property: string | null = null;
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      const aliased = await fixture<Block>(html`<lr-tool-call-block name="t" expanded error="boom"></lr-tool-call-block>`);
+      attribute = errorText(aliased);
+      const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded></lr-tool-call-block>`);
+      el.error = 'bang';
+      await el.updateComplete;
+      property = errorText(el);
+      reads = [aliased.error, aliased.errorText, el.error, el.errorText];
+    });
+    expect(attribute).to.equal('boom');
+    expect(property).to.equal('bang');
+    expect(reads).to.deep.equal(['boom', 'boom', 'bang', 'bang']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-call-block:property:error']);
+  });
+
+  it('applies the last authored spelling when error and error-text are both present', async () => {
+    let shown: (string | null)[] = [];
+    await captureDeprecationWarnings(ERROR, async () => {
+      shown = [
+        errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error="old" error-text="new"></lr-tool-call-block>`)),
+        errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error-text="new" error="old"></lr-tool-call-block>`)),
+      ];
+    });
+    expect(shown).to.deep.equal(['new', 'old']);
+  });
+
+  it('syncs error back from the canonical errorText without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded></lr-tool-call-block>`);
+      reads.push(el.error);
+      el.errorText = 'boom';
+      await el.updateComplete;
+      reads.push(el.error);
+    });
+    expect(reads).to.deep.equal([undefined, 'boom']);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-tool-call-block deprecated --lr-tool-call-block-background alias', () => {
+  it('paints from --lr-tool-call-block-bg, still honours the old name, and lets the canonical name win', async () => {
+    const fill = async (style: string): Promise<string> => {
+      const el = await fixture<Block>(html`<lr-tool-call-block name="t" style=${style}></lr-tool-call-block>`);
+      return getComputedStyle(part(el, 'base')!).backgroundColor;
+    };
+    expect(await fill('--lr-tool-call-block-bg: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
+    expect(await fill('--lr-tool-call-block-background: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
+    expect(await fill('--lr-tool-call-block-bg: rgb(4, 5, 6); --lr-tool-call-block-background: rgb(1, 2, 3)')).to.equal('rgb(4, 5, 6)');
   });
 });

@@ -2,8 +2,16 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { styles } from './result-card.styles.js';
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /** Visual chrome for `<lr-result-card>`'s root — the library's shared container-frame vocabulary. */
 export type ResultCardAppearance = LyraFrame;
@@ -33,20 +41,23 @@ export type ResultCardAppearance = LyraFrame;
  * @csspart heading - The heading text. Truncates with an ellipsis and carries
  * its own native `title` attribute (the full string) so hovering the
  * truncated text reveals it. The host's native `HTMLElement.title` remains
- * independent and is never repurposed or removed.
+ * independent and is never repurposed or removed. A plain label unless
+ * `heading-level` exposes it to heading navigation.
  * @csspart actions - The wrapper around the `actions` slot. `hidden`
  * whenever the slot has no assigned content.
  * @csspart body - The wrapper around the default slot.
  * @cssprop [--lr-result-card-compact-header-padding=var(--lr-space-xs)] - `[part="header"]`
- *   block/inline padding while `compact`.
+ *   block/inline padding while `size` is `s` or smaller.
  * @cssprop [--lr-result-card-compact-header-gap=var(--lr-space-xs)] - Gap between `[part="header"]`'s
- *   heading and actions while `compact`.
+ *   heading and actions while `size` is `s` or smaller.
  * @cssprop [--lr-result-card-compact-body-padding=var(--lr-space-xs)] - `[part="body"]` padding
- *   while `compact`.
+ *   while `size` is `s` or smaller.
  * @cssprop [--lr-result-card-compact-body-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s
- *   children while `compact`.
- * @cssprop [--lr-result-card-background=var(--lr-color-surface)] - Fill of the outer card
+ *   children while `size` is `s` or smaller.
+ * @cssprop [--lr-result-card-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-result-card-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-result-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-result-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the `[part="header"]` divider.
  * @cssprop [--lr-result-card-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -57,15 +68,33 @@ export type ResultCardAppearance = LyraFrame;
 export class LyraResultCard extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   /** Small visible heading for the card. Leave unset for an untitled card.
    *  This is deliberately separate from the host's native `title` tooltip. Removing the attribute clears its displayed text. */
   @property() heading = '';
+
+  /** Semantic level of `[part="heading"]`. The default `none` keeps it a plain label; `1`–`6` also
+   *  exposes it to heading navigation at that level. Invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
+
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the header/body
+   * padding for dense contexts (a card rendered as a row in a transcript or result list) -- same
+   * convention as `lr-agent-run`'s `size`. `m` (the default) and larger keep the full card padding.
+   * Purely a density knob: the border and background stay, so use `frame="plain"` instead to drop
+   * the chrome entirely. `frame="plain"` leaves the dense padding and gaps intact when both are set.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
    *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
    *  full card padding. Purely a density knob: the border and background stay, so use
    *  `frame="plain"` instead to drop the chrome entirely. `frame="plain"` leaves compact padding
-   *  and gaps intact when both are set. */
+   *  and gaps intact when both are set.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Explicit SSR presence hint for an `actions` slot. Browser upgrades also detect assignment
@@ -78,7 +107,8 @@ export class LyraResultCard extends LyraElement {
    *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, filled box. `'plain'`
    *  removes the border, background, and corner radius, so a card nested inside a host container
    *  that already draws a border (e.g. `<lr-tool-result-view>`'s own chrome) doesn't double it.
-   *  `plain` controls chrome only: compact padding and gaps still apply when both are set. */
+   *  `plain` controls chrome only: the dense `size` tier's padding and gaps still apply when both
+   *  are set. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // See `<lr-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
@@ -109,10 +139,18 @@ export class LyraResultCard extends LyraElement {
     const hasHeading = (this.heading ?? '').length > 0;
     const hasActions = this.withActions || this.hasActionsSlot;
     const hasHeader = hasHeading || hasActions;
+    const headingLevel = resolveHeadingLevel(this.headingLevel ?? 'none');
     return html`
       <div part="base">
         <div part="header" ?hidden=${!hasHeader}>
-          ${hasHeading ? html`<span part="heading" title=${this.heading}>${this.heading}</span>` : nothing}
+          ${hasHeading
+            ? html`<span
+                part="heading"
+                title=${this.heading}
+                role=${headingLevel ? 'heading' : nothing}
+                aria-level=${headingLevel ?? nothing}
+              >${this.heading}</span>`
+            : nothing}
           <div part="actions" ?hidden=${!hasActions}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>

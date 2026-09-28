@@ -5,6 +5,7 @@ import './flow-run-status.js';
 import type { LyraFlowRunStatus } from './flow-run-status.js';
 import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../flow-canvas/flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -20,10 +21,10 @@ const nodes: FlowNode[] = [
   { id: 'summarize', position: { x: 200, y: 0 }, data: { label: 'Summarize' } },
 ];
 
-it('defaults to an empty decorations object, hideSummary false, empty for/label', async () => {
+it('defaults to an empty decorations object, withoutSummary false, empty for/label', async () => {
   const el = (await fixture(html`<lr-flow-run-status></lr-flow-run-status>`)) as LyraFlowRunStatus;
   expect(el.decorations).to.deep.equal({});
-  expect(el.hideSummary).to.be.false;
+  expect(el.withoutSummary).to.be.false;
   expect(el.for).to.equal('');
   expect(el.label).to.equal('');
 });
@@ -322,12 +323,12 @@ it('contains long summary, count, and slotted text in a 320px allocation', async
   expect(slotted.scrollWidth).to.be.at.most(Math.ceil(slotted.getBoundingClientRect().width) + 1);
 });
 
-it('hideSummary suppresses the visible strip but still mirrors decorations into the canvas', async () => {
+it('withoutSummary suppresses the visible strip but still mirrors decorations into the canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>
       <lr-flow-run-status
         slot="top-end"
-        hide-summary
+        without-summary
         .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
       ></lr-flow-run-status>
     </lr-flow-canvas>
@@ -591,5 +592,78 @@ describe('explicitly empty host aria-label', () => {
     )) as LyraFlowRunStatus;
     await omitted.updateComplete;
     expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Progress');
+  });
+});
+
+describe('deprecated hide-summary alias', () => {
+  const HIDE_SUMMARY: readonly DeprecatedUsage[] = [
+    { tag: 'lr-flow-run-status', kind: 'property', name: 'hideSummary' },
+  ];
+  const decorations = { fetch: { status: 'running' } } as FlowRunDecorations;
+  const summaryCount = (el: LyraFlowRunStatus): number =>
+    el.shadowRoot!.querySelectorAll('[part="summary"], [part="count"]').length;
+
+  it('omits the visible strip exactly like without-summary and warns once, naming without-summary', async () => {
+    const canonical = await fixture<LyraFlowRunStatus>(
+      html`<lr-flow-run-status without-summary .decorations=${decorations}></lr-flow-run-status>`,
+    );
+    let aliased!: LyraFlowRunStatus;
+    const warnings = await captureDeprecationWarnings(HIDE_SUMMARY, async () => {
+      aliased = await fixture<LyraFlowRunStatus>(
+        html`<lr-flow-run-status hide-summary .decorations=${decorations}></lr-flow-run-status>`,
+      );
+      const second = await fixture<LyraFlowRunStatus>(html`<lr-flow-run-status hide-summary></lr-flow-run-status>`);
+      await second.updateComplete;
+    });
+    expect(summaryCount(aliased)).to.equal(0);
+    expect(summaryCount(aliased)).to.equal(summaryCount(canonical));
+    expect(aliased.withoutSummary).to.be.true;
+    expect(aliased.hideSummary).to.be.true;
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-flow-run-status:property:hideSummary',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-summary');
+  });
+
+  it('never warns for without-summary or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(HIDE_SUMMARY, async () => {
+      const el = await fixture<LyraFlowRunStatus>(html`<lr-flow-run-status></lr-flow-run-status>`);
+      el.withoutSummary = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('forwards alias writes, syncs back from without-summary, and lets the last write win', async () => {
+    await captureDeprecationWarnings(HIDE_SUMMARY, async () => {
+      const el = await fixture<LyraFlowRunStatus>(
+        html`<lr-flow-run-status .decorations=${decorations}></lr-flow-run-status>`,
+      );
+      expect(summaryCount(el)).to.be.greaterThan(0);
+      el.hideSummary = true;
+      await el.updateComplete;
+      expect(el.withoutSummary).to.be.true;
+      expect(summaryCount(el)).to.equal(0);
+      el.withoutSummary = false;
+      await el.updateComplete;
+      expect(el.hideSummary).to.be.false;
+      expect(summaryCount(el)).to.be.greaterThan(0);
+
+      const aliasLast = await fixture<LyraFlowRunStatus>(
+        html`<lr-flow-run-status without-summary hide-summary .decorations=${decorations}></lr-flow-run-status>`,
+      );
+      aliasLast.removeAttribute('hide-summary');
+      await aliasLast.updateComplete;
+      expect(aliasLast.withoutSummary).to.be.false;
+      expect(summaryCount(aliasLast)).to.be.greaterThan(0);
+
+      const canonicalLast = await fixture<LyraFlowRunStatus>(
+        html`<lr-flow-run-status hide-summary without-summary .decorations=${decorations}></lr-flow-run-status>`,
+      );
+      canonicalLast.removeAttribute('without-summary');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.hideSummary).to.be.false;
+      expect(summaryCount(canonicalLast)).to.be.greaterThan(0);
+    });
   });
 });

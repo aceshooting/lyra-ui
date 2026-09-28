@@ -11,8 +11,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, 'dialog.class.ts'), 'utf8');
 
 test('lr-dialog close-button doc warns that --lr-icon-button-size is a no-op here', () => {
-  const csspartDoc = source.match(/@csspart close-button__control[^]*?(?=\n\s*\*\s*@csspart)/);
-  assert.ok(csspartDoc, 'expected the close-button__control @csspart doc block');
+  const csspartDoc = source.match(/@csspart close-button-control[^]*?(?=\n\s*\*\s*@csspart)/);
+  assert.ok(csspartDoc, 'expected the close-button-control @csspart doc block');
   assert.match(
     csspartDoc[0],
     /--lr-icon-button-size-scope/,

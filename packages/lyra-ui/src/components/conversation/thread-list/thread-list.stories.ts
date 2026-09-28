@@ -195,7 +195,7 @@ export const HoverRevealedRowMenu: Story = {
 export const WithArchivedShown: Story = {
   render: () =>
     html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);">
-      <lr-thread-list show-archived .threads=${threads}></lr-thread-list>
+      <lr-thread-list with-archived .threads=${threads}></lr-thread-list>
     </div>`,
 };
 
@@ -306,7 +306,7 @@ export const Narrow320px: Story = {
     >
       <lr-thread-list
         searchable
-        show-archived
+        with-archived
         active-conversation-id="rtl-active"
         .threads=${narrowRtlThreads}
         .rowActions=${['pin', 'archive', 'delete']}
@@ -379,8 +379,8 @@ export const HighlightedExcerpt: Story = {
         <div style="block-size:400px;border:1px solid var(--lr-color-border);">
           <lr-thread-list
             style="
-              --lr-thread-list-excerpt-highlight-background:var(--lr-color-brand-quiet);
-              --lr-thread-list-excerpt-highlight-foreground:var(--lr-color-text);
+              --lr-thread-list-excerpt-highlight-bg:var(--lr-color-brand-quiet);
+              --lr-thread-list-excerpt-highlight-color:var(--lr-color-text);
               --lr-thread-list-excerpt-highlight-radius:var(--lr-radius-pill);
               --lr-thread-list-excerpt-highlight-padding:0 var(--lr-space-2xs);
             "
@@ -445,11 +445,11 @@ export const DenseRows: Story = {
   `,
 };
 
-/** `compact` is a pure forwarding property: it sets `compact` on every data-mode row
+/** `compact` is a pure forwarding property: it sets the dense `size="s"` on every data-mode row
  *  `<lr-conversation-item>`, which is where the density actually lives. It is the one-attribute
  *  version of the `::part(row-item-*)` styling above -- reach for the parts when the tuning goes
  *  beyond the row's own density knob. Slotted mode is a deliberate no-op: that mode renders
- *  host-supplied items as-is, so a host sets `compact` on its own items there. */
+ *  host-supplied items as-is, so a host sets `size` on its own items there. */
 export const CompactRows: Story = {
   name: 'compact (forwarded row density)',
   render: () => html`

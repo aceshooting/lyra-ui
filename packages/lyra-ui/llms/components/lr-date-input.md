@@ -7,8 +7,8 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-date-input-text-color` since `21.1.0`; use css-property `--lr-date-input-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 22 parts, 25 custom properties — see `lr-date-picker.md`
+- **Themeable via** 22 parts, 26 custom properties — see `lr-date-picker.md`
 - **Documented with** `lr-date-picker`: see [lr-date-picker.md](./lr-date-picker.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

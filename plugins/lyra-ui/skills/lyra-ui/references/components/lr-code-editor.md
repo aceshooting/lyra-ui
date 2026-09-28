@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `lineNumbers` / `line-numbers` since `21.1.0`; use property `without-line-numbers`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 8 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,8 +36,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
-- `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
-  one row per `\n`-separated line
+- `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
+  `gutter` part, which otherwise renders one row per `\n`-separated line. Deprecated alias:
+  `line-numbers`/`lineNumbers` (use `without-line-numbers`, inverted: `line-numbers="false"` is
+  `without-line-numbers`; kept in step, last write wins; removed in 23.0.0)
 - `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
   shared by the native textarea and text measurement. Explicit property/attribute assignment wins
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
@@ -100,7 +102,7 @@ the internal textarea; native payload such as `InputEvent.inputType` and
 **CSS parts:** `form-control`, `label` / `form-control-label` (both tokens sit on the same `<label>`
 element — `label` is the historical name, `form-control-label` the one every other form component
 in this family uses), `editor` (the bordered frame and the single scroll viewport), `gutter` (line
-numbers, `aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+numbers, `aria-hidden`, omitted while `withoutLineNumbers`), `textarea`, `hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 that label element — the one `::after` rule described under "The required-field marker" above, not

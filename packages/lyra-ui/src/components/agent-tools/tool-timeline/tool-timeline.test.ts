@@ -5,6 +5,7 @@ import type { LyraToolCallChip } from '../tool-call-chip/tool-call-chip.class.js
 import type { LyraToolResultView } from '../tool-result-view/tool-result-view.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -35,7 +36,7 @@ function resultViewIn(entry: HTMLElement | undefined): LyraToolResultView {
 async function openEntry(el: LyraToolTimeline, index = 0): Promise<HTMLElement> {
   const row = entryAt(el, index);
   row.querySelector('lr-details')!.dispatchEvent(
-    new CustomEvent('lr-toggle', { detail: { open: true }, bubbles: true, composed: true }),
+    new CustomEvent('lr-toggle', { detail: { open: true, expanded: true }, bubbles: true, composed: true }),
   );
   await el.updateComplete;
   return entryAt(el, index);
@@ -110,14 +111,14 @@ it('exposes a vetoed approval at the timeline boundary and lets a host revert it
   await approvalDialog.updateComplete;
   expect(el.pendingApproval).to.equal('approve');
   expect(approvalDialog.open).to.be.true;
-  expect(approvalDialog.pending).to.equal('approve');
+  expect(approvalDialog.pendingAction).to.equal('approve');
 
   el.revertPendingApproval();
   await el.updateComplete;
   await approvalDialog.updateComplete;
   expect(el.pendingApproval).to.equal(null);
   expect(approvalDialog.open).to.be.true;
-  expect(approvalDialog.pending).to.equal(null);
+  expect(approvalDialog.pendingAction).to.equal(null);
   expect(editor.value).to.equal(editedArgs);
 
   const retry = oneEvent(el, 'lr-tool-approval-decide');
@@ -141,7 +142,7 @@ it('lets a host finalize a vetoed denial through the timeline boundary', async (
   await el.updateComplete;
   await approvalDialog.updateComplete;
   expect(el.pendingApproval).to.equal('deny');
-  expect(approvalDialog.pending).to.equal('deny');
+  expect(approvalDialog.pendingAction).to.equal('deny');
 
   el.finalizePendingApproval();
   await el.updateComplete;
@@ -183,7 +184,7 @@ it('a host that approves synchronously through entries (instead of finalizePendi
 
   expect(el.pendingApproval).to.equal(null);
   expect(approvalDialog.open).to.be.false;
-  expect(approvalDialog.pending).to.equal(null);
+  expect(approvalDialog.pendingAction).to.equal(null);
 });
 
 it('a host that denies synchronously through entries (instead of finalizePendingApproval()) wins: the nested dialog stops showing pending', async () => {
@@ -211,7 +212,7 @@ it('a host that denies synchronously through entries (instead of finalizePending
 
   expect(el.pendingApproval).to.equal(null);
   expect(approvalDialog.open).to.be.false;
-  expect(approvalDialog.pending).to.equal(null);
+  expect(approvalDialog.pendingAction).to.equal(null);
 });
 
 it('uses prototype-safe redaction clones', async () => {
@@ -220,7 +221,7 @@ it('uses prototype-safe redaction clones', async () => {
   const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
   const details = entryAt(el).querySelector('lr-details') as HTMLElement & { open: boolean };
   details.open = true;
-  details.dispatchEvent(new CustomEvent('lr-toggle', { detail: { open: true }, bubbles: true, composed: true }));
+  details.dispatchEvent(new CustomEvent('lr-toggle', { detail: { open: true, expanded: true }, bubbles: true, composed: true }));
   await el.updateComplete;
   const view = resultViewIn(entriesEl(el)[0]);
   expect(Object.getPrototypeOf(view.args)).to.equal(null);
@@ -284,7 +285,7 @@ it('projects accepted entries once, omits accessors, and retains opaque args, re
       throw new Error('admitted entries must stay opaque after projection');
     },
   });
-  el!.approvalEditable = false;
+  el!.approvalReadonly = true;
   await el!.updateComplete;
   expect(sourceReads).to.equal(0);
   expect(chipIn(entriesEl(el!)[0]).name).to.equal('Safe');
@@ -327,7 +328,7 @@ it('defers opaque payload traversal until disclosure and does not re-read it aft
   const readsAfterOpen = ownKeyReads;
   expect(readsAfterOpen).to.equal(1);
 
-  el.approvalEditable = false;
+  el.approvalReadonly = true;
   await el.updateComplete;
   expect(ownKeyReads).to.equal(readsAfterOpen);
 });
@@ -384,10 +385,10 @@ it('keeps an incomplete entry status for both the timeline row and its child chi
   expect(chip.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Incomplete');
 });
 
-it('defaults to entries=[] and approvalEditable=true, rendering an empty list with no dialog decision affordance', async () => {
+it('defaults to entries=[] and approvalReadonly=false, rendering an empty list with no dialog decision affordance', async () => {
   const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.entries).to.deep.equal([]);
-  expect(el.approvalEditable).to.be.true;
+  expect(el.approvalReadonly).to.be.false;
   expect(el.pendingApproval).to.equal(null);
   expect(entriesEl(el).length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
@@ -956,9 +957,58 @@ it('shows an entry display name on its chip and details disclosure while the ren
   expect(dialog(gated).toolName, 'the approval dialog names the exact tool').to.equal('read_file');
 });
 
-it('accepts approval-editable="false" as a plain-HTML attribute string', async () => {
-  const el = (await fixture(html`<lr-tool-timeline approval-editable="false"></lr-tool-timeline>`)) as LyraToolTimeline;
-  expect(el.approvalEditable).to.be.false;
+it('accepts approval-readonly as a plain-HTML attribute and forwards it to the approval dialog', async () => {
+  const el = (await fixture(html`<lr-tool-timeline approval-readonly></lr-tool-timeline>`)) as LyraToolTimeline;
+  expect(el.approvalReadonly).to.be.true;
+  expect(dialog(el).readonly).to.be.true;
+});
+
+describe('lr-tool-timeline deprecated approval-editable alias', () => {
+  const APPROVAL_EDITABLE: readonly DeprecatedUsage[] = [
+    { tag: 'lr-tool-timeline', kind: 'property', name: 'approvalEditable' },
+  ];
+
+  it('treats approval-editable="false" exactly like approval-readonly, keeps a bare one meaning the default, and warns once', async () => {
+    let results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const off = (await fixture(html`<lr-tool-timeline approval-editable="false"></lr-tool-timeline>`)) as LyraToolTimeline;
+      const bare = (await fixture(html`<lr-tool-timeline approval-editable></lr-tool-timeline>`)) as LyraToolTimeline;
+      const both = (await fixture(html`<lr-tool-timeline approval-editable approval-readonly></lr-tool-timeline>`)) as LyraToolTimeline;
+      const property = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
+      property.approvalEditable = false;
+      await property.updateComplete;
+      results = [off, bare, both, property].map((el) => dialog(el).readonly);
+      results.push(off.approvalEditable, off.approvalReadonly);
+    });
+    expect(results).to.deep.equal([true, false, true, true, false, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-timeline:property:approvalEditable']);
+  });
+
+  it('applies the last authored spelling when approval-editable and approval-readonly are both present', async () => {
+    let results: boolean[] = [];
+    await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const canonicalLast = (await fixture(html`<lr-tool-timeline approval-editable approval-readonly></lr-tool-timeline>`)) as LyraToolTimeline;
+      const aliasLast = (await fixture(html`<lr-tool-timeline approval-readonly approval-editable></lr-tool-timeline>`)) as LyraToolTimeline;
+      results = [canonicalLast.approvalReadonly, dialog(canonicalLast).readonly, aliasLast.approvalReadonly, dialog(aliasLast).readonly];
+    });
+    expect(results).to.deep.equal([true, true, false, false]);
+  });
+
+  it('syncs and reflects approval-editable back from approvalReadonly without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+      el.approvalReadonly = true;
+      await el.updateComplete;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+      el.approvalReadonly = false;
+      await el.updateComplete;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+    });
+    expect(reads).to.deep.equal([true, null, false, 'false', true, null]);
+    expect(warnings).to.have.length(0);
+  });
 });
 
 it('renders correctly under dir="rtl" with no crash, preserving chronological order', async () => {
@@ -1123,7 +1173,7 @@ it('forgets a closed details disclosure and keeps it closed after rerender', asy
   expect(details.open).to.equal(true);
 
   details.dispatchEvent(new CustomEvent('lr-toggle', {
-    detail: { open: false },
+    detail: { open: false, expanded: false },
     bubbles: true,
     composed: true,
   }));

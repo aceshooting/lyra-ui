@@ -5,6 +5,10 @@ import './lightbox.js';
 import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 // Registers the real 'ar' catalog so the lang="ar-EG" counter/live-region digit-formatting test
 // below resolves every key it incidentally touches (lightboxImagePosition, lightboxLabel, close,
 // previous, next, zoom controls, ...) instead of tripping the partial-catalog fallback warning.
@@ -1012,54 +1016,124 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
   }
 });
 
-// Regression coverage for the api-surface-true-default-boolean-attribute defect class -- Lit's
-// default presence-based `type: Boolean` converter can never clear a `true`-defaulting property
-// from a plain-HTML attribute (`show-counter="false"` still counts as "present"), so showCounter
-// needs a custom converter that checks the literal string, matching every other `show*`
-// true-defaulting boolean in this library (e.g. <lr-generation-metrics>'s showStop).
-describe('showCounter', () => {
-  it('defaults to true and renders the counter', async () => {
-    const el = (await fixture(html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`)) as LyraLightbox;
-    expect(el.showCounter).to.be.true;
-    expect(el.shadowRoot!.querySelectorAll('[part="counter"]').length).to.equal(1);
-    el.open = false;
+// `without-counter` hides only the visible counter. `show-counter` is its deprecated inverted
+// alias; it keeps working, including the plain-HTML `show-counter="false"` spelling that Lit's
+// presence-based boolean converter could never express, until its removal.
+describe('withoutCounter and the deprecated showCounter alias', () => {
+  const SHOW_COUNTER: readonly DeprecatedUsage[] = [
+    { tag: 'lr-lightbox', kind: 'property', name: 'showCounter' },
+  ];
+  const twoImages = [image, { ...image, caption: 'Second' }];
+  const counters = (el: LyraLightbox): number =>
+    el.shadowRoot!.querySelectorAll('[part="counter"]').length;
+  const liveText = (el: LyraLightbox): string | null =>
+    el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+
+  it('renders the counter by default, without a warning', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      const el = (await fixture(html`<lr-lightbox .images=${twoImages} open></lr-lightbox>`)) as LyraLightbox;
+      expect(el.withoutCounter).to.be.false;
+      expect(el.showCounter).to.be.true;
+      expect(counters(el)).to.equal(1);
+      el.open = false;
+    });
+    expect(warnings).to.have.length(0);
   });
 
-  it('a plain HTML show-counter="false" attribute (no property binding) actually clears it', async () => {
+  it('without-counter hides only the visible counter', async () => {
     const el = (await fixture(
-      html`<lr-lightbox show-counter="false" open .images=${[image, { ...image, caption: 'Second' }]}></lr-lightbox>`,
+      html`<lr-lightbox without-counter open .images=${twoImages}></lr-lightbox>`,
     )) as LyraLightbox;
     await el.updateComplete;
+    expect(el.withoutCounter).to.be.true;
     expect(el.showCounter).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="counter"]') === null).to.be.true;
+    expect(counters(el)).to.equal(0);
+    expect(liveText(el)).to.equal('Image 1 of 2');
     el.open = false;
   });
 
-  it('a .showCounter=${false} property binding also clears it', async () => {
-    const el = (await fixture(
-      html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open .showCounter=${false}></lr-lightbox>`,
-    )) as LyraLightbox;
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="counter"]') === null).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('Image 1 of 2');
-    el.open = false;
+  it('show-counter="false" equals without-counter and warns once', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const alias = (await fixture(
+          html`<lr-lightbox show-counter="false" open .images=${twoImages}></lr-lightbox>`,
+        )) as LyraLightbox;
+        await alias.updateComplete;
+        expect(alias.withoutCounter).to.be.true;
+        expect(alias.showCounter).to.be.false;
+        expect(counters(alias)).to.equal(0);
+        expect(liveText(alias)).to.equal('Image 1 of 2');
+        alias.open = false;
+      }
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-lightbox:property:showCounter',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-counter');
   });
 
-  // The converter is parse-only on purpose: nothing styles or queries `[show-counter]`, so the
-  // property does not reflect and no attribute is ever written back from a property assignment.
-  it('never writes the attribute back from a property assignment', async () => {
-    const el = (await fixture(
-      html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`,
-    )) as LyraLightbox;
-    el.showCounter = false;
-    await el.updateComplete;
-    expect(el.hasAttribute('show-counter')).to.equal(false);
-    expect(el.shadowRoot!.querySelector('[part="counter"]') === null).to.be.true;
+  it('a .showCounter=${false} property binding also clears it, and true restores it', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      const el = (await fixture(
+        html`<lr-lightbox .images=${twoImages} open .showCounter=${false}></lr-lightbox>`,
+      )) as LyraLightbox;
+      await el.updateComplete;
+      expect(counters(el)).to.equal(0);
+      expect(liveText(el)).to.equal('Image 1 of 2');
 
-    el.showCounter = true;
+      el.showCounter = true;
+      await el.updateComplete;
+      expect(el.withoutCounter).to.be.false;
+      expect(counters(el)).to.equal(1);
+      el.open = false;
+    });
+    expect(warnings).to.have.length(1);
+  });
+
+  it('removing show-counter="false" restores the default counter', async () => {
+    await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      const el = (await fixture(
+        html`<lr-lightbox show-counter="false" open .images=${twoImages}></lr-lightbox>`,
+      )) as LyraLightbox;
+      el.removeAttribute('show-counter');
+      await el.updateComplete;
+      expect(el.withoutCounter).to.be.false;
+      expect(counters(el)).to.equal(1);
+      el.open = false;
+    });
+  });
+
+  it('lets the later-written without-counter win over show-counter', async () => {
+    await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      const el = (await fixture(
+        html`<lr-lightbox show-counter="true" without-counter open .images=${twoImages}></lr-lightbox>`,
+      )) as LyraLightbox;
+      await el.updateComplete;
+      expect(el.withoutCounter).to.be.true;
+      expect(counters(el)).to.equal(0);
+      el.open = false;
+    });
+  });
+
+  // Neither spelling reflects: nothing styles or queries them, so no attribute is ever written
+  // back from a property assignment.
+  it('never writes either attribute back from a property assignment', async () => {
+    const el = (await fixture(
+      html`<lr-lightbox .images=${twoImages} open></lr-lightbox>`,
+    )) as LyraLightbox;
+    el.withoutCounter = true;
     await el.updateComplete;
+    expect(el.hasAttribute('without-counter')).to.equal(false);
     expect(el.hasAttribute('show-counter')).to.equal(false);
-    expect(el.shadowRoot!.querySelectorAll('[part="counter"]').length).to.equal(1);
+    expect(counters(el)).to.equal(0);
+
+    await captureDeprecationWarnings(SHOW_COUNTER, async () => {
+      el.showCounter = true;
+      await el.updateComplete;
+    });
+    expect(el.hasAttribute('show-counter')).to.equal(false);
+    expect(el.hasAttribute('without-counter')).to.equal(false);
+    expect(counters(el)).to.equal(1);
     el.open = false;
   });
 });

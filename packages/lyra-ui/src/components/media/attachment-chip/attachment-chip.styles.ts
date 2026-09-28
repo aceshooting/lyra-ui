@@ -30,31 +30,58 @@ export const styles = css`
     --_lr-attachment-chip-compact-thumbnail-only-padding: var(--lr-size-0-125rem);
   }
 
-  :host([compact]) [part='base'] {
+  /* The compact density: size s and the steps below it, or the deprecated compact attribute. One
+     :host([x]) selector per spelling keeps every branch at the same specificity. Once upgraded the
+     two are kept in sync, so the compact selector only matters while size is absent; that
+     qualifier sits in :where() to add no specificity. */
+  :host([compact]:where(:not([size]))) [part='base'],
+  :host([size='2xs']) [part='base'],
+  :host([size='xs']) [part='base'],
+  :host([size='s']) [part='base'],
+  :host([size='small']) [part='base'] {
     border: none;
     border-radius: var(--lr-radius-pill);
     padding: var(--lr-attachment-chip-compact-padding, var(--_lr-attachment-chip-compact-padding));
     font-size: var(--lr-attachment-chip-compact-font-size, var(--_lr-attachment-chip-compact-font-size));
     gap: var(--lr-attachment-chip-compact-gap, var(--_lr-attachment-chip-compact-gap));
   }
-  :host([compact]) [part='thumbnail'] {
+  :host([compact]:where(:not([size]))) [part='thumbnail'],
+  :host([size='2xs']) [part='thumbnail'],
+  :host([size='xs']) [part='thumbnail'],
+  :host([size='s']) [part='thumbnail'],
+  :host([size='small']) [part='thumbnail'] {
     inline-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
     block-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
   }
-  /* Action buttons keep the shared hit-area floor in compact mode, though the thumbnail shrinks. */
-  :host([compact]) [part='retry-button'],
-  :host([compact]) [part='preview-button'],
-  :host([compact]) [part='remove-button'] {
+  /* Action buttons keep the shared hit-area floor at the compact density, though the thumbnail
+     shrinks. */
+  :host([compact]:where(:not([size]))) [part='retry-button'],
+  :host([compact]:where(:not([size]))) [part='preview-button'],
+  :host([compact]:where(:not([size]))) [part='remove-button'],
+  :host([size='2xs']) [part='retry-button'],
+  :host([size='xs']) [part='retry-button'],
+  :host([size='s']) [part='retry-button'],
+  :host([size='small']) [part='retry-button'],
+  :host([size='2xs']) [part='preview-button'],
+  :host([size='xs']) [part='preview-button'],
+  :host([size='s']) [part='preview-button'],
+  :host([size='small']) [part='preview-button'],
+  :host([size='2xs']) [part='remove-button'],
+  :host([size='xs']) [part='remove-button'],
+  :host([size='s']) [part='remove-button'],
+  :host([size='small']) [part='remove-button'] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
   [part='meta'][hidden] {
     display: none;
   }
-  /* Keyed off [part='meta'][hidden] via :has(), not just [compact][thumbnail-only]: thumbnail-only
-     only actually hides [part='meta'] for an image-mime attachment (see the class doc), and a
-     non-image chip still renders the text row and needs the ordinary compact padding around it. */
-  :host([compact][thumbnail-only]) [part='base']:has([part='meta'][hidden]) {
+  /* Keyed off [part='meta'][hidden] via :has(), not just the compact density plus thumbnail-only:
+     thumbnail-only only actually hides [part='meta'] for an image-mime attachment at the compact
+     density (see the class doc), and a non-image chip still renders the text row and needs the
+     ordinary compact padding around it. The :has() test already implies the compact density; the
+     :host([thumbnail-only]) qualifier keeps this rule above the compact padding rules. */
+  :host([thumbnail-only]) [part='base']:has([part='meta'][hidden]) {
     padding: var(--lr-attachment-chip-compact-thumbnail-only-padding, var(--_lr-attachment-chip-compact-thumbnail-only-padding));
   }
 

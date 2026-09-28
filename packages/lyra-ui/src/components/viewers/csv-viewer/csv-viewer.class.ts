@@ -29,7 +29,8 @@ import {
   type PapaParseApi,
 } from '../../../internal/papaparse-loader.js';
 import { styles } from './csv-viewer.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   delimitedCellText as cell,
   delimitedColumnCount as columns,
@@ -65,8 +66,8 @@ type OwnedAnimationFrameWait = {
 };
 const MAX_SEARCH_MATCHES = 1_000;
 
-/** `hasHeaderRow` shifts every raw-grid (1-based, header row included) row number down by one to
- *  reach the matching index into the virtualized body array. */
+/** A rendered header row shifts every raw-grid (1-based, header row included) row number down by
+ *  one to reach the matching index into the virtualized body array. */
 function headerOffset(hasHeaderRow: boolean): number {
   return hasHeaderRow ? 1 : 0;
 }
@@ -99,7 +100,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * Fetches CSV text, parses quoted fields with PapaParse, and virtualizes its rows.
  *
  * Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with
- * the header row included whenever `has-header-row` is set (matching how a spreadsheet app itself
+ * the header row included unless `without-header-row` is set (matching how a spreadsheet app itself
  * labels `A1`) -- `scrollToAnchor()` scrolls the addressed row into view via the virtualized list's
  * `active-item-id`, then scrolls the first addressed column horizontally into view. A `sheet`-qualified
  * anchor never resolves here -- this viewer has no sheets. `highlights` paint as a
@@ -130,8 +131,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   virtual-list remains the data-row scrollport within that allocation.
  * @csspart sheet - The named `role="table"` wrapper around the header row and virtualized body.
  * @csspart rows - The virtualized row list.
- * @csspart header-row - The persistent header above the virtualized row scrollport, rendered while
- *   `has-header-row` is set.
+ * @csspart header-row - The persistent header above the virtualized row scrollport, rendered unless
+ *   `without-header-row` is set.
  * @csspart data-row - One virtualized data row.
  * @csspart cell - One rendered cell.
  * @csspart cell-highlight - A structural cell covered by a `highlights` entry.
@@ -177,13 +178,21 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     srOnly,
     viewerLoadingStyles,
   ];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hasHeaderRow: ['withoutHeaderRow', invertAlias, invertAlias],
+  };
+
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name used on the shadow viewer owner when host `aria-label` is
    *  absent. A non-empty host label remains on the host; an explicitly empty one is preserved on
    *  the shadow owner. */
   @property() name = '';
-  /** Whether the first parsed row is rendered as a sticky header. */
+  /** Renders the first parsed row as an ordinary data row instead of the persistent header. */
+  @property({ type: Boolean, attribute: 'without-header-row' }) withoutHeaderRow = false;
+  /** Whether the first parsed row is rendered as a sticky header.
+   *  @deprecated Use `without-header-row`; removal not before 23.0.0. */
   @property({
     attribute: 'has-header-row',
     converter: trueDefaultBooleanConverter,
@@ -467,7 +476,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const { rows } = loadedState;
     if (rawRow < 1 || rawRow > rows.length || col < 0 || col >= columns(rows))
       return false;
-    const bodyIndex = rawRow - 1 - headerOffset(this.hasHeaderRow);
+    const bodyIndex = rawRow - 1 - headerOffset(!this.withoutHeaderRow);
     if (bodyIndex < 0) {
       const target = this.renderRoot
         .querySelector('[part="header-row"]')
@@ -618,9 +627,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   };
 
   /** Memoized `<lr-virtual-list>.items`/`.renderItem` inputs, keyed on the exact `rows` array
-   *  reference and `hasHeaderRow` -- a fresh `body` array and `renderItem` closure on every
-   *  render() (a search keystroke, active-row change, locale change, all unrelated to the data
-   *  itself) would otherwise defeat the virtual list's own offset-cache memoization on every one
+   *  reference and whether the header row renders -- a fresh `body` array and `renderItem` closure
+   *  on every render() (a search keystroke, active-row change, locale change, all unrelated to the
+   *  data itself) would otherwise defeat the virtual list's own offset-cache memoization on every one
    *  of those, forcing its O(n) `recomputeOffsets()` and clearing measured row heights. `renderItem`
    *  still reads live `this` state (highlights, etc.) on every call -- only its own identity is
    *  cached, not its output. */
@@ -664,11 +673,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       if (!rows.length)
         content = html`<p class="empty-note">${this.localize('noData')}</p>`;
       else {
-        const header = this.hasHeaderRow ? rows[0] : undefined;
+        const hasHeaderRow = !this.withoutHeaderRow;
+        const header = hasHeaderRow ? rows[0] : undefined;
         const count = columns(rows);
         const { body, renderItem } = this.virtualListInputs(
           rows,
-          this.hasHeaderRow
+          hasHeaderRow
         );
         const tableLabel = hostAriaLabel(this)
           ?? (this.name || this.localize('csvViewerLabel'));
@@ -689,7 +699,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
             .keyFunction=${indexKeyFunction}
             .activeItemId=${this.activeRowKey}
             item-role="row"
-            row-index-offset=${this.hasHeaderRow ? '1' : '0'}
+            row-index-offset=${hasHeaderRow ? '1' : '0'}
             @lr-load-more=${this.stopInternalEvent}
             @lr-visible-range-change=${this.stopInternalEvent}
             @lr-virtual-scroll=${this.stopInternalEvent}

@@ -35,6 +35,8 @@ import {
   trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
@@ -444,6 +446,15 @@ export interface LyraLiteChartEventMap {
   'lr-datum-activate': CustomEvent<
     LyraChartDatumActivateDetail<'bar' | 'point', number | null>
   >;
+  /** A bar/point was activated by pointer or keyboard. */
+  'lr-point-activate': CustomEvent<{
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: number | null;
+  }>;
+  /** @deprecated Use `lr-point-activate`; removal not before 23.0.0. Fired right after it, from
+   *  the same activation, with an identical detail. */
   'lr-point-click': CustomEvent<{
     datasetIndex: number;
     index: number;
@@ -500,11 +511,11 @@ export interface LyraLiteChartEventMap {
  * `withoutValueAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether
  * (x-axis category labels, rendered separately, are unaffected). An eighth,
  * `legendText`, appends a formatter-supplied string after each series' label in the
- * built-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same
- * fallback-to-unchanged convention as every other hook here. The built-in multi-series accessible
- * table can independently format its finite numeric cells through `tableCellFormatter`; for a
- * stacked bar chart, `tableTotals` adds an opt-in localized total column. Both are no-ops when
- * unset.
+ * built-in legend row (e.g. a value or share) — no-op while `withLegend` is unset, matching the
+ * same fallback-to-unchanged convention as every other hook here. The built-in multi-series
+ * accessible table can independently format its finite numeric cells through
+ * `tableCellFormatter`; for a stacked bar chart, `tableTotals` adds an opt-in localized total
+ * column. Both are no-ops when unset.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -522,10 +533,12 @@ export interface LyraLiteChartEventMap {
  * @event lr-datum-activate - Fired when a bar/point is activated. The
  *   normalized detail includes `kind`, `datasetIndex`, `index`, `label`, and
  *   `value` across the chart family.
- * @event lr-point-click - Fired when a bar/point is activated (click, or
+ * @event lr-point-activate - Fired when a bar/point is activated (click, or
  *   Enter/Space while focused). `detail: { datasetIndex: number, index:
  *   number, label: string | undefined, value: number | null }` — same shape
- *   as `lr-chart`'s `lr-point-click`.
+ *   as `lr-chart`'s `lr-point-activate`.
+ * @event lr-point-click - Deprecated alias of `lr-point-activate`, fired right after it from the
+ *   same activation with an identical detail; removal not before 23.0.0.
  * @csspart base - The host's flex layout wrapper.
  * @csspart description - The visually hidden accessible chart description, when set.
  * @csspart grid-line - Each horizontal gridline.
@@ -539,7 +552,7 @@ export interface LyraLiteChartEventMap {
  *   matches, it carries a per-series `stroke-dasharray` for the same reason.
  * @csspart point - Each series' per-point keyboard target (type="line"). Carries
  *   `data-selected` and explicit `aria-pressed` state.
- * @csspart legend - The legend row, when `legend` is set.
+ * @csspart legend - The legend row, when `withLegend` is set.
  * @csspart legend-item - Each legend entry.
  * @csspart legend-swatch - Each legend entry's color swatch. While `forced-colors: active`
  *   matches, it carries a `data-encoding` attribute selecting the CSS texture that matches its
@@ -612,6 +625,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    legend: 'withLegend',
+    beginAtZero: ['withoutZeroBaseline', invertAlias, invertAlias],
+    showDataTable: 'withDataTable',
+  };
+
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: readonly string[] = [];
@@ -631,6 +651,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * (legend shown by default): `lr-lite-chart`'s typical single-series sparkline-adjacent usage is
    * more often legend-redundant than `lr-chart`'s typical multi-dataset case.
    */
+  @property({ type: Boolean, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deliberately opt-in (default `false`), unlike `lr-chart`'s negative-polarity `withoutLegend`
+   * (legend shown by default): `lr-lite-chart`'s typical single-series sparkline-adjacent usage is
+   * more often legend-redundant than `lr-chart`'s typical multi-dataset case.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
   @property({ type: Boolean }) legend = false;
   /** Logical placement for the optional DOM legend. Deliberately `'bottom'`, unlike `lr-chart`'s
    *  `'top'` default -- shared with `lr-box-plot` via `chart-chrome.ts`'s
@@ -647,6 +676,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ attribute: 'x-label' }) xLabel = '';
   /** Vertical axis title. Long titles ellipsize to fit while retaining their full accessible name. */
   @property({ attribute: 'y-label' }) yLabel = '';
+  /** Lets the value axis start at the data minimum instead of always including zero. */
+  @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
+
+  /** Deprecated inverted alias of `without-zero-baseline` (`withoutZeroBaseline`).
+   * @deprecated Use `without-zero-baseline`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Stacks each category's bars into one segmented bar. Ignored for `type="line"`. */
   @property({ type: Boolean }) stacked = false;
@@ -667,11 +701,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * meaning as `<lr-chart>`'s property of the same name.
    * @default false
    */
+  @property({ type: Boolean, attribute: 'with-data-table' }) withDataTable = false;
+
+  /**
+   * Makes the generated data table visible; it stays screen-reader available when false. Same
+   * meaning as `<lr-chart>`'s property of the same name.
+   * @default false
+   * @deprecated Use `with-data-table`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * Render a disclosure button above the accessible data table so a sighted reader can reveal the
-   * numbers on demand, turning `showDataTable` into the disclosure's INITIAL state rather than its
+   * numbers on demand, turning `withDataTable` into the disclosure's INITIAL state rather than its
    * whole behavior. The table stays in the DOM in both states, so assistive technology never loses
    * it.
    *
@@ -683,16 +725,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   @property({ type: Boolean, attribute: 'data-table-toggle' }) dataTableToggle = false;
 
-  /** Live disclosure state; null until toggled, so an untouched control follows `showDataTable`. */
+  /** Live disclosure state; null until toggled, so an untouched control follows `withDataTable`. */
   @state() private dataTableExpandedOverride: boolean | null = null;
 
   private readonly dataTableId = nextId('lite-chart-data-table');
 
-  /** Identical to `showDataTable` whenever `dataTableToggle` is off, keeping the unset path
+  /** Identical to `withDataTable` whenever `dataTableToggle` is off, keeping the unset path
    *  byte-identical to before. */
   private get dataTableVisible(): boolean {
-    if (!this.dataTableToggle) return this.showDataTable;
-    return this.dataTableExpandedOverride ?? this.showDataTable;
+    if (!this.dataTableToggle) return this.withDataTable;
+    return this.dataTableExpandedOverride ?? this.withDataTable;
   }
 
   private toggleDataTable(): void {
@@ -758,7 +800,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Formats extra per-item text appended after a series' label in the built-in legend row (e.g. a
    *  value or percentage share) — receives the series label and its dataset index. Falls back to
    *  rendering the label alone when unset (today's exact legend output), mirroring `pointText`'s and
-   *  `tickFormat`'s existing opt-in-hook convention. Has no effect while `legend` is `false`. */
+   *  `tickFormat`'s existing opt-in-hook convention. Has no effect while `withLegend` is `false`. */
   @property({ attribute: false }) legendText?: (label: string, datasetIndex: number) => string;
   /**
    * Visual-only override for one category-axis tick's text — receives that category's own `labels`
@@ -842,10 +884,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
    *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
-   *  exactly. `lr-lite-chart` keeps this override under its original `accessible-label` name; it
-   *  is unrelated to (and was not renamed alongside) the deprecated `accessible-label` alias that
-   *  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property. */
+   *  exactly. The `accessible-label` attribute spelling is deprecated (use the host `aria-label`
+   *  in markup; removal not before 23.0.0) and logs a one-time development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+
+  /** The host `aria-label`, which names the chart ahead of every other source. Declared so a
+   *  later change re-renders the `<svg>` name. */
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
   /** Accessible chart name. A host `aria-label` wins. */
   @property() label: string | null = null;
   /** Optional accessible chart description. */
@@ -949,6 +994,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    if (name === 'accessible-label' && value != null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
     super.attributeChangedCallback(name, oldValue, value);
     if (oldValue !== value && (name === 'style' || name === 'class')) {
       this.fitAxisTitles();
@@ -1729,10 +1777,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /**
    * The lower bound of a logarithmic axis.
    *
-   * Deliberately NOT the linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, and
-   * zero has no logarithm. Using the smallest POSITIVE datum instead is what makes the axis span
-   * the data's real decades — otherwise a 1..1000 series collapses onto a single decade and every
-   * value below the top one pins to the baseline. Falls back to a decade below the maximum when no
+   * Deliberately NOT the linear `lo`: the zero baseline is on by default, so `lo` is normally
+   * `0`, and zero has no logarithm. Using the smallest POSITIVE datum instead is what makes the
+   * axis span the data's real decades — otherwise a 1..1000 series collapses onto a single decade
+   * and every value below the top one pins to the baseline. Falls back to a decade below the maximum when no
    * positive datum exists, which keeps the geometry finite for a degenerate series.
    */
   private logDomainFloor(lo: number, hi: number): number {
@@ -1805,7 +1853,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       lo = 0;
       hi = 1;
     }
-    const domain = niceDomain(lo, hi, this.beginAtZero, TICK_COUNT);
+    const domain = niceDomain(lo, hi, !this.withoutZeroBaseline, TICK_COUNT);
     if (this.scale === 'logarithmic') {
       const ticks = logarithmicTicks(this.logDomainFloor(domain.lo, domain.hi), domain.hi, TICK_COUNT);
       if (ticks) return { ...domain, ticks };
@@ -1823,6 +1871,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       label,
       value,
     });
+    this.emit('lr-point-activate', { datasetIndex, index, label, value });
     this.emit('lr-point-click', { datasetIndex, index, label, value });
   }
 
@@ -2715,6 +2764,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       (datasetIndex) => this.datasets[datasetIndex]!.label,
     );
     const chartLabel =
+      this.hostAccessibleLabel ??
       hostAriaLabel(this) ??
       (this.label ||
         this.accessibleLabel ||
@@ -2731,7 +2781,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return html`
       <div
         part="base"
-        data-legend-position=${this.legend
+        data-legend-position=${this.withLegend
           ? chartChromeLegendPlacement(this.legendPosition)
           : nothing}
       >
@@ -2853,7 +2903,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 : this.markAnnouncement(index, marksForA11y)}</li>`)}
             </ul>`}
         </div>
-        ${this.legend
+        ${this.withLegend
           ? html`<div part="legend">
               ${recordSample.seriesIndexes.map(
                 (i) => {

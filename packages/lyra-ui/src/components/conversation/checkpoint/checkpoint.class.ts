@@ -1,6 +1,7 @@
 import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
@@ -49,8 +50,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by both `restorable` and
- *  `confirmRestore`, which have the identical `true`-default parsing need. */
+ *  `fromAttribute` checks the literal string instead. Shared by the deprecated `restorable` and
+ *  `confirmRestore` aliases, which have the identical `true`-default parsing need. */
 
 /**
  * `<lr-checkpoint>` — an inline conversation restore point: a labeled marker between messages
@@ -60,15 +61,15 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @customElement lr-checkpoint
  * @slot - Optional supplemental content under the marker row (e.g. what changed since this
  *   point).
- * @event lr-restore - Restore was activated (after the inline confirm step, when
- *   `confirmRestore` is on). `detail: { checkpointId, label }`. Not cancelable — a request; this
+ * @event lr-restore - Restore was activated (after the inline confirm step, unless
+ *   `without-restore-confirmation` is set). `detail: { checkpointId, label }`. Not cancelable — a request; this
  *   component performs no default action and stores nothing.
  * @csspart base - The marker root (`role="group"`).
  * @csspart line - Each of the two flanking rules.
  * @csspart icon - The bookmark glyph.
  * @csspart label - The computed label text.
  * @csspart timestamp - The formatted `timestamp`, when set.
- * @csspart restore-button - The Restore button. Only rendered while `restorable`.
+ * @csspart restore-button - The Restore button. Not rendered while `without-restore`.
  * @csspart confirm-group - The inline confirm prompt, swapped in for `restore-button` while
  *   confirming.
  * @csspart confirm-prompt - The confirm prompt text.
@@ -95,6 +96,10 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    restorable: ['withoutRestore', invertAlias, invertAlias],
+    confirmRestore: ['withoutRestoreConfirmation', invertAlias, invertAlias],
+  };
 
   /** Opaque id echoed in the `lr-restore` event detail. */
   @property({ attribute: 'checkpoint-id' }) checkpointId = '';
@@ -109,11 +114,30 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   /** Overrides the default `hour:minute` rendering of `timestamp`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
-  /** When `false`, renders a plain marker with no button — for read-only views, or the currently-
-   *  restored checkpoint. */
+  /** Renders a plain marker with no button — for read-only views, or the currently-restored
+   *  checkpoint. */
+  @property({ type: Boolean, attribute: 'without-restore' }) withoutRestore = false;
+
+  /**
+   * Deprecated inverted alias of `without-restore` (`withoutRestore`): `restorable="false"` equals
+   * `without-restore`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-restore`; removal not before 23.0.0.
+   */
   @property({ converter: trueDefaultBooleanConverter }) restorable = true;
 
-  /** Gates the `lr-restore` event behind the inline confirm step. */
+  /** Skips the inline confirm step: Restore fires `lr-restore` immediately. */
+  @property({ type: Boolean, attribute: 'without-restore-confirmation' })
+  withoutRestoreConfirmation = false;
+
+  /**
+   * Deprecated inverted alias of `without-restore-confirmation` (`withoutRestoreConfirmation`):
+   * `confirm-restore="false"` equals `without-restore-confirmation`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-restore-confirmation`; removal not before 23.0.0.
+   */
   @property({ attribute: 'confirm-restore', converter: trueDefaultBooleanConverter }) confirmRestore = true;
 
   /** Host-set busy state: the Restore button becomes `aria-disabled="true"` with a spinner beside
@@ -141,8 +165,8 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private onRestoreClick = (): void => {
-    if (!this.restorable || this.restoring || this.confirming) return;
-    if (!this.confirmRestore) {
+    if (this.withoutRestore || this.restoring || this.confirming) return;
+    if (this.withoutRestoreConfirmation) {
       this.fireRestore();
       return;
     }
@@ -164,7 +188,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
           generation !== this.focusGeneration ||
           !this.isConnected ||
           this.confirming ||
-          !this.restorable
+          this.withoutRestore
         ) return;
         // Deliberately NOT gated on `restoring`. Confirming is the terminal action here: it destroys
         // the confirm group -- and with it the Confirm button holding focus -- and a host that
@@ -172,7 +196,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
         // runs. The restore button is still rendered in that state (`aria-disabled`, not `disabled`,
         // so still focusable) and is the component's only remaining stop, so declining the refocus
         // drops a keyboard user onto <body> at the moment the restore they authorised begins. The
-        // `restorable` check above stays because that branch renders no button at all, and the
+        // `withoutRestore` check above stays because that branch renders no button at all, and the
         // optional call then covers every remaining "nothing to focus" case on its own.
         (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.focus();
       });
@@ -180,7 +204,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private onConfirmClick = (): void => {
-    if (!this.confirming || !this.restorable || !this.confirmRestore || this.restoring) {
+    if (!this.confirming || this.withoutRestore || this.withoutRestoreConfirmation || this.restoring) {
       this.revertToRestore(false);
       return;
     }
@@ -207,8 +231,10 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     super.willUpdate(changed);
     if (
       this.confirming &&
-      (changed.has('restorable') || changed.has('confirmRestore') || changed.has('restoring')) &&
-      (!this.restorable || !this.confirmRestore || this.restoring)
+      (changed.has('withoutRestore') ||
+        changed.has('withoutRestoreConfirmation') ||
+        changed.has('restoring')) &&
+      (this.withoutRestore || this.withoutRestoreConfirmation || this.restoring)
     ) {
       this.confirming = false;
       this.focusGeneration++;
@@ -222,7 +248,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   override click(): void {
-    if (!this.restorable || this.restoring || this.confirming) return;
+    if (this.withoutRestore || this.restoring || this.confirming) return;
     (this.renderRoot.querySelector('[part="restore-button"]') as HTMLButtonElement | null)?.click();
   }
 
@@ -238,7 +264,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
         <span part="icon" aria-hidden="true">${bookmarkIcon()}</span>
         <span part="label">${label}</span>
         ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
-        ${this.restorable
+        ${!this.withoutRestore
           ? this.confirming
             ? html`
                 <span

@@ -6,6 +6,7 @@ import { composedAccessibilityTextResult } from '../../../internal/accessibility
 import { chevronIcon } from '../../../internal/icons.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { styles } from './reorder-item.styles.js';
 import { reorderIdentityChange, reorderOwnerUpdate, type ReorderIdentityOwner, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -49,10 +50,14 @@ function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
  * @csspart move-up-button - The move-up control, a composed `<lr-icon-button>` as of 16.0.0. It
  *   still owns the accessible name, the activation and the rotation; its background, radius,
  *   hover/press mixes, focus ring and hit-area floor now come from `--lr-icon-button-*`.
- * @csspart move-up-button__control - The move-up control's own native `<button>`, forwarded
+ * @csspart move-up-button-control - The move-up control's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `move-up-button`.
+ * @csspart move-up-button__control - Deprecated alias of `move-up-button-control` on the same
+ *   node; removal not before 23.0.0.
  * @csspart move-down-button - The move-down control, likewise a composed `<lr-icon-button>`.
- * @csspart move-down-button__control - The move-down control's own native `<button>`.
+ * @csspart move-down-button-control - The move-down control's own native `<button>`.
+ * @csspart move-down-button__control - Deprecated alias of `move-down-button-control` on the same
+ *   node; removal not before 23.0.0.
  * @csspart content - Wrapper around the default slot.
  * @cssstate at-start - This is the first valid item in its owning list.
  * @cssstate at-end - This is the last valid item in its owning list.
@@ -85,6 +90,17 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    newValue: string | null
+  ): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
+
   private readonly reorderInternals = attachInternalsSafely(this);
   private readonly moveUpLabelId = nextId('reorder-move-up');
   private readonly moveDownLabelId = nextId('reorder-move-down');
@@ -101,14 +117,21 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   private contentObserver?: MutationObserver;
 
   /** Required unique, nonempty stable identifier included in the parent list's emitted
-   * `lr-reorder` order array. An owning list excludes an item with a missing, whitespace-only, or
-   * duplicate value from movement until its identity becomes valid. Direct property or attribute
-   * edits refresh the owner's movement boundaries. Removed standalone values render as absent. */
+   * `lr-reorder-request` order array. An owning list excludes an item with a missing,
+   * whitespace-only, or duplicate value from movement until its identity becomes valid. Direct
+   * property or attribute edits refresh the owner's movement boundaries. Removed standalone values
+   * render as absent. */
   @property() value = '';
 
-  /** Explicit item identity used to correlate this row's repeated move actions. When absent, a
-   * bounded accessible-text projection of the row content is used. */
+  /** Explicit item identity used to correlate this row's repeated move actions. A host
+   * `aria-label` takes precedence; when neither is present, a bounded accessible-text projection of
+   * the row content is used. In markup, name the row with the host `aria-label`: the
+   * `accessible-label` attribute is deprecated (removal not before 23.0.0) and logs a one-time
+   * development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+
+  /** The host `aria-label`: names the row and, in place of its content, both move actions. */
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   /** Disables this row's own move-up/move-down buttons without removing it or its slotted content
    *  from the DOM. Does not gate the default slot's own content. */
@@ -229,6 +252,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   }
 
   private get resolvedItemLabel(): string {
+    if (this.hostAccessibleLabel !== null) return this.hostAccessibleLabel;
     if (this.accessibleLabel !== undefined) return this.accessibleLabel;
     return composedAccessibilityTextResult(this.childNodes, {
       ancestorBoundary: this,
@@ -301,7 +325,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         <span id=${this.itemLabelId} hidden>${itemLabel}</span>
         <lr-icon-button
           part="move-up-button"
-          exportparts="button:move-up-button__control"
+          exportparts="button:move-up-button-control, button:move-up-button__control"
           aria-labelledby=${`${this.moveUpLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveUpDisabled}
           @click=${this.onMoveUpClick}
@@ -310,7 +334,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         </lr-icon-button>
         <lr-icon-button
           part="move-down-button"
-          exportparts="button:move-down-button__control"
+          exportparts="button:move-down-button-control, button:move-down-button__control"
           aria-labelledby=${`${this.moveDownLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveDownDisabled}
           @click=${this.onMoveDownClick}

@@ -1,7 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -44,6 +45,12 @@ export interface LyraThinkingPanelEventMap {
  *  mistaken for having deliberately scrolled away to read earlier content. */
 const NEAR_BOTTOM_PX = 48;
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /**
  * `<lr-thinking-panel>` — a collapsible panel for an AI agent's
  * intermediate reasoning/"thinking" transcript, kept visually and
@@ -53,7 +60,7 @@ const NEAR_BOTTOM_PX = 48;
  * `<lr-markdown>`, or plain text) — this component has no dependency on
  * either and imposes no structure on what's slotted.
  *
- * `compact` tightens the header and transcript-body padding for dense
+ * `size="s"` tightens the header and transcript-body padding for dense
  * transcript rows. `frame="plain"` removes the outside card chrome when a
  * containing message or panel already supplies it; the header/body divider
  * and their layout remain, so the disclosure keeps its internal structure.
@@ -137,17 +144,18 @@ const NEAR_BOTTOM_PX = 48;
  *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  * @cssprop [--lr-thinking-panel-pending-color=var(--lr-color-brand)] - Live pending-state color.
  * @cssprop [--lr-thinking-panel-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
- *   `[part="header"]` padding while `compact`.
+ *   `[part="header"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-thinking-panel-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
- *   toggle, label, and duration while `compact`.
+ *   toggle, label, and duration while `size` is `s` or smaller.
  * @cssprop [--lr-thinking-panel-compact-header-font-size=var(--lr-font-size-sm)] - Font size of
- *   `[part="header"]` while `compact`.
+ *   `[part="header"]` while `size` is `s` or smaller.
  * @cssprop [--lr-thinking-panel-compact-body-padding=var(--lr-space-s)] - `[part="body"]` padding
- *   while `compact`.
+ *   while `size` is `s` or smaller.
  * @cssprop [--lr-thinking-panel-compact-body-font-size=var(--lr-font-size-sm)] - Font size of
- *   `[part="body"]` while `compact`.
- * @cssprop [--lr-thinking-panel-background=var(--lr-color-surface)] - Fill of the outer card
+ *   `[part="body"]` while `size` is `s` or smaller.
+ * @cssprop [--lr-thinking-panel-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-thinking-panel-background=var(--lr-color-surface)] - Deprecated alias of `--lr-thinking-panel-bg`; removal not before 23.0.0.
  * @cssprop [--lr-thinking-panel-border-color=var(--lr-color-border)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-thinking-panel-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -188,20 +196,33 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   /** Optional header-text override. Omission localizes `thinkingPanelLabel`; any supplied string,
    *  including `'Thinking'` or `''`, is rendered verbatim. */
   @property() label?: string;
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the header/body
+   * padding, header gap, and header/body font size for dense transcript contexts; `m` (the default)
+   * and larger keep the regular density. This changes density only; the outer border and surface
+   * remain, so use `frame="plain"` to remove card chrome.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   /** Tighter header/body padding, header gap, and header/body font size for dense transcript
    *  contexts. Defaults to `false`, preserving the regular-density treatment. This changes
    *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
-   *  chrome. */
+   *  chrome.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
    *  and corner radius so a thinking panel nested inside existing message chrome does not double
-   *  it. Plain preserves the header/body divider and whichever regular or compact padding applies. */
+   *  it. Plain preserves the header/body divider and whichever regular or dense padding applies. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Whether the reasoning transcript is currently shown. Starts collapsed,

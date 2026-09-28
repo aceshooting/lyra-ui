@@ -78,7 +78,7 @@ export const GroupedByRelevanceTier: Story = {
 };
 
 export const NotSelectable: Story = {
-  render: () => html`<lr-retrieval-results .selectable=${false} .chunks=${chunks}></lr-retrieval-results>`,
+  render: () => html`<lr-retrieval-results without-selection .chunks=${chunks}></lr-retrieval-results>`,
 };
 
 export const Loading: Story = {

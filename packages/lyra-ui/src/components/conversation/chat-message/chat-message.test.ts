@@ -5,6 +5,7 @@ import "../markdown/markdown-core.js";
 import type { LyraChatMessage } from "./chat-message.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.js";
 import { styles } from "./chat-message.styles.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 function liveRegionText(el: LyraChatMessage): string {
   const region = el.shadowRoot!.querySelector(
@@ -198,13 +199,13 @@ it("emits a cancelable collapse request followed by lr-toggle only after commit"
   await el.updateComplete;
 
   expect(el.collapsed).to.be.true;
-  expect(detail).to.deep.equal({ collapsed: true });
+  expect(detail).to.deep.equal({ expanded: false, collapsed: true });
   expect(button.getAttribute("aria-expanded")).to.equal("false");
 
   button.click();
   await el.updateComplete;
   expect(el.collapsed).to.be.false;
-  expect(detail).to.deep.equal({ collapsed: false });
+  expect(detail).to.deep.equal({ expanded: true, collapsed: false });
 });
 
 it("honors preventDefault on lr-toggle-request without mutating collapse state", async () => {
@@ -572,7 +573,7 @@ it("renders actions inside the footer, inside the bubble, by default", async () 
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
-  expect(el.actionsPosition).to.equal("inside");
+  expect(el.actionsPlacement).to.equal("inside");
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
   const actions = el.shadowRoot!.querySelector(
     '[part="actions"]'
@@ -581,13 +582,13 @@ it("renders actions inside the footer, inside the bubble, by default", async () 
   expect(actions.closest('[part="footer"]')).to.exist;
 });
 
-it('renders actions as a sibling after the bubble when actions-position="outside"', async () => {
+it('renders actions as a sibling after the bubble when actions-placement="outside"', async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-position="outside"
+    html`<lr-chat-message actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
-  expect(el.actionsPosition).to.equal("outside");
+  expect(el.actionsPlacement).to.equal("outside");
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
   const actions = el.shadowRoot!.querySelector(
     '[part="actions"]'
@@ -601,7 +602,7 @@ it('renders actions as a sibling after the bubble when actions-position="outside
 
 it("keeps the footer hidden for outside actions when there is no status/timestamp", async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-position="outside"
+    html`<lr-chat-message actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
@@ -660,13 +661,13 @@ it("aligns a system turn's actions to the inline start, matching its own start-a
 
 it('aligns a user turn\'s outside actions content to the inline end, matching its own end-aligned bubble', async () => {
   // Regression test: [part='actions'] becomes a full-width block-level flex row when
-  // actions-position="outside" (it is no longer a flex item of [part='footer'], so its own box
+  // actions-placement="outside" (it is no longer a flex item of [part='footer'], so its own box
   // always spans the message's full width regardless of role). The role-conditional auto margins
   // that align it correctly in the default footer position have no effect there -- there is never
   // spare space to distribute onto a box that already fills its container. The slotted content
   // itself must be pushed to the inline end via justify-content instead.
   const el = (await fixture(
-    html`<lr-chat-message message-role="user" actions-position="outside"
+    html`<lr-chat-message message-role="user" actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
@@ -679,7 +680,7 @@ it('aligns a user turn\'s outside actions content to the inline end, matching it
 
 it('aligns an assistant turn\'s outside actions content to the inline start, matching its own start-aligned bubble', async () => {
   const el = (await fixture(
-    html`<lr-chat-message message-role="assistant" actions-position="outside"
+    html`<lr-chat-message message-role="assistant" actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
@@ -692,7 +693,7 @@ it('aligns an assistant turn\'s outside actions content to the inline start, mat
 
 it('aligns a system turn\'s outside actions content to the inline start, matching its own start-aligned bubble', async () => {
   const el = (await fixture(
-    html`<lr-chat-message message-role="system" actions-position="outside"
+    html`<lr-chat-message message-role="system" actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
@@ -992,14 +993,14 @@ it('is accessible fully populated: avatar, badges, attachments, actions, timesta
 
 it("is accessible with outside actions populated", async () => {
   const el = (await fixture(
-    html`<lr-chat-message actions-position="outside"
+    html`<lr-chat-message actions-placement="outside"
       ><button slot="actions">Copy</button>hi</lr-chat-message
     >`
   )) as LyraChatMessage;
   await expect(el).to.be.accessible();
 });
 
-describe("attachments-position", () => {
+describe("attachments-placement", () => {
   it('defaults to "after" -- attachments render after the body in DOM order', async () => {
     const el = (await fixture(html`
       <lr-chat-message
@@ -1013,9 +1014,9 @@ describe("attachments-position", () => {
     expect(parts.indexOf("body")).to.be.lessThan(parts.indexOf("attachments"));
   });
 
-  it('renders attachments before the body when attachments-position="before"', async () => {
+  it('renders attachments before the body when attachments-placement="before"', async () => {
     const el = (await fixture(html`
-      <lr-chat-message attachments-position="before"
+      <lr-chat-message attachments-placement="before"
         ><span slot="attachments">file.png</span>Hello</lr-chat-message
       >
     `)) as LyraChatMessage;
@@ -1026,10 +1027,99 @@ describe("attachments-position", () => {
     expect(parts.indexOf("attachments")).to.be.lessThan(parts.indexOf("body"));
   });
 
-  it("reflects attachments-position onto the property", async () => {
+  it("reflects attachments-placement onto the property", async () => {
     const el = (await fixture(
-      html`<lr-chat-message attachments-position="before"></lr-chat-message>`
+      html`<lr-chat-message attachments-placement="before"></lr-chat-message>`
     )) as LyraChatMessage;
+    expect(el.attachmentsPlacement).to.equal("before");
+  });
+});
+
+describe("deprecated -position aliases", () => {
+  it('actions-position="outside" equals actions-placement="outside" and warns once', async () => {
+    const usage = { tag: "lr-chat-message", kind: "property", name: "actionsPosition" } as const;
+    let el!: LyraChatMessage;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(
+        html`<lr-chat-message actions-position="outside"
+          ><button slot="actions">Copy</button>hi</lr-chat-message
+        >`
+      )) as LyraChatMessage;
+      await fixture(html`<lr-chat-message actions-position="outside">hi</lr-chat-message>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-chat-message:property:actionsPosition",
+    ]);
+    expect(el.actionsPlacement).to.equal("outside");
+    expect(el.actionsPosition).to.equal("outside");
+    expect(el.getAttribute("actions-placement")).to.equal("outside");
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    expect(bubble.contains(actions)).to.be.false;
+    expect(getComputedStyle(actions).marginBlockStart).to.not.equal("0px");
+  });
+
+  it('attachments-position="before" equals attachments-placement="before" and warns once', async () => {
+    const usage = { tag: "lr-chat-message", kind: "property", name: "attachmentsPosition" } as const;
+    let el!: LyraChatMessage;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(html`
+        <lr-chat-message attachments-position="before"
+          ><span slot="attachments">file.png</span>Hello</lr-chat-message
+        >
+      `)) as LyraChatMessage;
+      el.attachmentsPosition = "after";
+      await el.updateComplete;
+      el.attachmentsPosition = "before";
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.attachmentsPlacement).to.equal("before");
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
+    const parts = Array.from(bubble.children).map((c) => c.getAttribute("part"));
+    expect(parts.indexOf("attachments")).to.be.lessThan(parts.indexOf("body"));
+  });
+
+  it("lets the last write win when both spellings are authored", async () => {
+    let canonicalLast!: LyraChatMessage;
+    let aliasLast!: LyraChatMessage;
+    await captureDeprecationWarnings(
+      [
+        { tag: "lr-chat-message", kind: "property", name: "actionsPosition" },
+        { tag: "lr-chat-message", kind: "property", name: "attachmentsPosition" },
+      ],
+      async () => {
+        canonicalLast = (await fixture(html`
+          <lr-chat-message
+            actions-position="outside"
+            actions-placement="inside"
+            attachments-position="before"
+            attachments-placement="after"
+          >hi</lr-chat-message>
+        `)) as LyraChatMessage;
+        aliasLast = (await fixture(html`
+          <lr-chat-message
+            actions-placement="inside"
+            actions-position="outside"
+            attachments-placement="after"
+            attachments-position="before"
+          >hi</lr-chat-message>
+        `)) as LyraChatMessage;
+      }
+    );
+    expect(canonicalLast.actionsPlacement).to.equal("inside");
+    expect(canonicalLast.attachmentsPlacement).to.equal("after");
+    expect(aliasLast.actionsPlacement).to.equal("outside");
+    expect(aliasLast.attachmentsPlacement).to.equal("before");
+  });
+
+  it("syncs both aliases back from the canonical -placement properties", async () => {
+    const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
+    el.actionsPlacement = "outside";
+    el.attachmentsPlacement = "before";
+    await el.updateComplete;
+    expect(el.actionsPosition).to.equal("outside");
+    expect(el.getAttribute("actions-position")).to.equal("outside");
     expect(el.attachmentsPosition).to.equal("before");
   });
 });
@@ -1365,7 +1455,7 @@ describe("failure slot", () => {
 
   it("leaves outside-actions behavior unaffected when the failure slot is also in use", async () => {
     const el = (await fixture(html`
-      <lr-chat-message status="failed" actions-position="outside">
+      <lr-chat-message status="failed" actions-placement="outside">
         <div slot="failure" role="alert">Send failed</div>
         <button slot="actions">Copy</button>
       </lr-chat-message>

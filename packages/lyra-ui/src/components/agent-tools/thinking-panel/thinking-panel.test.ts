@@ -6,6 +6,7 @@ import '../../conversation/markdown/markdown.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-thinking-panel', 'appearance');
@@ -214,7 +215,7 @@ describe('label localization', () => {
   });
 });
 
-describe('compact / frame escape hatches', () => {
+describe('size / frame escape hatches', () => {
   function chrome(el: LyraThinkingPanel): {
     base: {
       borderTopWidth: string;
@@ -238,15 +239,15 @@ describe('compact / frame escape hatches', () => {
     };
   }
 
-  it('leaves the existing regular card treatment unchanged when compact and frame are unset', async () => {
+  it('leaves the existing regular card treatment unchanged when size and frame are unset', async () => {
     const implicit = (await fixture(
       html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const explicit = (await fixture(
-      html`<lr-thinking-panel .compact=${false} frame="card" expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="m" frame="card" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
 
-    expect(implicit.compact).to.be.false;
+    expect(implicit.size).to.equal('m');
     expect(implicit.frame).to.equal('card');
     expect(implicit.hasAttribute('compact')).to.be.false;
     expect(implicit.getAttribute('frame')).to.equal('card');
@@ -255,18 +256,18 @@ describe('compact / frame escape hatches', () => {
     expect(chrome(implicit).base.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('reflects compact and tightens header/body dimensions through dedicated cssprops', async () => {
+  it('reflects size="s" and tightens header/body dimensions through dedicated cssprops', async () => {
     const regular = (await fixture(
       html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const compact = (await fixture(
-      html`<lr-thinking-panel compact expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="s" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const regularChrome = chrome(regular);
     const compactChrome = chrome(compact);
 
-    expect(compact.compact).to.be.true;
-    expect(compact.hasAttribute('compact')).to.be.true;
+    expect(compact.size).to.equal('s');
+    expect(compact.getAttribute('size')).to.equal('s');
     expect(compactChrome.header.padding).to.not.equal(regularChrome.header.padding);
     expect(compactChrome.header.gap).to.not.equal(regularChrome.header.gap);
     expect(compactChrome.body.padding).to.not.equal(regularChrome.body.padding);
@@ -282,12 +283,12 @@ describe('compact / frame escape hatches', () => {
     expect(retuned.body.padding).to.equal('4px 5px 6px');
   });
 
-  it('reduces compact header typography through its dedicated retunable cssprop', async () => {
+  it('reduces dense header typography through its dedicated retunable cssprop', async () => {
     const regular = (await fixture(
       html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const compact = (await fixture(
-      html`<lr-thinking-panel compact expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="s" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const regularHeader = regular.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     const compactHeader = compact.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
@@ -300,12 +301,12 @@ describe('compact / frame escape hatches', () => {
     expect(getComputedStyle(compactHeader).fontSize).to.equal('11px');
   });
 
-  it('also reduces compact body typography through its own dedicated retunable cssprop', async () => {
+  it('also reduces dense body typography through its own dedicated retunable cssprop', async () => {
     const regular = (await fixture(
       html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const compact = (await fixture(
-      html`<lr-thinking-panel compact expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="s" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const regularBody = regular.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     const compactBody = compact.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
@@ -320,7 +321,7 @@ describe('compact / frame escape hatches', () => {
 
   it('drops only the outer chrome under frame="plain", retaining the collapse divider and density', async () => {
     const plain = (await fixture(
-      html`<lr-thinking-panel compact frame="plain" expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="s" frame="plain" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     const plainChrome = chrome(plain);
 
@@ -358,9 +359,9 @@ describe('compact / frame escape hatches', () => {
     expect(chrome(el).base.borderTopWidth).to.equal('1px');
   });
 
-  it('is accessible with populated compact plain chrome', async () => {
+  it('is accessible with populated dense plain chrome', async () => {
     const el = (await fixture(
-      html`<lr-thinking-panel compact frame="plain" expanded>Reasoning</lr-thinking-panel>`,
+      html`<lr-thinking-panel size="s" frame="plain" expanded>Reasoning</lr-thinking-panel>`,
     )) as LyraThinkingPanel;
     await expect(el).to.be.accessible();
   });
@@ -1010,11 +1011,11 @@ describe('card chrome theming hooks', () => {
   const part = (el: LyraThinkingPanel, name: string) =>
     el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('repaints the card through --lr-thinking-panel-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-thinking-panel-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-thinking-panel
         expanded
-        style="--lr-thinking-panel-background: rgb(1, 2, 3); --lr-thinking-panel-border-color: rgb(4, 5, 6); --lr-thinking-panel-radius: 11px"
+        style="--lr-thinking-panel-bg: rgb(1, 2, 3); --lr-thinking-panel-border-color: rgb(4, 5, 6); --lr-thinking-panel-radius: 11px"
         >Reasoning</lr-thinking-panel
       >
     `)) as LyraThinkingPanel;
@@ -1032,7 +1033,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-thinking-panel
         expanded
-        style="--lr-thinking-panel-background: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border); --lr-thinking-panel-radius: var(--lr-radius)"
+        style="--lr-thinking-panel-bg: var(--lr-color-surface); --lr-thinking-panel-border-color: var(--lr-color-border); --lr-thinking-panel-radius: var(--lr-radius)"
         >Reasoning</lr-thinking-panel
       >
     `)) as LyraThinkingPanel;
@@ -1120,4 +1121,92 @@ describe('header text contrast at rest, hover and press', () => {
       });
     }
   }
+});
+
+describe('lr-thinking-panel size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-thinking-panel', kind: 'property', name: 'compact' }];
+  const density = (el: LyraThinkingPanel): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, body: getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`));
+      dense = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="s" expanded></lr-thinking-panel>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="s" expanded></lr-thinking-panel>`));
+      const aliased = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel compact expanded></lr-thinking-panel>`);
+      alias = density(aliased);
+      const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-thinking-panel:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel compact size="l" expanded></lr-thinking-panel>`);
+      const compactLast = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="l" compact expanded></lr-thinking-panel>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', () => {
+  const fill = (el: LyraThinkingPanel): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+
+  it('paints from --lr-thinking-panel-bg, keeps honouring --lr-thinking-panel-background as its fallback, and lets --lr-thinking-panel-bg win', async () => {
+    const canonical = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded style="--lr-thinking-panel-bg: rgb(1, 2, 3)"></lr-thinking-panel>`);
+    const alias = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded style="--lr-thinking-panel-background: rgb(1, 2, 3)"></lr-thinking-panel>`);
+    const both = await fixture<LyraThinkingPanel>(
+      html`<lr-thinking-panel expanded style="--lr-thinking-panel-bg: rgb(4, 5, 6); --lr-thinking-panel-background: rgb(1, 2, 3)"></lr-thinking-panel>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
 });

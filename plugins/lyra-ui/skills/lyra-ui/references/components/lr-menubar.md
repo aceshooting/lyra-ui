@@ -58,7 +58,7 @@ The chip's decorative `details` subtree is hidden from assistive technology.
 
 **Events:** `lr-select`, cancelable `CustomEvent<MenuItemSelectDetail>`, bubbles once from the
 owning menu with `detail.item`. Prevent default to keep the menu open. Checkbox/radio
-`lr-menu-item-change` also bubbles from its item. There are no menubar lifecycle events or public
+`lr-menu-item-change-request` also bubbles from its item. There are no menubar lifecycle events or public
 open/close methods.
 
 **Slots:** default, containing only `lr-menubar-item` elements. **CSS parts:** `base`.

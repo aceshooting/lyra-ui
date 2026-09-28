@@ -7,10 +7,16 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-before-datum-visibility-change` since `19.0.1`; use event `addEventListener('lr-datum-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
 - **Deprecated event** `lr-before-legend-visibility-change` since `19.0.1`; use event `addEventListener('lr-legend-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showDataTable` / `show-data-table` since `21.1.0`; use property `with-data-table`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `zoom` / `zoom` since `21.1.0`; use property `zoomable`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,16 +36,18 @@ structured points retain their y-value formatting.
 - `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
   axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
   `both`. Radial charts ignore this setting. Use `grid` when only grid lines should disappear.
-- `compact: boolean = false` — hides cartesian axes and removes automatic plot padding. Combine
-  with `withoutLegend` and a short `height` (for example `64px`) for an inline histogram or
-  sparkline. Tooltips, accessible data, formatting and keyboard activation remain available.
-  `config` still wins over generated options, so explicit scale visibility or layout padding
-  can override the preset. Leaving compact mode restores `axes`. Radial charts are unaffected.
+- `size: LyraSize = 'm'` — plot density on the shared size scale. `s` (and the smaller `xs`/`2xs`)
+  hides cartesian axes and removes automatic plot padding; `m` and larger keep the full plot.
+  Combine `size="s"` with `withoutLegend` and a short `height` (for example `64px`) for an inline
+  histogram or sparkline. Tooltips, accessible data, formatting and keyboard activation remain
+  available. `config` still wins over generated options, so explicit scale visibility or layout
+  padding can override the preset. Leaving the compact tier restores `axes`. Radial charts are
+  unaffected. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 
   For a monthly histogram above `lr-slider`, give both controls the same inline allocation and
-  use `lr-bar-chart compact without-legend height="64px"`. Map range values to bin edges: with
+  use `lr-bar-chart size="s" without-legend height="64px"`. Map range values to bin edges: with
   twelve months, set the slider's `min=0`, `max=12`, `step=1` and treat its values as the half-open
-  interval `[minValue, maxValue)`. Equal edges select no months. Use `show-value`,
+  interval `[minValue, maxValue)`. Equal edges select no months. Use `with-value`,
   `value-display="formatted"` and `value-placement="label"` to display application-formatted month
   names without a separate readout listener. Commit filtering on `lr-change`; `lr-input` remains
   available for live previews. Chart categories retain their authored physical order: for an RTL
@@ -83,7 +91,7 @@ structured points retain their y-value formatting.
   percentiles, file sizes) honestly, where a linear axis collapses everything below the maximum
   into the baseline. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
   applied to the secondary `y2` axis too when one is present. A logarithmic axis cannot represent
-  zero (`log(0)` is `-Infinity`), so `beginAtZero` is not forwarded in that mode and non-positive
+  zero (`log(0)` is `-Infinity`), so the zero baseline is not forwarded in that mode and non-positive
   points are dropped by Chart.js's own log scale. Chart.js rejects an unregistered scale type at
   construction, so `LogarithmicScale` is registered with the core — it ships inside the `chart.js`
   module already loaded, adding no download weight
@@ -189,7 +197,7 @@ structured points retain their y-value formatting.
   so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
   `label` and `seriesLabel` reach the `tooltip`, `legend`, `visual`, `table`, `export` and `spoken`
   surfaces, with indexes in source space — the same space the data table, the CSV export and
-  `lr-point-click` use. A `tick` call carries `axis` but none of those four. A
+  `lr-point-activate` use. A `tick` call carries `axis` but none of those four. A
   `stackTotals`/`tableTotals` stack total is also an exception: it is a sum
   *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
   and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
@@ -207,15 +215,19 @@ structured points retain their y-value formatting.
   footer.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
-- `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
-  range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
+- `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
+  zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
+  Deprecated alias: `zoom` (use `zoomable`; removed in 23.0.0).
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
 - `xLabel: string | null = null` (attribute `x-label`)
 - `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
-- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets a linear value
+  axis start at the data minimum instead of always including zero. Deprecated alias:
+  `begin-at-zero` (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`;
+  removed in 23.0.0).
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
@@ -237,7 +249,7 @@ structured points retain their y-value formatting.
   data-labels>` never affects any other chart on the page. If the peer is unavailable or cannot
   register, the core chart remains usable, labels stay disabled, and a localized visible
   `feature-warning` plus assertive announcement explains the nonfatal limitation. The screen-reader
-  equivalent is the always-present accessible data table (`show-data-table` makes it visible) —
+  equivalent is the always-present accessible data table (`with-data-table` makes it visible) —
   labels are a purely visual, canvas-only addition and add no new a11y surface.
 - `stackTotals: boolean = false` (attribute `stack-totals`) — on an actually-stacked axis (`stacked`
   or `stackedAxes`, bar/line only), draws the per-category stack total above each stack, via the
@@ -273,16 +285,17 @@ structured points retain their y-value formatting.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
-  accessible data table visible rather than screen-reader-only
+- `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
+  accessible data table visible rather than screen-reader-only. Deprecated alias: `show-data-table`
+  (`showDataTable`; use `with-data-table`; removed in 23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
-  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
-  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  `withDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
-  reader activates it, the disclosure follows `showDataTable`; afterwards the reader's selected
+  reader activates it, the disclosure follows `withDataTable`; afterwards the reader's selected
   state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
   same disclosure state. Unset, nothing renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
@@ -378,7 +391,7 @@ const series = [
 ```
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
-`resetZoom()`), `lr-point-click` (fired when pointer input lands on an intersecting data
+`resetZoom()`), `lr-point-activate` (fired when pointer input lands on an intersecting data
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
@@ -390,7 +403,8 @@ including a string or finite-number `id` when supplied; invalid ids are omitted.
 `LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
 checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
-`lr-point-click` remains as a compatibility event. Also
+Deprecated alias: `lr-point-click` (use `lr-point-activate`; removed in 23.0.0) — it still fires
+right after `lr-point-activate` from the same activation with an identical detail. Also
 `lr-legend-visibility-change-request` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
@@ -453,7 +467,8 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
-`--lr-chart-tooltip-text` (default `var(--lr-color-text)`) — each resolved fresh via
+`--lr-chart-tooltip-color` (default `var(--lr-color-text)`; deprecated alias:
+`--lr-chart-tooltip-text`, removed in 23.0.0) — each resolved fresh via
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
@@ -526,8 +541,8 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 - `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
-regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
-later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
+regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoomable` is
+— or later becomes — `true`; never fetched for a chart that keeps `zoomable` unset/false, since the plugin
 has a hard dependency on `hammerjs`), `chartjs-plugin-datalabels` only when `data-labels` or
 `stack-totals` is enabled, and `chartjs-plugin-annotation` only when `annotations` contains a usable
 entry. Each capability load is memoized once per page, registering only the tree-shaken
@@ -560,7 +575,7 @@ announced. In particular, unavailable data labels do not remove generated table 
 - generated `scales` are keyed off the *effective* type (`config.type` ?? `type`, see
   `effectiveType()`) and are type-appropriate: no scale at all for `type="pie"`/`"doughnut"` (true of
   `<lr-chart type="pie">` directly, not just the `lr-pie-chart`/`lr-doughnut-chart` subclasses),
-  and a single radial `r` scale (respecting `beginAtZero`) for `type="radar"`/`"polarArea"`
+  and a single radial `r` scale (respecting `withoutZeroBaseline`) for `type="radar"`/`"polarArea"`
   (`lr-radar-chart`/`lr-polar-area-chart`), instead of always generating the cartesian `x`/`y`/
   `y2` block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those types (a
   radial scale and "no scale" both have nowhere to put an axis title) — reach a titled radial scale
@@ -586,12 +601,12 @@ announced. In particular, unavailable data labels do not remove generated table 
   the observer, drawing starts when the peer and canvas are ready. An empty delivered callback
   retains the visible fallback. Peer loading and accessible DOM may settle while visibility is
   pending. Independently, `updated()` only reaches
-  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `compact`, `indexAxis`,
+  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `size`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`,
-  `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  `height`, `xLabel`, `yLabel`, `y2Label`, `withoutZeroBaseline`,
   `stacked`, `stackedAxes`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
-  slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
+  slotted config, `zoomable`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an
   unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
   ignore unchanged inline sizes and coalesce into one animation-frame task; a responsive legend

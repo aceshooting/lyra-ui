@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hideCreate` / `hide-create` since `21.1.0`; use property `without-create`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `hideSummary` / `hide-summary` since `21.1.0`; use property `without-summary`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,10 +38,12 @@ errorMessage?: string }` (all four types exported here), where
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
-- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
-  total/synced/syncing/needs-attention row
-- `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
-  affordance, e.g. for a read-only or permission-gated view
+- `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
+  total/synced/syncing/needs-attention row. Deprecated alias: `hide-summary`/`hideSummary` (use `without-summary`;
+  removed in 23.0.0)
+- `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
+  affordance, e.g. for a read-only or permission-gated view. Deprecated alias: `hide-create`/`hideCreate` (use
+  `without-create`; removed in 23.0.0)
 - `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
   `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
   while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
@@ -70,8 +73,8 @@ outer `error` property never drifts out of sync with the table's internal state.
 button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
-`create-button` (omitted while `hideCreate`), `summary` (omitted while `hideSummary` or `sources` is
-empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
+`create-button` (omitted while `without-create` is set), `summary` (omitted while `without-summary`
+is set or `sources` is empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
@@ -97,7 +100,7 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
   Authorization enforcement is the host's concern.
 - "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so
   re-running a failed sync is one click); "Pause sync" is enabled only while `'syncing'`.
-- The inner `lr-table`'s own `lr-row-click` is deliberately stopped from propagating — this component
+- The inner `lr-table`'s own `lr-row-activate` is deliberately stopped from propagating — this component
   exposes no row-click/selection semantics, only the per-row action menu.
 
 ---

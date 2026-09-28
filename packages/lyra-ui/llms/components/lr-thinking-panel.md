@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-thinking-panel-background` since `21.1.0`; use css-property `--lr-thinking-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
-- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,14 +28,15 @@ plain text) — this component has no dependency on either.
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
   catalog). Any supplied string is an explicit override and renders verbatim, including
   `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
-- `compact: boolean = false` (reflected) — tightens the header/body padding, the header's internal
-  gap, and the header/body font size for dense transcript rows. This is only a density control: its
-  card border and surface remain, so use `frame="plain"` when surrounding message chrome already
-  supplies them.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header/body padding, the header's internal gap, and the header/body font
+  size for dense transcript rows; `m` and larger keep the regular density. This is only a density
+  control: its card border and surface remain, so use `frame="plain"` when surrounding message
+  chrome already supplies them. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
   (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
   border, background, and corner radius so a nested panel does not double an existing frame;
-  it retains the header/body divider and the active regular or compact padding. The exported
+  it retains the header/body divider and the active regular or dense padding. The exported
   `ThinkingPanelAppearance` alias names this same union.
 - `expanded: boolean = false` (reflected) — starts collapsed, matching `<lr-source-list>`'s
   default.
@@ -78,18 +80,19 @@ exposed as a component property since it's a pure layout knob, not something a t
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
 pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
-`[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
-`var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`[part="header"]` padding while `size` is `s` or smaller; `--lr-thinking-panel-compact-header-gap`
+(default `var(--lr-space-2xs)`) — gap between the toggle, label, and duration at that size; and
 `--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
-`[part="header"]` while `compact`; and
+`[part="header"]` at that size; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
-padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
-`var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
-`--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
+padding at that size; and `--lr-thinking-panel-compact-body-font-size` (default
+`var(--lr-font-size-sm)`) — font size of `[part="body"]` at that size.
+`--lr-thinking-panel-bg` (default `var(--lr-color-surface)`),
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
+`frame="plain"` keeps. Deprecated alias: `--lr-thinking-panel-background` (use
+`--lr-thinking-panel-bg`; removed in 23.0.0). The mouse-hover preview on `[part="body"]` mentioned above has its own
 four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (default
 `var(--lr-focus-ring-width)`), `--lr-thinking-panel-body-hover-outline-style` (default `solid`),
 `--lr-thinking-panel-body-hover-outline-color` (default `var(--lr-color-border)`, set to
@@ -115,7 +118,7 @@ paint. Plus shared
 </lr-thinking-panel>
 
 <div class="message-frame">
-  <lr-thinking-panel compact frame="plain" expanded>
+  <lr-thinking-panel size="s" frame="plain" expanded>
     Reasoning nested inside message chrome without a second card frame.
   </lr-thinking-panel>
 </div>

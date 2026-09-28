@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `dedupe` / `dedupe` since `21.1.0`; use property `without-dedupe`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `selectable` / `selectable` since `21.1.0`; use property `without-selection`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,9 +38,13 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
   its own copy on toggle _then_ emits `lr-select`; reassign to control
-- `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
-- `dedupe: boolean = true` (reflected) — retained for compatibility; malformed, blank, and later
-  duplicate chunk ids are always omitted first-wins so identity never becomes ambiguous
+- `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
+  `lr-checkbox`. Deprecated alias: `selectable` (use `without-selection`; `selectable="false"`
+  equals `without-selection`; removed in 23.0.0)
+- `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
+  compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
+  first-wins so identity never becomes ambiguous. Deprecated alias: `dedupe` (use `without-dedupe`;
+  `dedupe="false"` equals `without-dedupe`; removed in 23.0.0)
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -103,7 +108,7 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch. It is the only
+  canonicalized nonblank/first-wins regardless of the legacy `without-dedupe` switch. It is the only
   host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
   `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
@@ -119,8 +124,8 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 empty and neither `errorText` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
-`group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
-`selectable` is false), `row-body` (carries `data-selected`), `row-body-selected` (additional part
+`group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted while
+`without-selection` is set), `row-body` (carries `data-selected`), `row-body-selected` (additional part
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
 `presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.

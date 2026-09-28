@@ -13,6 +13,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { statePart } from '../../../internal/state-part.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
@@ -200,7 +201,7 @@ function formatCount(n: number, locale: string): string {
  * @csspart semantic - The visually-hidden meter/group carrying aggregate range semantics.
  * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
  * @csspart segment-item - One visually-hidden segment label/count pair.
- * @csspart legend - The visible category key rendered below the meter when `showLegend` is set.
+ * @csspart legend - The visible category key rendered below the meter when `with-legend` is set.
  *   `aria-hidden` in the default presentational mode, because `segment-list` already exposes the
  *   same names to assistive technology; reachable while `interactive` is set, where its rows are
  *   the filter controls themselves.
@@ -259,6 +260,9 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showLegend: 'withLegend',
+  };
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */
   @property({ attribute: false }) segments: readonly ContextMeterSegment[] = [];
@@ -294,8 +298,16 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    *  undiscoverable) and the visually-hidden breakdown list — so a meter split across more than two
    *  or three categories is legible to a screen-reader user but not to a sighted one, who has to
    *  hand-roll swatch+label markup outside the component. Non-interactive: it toggles nothing and
-   *  emits nothing, mirroring `<lr-sequence-strip>`'s `showLegend` rather than the interactive
+   *  emits nothing, mirroring `<lr-sequence-strip>`'s `withLegend` rather than the interactive
    *  `<lr-graph-legend>`. */
+  @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /**
@@ -305,7 +317,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    *
    * The share is the SAME clamped ratio the bar/ring paints, so a key can never disagree with the
    * band it stands for, and it is formatted through `effectiveLocale`. Has no effect while
-   * `showLegend` is unset. Folding the number into `segment.label` instead would push it into the
+   * `withLegend` is unset. Folding the number into `segment.label` instead would push it into the
    * hover title and the visually-hidden breakdown too, where a screen reader would hear the count
    * twice.
    */
@@ -331,7 +343,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    * off is unusable through assistive technology, whatever it looks like.
    *
    * A band's width IS its share, so a small band is a small pointer target. Pair `interactive` with
-   * `showLegend` where that matters -- the legend row is the same action at full row height.
+   * `withLegend` where that matters -- the legend row is the same action at full row height.
    */
   @property({ type: Boolean, reflect: true }) interactive = false;
 
@@ -553,7 +565,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
             // hit-area-exempt: a band's inline size IS the datum -- the share it stands for -- so a
             // minimum target size would make the meter lie about its own data. The legend row is
             // the same action at full row height, which is why `interactive` documents pairing with
-            // `showLegend`.
+            // `withLegend`.
             return this.interactive
               ? html`<button
                   part=${this.segmentPart('segment', index, segment)}
@@ -688,7 +700,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   override render(): TemplateResult {
     return html`
       ${this.shape === 'ring' ? this.renderRing() : this.renderBar()}
-      ${this.showLegend ? this.renderLegend() : nothing}
+      ${this.withLegend ? this.renderLegend() : nothing}
       ${this.renderSemantics()}
     `;
   }

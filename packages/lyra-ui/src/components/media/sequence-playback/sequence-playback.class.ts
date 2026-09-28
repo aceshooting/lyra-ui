@@ -4,6 +4,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './sequence-playback.styles.js';
@@ -72,6 +74,9 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    loop: ['withoutLoop', invertAlias, invertAlias],
+  };
 
   static override properties = {
     playing: { type: Boolean, reflect: true, noAccessor: true },
@@ -89,7 +94,12 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   // hand-written accessor below, so a direct `el.playing = true/false`
   // assignment always drives the real timer — not just calls through
   // play()/pause().
-  
+
+  /** Stops playback on the last item instead of wrapping back to the first. Read on every tick,
+   *  so a live change takes effect at the next step. */
+  @property({ type: Boolean, attribute: 'without-loop' }) withoutLoop = false;
+
+  /** @deprecated Use `without-loop` (inverted); removal not before 23.0.0. */
   loop = true;
 
   /**
@@ -214,7 +224,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   // A self-rescheduling `setTimeout` (rather than one long-lived
   // `setInterval`) so `intervalMs` is re-read fresh before every tick, the
-  // same way `tick()` already re-reads `this.loop` on every fire — changing
+  // same way `tick()` already re-reads `this.withoutLoop` on every fire — changing
   // `interval-ms` live takes effect on the very next step instead of only
   // after a pause/play cycle.
   private scheduleTick(): void {
@@ -251,7 +261,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     const itemCount = finiteCount(this.itemCount);
     const next = finiteCount(this.currentIndex) + 1;
     if (next >= itemCount) {
-      if (this.loop) this.setIndex(0);
+      if (!this.withoutLoop) this.setIndex(0);
       else {
         this.setIndex(itemCount - 1);
         this.pause();

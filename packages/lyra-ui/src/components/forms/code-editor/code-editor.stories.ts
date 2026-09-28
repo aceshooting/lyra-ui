@@ -156,7 +156,6 @@ export const SingleEditorScrollport: Story = {
           <div dir=${direction} style="inline-size: 200px; block-size: 160px">
             <lr-code-editor
               label=${`${direction.toUpperCase()} long source`}
-              line-numbers
               resize="none"
               style="block-size: 100%"
               .value=${longUnwrappedSource}

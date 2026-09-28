@@ -8,6 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated event** `lr-before-visibility-change` since `19.0.1`; use event `addEventListener('lr-visibility-change-request', ...)`; removal not before `21.0.0` — Renamed to the library's dominant *-request veto-event convention; both names fire from the same gesture with an identical detail during the compatibility window, and either may veto.
+- **Deprecated property** `interactive` / `interactive` since `21.1.0`; use property `without-interaction`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -31,8 +32,10 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   label; values are rendered as finite nonnegative integers (invalid or negative values become zero)
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
-- `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
-  plain, non-interactive rows
+- `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
+  non-interactive rows instead of the default toggle `<button>` rows. Deprecated alias:
+  `interactive` (use `without-interaction`; `interactive="false"` equals `without-interaction`;
+  removed in 23.0.0)
 - `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
@@ -47,7 +50,7 @@ frozen detail; either event may veto. It is slated for removal in 21.0.0 — mig
 
 **Slots:** none.
 
-**CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
+**CSS parts:** `base`, `item` (a `<button>`, or a plain `<div>` while `without-interaction` is set), `swatch`,
 `label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default

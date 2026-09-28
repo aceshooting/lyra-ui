@@ -28,7 +28,7 @@ import {
   type VirtualAnchor,
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { activeElementIn, composedParentElement } from '../../../internal/active-element.js';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
@@ -46,6 +46,8 @@ import {
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
@@ -195,13 +197,15 @@ export interface LyraTooltipEventMap {
  * @csspart popup - The tooltip popup. It is the same node as `base` and `tooltip`.
  * @csspart base__popup - Shoelace exported popup alias on the same node.
  * @csspart body - Tooltip content wrapper.
- * @csspart arrow - The arrow element, rendered only when `arrow` is set. Its part name also
+ * @csspart arrow - The arrow element, rendered unless `without-arrow` is set. Its part name also
  *   carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`).
  * @csspart base__arrow - Shoelace exported alias on the arrow.
  * @cssprop [--max-width=var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))] - Maximum inline
  * size of the tooltip.
  * @cssprop --lr-tooltip-max-inline-size - Retained Lyra fallback for `--max-width`.
- * @cssprop --lr-tooltip-background - Tooltip background color (default `--lr-color-neutral`).
+ * @cssprop --lr-tooltip-bg - Tooltip background color (default `--lr-color-neutral`).
+ * @cssprop --lr-tooltip-background - Deprecated alias of `--lr-tooltip-bg`, read only as its
+ *   fallback; removal not before 23.0.0.
  * @cssprop --lr-tooltip-color - Tooltip text color (default `--lr-color-on-neutral`).
  * @cssprop [--arrow-size=var(--lr-tooltip-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
  * arrow square.
@@ -210,7 +214,7 @@ export interface LyraTooltipEventMap {
  * @cssprop [--hide-delay=0ms] - Interaction hide delay when `hide-delay` is not explicit.
  * @cssprop --lr-overlay-surface - Shared floating-surface fill. Advertised here because this tag's
  *   rules live in the stylesheet module `lr-popover` also composes; a tooltip bubble is a
- *   high-contrast label, not a panel, so it paints from `--lr-tooltip-background` and is
+ *   high-contrast label, not a panel, so it paints from `--lr-tooltip-bg` and is
  *   deliberately outside the overlay-surface family.
  * @cssprop --lr-overlay-border - Shared floating-surface edge colour. Same deliberate exclusion as
  *   `--lr-overlay-surface` above: the bubble draws no border.
@@ -234,6 +238,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, tooltipStyles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    arrow: ['withoutArrow', invertAlias, invertAlias],
+  };
   private _open = false;
   /** Whether the tooltip is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle;
    *  assigning `false` also cancels a delayed open that has not fired yet.
@@ -353,10 +360,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   set hoist(next: boolean) {
     this.positioningStrategy = next ? 'fixed' : 'absolute';
   }
-  /** Render an arrow that points at the anchor. Defaults on for mapped tooltip markup. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
-  /** Positive mapped spelling for suppressing the default arrow. */
+  /** Suppresses the arrow that otherwise points at the anchor. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
+  /** Render an arrow that points at the anchor. Defaults on for mapped tooltip markup.
+   *  @deprecated Use `without-arrow`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
@@ -429,7 +437,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private readonly transitionGate = new OverlayTransitionGate();
 
   private get rendersArrow(): boolean {
-    return this.arrow && !this.withoutArrow;
+    return !this.withoutArrow;
   }
 
   private get activeContentSlot(): HTMLSlotElement | null {
@@ -744,7 +752,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
 
   private shouldRestoreFocusAfterEscape(): boolean {
     if (this.virtualAnchor) return this.returnFocusTo !== undefined;
-    const active = activeElementIn(this.ownerDocument);
+    // The document reports only the outermost shadow host when focus sits inside a shadow root,
+    // so read the innermost focused node before asking whether it lies within this tooltip.
+    const active = deepActiveElementIn(this.ownerDocument);
     return safelyComposedContains(this, active);
   }
 
@@ -1077,7 +1087,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     } catch {
       /* fall through to the focus check */
     }
-    const active = activeElementIn(trigger.ownerDocument);
+    const active = deepActiveElementIn(trigger.ownerDocument);
     return safelyComposedContains(trigger, active);
   }
 

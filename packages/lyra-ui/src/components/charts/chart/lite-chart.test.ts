@@ -92,7 +92,7 @@ describe('lite chart family-contract regressions', () => {
       { label: 'Revenue', data: [7] },
     ] as unknown as LyraLiteChart['datasets'];
     const el = await mount(html`<lr-lite-chart
-      show-data-table
+      with-data-table
       .labels=${['North']}
       .datasets=${datasets}
     ></lr-lite-chart>`);
@@ -138,7 +138,7 @@ describe('lite chart family-contract regressions', () => {
   it('routes values through the unified formatter and emits both activation contracts', async () => {
     const surfaces = new Set<string>();
     const el = await mount(html`<lr-lite-chart
-      legend
+      with-legend
       .labels=${['A']}
       .datasets=${[{ label: 'S', data: [2] }]}
     ></lr-lite-chart>`);
@@ -150,12 +150,12 @@ describe('lite chart family-contract regressions', () => {
     el.exportData('csv');
     const events: string[] = [];
     el.addEventListener('lr-datum-activate', () => events.push('datum'));
-    el.addEventListener('lr-point-click', () => events.push('legacy'));
+    el.addEventListener('lr-point-activate', () => events.push('point'));
     el.shadowRoot!.querySelector('[part="bar"]')!.dispatchEvent(
       new MouseEvent('click', { bubbles: true, composed: true }),
     );
     expect([...surfaces]).to.include.members(['visual', 'spoken', 'legend', 'export']);
-    expect(events).to.deep.equal(['datum', 'legacy']);
+    expect(events).to.deep.equal(['datum', 'point']);
   });
 });
 
@@ -238,7 +238,7 @@ it('resolves the axis tick-label font size from --lr-chart-tick-font-size, defau
 it('rejects unsafe public height and series paint values while preserving valid ones', async () => {
   const el = await mount(html`<lr-lite-chart
     .height=${'12rem;position:fixed'}
-    .legend=${true}
+    .withLegend=${true}
     .labels=${['A']}
     .datasets=${[{ label: 'Series', data: [1], color: 'url("data:image/svg+xml,<svg/>")' }]}
   ></lr-lite-chart>`);
@@ -258,9 +258,9 @@ it('rejects unsafe public height and series paint values while preserving valid 
   expect(el.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('fill')).to.contain('color-mix');
 });
 
-it('parses begin-at-zero="false" as false from plain HTML', async () => {
-  const el = await mount(html`<lr-lite-chart begin-at-zero="false"></lr-lite-chart>`);
-  expect(el.beginAtZero).to.be.false;
+it('parses without-zero-baseline from plain HTML', async () => {
+  const el = await mount(html`<lr-lite-chart without-zero-baseline></lr-lite-chart>`);
+  expect(el.withoutZeroBaseline).to.be.true;
 });
 
 it('renders one bar per label per dataset (grouped, not stacked)', async () => {
@@ -362,14 +362,14 @@ it('skips null values in a line series without throwing, and without a point for
   expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
 });
 
-it('emits lr-point-click with the right detail on bar click', async () => {
+it('emits lr-point-activate with the right detail on bar click', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
   ></lr-lite-chart>`);
   const detailPromise = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    el.addEventListener('lr-point-activate', (e) => resolve(e as CustomEvent), { once: true }),
   );
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   // Dataset B ('Tue') -> second dataset, index 1.
@@ -378,7 +378,7 @@ it('emits lr-point-click with the right detail on bar click', async () => {
   expect(detail).to.deep.equal({ datasetIndex: 1, index: 1, label: 'Tue', value: 5 });
 });
 
-it('emits lr-point-click on Enter and Space while a bar is focused, not on other keys', async () => {
+it('emits lr-point-activate on Enter and Space while a bar is focused, not on other keys', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
@@ -386,7 +386,7 @@ it('emits lr-point-click on Enter and Space while a bar is focused, not on other
   ></lr-lite-chart>`);
   const bar = el.shadowRoot!.querySelector('[part="bar"]')! as SVGRectElement;
   let count = 0;
-  el.addEventListener('lr-point-click', () => count++);
+  el.addEventListener('lr-point-activate', () => count++);
 
   bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
   expect(count).to.equal(0);
@@ -589,14 +589,14 @@ it('routes the unified formatter through the multi-series table (value and total
   });
 });
 
-it('emits lr-point-click for a line point too, with the same detail shape', async () => {
+it('emits lr-point-activate for a line point too, with the same detail shape', async () => {
   const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${['x']}
     .datasets=${[{ label: 'Series', data: [42] }]}
   ></lr-lite-chart>`);
   const detailPromise = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    el.addEventListener('lr-point-activate', (e) => resolve(e as CustomEvent), { once: true }),
   );
   el.shadowRoot!.querySelector('[part="point"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const { detail } = await detailPromise;
@@ -610,7 +610,7 @@ it('renders no legend by default, and one legend-item per dataset when legend is
   ></lr-lite-chart>`);
   expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
 
-  el.legend = true;
+  el.withLegend = true;
   await el.updateComplete;
   const items = el.shadowRoot!.querySelectorAll('[part="legend-item"]');
   expect(items.length).to.equal(2);
@@ -683,13 +683,13 @@ it('allows the categorical palette to be rethemed through semantic chart color v
   expect(getComputedStyle(rects[1]!).fill).to.equal('rgb(1, 2, 3)');
 });
 
-it('draws a gridline at the y=0 baseline when beginAtZero is true (the default)', async () => {
+it('draws a gridline at the y=0 baseline while the zero baseline is on (the default)', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['only']}
     .datasets=${[{ label: 'A', data: [100] }]}
   ></lr-lite-chart>`);
-  // beginAtZero pulls 0 into the domain even though every value is positive
+  // The zero baseline pulls 0 into the domain even though every value is positive
   // and far from 0 — the nice-tick set should therefore include 0.
   const labels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')]
     .map((t) => t.textContent)
@@ -735,7 +735,7 @@ it('sets an aria-label on the svg from the dataset labels (role=group, not img, 
 
 it('is accessible', async () => {
   const el = await mount(html`<lr-lite-chart
-    legend
+    with-legend
     x-label="Day"
     y-label="Count"
     .labels=${BAR_LABELS}
@@ -746,7 +746,7 @@ it('is accessible', async () => {
 
 it('renders the legend with just the label when legendText is unset (unchanged default)', async () => {
   const el = await mount(html`<lr-lite-chart
-    legend
+    with-legend
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
@@ -758,7 +758,7 @@ it('renders the legend with just the label when legendText is unset (unchanged d
 
 it('appends legendText output next to each series label when set', async () => {
   const el = await mount(html`<lr-lite-chart
-    legend
+    with-legend
     type="bar"
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
@@ -770,7 +770,7 @@ it('appends legendText output next to each series label when set', async () => {
 
 it('sums only the finite values of a series into the legend total, skipping null/non-finite entries', async () => {
   const el = await mount(html`<lr-lite-chart
-    legend
+    with-legend
     type="bar"
     .labels=${['a', 'b', 'c']}
     .datasets=${[{ label: 'A', data: [2, null, 3] }]}
@@ -850,11 +850,11 @@ it('re-renders when the bar position callback is replaced by reference', async (
   expect(after).to.not.equal(before);
 });
 
-it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false', async () => {
+it('draws a bar from the axis lo, not the domain zero, without the zero baseline', async () => {
   const el = (await fixture(
-    // This property binding exercises the same false branch as the explicit
-    // `begin-at-zero="false"` attribute covered above.
-    html`<lr-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lr-lite-chart>`,
+    // This property binding exercises the same branch as the explicit
+    // `without-zero-baseline` attribute covered above.
+    html`<lr-lite-chart type="bar" .withoutZeroBaseline=${true} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   el.style.setProperty('--lr-chart-height', '200px');
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
@@ -869,9 +869,9 @@ it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false
   expect(y + height).to.be.at.most(plotBottom + 0.5);
 });
 
-it('draws a bar from the axis hi, not the domain zero, when beginAtZero is false and every value is negative', async () => {
+it('draws a bar from the axis hi, not the domain zero, without the zero baseline when every value is negative', async () => {
   const el = (await fixture(
-    html`<lr-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-95] }]}></lr-lite-chart>`,
+    html`<lr-lite-chart type="bar" .withoutZeroBaseline=${true} .labels=${['a']} .datasets=${[{ label: 's', data: [-95] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
   (el as unknown as { plotHeight: number }).plotHeight = 200;
@@ -2692,7 +2692,6 @@ describe('scale="sqrt" stacked proportionality', () => {
         type="bar"
         stacked
         scale="sqrt"
-        begin-at-zero
         .labels=${['only']}
         .datasets=${[
           { label: 'A', data: [10] },
@@ -2727,13 +2726,13 @@ describe('scale="sqrt" stacked proportionality', () => {
       { label: 'B', data: [-20] },
     ];
     const linearEl = (await fixture(html`
-      <lr-lite-chart type="bar" stacked scale="linear" begin-at-zero .labels=${labels} .datasets=${datasets}></lr-lite-chart>
+      <lr-lite-chart type="bar" stacked scale="linear" .labels=${labels} .datasets=${datasets}></lr-lite-chart>
     `)) as LyraLiteChart;
     (linearEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
     (linearEl as unknown as { plotHeight: number }).plotHeight = 150;
     await linearEl.updateComplete;
     const sqrtEl = (await fixture(html`
-      <lr-lite-chart type="bar" stacked scale="sqrt" begin-at-zero .labels=${labels} .datasets=${datasets}></lr-lite-chart>
+      <lr-lite-chart type="bar" stacked scale="sqrt" .labels=${labels} .datasets=${datasets}></lr-lite-chart>
     `)) as LyraLiteChart;
     (sqrtEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
     (sqrtEl as unknown as { plotHeight: number }).plotHeight = 150;
@@ -2766,7 +2765,6 @@ describe('scale="sqrt" stacked proportionality', () => {
       <lr-lite-chart
         type="bar"
         scale="sqrt"
-        begin-at-zero
         .labels=${['a', 'b']}
         .datasets=${[{ label: 'A', data: [10, 90] }]}
       ></lr-lite-chart>
@@ -2782,13 +2780,13 @@ describe('scale="sqrt" stacked proportionality', () => {
   });
 });
 
-// --- accessibleLabel --------------------------------------------------------------------
+// --- accessibleLabel and the host aria-label ----------------------------------------------
 
 describe('accessibleLabel', () => {
   it('overrides the auto-derived <svg> aria-label when set', async () => {
     const el = (await fixture(html`
       <lr-lite-chart
-        accessible-label="Custom chart description"
+        .accessibleLabel=${'Custom chart description'}
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
       ></lr-lite-chart>
@@ -2809,7 +2807,7 @@ describe('accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-lite-chart
         aria-label="Quarterly revenue"
-        accessible-label="Legacy chart label"
+        .accessibleLabel=${'Legacy chart label'}
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
       ></lr-lite-chart>
@@ -3014,7 +3012,7 @@ it('can shrink to a 320px allocation with long chart content', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
       <lr-lite-chart
-        legend
+        with-legend
         .labels=${['A category label that is intentionally very long', 'Another translated category label']}
         .datasets=${[{ label: 'A deliberately long translated revenue series label', data: [1, 2] }]}
       ></lr-lite-chart>
@@ -3264,7 +3262,7 @@ it('re-announces via onMarkFocus() instead of a redundant .focus() when the addr
 
 it('scale="sqrt" falls back to a domainMax of 1 instead of dividing by a non-positive hi, for an all-negative domain', async () => {
   const el = (await fixture(
-    html`<lr-lite-chart type="bar" scale="sqrt" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-50] }]}></lr-lite-chart>`,
+    html`<lr-lite-chart type="bar" scale="sqrt" .withoutZeroBaseline=${true} .labels=${['a']} .datasets=${[{ label: 's', data: [-50] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -3305,7 +3303,7 @@ it('skips a null/non-finite value when computing the stacked domain extent, with
 it('emits null (not undefined, and without throwing) for a point-click index that has no backing data value', async () => {
   const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a', 'b']} .datasets=${[{ label: 's', data: [1, 2] }]}></lr-lite-chart>`);
   const detailPromise = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+    el.addEventListener('lr-point-activate', (e) => resolve(e as CustomEvent), { once: true }),
   );
   (el as unknown as { emitPoint: (di: number, i: number) => void }).emitPoint(0, 99);
   const { detail } = await detailPromise;
@@ -3605,7 +3603,7 @@ describe('lite-chart robustness regressions', () => {
     const pointHit = line.shadowRoot!.querySelector('[data-mark-hit-target="point"]')!;
     expect(Number(pointHit.getAttribute('r')) * 2).to.be.at.least(24);
     let detail: unknown;
-    line.addEventListener('lr-point-click', (event) => {
+    line.addEventListener('lr-point-activate', (event) => {
       detail = (event as CustomEvent).detail;
     }, { once: true });
     pointHit.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -3732,7 +3730,7 @@ describe('lite-chart robustness regressions', () => {
     const el = await mount(html`
       <lr-lite-chart
         type="line"
-        .beginAtZero=${false}
+        .withoutZeroBaseline=${true}
         .labels=${['only']}
         .datasets=${[{ label: 's', data: [Number.MAX_VALUE] }]}
       ></lr-lite-chart>
@@ -3751,7 +3749,7 @@ describe('lite-chart robustness regressions', () => {
     const el = await mount(html`
       <lr-lite-chart
         type="line"
-        .beginAtZero=${false}
+        .withoutZeroBaseline=${true}
         .labels=${['only']}
         .datasets=${[{ label: 's', data: [-Number.MAX_VALUE] }]}
       ></lr-lite-chart>
@@ -3933,7 +3931,7 @@ describe('lite-chart semantics and geometry', () => {
       '[part="point"][data-dataset-index="0"][data-index="1"]',
     )!;
     const pointEvents: CustomEvent[] = [];
-    line.addEventListener('lr-point-click', (event) => pointEvents.push(event as CustomEvent));
+    line.addEventListener('lr-point-activate', (event) => pointEvents.push(event as CustomEvent));
     const rect = earlierPoint.getBoundingClientRect();
 
     try {
@@ -3972,7 +3970,7 @@ describe('lite-chart semantics and geometry', () => {
       '[part="point"][data-dataset-index="1"][data-index="0"]',
     )!;
     const pointEvents: CustomEvent[] = [];
-    line.addEventListener('lr-point-click', (event) => pointEvents.push(event as CustomEvent));
+    line.addEventListener('lr-point-activate', (event) => pointEvents.push(event as CustomEvent));
     const rect = laterPoint.getBoundingClientRect();
 
     try {
@@ -4007,7 +4005,7 @@ describe('lite-chart semantics and geometry', () => {
       ) => void;
     };
     const detailPromise = new Promise<CustomEvent>((resolve) =>
-      el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+      el.addEventListener('lr-point-activate', (e) => resolve(e as CustomEvent), { once: true }),
     );
     // A synthetic event whose currentTarget isn't part of any SVG at all -- e.g. a hand-rolled
     // event object, as opposed to a real click dispatched on one of the rendered <circle>s.
@@ -4045,7 +4043,7 @@ describe('lite-chart semantics and geometry', () => {
       ) => void;
     };
     const detailPromise = new Promise<CustomEvent>((resolve) =>
-      el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+      el.addEventListener('lr-point-activate', (e) => resolve(e as CustomEvent), { once: true }),
     );
     // A real click (detail > 0) on the real first point's circle, but addressed at a
     // dataset/index pair (99, 99) absent from `points` entirely -- the initial exact-identity
@@ -4473,7 +4471,7 @@ describe('scale="logarithmic"', () => {
   });
 
   it('spans the data decades rather than collapsing onto one', async () => {
-    // Regression guard for the floor: `beginAtZero` defaults true, so the linear `lo` is 0 and has
+    // Regression guard for the floor: the zero baseline is on by default, so the linear `lo` is 0 and has
     // no logarithm. Deriving the floor from the smallest positive datum is what keeps 1..1000 as
     // three decades instead of pinning everything below the maximum to the baseline.
     const el = await build('logarithmic', 'bar', [1, 10, 100, 1000]);
@@ -4528,7 +4526,7 @@ it('preserves an explicitly empty host aria-label on the semantic SVG instead of
   const explicit = (await fixture(html`
     <lr-lite-chart
       aria-label=""
-      accessible-label="Legacy chart label"
+      .accessibleLabel=${'Legacy chart label'}
       .labels=${['a']}
       .datasets=${[{ label: 'A', data: [1] }]}
     ></lr-lite-chart>
@@ -4540,7 +4538,7 @@ it('preserves an explicitly empty host aria-label on the semantic SVG instead of
 
   const omitted = (await fixture(html`
     <lr-lite-chart
-      accessible-label="Legacy chart label"
+      .accessibleLabel=${'Legacy chart label'}
       .labels=${['a']}
       .datasets=${[{ label: 'A', data: [1] }]}
     ></lr-lite-chart>
@@ -4577,8 +4575,8 @@ describe('data-table disclosure', () => {
     expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
   });
 
-  it('makes the table visible with show-data-table, matching lr-chart', async () => {
-    const el = await liteChartWith(html`<lr-lite-chart show-data-table></lr-lite-chart>`);
+  it('makes the table visible with with-data-table, matching lr-chart', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart with-data-table></lr-lite-chart>`);
     expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
   });
 
@@ -4655,9 +4653,9 @@ describe('data-table disclosure', () => {
     expect(wrapper(el).getBoundingClientRect().height).to.be.greaterThan(1);
   });
 
-  it('starts expanded when show-data-table is set alongside the toggle', async () => {
+  it('starts expanded when with-data-table is set alongside the toggle', async () => {
     const el = await liteChartWith(
-      html`<lr-lite-chart show-data-table data-table-toggle></lr-lite-chart>`,
+      html`<lr-lite-chart with-data-table data-table-toggle></lr-lite-chart>`,
     );
     expect(toggle(el)!.getAttribute('aria-expanded')).to.equal('true');
   });
@@ -4703,7 +4701,7 @@ describe('lr-lite-chart formatter metadata', () => {
     const seen: LyraChartFormatterContext[] = [];
     const el = await mount(html`<lr-lite-chart
       type="bar"
-      legend
+      with-legend
       .labels=${['Jan', 'Feb']}
       .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
       .formatter=${(context: LyraChartFormatterContext) => {
@@ -4878,8 +4876,8 @@ describe('bidi isolation of formatted labels', () => {
     const el = await mount(html`<lr-lite-chart
       dir="rtl"
       type="bar"
-      legend
-      show-data-table
+      with-legend
+      with-data-table
       style="inline-size: 480px"
       .labels=${['9:00 AM', '10:00 AM']}
       .datasets=${[
@@ -4920,7 +4918,7 @@ describe('bidi isolation of formatted labels', () => {
     const el = await mount(html`<lr-lite-chart
       dir="rtl"
       type="line"
-      show-data-table
+      with-data-table
       .labels=${['Jan', 'Feb']}
       .datasets=${[{ label: 'Throughput', data: [1.5, 2.5] }]}
       .pointText=${(_label: string, value: number) => rateLabel(value)}
@@ -4942,7 +4940,7 @@ describe('bidi isolation of formatted labels', () => {
     const el = await mount(html`<lr-lite-chart
       dir="rtl"
       type="bar"
-      legend
+      with-legend
       .labels=${['9:00 AM', '10:00 AM']}
       .datasets=${[
         { label: 'Up', data: [1.5, 2.5] },

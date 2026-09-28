@@ -77,7 +77,7 @@ export const styles = css`
     display: none;
   }
   [part="link"] {
-    stroke: var(--lr-link-color, var(--lr-color-border));
+    stroke: var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border)));
     fill: none;
     cursor: pointer;
   }
@@ -102,23 +102,24 @@ export const styles = css`
     stroke-linejoin: round;
     pointer-events: all;
   }
-  /* This part's color is per-instance and data-driven (--lr-link-color, --lr-node-fill,
-     --lr-graph-hull-fill), so no single hardcoded hover color works -- and neither did filter:
-     brightness(), which multiplies every channel: it lightened a dark stroke, did nothing on a
-     pure-white or pure-black one, and, being a filter, re-tinted the arrowhead marker painted from
-     the same stroke. Mixing that same custom property toward --lr-color-mix-partner keeps the
-     per-instance color and always moves in the direction needed. */
+  /* This part's color is per-instance and data-driven (--lr-graph-edge-color,
+     --lr-graph-node-fill, --lr-graph-hull-fill), so no single hardcoded hover color works -- and
+     neither did filter: brightness(), which multiplies every channel: it lightened a dark stroke,
+     did nothing on a pure-white or pure-black one, and, being a filter, re-tinted the arrowhead
+     marker painted from the same stroke. Mixing that same custom property toward
+     --lr-color-mix-partner keeps the per-instance color and always moves in the direction
+     needed. */
   [part="link"]:hover {
     stroke: color-mix(
       in oklab,
-      var(--lr-link-color, var(--lr-color-border)),
+      var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
   [part="link"]:active {
     stroke: color-mix(
       in oklab,
-      var(--lr-link-color, var(--lr-color-border)),
+      var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -134,24 +135,24 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="node"] {
-    /* --lr-node-fill is set inline per node (see graph.ts) from LyraGraphNode.color, falling back
-       to the brand token. An inline style declaration always wins the cascade over this selector,
-       so fill has to be set here, not via the presentation attribute, for a per-node color to
-       apply. */
-    fill: var(--lr-node-fill, var(--lr-color-brand));
+    /* --lr-graph-node-fill is set inline per node (see graph.ts) from LyraGraphNode.color, falling
+       back to the deprecated --lr-node-fill and then the brand token. An inline style declaration
+       always wins the cascade over this selector, so fill has to be set here, not via the
+       presentation attribute, for a per-node color to apply. */
+    fill: var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand)));
     cursor: pointer;
   }
   [part="node"]:hover {
     fill: color-mix(
       in oklab,
-      var(--lr-node-fill, var(--lr-color-brand)),
+      var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
   [part="node"]:active {
     fill: color-mix(
       in oklab,
-      var(--lr-node-fill, var(--lr-color-brand)),
+      var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

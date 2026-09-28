@@ -20,9 +20,8 @@ focus indicator again on `<lr-combobox>` and `<lr-date-input>`, both of which pr
 the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus rule was
 `solid transparent`. Both now express appearance as private custom properties, so no `[part]` rule
 can out-rank another. `<lr-option>` and `<lr-time-range>`'s active preset regain their pointer
-feedback, and `<lr-token-input>` can now veto all three of its mutations (`lr-add` and
-`lr-token-edit` became cancelable alongside `lr-remove`, which already was — additive; see that
-section).
+feedback, and `<lr-token-input>` can now veto all three of its mutations (adding and editing a
+token became cancelable alongside removing one, which already was — additive; see that section).
 
 ## Setter-only `null` clearing in 8.0.0
 
@@ -245,13 +244,14 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option
-- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+- `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no option or async row claims to the end of the listbox as a synthetic,
   badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by
   the active query exactly like the `allow-create` row is, so a query it does not match neither
   shows it nor suppresses the "no matches" copy; re-picking it re-commits the same value and
   deliberately does **not** reclassify it as known — the badge and the row both survive, and the row
-  never appears in `selectedRows`
+  never appears in `selectedRows`. Deprecated alias: `show-unknown-option`/`showUnknownOption` (use
+  `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
   tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
@@ -634,10 +634,11 @@ here wins over every treatment. `--lr-combobox-open-border-color` (default
 border before. Read the name as the state the listbox opens in rather than as a synonym for `open`:
 it is bound to `:focus-within`, so it also paints on a focused row whose listbox is closed — after
 an Escape dismissal, say. It is named for symmetry with `lr-select`'s
-`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-text-color`
+`--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-color`
 (default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
 instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
-loud brand fill.
+loud brand fill. Deprecated alias: `--lr-combobox-text-color` (use `--lr-combobox-color`; removed in
+23.0.0).
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a
@@ -672,7 +673,7 @@ form control it opens from and keeps that control's boundary contrast (see `<lr-
 `[part='unknown-value']` badge described above under "Unknown committed values".
 `--lr-combobox-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
 `[part='option-badge']` trailing metadata badge on an async row, and the "not in catalog" badge
-`show-unknown-option` renders on the synthetic unmatched-value listbox row — the same
+`with-unknown-option` renders on the synthetic unmatched-value listbox row — the same
 per-component indirection `lr-select`'s `--lr-select-option-badge-bg` uses.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
@@ -952,9 +953,10 @@ exactly like the multi-option case, until the trigger is actually activated.
   from pushing it off-screen; `--lr-popover-viewport-clamp` does **not** apply to a synced listbox,
   and still does with `sync` unset. Assignment while open repositions in place without closing;
   unsetting it releases the inline width the positioner wrote
-- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+- `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
-  keyboard-reachable, re-selectable row. Off by default
+  keyboard-reachable, re-selectable row. Off by default. Deprecated alias: `show-unknown-option`/`showUnknownOption`
+  (use `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
   row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
@@ -965,7 +967,7 @@ exactly like the multi-option case, until the trigger is actually activated.
   flight). While `true`, a committed value that currently matches no option renders the localized
   `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
   value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
-  `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
+  `withUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
   missing". It covers an **empty** selection too: with nothing selected — a create form whose
   catalogue is still being fetched, or an edit form whose saved selection is legitimately empty —
   the trigger renders that same localized text in place of `placeholder`, from the same `loading`
@@ -1031,7 +1033,7 @@ stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
 that same value's own `<lr-option>` catalog simply hasn't arrived yet (unlike `<lr-combobox>`,
 `<lr-select>` has no async `source` of its own, so this is consumer-driven rather than automatic):
 a still-unmatched value then renders the localized `loading` placeholder instead of the raw value,
-with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
+with no `unknown-value` badge and no synthetic `withUnknownOption` row, since it is not yet known
 to be missing. Once the matching option mounts, the real label renders on the next render with no
 `value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
 `false`. The same flag covers the other half of that state: with **nothing** selected the trigger
@@ -1118,7 +1120,7 @@ following option rows; options with an empty `group` get no heading or group wra
 `lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set),
 `option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
-only while `show-unknown-option` is set), `expand-icon`, `error`, and
+only while `with-unknown-option` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
@@ -1220,7 +1222,7 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
 `--lr-select-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
-`[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
+`[part='option-badge']` "not in catalog" badge `with-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
 `--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered
@@ -1461,9 +1463,10 @@ while its range is the current value),
 `view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
 `weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 
-**Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
-size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the
-default). An inherited or direct public value remains authoritative in every tier.
+**Themeable custom properties:** `--lr-date-picker-cell-size` (default `2.25rem`, controls
+day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
+`m` keeps the default). An inherited or direct public value remains authoritative in every tier.
+Deprecated alias: `--lr-cell-size` (use `--lr-date-picker-cell-size`; removed in 23.0.0).
 
 **Optional peer deps:** none.
 
@@ -1623,10 +1626,11 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-form-control-height`. All four defaults follow the shared size ladder, including
 `small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
 Inherited or direct public values win. `pill` changes the private radius default to
-`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-text-color`
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-color`
 (default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
 `var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
-brand fill.
+brand fill. Deprecated alias: `--lr-date-input-text-color` (use `--lr-date-input-color`; removed in
+23.0.0).
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs
@@ -2230,20 +2234,23 @@ block of its own — the ones marked variant-independent are the exceptions:
   variant-independent. Set it to tint an outlined button (a faint surface wash behind the outline)
   without a `::part(base)` rule, and point `--lr-button-hover-base` at the same colour so the hover
   and press states keep moving away from what is actually painted.
-- `--lr-button-quiet-text` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
+- `--lr-button-quiet-color` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
   `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, variant-independent too.
+  Deprecated alias: `--lr-button-quiet-text` (use `--lr-button-quiet-color`; removed in 23.0.0).
 
 Hover and press are **colour mixes, not a filter** — `--lr-button-hover-base` (default
 `--lr-color-surface`) is the colour both move away from, and each painted tier re-points it at the
 fill it actually paints (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill`
 for `accent`); the chrome-less tiers paint nothing, so they mix from the page surface.
-`--lr-button-hover-background` (default `color-mix(in oklab, var(--lr-button-hover-base),
+`--lr-button-hover-bg` (default `color-mix(in oklab, var(--lr-button-hover-base),
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
-`--lr-button-active-background` the same mix at the stronger `--lr-color-mix-active` share, so a
-press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
+`--lr-button-active-bg` the same mix at the stronger `--lr-color-mix-active` share, so a
+press reads as more than a hover. Deprecated aliases: `--lr-button-hover-background` and
+`--lr-button-active-background` (use `--lr-button-hover-bg`/`--lr-button-active-bg`; removed in
+23.0.0). `appearance="link"` moves its text colour by those two shares
 instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
-`--lr-button-quiet-text`/`-border`) theme its hover state independently. Both are **undeclared by
+`--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by
 default**, falling back to whatever colour/border the active `appearance` already paints at rest —
 every appearance's current hover paint is unchanged until one is set.
 `appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
@@ -2553,13 +2560,16 @@ the surrounding text's font-size rather than the native button's UA default.
 The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
 setting only one still behaves:
 
-- `--lr-icon-button-background` (default `transparent`),
-  `--lr-icon-button-background-hover` (default `color-mix(in oklab, var(--lr-color-surface),
+- `--lr-icon-button-bg` (default `transparent`),
+  `--lr-icon-button-bg-hover` (default `color-mix(in oklab, var(--lr-color-surface),
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
-  `--lr-icon-button-background-active` (the same mix at the stronger `--lr-color-mix-active` share,
+  `--lr-icon-button-bg-active` (the same mix at the stronger `--lr-color-mix-active` share,
   so a press reads as more than a hover) — the `[part='button']` background in each state. The
   hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
-  icon button on a default page changed nothing at all.
+  icon button on a default page changed nothing at all. Deprecated aliases:
+  `--lr-icon-button-background`, `--lr-icon-button-background-hover` and
+  `--lr-icon-button-background-active` (use `--lr-icon-button-bg`, `--lr-icon-button-bg-hover` and
+  `--lr-icon-button-bg-active`; removed in 23.0.0).
 - `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
   `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
   `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
@@ -3105,20 +3115,15 @@ unchanged.
 
 Stepper switches:
 
-- `steppers: boolean = true` (attribute `steppers`, reflected) — renders the increment/decrement
-  pair inside the control row. It **defaults to `true`**, so it needs a custom converter to switch
-  off: write `steppers="false"` as an attribute, or `.steppers=${false}` as a property binding.
-  A bare `?steppers=${false}` (or removing the attribute in a framework that models booleans by
-  presence) cannot reset a `true`-defaulting property.
+- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — hides the
+  increment/decrement pair the control row renders by default. Deprecated alias: `steppers` (use
+  `without-steppers`, inverted: `steppers="false"` is `without-steppers`; kept in step, last write wins; removed in 23.0.0).
 - `withoutSpinButtons: boolean = true` (attribute `without-spin-buttons`, reflected) — the same
   knob `lr-input` exposes, but **defaulted the other way here** (`lr-input`'s default is `false`),
   so the component's own steppers are never shown alongside the browser's built-in spin buttons.
-  It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
-  brings the native pair back. The two properties are independent: `steppers="false"
+  It is `true`-defaulting, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
+  brings the native pair back. The two properties are independent: `without-steppers
 without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
-- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — the positive
-  upstream spelling for hiding the custom pair. It does not invert `steppers`: either
-  `without-steppers` or `steppers="false"` hides the same controls, and both unset leaves them on.
 
 Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
 handling stay the platform's. Unlike those silent methods, a stepper **click** is a user edit and
@@ -3179,7 +3184,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <!-- A bare numeric field: no steppers, and the browser's own spinners back: -->
 <lr-number-input
   label="Quantity"
-  steppers="false"
+  without-steppers
   without-spin-buttons="false"
 ></lr-number-input>
 <script type="module">
@@ -3189,13 +3194,12 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 **Known gotchas:**
 
-- **`steppers` and `without-spin-buttons` both default to `true` here.** Only the literal string
-  `"false"` parses as `false`; every other attribute value — including an empty one, and including
-  _removing_ the attribute — parses as `true`. So `?attr=${false}` and a removed attribute cannot
-  reset either; use the `="false"` attribute value or the `.prop=${false}` property binding. The
-  two also serialize differently when reflected: `steppers` is absent while `true` and appears as
-  `steppers="false"` while `false`, whereas `without-spin-buttons` appears empty while `true` and is
-  absent while `false`. Assert the rendered result, not the attribute's presence.
+- **`without-spin-buttons` defaults to `true` here.** Only the literal string `"false"` parses as
+  `false`; every other attribute value — including an empty one, and including _removing_ the
+  attribute — parses as `true`. So `?without-spin-buttons=${false}` and a removed attribute cannot
+  reset it; use the `="false"` attribute value or the `.withoutSpinButtons=${false}` property
+  binding. It reflects as an empty attribute while `true` and is absent while `false`; assert the
+  rendered result, not the attribute's presence.
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
   toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
@@ -3413,7 +3417,9 @@ properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `ste
 native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
 node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
 The inherited `--lr-input-*` theme inputs therefore remain configurable from an ancestor theme
-wrapper without being shadowed by the subclass. Among those inherited properties and methods:
+wrapper without being shadowed by the subclass. On this element the spin-button switch is spelled
+`without-spin-buttons` (`withoutSpinButtons`). Deprecated alias: `no-spin-buttons` (use
+`without-spin-buttons`; kept in step, last write wins; removed in 23.0.0). Among those inherited properties and methods:
 `defaultValue: string = ''` (attribute `value`, reflected) is the reset value, and
 `customError: string | null = null` (attribute `custom-error`, reflected) is a consumer-supplied
 validation message. `getForm()` returns the browser-resolved form owner, including an external
@@ -4200,9 +4206,9 @@ while pressed:
   --lr-gemstone-selected-blur: .42rem;
 }
 .gemstone-accent-picker lr-icon-button {
-  --lr-icon-button-background: transparent;
-  --lr-icon-button-background-hover: transparent;
-  --lr-icon-button-background-active: transparent;
+  --lr-icon-button-bg: transparent;
+  --lr-icon-button-bg-hover: transparent;
+  --lr-icon-button-bg-active: transparent;
   --lr-icon-button-border: none;
 }
 .gem { display: inline-flex; inline-size: 1.15rem; block-size: 1.15rem; }
@@ -4759,16 +4765,17 @@ single numeric string entry.
   `with-tooltip` bubble's text. The second argument identifies which handle is being formatted
   (`'value'` on a single-handle slider). A nullish result omits `aria-valuetext`. Leaving the
   property unset preserves the numeric `aria-valuetext`.
-- `showValue: boolean = false` (attribute `show-value`) — opt-in numeric readout next to the track;
+- `withValue: boolean = false` (attribute `with-value`) — opt-in numeric readout next to the track;
   a range readout joins both values with an en dash. The explicit HTML spelling
-  `show-value="false"` stays false.
+  `with-value="false"` stays false. Deprecated alias: `show-value`/`showValue` (use `with-value`; kept in step,
+  last write wins; removed in 23.0.0).
 - `valueDisplay: SliderValueDisplay = 'numeric'` (attribute `value-display`) — `'numeric' |
   'formatted'`. Opt into `formatted` to reuse `valueFormatter` (or `tooltipFormatter` when no
   value formatter is supplied) for the visible readout too. Each range handle is formatted
   separately; nullish results fall back to localized numbers. Existing ARIA and tooltip behavior
   is unchanged. The callback owns its unit labels and locale formatting.
 - `valuePlacement: SliderValuePlacement = 'inline'` (attribute `value-placement`) — `'inline' |
-  'label'`. With `showValue`, `label` places the readout opposite the label in a wrapping row that
+  'label'`. With `withValue`, `label` places the readout opposite the label in a wrapping row that
   follows RTL. The readout stays outside the accessible label. These presentation options update
   on live `lr-input` changes without changing the commit-only `lr-change` contract.
 - `value: number = 0`, `defaultValue: number = 0` (attribute `value`), `valueAsNumber: number`, and
@@ -4824,7 +4831,7 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
-nodes when `showValue` and `valuePlacement="label"` are enabled.
+nodes when `withValue` and `valuePlacement="label"` are enabled.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
@@ -5620,18 +5627,21 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 each list mutation; native events have no detail and both aliases carry a frozen
 `{ value: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
-`relatedTarget`. `lr-add`
+`relatedTarget`. `lr-token-add-request`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
-readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable as of
-10.0.0; `preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the
-input unchanged so the user can correct it, rather than clearing it),
-`lr-remove`
+readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable;
+`preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the input
+unchanged so the user can correct it, rather than clearing it),
+`lr-token-remove-request`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
-unchanged), and `lr-token-edit`
+unchanged), and `lr-token-edit-request`
 (`detail: { value, previousValue, index }` — an existing token is about to be edited in place —
-cancelable as of 10.0.0; `preventDefault()` keeps the token in `value` unchanged and leaves the
-inline editor open with the user's edited text intact, rather than closing and discarding it).
-All three mutators now share one veto contract; previously only `lr-remove` could be vetoed.
+cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
+open with the user's edited text intact, rather than closing and discarding it).
+All three mutators share one veto contract.
+Deprecated aliases: `lr-add`, `lr-remove` and `lr-token-edit` (use `lr-token-add-request`,
+`lr-token-remove-request` and `lr-token-edit-request`; removed in 23.0.0). Each alias fires right
+after its canonical event with an equal detail, and either event's `preventDefault()` vetoes.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
@@ -5667,7 +5677,7 @@ back — a blur means the user already aimed focus elsewhere. A changed inline e
 its native/alias input-change sequence before the public native/alias blur sequence. Both the draft
 and inline editor relay one native bubbling/composed host `focus` or `blur` event while their source
 event stays internal.
-`lr-token-edit` fires only for an edit
+`lr-token-edit-request` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
 duplicate draft is skipped rather than rejecting the whole entry. Own or fieldset-cascaded
@@ -5768,8 +5778,10 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
-- `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
-  one row per `\n`-separated line
+- `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
+  `gutter` part, which otherwise renders one row per `\n`-separated line. Deprecated alias:
+  `line-numbers`/`lineNumbers` (use `without-line-numbers`, inverted: `line-numbers="false"` is
+  `without-line-numbers`; kept in step, last write wins; removed in 23.0.0)
 - `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press and the tab width
   shared by the native textarea and text measurement. Explicit property/attribute assignment wins
   over `--lr-code-editor-tab-size`; otherwise the token controls the rendered tab width. Sanitized
@@ -5832,7 +5844,7 @@ the internal textarea; native payload such as `InputEvent.inputType` and
 **CSS parts:** `form-control`, `label` / `form-control-label` (both tokens sit on the same `<label>`
 element — `label` is the historical name, `form-control-label` the one every other form component
 in this family uses), `editor` (the bordered frame and the single scroll viewport), `gutter` (line
-numbers, `aria-hidden`, only when `lineNumbers`), `textarea`, `hint`, `error`.
+numbers, `aria-hidden`, omitted while `withoutLineNumbers`), `textarea`, `hint`, `error`.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 that label element — the one `::after` rule described under "The required-field marker" above, not
@@ -6555,23 +6567,25 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
-- `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`
-  (or `<lr-flag country={country} variant="compact">` when the entry sets `country`); `false`
-  omits the flag element entirely (not just visually).
+- `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
+  `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
+  when the entry sets `country`) and the trigger flag entirely (not just visually). Deprecated
+  alias: `show-flags`/`showFlags` (use `without-flags`, inverted: `show-flags="false"` is `without-flags`;
+  kept in step, last write wins; removed in 23.0.0).
 - `triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label'` (attribute `trigger-display`) —
   `'flag' | 'label' | 'flag-label'`. The default keeps the flag, label and chevron. `label`
   omits only the trigger flag; the menu keeps its flags and endonyms. `flag` centers the flag in
   a square and hides the visible label and chevron. The `trigger-label` remains available to
   assistive technology and describes the trigger's current language; its accessible name still
   follows `label`/the host `aria-label`. The square uses the shared/scoped trigger height with a
-  24px floor. `showFlags=false` retains visible text in every mode. Selection, keyboard navigation,
+  24px floor. `withoutFlags` retains visible text in every mode. Selection, keyboard navigation,
   form values and the uncommitted effective-locale preview keep their usual behavior.
 - `optionDisplay: LyraLocaleOptionDisplay = 'label-tag'` (attribute `option-display`) —
   `'label' | 'label-tag'`. The default renders each option row as the locale's label above its raw
   BCP-47 tag. `'label'` renders the label alone and **omits the `option-tag` element from the DOM**
   rather than hiding it with CSS — a visually hidden tag would still join the row's accessible name
   and would still be matched by `::part(option-tag)`, so under `'label'` that part matches nothing
-  at all. The trigger, the row flags, `showFlags`, selection, keyboard navigation and form values
+  at all. The trigger, the row flags, `withoutFlags`, selection, keyboard navigation and form values
   are identical in both modes; only the option rows change.
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger _displays_ `effectiveLocale` as a preview label, but
@@ -6636,8 +6650,8 @@ priority until cleared.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`,
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
-`showFlags` is on and `triggerDisplay` is not `label`), `trigger-label` (the current language,
-visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
+`withoutFlags` is off and `triggerDisplay` is not `label`), `trigger-label` (the current language,
+visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `withoutFlags` is off),
 `option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag; rendered only while
 `optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
 `expand-icon`,
@@ -6679,7 +6693,7 @@ change every unset locale picker beneath it.
 
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
-`@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
+`@aceshooting/lyra-flags` package isn't installed and `withoutFlags` is left off.
 
 A compact header can set `trigger-display="flag"` and
 `--lr-locale-picker-trigger-height: 2.25rem` for a 36px square at the usual 16px root size.
@@ -7098,13 +7112,15 @@ and press get outline affordances, and disabled toggles read as `GrayText` at fu
 **Themeable custom properties** (not declared on the host, so ancestor values win):
 `--lr-toggle-radius` (default `var(--lr-form-control-radius)`), `--lr-toggle-padding-inline`
 (default `var(--lr-space-s)`), `--lr-toggle-gap` (default `var(--lr-form-control-gap)`),
-`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-background` (default
+`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-bg` (default
 `transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
-`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-background` (default
+`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-bg` (default
 `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
-`--lr-toggle-pressed-background` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
+`--lr-toggle-pressed-bg` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
 (default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
-`var(--lr-color-border-loud)`).
+`var(--lr-color-border-loud)`). Deprecated aliases: `--lr-toggle-background`,
+`--lr-toggle-hover-background` and `--lr-toggle-pressed-background` (use `--lr-toggle-bg`,
+`--lr-toggle-hover-bg` and `--lr-toggle-pressed-bg`; removed in 23.0.0).
 
 ```html
 <script type="module">

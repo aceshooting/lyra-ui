@@ -59,7 +59,7 @@ export class LyraHistogram extends LyraChart {
   // file meaningful instead of dead weight. `srOnly` must still be included
   // here (mirrors `LyraChart.styles`) since the inherited `renderDataTable()`
   // relies on it to visually hide the fallback `<table>`/description when
-  // `showDataTable` is false.
+  // `withDataTable` is false.
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
   override type = 'bar' as const;

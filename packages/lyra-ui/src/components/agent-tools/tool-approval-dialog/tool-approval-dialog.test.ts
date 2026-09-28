@@ -5,6 +5,7 @@ import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
 
@@ -180,26 +181,26 @@ it('renders slotted footer content alongside the built-in action buttons', async
 });
 
 describe('editing', () => {
-  it('does not render an edit button when editable is false', async () => {
+  it('does not render an edit button when readonly is set', async () => {
     const el = (await fixture(
-      html`<lr-tool-approval-dialog tool-name="delete_file" .editable=${false}></lr-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="delete_file" .readonly=${true}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]').length).to.equal(0);
   });
 
-  it('honors the plain HTML attribute form editable="false" (not just a JS property binding)', async () => {
+  it('honors the plain HTML attribute form readonly (not just a JS property binding)', async () => {
     const el = (await fixture(
-      html`<lr-tool-approval-dialog tool-name="delete_file" editable="false"></lr-tool-approval-dialog>`,
+      html`<lr-tool-approval-dialog tool-name="delete_file" readonly></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    expect(el.editable).to.be.false;
+    expect(el.readonly).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]').length).to.equal(0);
   });
 
-  it('defaults editable to true when the attribute is entirely absent', async () => {
+  it('defaults readonly to false when the attribute is entirely absent', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="delete_file"></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    expect(el.editable).to.be.true;
+    expect(el.readonly).to.be.false;
     expect(editButton(el).tagName).to.equal('BUTTON');
   });
 
@@ -257,7 +258,7 @@ describe('editing', () => {
     let ancestorInputs = 0;
     el.addEventListener('input', () => hostInputs += 1);
     wrapper.addEventListener('input', () => ancestorInputs += 1);
-    el.pending = 'approve';
+    el.pendingAction = 'approve';
     await el.updateComplete;
 
     editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
@@ -426,7 +427,7 @@ describe('editing', () => {
     el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     const ta = textarea(el);
     const rect = ta.getBoundingClientRect();
@@ -599,13 +600,13 @@ describe('editing', () => {
     el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
     approveButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     el.toolName = 'read_file';
     el.args = { path: 'replacement.md' };
     await el.updateComplete;
 
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(el.shadowRoot!.querySelector('[part="args-editor"]') === null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="args-view"]') as LyraJsonViewer).data).to.deep.equal({
       path: 'replacement.md',
@@ -629,7 +630,7 @@ describe('editing', () => {
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelector('[part="args-editor"]') === null).to.be.true;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 });
 
@@ -696,7 +697,7 @@ describe('approve/deny', () => {
     expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
     await approveEl.updateComplete;
     expect(approveEl.open, 'not-prevented path closes normally').to.be.false;
-    expect(approveEl.pending).to.equal(null);
+    expect(approveEl.pendingAction).to.equal(null);
 
     const preventedApproveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
@@ -709,7 +710,7 @@ describe('approve/deny', () => {
     expect(preventedApproveEvent.defaultPrevented, 'prevented here').to.equal(true);
     await preventedApproveEl.updateComplete;
     expect(preventedApproveEl.open, 'prevented path never closes').to.be.true;
-    expect(preventedApproveEl.pending).to.equal('approve');
+    expect(preventedApproveEl.pendingAction).to.equal('approve');
 
     const denyEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
@@ -733,7 +734,7 @@ describe('approve/deny', () => {
     expect(preventedDenyEvent.defaultPrevented).to.equal(true);
     await preventedDenyEl.updateComplete;
     expect(preventedDenyEl.open).to.be.true;
-    expect(preventedDenyEl.pending).to.equal('deny');
+    expect(preventedDenyEl.pendingAction).to.equal('deny');
   });
 });
 
@@ -861,7 +862,7 @@ describe('focus management', () => {
     expect(blurEvent.composed).to.be.true;
   });
 
-  it('refocuses the Deny button (keeping the trap engaged) when editable is turned off while the textarea has focus', async () => {
+  it('refocuses the Deny button (keeping the trap engaged) when readonly is turned on while the textarea has focus', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
@@ -869,7 +870,7 @@ describe('focus management', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.activeElement) === (textarea(el))).to.equal(true);
 
-    el.editable = false;
+    el.readonly = true;
     await el.updateComplete;
 
     // Focus lands back on Deny instead of falling through to <body> -- see
@@ -1251,7 +1252,7 @@ describe('async pending decisions', () => {
     expect(textarea(el).readOnly).to.be.true;
     expect(editButton(el).disabled).to.be.true;
   });
-  it('lr-approve/lr-deny are cancelable; preventDefault() sets pending instead of closing', async () => {
+  it('lr-approve/lr-deny are cancelable; preventDefault() sets pendingAction instead of closing', async () => {
     const approveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
@@ -1260,8 +1261,8 @@ describe('async pending decisions', () => {
     approveEl.addEventListener('lr-close', () => (approveClosed = true));
     approveButton(approveEl).click();
     await approveEl.updateComplete;
-    expect(approveEl.pending).to.equal('approve');
-    expect(approveEl.hasAttribute('pending')).to.be.true;
+    expect(approveEl.pendingAction).to.equal('approve');
+    expect(approveEl.hasAttribute('pending-action')).to.be.true;
     expect(approveEl.open).to.be.true;
     expect(approveClosed).to.be.false;
 
@@ -1273,7 +1274,7 @@ describe('async pending decisions', () => {
     denyEl.addEventListener('lr-close', () => (denyClosed = true));
     denyButton(denyEl).click();
     await denyEl.updateComplete;
-    expect(denyEl.pending).to.equal('deny');
+    expect(denyEl.pendingAction).to.equal('deny');
     expect(denyEl.open).to.be.true;
     expect(denyClosed).to.be.false;
   });
@@ -1298,7 +1299,7 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-approve', (e) => e.preventDefault());
     approveButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     const closeListener = oneEvent(el, 'lr-close');
     el.close('approve');
@@ -1318,11 +1319,11 @@ describe('async pending decisions', () => {
     )) as LyraToolApprovalDialog;
     el.addEventListener('lr-approve', (e) => {
       e.preventDefault();
-      el.pending = null;
+      el.pendingAction = null;
     });
     approveButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(el.open).to.be.true;
     // Both controls stay enabled and interactive -- the built-in pending presentation never landed.
     expect(denyButton(el).disabled).to.be.false;
@@ -1337,9 +1338,9 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-deny', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
 
-    el.pending = null;
+    el.pendingAction = null;
     await el.updateComplete;
     expect(denyButton(el).loading).to.be.false;
     expect(denyButton(el).disabled).to.be.false;
@@ -1355,7 +1356,7 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-deny', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
 
     let closed = false;
     el.addEventListener('lr-close', () => (closed = true));
@@ -1369,7 +1370,7 @@ describe('async pending decisions', () => {
     expect(closed).to.be.false;
     expect(el.open).to.be.true;
 
-    el.pending = null;
+    el.pendingAction = null;
     await el.updateComplete;
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await el.updateComplete;
@@ -1384,30 +1385,30 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-deny', (e) => e.preventDefault());
     denyButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
 
     el.close('api'); // host abandons without ever resolving the pending decision
     await el.updateComplete;
     el.open = true;
     await el.updateComplete;
 
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(denyButton(el).loading).to.be.false;
   });
 
-  it('defaults pending to null and leaves the synchronous approve/deny path unchanged when never touched', async () => {
+  it('defaults pendingAction to null and leaves the synchronous approve/deny path unchanged when never touched', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    expect(el.pending).to.equal(null);
-    expect(el.hasAttribute('pending')).to.be.false;
+    expect(el.pendingAction).to.equal(null);
+    expect(el.hasAttribute('pending-action')).to.be.false;
     const approveListener = oneEvent(el, 'lr-approve');
     const closeListener = oneEvent(el, 'lr-close');
     approveButton(el).click();
     await approveListener;
     const { detail } = await closeListener;
     expect(detail).to.equal('approve');
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 
   it('is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)', async () => {
@@ -1419,7 +1420,7 @@ describe('async pending decisions', () => {
     await el.updateComplete;
     // Prove the pending state actually landed before checking accessibility -- otherwise this
     // would pass vacuously against the ordinary undecided render.
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
     expect(approveButton(el).loading).to.be.true;
     await expect(el).to.be.accessible();
   });
@@ -1437,11 +1438,11 @@ describe('async pending decisions', () => {
     )) as LyraToolApprovalDialog;
     el.addEventListener('lr-approve', (e) => {
       e.preventDefault();
-      el.pending = 'deny';
+      el.pendingAction = 'deny';
     });
     approveButton(el).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
     expect(el.open).to.be.true;
   });
 
@@ -1458,7 +1459,7 @@ describe('async pending decisions', () => {
     denyButton(el).click();
     await el.updateComplete;
     expect(el.open).to.be.false;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(closeReason).to.equal('deny');
   });
 });
@@ -1501,4 +1502,106 @@ it('renders the disabled edit action with the shared disabled opacity token', as
   const expected = getComputedStyle(el).getPropertyValue('--lr-opacity-disabled').trim();
   expect(getComputedStyle(edit).opacity).to.equal(expected);
   expect(getComputedStyle(edit).opacity).not.to.equal('1');
+});
+
+describe('lr-tool-approval-dialog deprecated editable and pending aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-tool-approval-dialog', kind: 'property', name: 'editable' },
+    { tag: 'lr-tool-approval-dialog', kind: 'property', name: 'pending' },
+  ];
+  const hasEdit = (el: LyraToolApprovalDialog): boolean => el.shadowRoot!.querySelector('[part="edit-button"]') !== null;
+
+  it('treats editable="false" exactly like readonly, keeps a bare editable meaning the default, and warns once', async () => {
+    let results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const canonical = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" readonly></lr-tool-approval-dialog>`);
+      const off = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable="false"></lr-tool-approval-dialog>`);
+      const bare = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable></lr-tool-approval-dialog>`);
+      const both = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable readonly></lr-tool-approval-dialog>`);
+      const property = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t"></lr-tool-approval-dialog>`);
+      property.editable = false;
+      await property.updateComplete;
+      results = [hasEdit(canonical), hasEdit(off), hasEdit(bare), hasEdit(both), hasEdit(property), off.readonly, off.editable];
+    });
+    expect(results).to.deep.equal([false, false, true, false, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-approval-dialog:property:editable']);
+  });
+
+  it('keeps pending reading and writing the pending-action state, warning once', async () => {
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
+      );
+      el.pending = 'deny';
+      await el.updateComplete;
+      reads = [el.pendingAction, el.pending, el.getAttribute('pending-action'), denyButton(el).loading, approveButton(el).disabled];
+      el.pending = null;
+      await el.updateComplete;
+      reads.push(el.pendingAction, el.hasAttribute('pending-action'));
+    });
+    expect(reads).to.deep.equal(['deny', 'deny', 'deny', true, true, null, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-approval-dialog:property:pending']);
+  });
+
+  it('lets a vetoing listener that writes the deprecated pending alias win over the built-in fallback', async () => {
+    let state: unknown[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
+      );
+      el.addEventListener('lr-approve', (e) => {
+        e.preventDefault();
+        el.pending = null;
+      });
+      approveButton(el).click();
+      await el.updateComplete;
+      state = [el.pendingAction, el.open, approveButton(el).loading];
+    });
+    expect(state).to.deep.equal([null, true, false]);
+  });
+
+  it('applies the last authored spelling when pending and pending-action or editable and readonly are both present', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const canonicalLast = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" pending="approve" pending-action="deny"></lr-tool-approval-dialog>`,
+      );
+      const aliasLast = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" pending-action="deny" pending="approve"></lr-tool-approval-dialog>`,
+      );
+      const editableLast = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" readonly editable></lr-tool-approval-dialog>`,
+      );
+      reads = [
+        canonicalLast.pendingAction,
+        canonicalLast.pending,
+        aliasLast.pendingAction,
+        aliasLast.pending,
+        editableLast.readonly,
+        hasEdit(editableLast),
+      ];
+    });
+    expect(reads).to.deep.equal(['deny', 'deny', 'approve', 'approve', false, true]);
+  });
+
+  it('syncs and reflects editable and pending back from the canonical properties without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraToolApprovalDialog>(
+        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
+      );
+      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.hasAttribute('pending'));
+      el.readonly = true;
+      el.pendingAction = 'approve';
+      await el.updateComplete;
+      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.getAttribute('pending'));
+      el.readonly = false;
+      el.pendingAction = null;
+      await el.updateComplete;
+      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.hasAttribute('pending'));
+    });
+    expect(reads).to.deep.equal([true, null, null, false, false, 'false', 'approve', 'approve', true, null, null, false]);
+    expect(warnings).to.have.length(0);
+  });
 });

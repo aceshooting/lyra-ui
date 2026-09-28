@@ -103,7 +103,7 @@ export const NoSyncScroll: Story = {
     <lr-document-compare
       style="max-width: 48rem;"
       view="side-by-side"
-      .syncScroll=${false}
+      without-sync-scroll
       .oldVersion=${{ id: 'v1', name: 'v1.0', mimeType: 'image/png', uri: PIXEL }}
       .newVersion=${{ id: 'v2', name: 'v1.1', mimeType: 'image/png', uri: PIXEL }}
     ></lr-document-compare>

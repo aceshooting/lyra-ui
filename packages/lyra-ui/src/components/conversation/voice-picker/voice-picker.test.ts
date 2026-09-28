@@ -4,6 +4,7 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 const CATALOG = ['alloy', 'verse'];
 const OBJECT_CATALOG = [
@@ -1428,11 +1429,11 @@ it('a voice with no previewUrl still fires the request event but never plays int
   expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
 });
 
-it('preview=false renders no preview affordances at all', async () => {
+it('without-preview renders no preview affordances at all', async () => {
   const el = (await fixture(
     html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
   )) as LyraVoicePicker;
-  el.preview = false;
+  el.withoutPreview = true;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(0);
   el.open = true;
@@ -1440,12 +1441,52 @@ it('preview=false renders no preview affordances at all', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="option-preview"]').length).to.equal(0);
 });
 
-it('accepts preview="false" as a plain-HTML attribute string, not just a property binding', async () => {
-  const el = (await fixture(
-    html`<lr-voice-picker preview="false" .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
-  )) as LyraVoicePicker;
+it('keeps the deprecated preview="false" alias equal to without-preview, warning once', async () => {
+  let el!: LyraVoicePicker;
+  let both!: LyraVoicePicker;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: 'lr-voice-picker', kind: 'property', name: 'preview' }],
+    async () => {
+      el = (await fixture(
+        html`<lr-voice-picker preview="false" .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`
+      )) as LyraVoicePicker;
+      both = (await fixture(
+        html`<lr-voice-picker preview without-preview .catalog=${OBJECT_CATALOG}></lr-voice-picker>`
+      )) as LyraVoicePicker;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    'lyra-deprecated:lr-voice-picker:property:preview',
+  ]);
+  expect(el.withoutPreview).to.be.true;
   expect(el.preview).to.be.false;
   expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(0);
+  expect(both.withoutPreview, 'the later without-preview attribute wins').to.be.true;
+  expect(both.preview).to.be.false;
+});
+
+it('forwards a preview write, syncs back from without-preview, and lets the last write win', async () => {
+  let el!: LyraVoicePicker;
+  let both!: LyraVoicePicker;
+  await captureDeprecationWarnings(
+    [{ tag: 'lr-voice-picker', kind: 'property', name: 'preview' }],
+    async () => {
+      el = (await fixture(html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`)) as LyraVoicePicker;
+      el.preview = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-voice-picker without-preview preview .catalog=${OBJECT_CATALOG}></lr-voice-picker>`
+      )) as LyraVoicePicker;
+    }
+  );
+  expect(el.withoutPreview).to.be.true;
+  expect(el.hasAttribute('without-preview')).to.be.true;
+  el.withoutPreview = false;
+  await el.updateComplete;
+  expect(el.preview).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="preview-button"]').length).to.equal(1);
+  expect(both.withoutPreview, 'the later preview attribute wins').to.be.false;
+  expect(both.preview).to.be.true;
 });
 
 it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and preview that specific row', async () => {

@@ -89,7 +89,7 @@ internally (both imported unconditionally as side effects, not optional).
 </script>
 ```
 
-The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
+The internal `lr-slider` renders with its own value readout suppressed (`.withValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
 to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`

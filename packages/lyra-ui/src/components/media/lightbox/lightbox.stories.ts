@@ -103,7 +103,7 @@ export const CounterHidden: Story = {
     <lr-lightbox
       .images=${images}
       .open=${context.viewMode !== 'docs'}
-      .showCounter=${false}
+      without-counter
     ></lr-lightbox>
   `,
 };

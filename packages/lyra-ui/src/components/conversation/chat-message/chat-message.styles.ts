@@ -154,7 +154,7 @@ export const styles = css`
   :host([message-role='system']) [part='actions'] {
     margin-inline-end: auto;
   }
-  :host([actions-position='outside']) [part='actions'] {
+  :host([actions-placement='outside']) [part='actions'] {
     margin-block-start: var(--lr-space-2xs);
   }
   /* Outside the footer, [part='actions'] is a sibling of [part='bubble'], not a flex item of
@@ -162,11 +162,11 @@ export const styles = css`
      The role-conditional auto margins above only move a flex item within its container's spare
      space, so they are a no-op on a box that already fills its container; justify-content on the
      slotted content pins it to the same inline edge as the bubble above. */
-  :host([actions-position='outside'][message-role='user']) [part='actions'] {
+  :host([actions-placement='outside'][message-role='user']) [part='actions'] {
     justify-content: flex-end;
   }
-  :host([actions-position='outside'][message-role='assistant']) [part='actions'],
-  :host([actions-position='outside'][message-role='system']) [part='actions'] {
+  :host([actions-placement='outside'][message-role='assistant']) [part='actions'],
+  :host([actions-placement='outside'][message-role='system']) [part='actions'] {
     justify-content: flex-start;
   }
   [part='timestamp'] {

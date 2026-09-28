@@ -7,9 +7,14 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showDataTable` / `show-data-table` since `21.1.0`; use property `with-data-table`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `zoom` / `zoom` since `21.1.0`; use property `zoomable`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,24 +38,27 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
-- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `compact`, `indexAxis`
+- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `size`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
   `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `tooltipTitleFormatter`,
-  `tooltipFooterFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
-  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
-  (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
+  `tooltipFooterFormatter`, `area`, `zoomable`, `config`, `height`, `xLabel` (`x-label`),
+  `yLabel` (`y-label`), `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`),
+  `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `withDataTable`
+  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly). The
+  inherited deprecated aliases `compact`, `zoom`, `begin-at-zero`/`beginAtZero` and
+  `show-data-table`/`showDataTable` keep working until 23.0.0 (see `lr-chart`).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-datum-visibility-change-request`
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate` (deprecated alias `lr-point-click`,
+removed in 23.0.0), `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
-`lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
+`lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 `lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
 the two `*-request` events above (removal not before 21.0.0).
@@ -67,7 +75,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-tooltip-color` (deprecated alias `--lr-chart-tooltip-text`), `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
@@ -80,7 +88,7 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set,
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoomable` is set,
 `chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set, and
 `chartjs-plugin-annotation` when `annotations` contains a usable entry.
 

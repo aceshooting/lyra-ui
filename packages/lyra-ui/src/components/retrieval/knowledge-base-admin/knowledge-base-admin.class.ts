@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 export type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
@@ -86,6 +87,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideIngestion: 'withoutIngestion',
+  };
 
   /** Knowledge-base source connectors. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -100,6 +104,10 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
    *  explicitly empty `label` is used as-is. */
   @property() label?: string;
   /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources. */
+  @property({ type: Boolean, attribute: 'without-ingestion' }) withoutIngestion =
+    false;
+  /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources.
+   *  @deprecated Use `without-ingestion`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'hide-ingestion' }) hideIngestion =
     false;
 
@@ -115,7 +123,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   }
 
   private setTab(tab: KnowledgeBaseAdminTab): void {
-    if (tab === 'ingestion' && this.hideIngestion) return;
+    if (tab === 'ingestion' && this.withoutIngestion) return;
     if (tab !== this.activeTab) {
       this.activeTab = tab;
       this.emit('lr-tab-change', { tab });
@@ -130,7 +138,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     const invalidTab =
       this.activeTab !== 'sources' && this.activeTab !== 'ingestion';
     const unavailableIngestion =
-      this.hideIngestion && this.activeTab === 'ingestion';
+      this.withoutIngestion && this.activeTab === 'ingestion';
     if (!invalidTab && !unavailableIngestion) return;
     this.focusSourcesAfterUpdate =
       activeElementIn(this.shadowRoot)?.matches('[role="tab"]') ?? false;
@@ -151,7 +159,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     event: KeyboardEvent,
     current: KnowledgeBaseAdminTab
   ): void {
-    const tabs: KnowledgeBaseAdminTab[] = this.hideIngestion
+    const tabs: KnowledgeBaseAdminTab[] = this.withoutIngestion
       ? ['sources']
       : ['sources', 'ingestion'];
     const currentIndex = tabs.indexOf(current);
@@ -195,7 +203,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     const hostLabel = hostAriaLabel(this);
     const tablistLabel = hostLabel === null ? visibleLabel : hostLabel;
     const tab: KnowledgeBaseAdminTab =
-      this.activeTab === 'ingestion' && !this.hideIngestion
+      this.activeTab === 'ingestion' && !this.withoutIngestion
         ? 'ingestion'
         : 'sources';
     return html`<section part="base">
@@ -215,7 +223,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
         >
           ${this.localize('knowledgeBaseAdminSourcesTab')}
         </button>
-        ${this.hideIngestion
+        ${this.withoutIngestion
           ? nothing
           : html`<button
               part="tab"
@@ -253,7 +261,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
             ></lr-knowledge-base>`
           : nothing}
       </div>
-      ${this.hideIngestion
+      ${this.withoutIngestion
         ? nothing
         : html`<div
             part="panel"

@@ -7,7 +7,9 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-add` since `21.1.0`; use event `addEventListener('lr-token-add-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated event** `lr-remove` since `21.1.0`; use event `addEventListener('lr-token-remove-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated event** `lr-token-edit` since `21.1.0`; use event `addEventListener('lr-token-edit-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -65,18 +67,21 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 each list mutation; native events have no detail and both aliases carry a frozen
 `{ value: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
-`relatedTarget`. `lr-add`
+`relatedTarget`. `lr-token-add-request`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
-readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable as of
-10.0.0; `preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the
-input unchanged so the user can correct it, rather than clearing it),
-`lr-remove`
+readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable;
+`preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the input
+unchanged so the user can correct it, rather than clearing it),
+`lr-token-remove-request`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
-unchanged), and `lr-token-edit`
+unchanged), and `lr-token-edit-request`
 (`detail: { value, previousValue, index }` — an existing token is about to be edited in place —
-cancelable as of 10.0.0; `preventDefault()` keeps the token in `value` unchanged and leaves the
-inline editor open with the user's edited text intact, rather than closing and discarding it).
-All three mutators now share one veto contract; previously only `lr-remove` could be vetoed.
+cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
+open with the user's edited text intact, rather than closing and discarding it).
+All three mutators share one veto contract.
+Deprecated aliases: `lr-add`, `lr-remove` and `lr-token-edit` (use `lr-token-add-request`,
+`lr-token-remove-request` and `lr-token-edit-request`; removed in 23.0.0). Each alias fires right
+after its canonical event with an equal detail, and either event's `preventDefault()` vetoes.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
@@ -112,7 +117,7 @@ back — a blur means the user already aimed focus elsewhere. A changed inline e
 its native/alias input-change sequence before the public native/alias blur sequence. Both the draft
 and inline editor relay one native bubbling/composed host `focus` or `blur` event while their source
 event stays internal.
-`lr-token-edit` fires only for an edit
+`lr-token-edit-request` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a
 duplicate draft is skipped rather than rejecting the whole entry. Own or fieldset-cascaded

@@ -12,6 +12,10 @@ import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const sources: KnowledgeSource[] = [
   {
@@ -77,13 +81,13 @@ function activate(item: LyraMenuItem): void {
 }
 
 describe('lr-knowledge-base', () => {
-  it('defaults to hideSummary=false, hideCreate=false, and an empty sources list', async () => {
+  it('defaults to withoutSummary=false, withoutCreate=false, and an empty sources list', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     expect(el.sources).to.deep.equal([]);
-    expect(el.hideSummary).to.be.false;
-    expect(el.hideCreate).to.be.false;
+    expect(el.withoutSummary).to.be.false;
+    expect(el.withoutCreate).to.be.false;
   });
 
   it('keeps an explicitly empty label distinct from an omitted one', async () => {
@@ -291,7 +295,7 @@ describe('lr-knowledge-base', () => {
     ]);
   });
 
-  it('clicking "Add source" emits lr-source-create with no detail; hide-create removes the button', async () => {
+  it('clicking "Add source" emits lr-source-create with no detail; without-create removes the button', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
@@ -307,13 +311,13 @@ describe('lr-knowledge-base', () => {
     // this.emit('lr-source-create') (no 2nd argument) still reads back as `null`, not `undefined`.
     expect(event.detail).to.equal(null);
 
-    el.hideCreate = true;
+    el.withoutCreate = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="create-button"]') == null).to.be
       .true;
   });
 
-  it('renders the aggregate summary with correct counts, and omits it via hideSummary or an empty sources list', async () => {
+  it('renders the aggregate summary with correct counts, and omits it via withoutSummary or an empty sources list', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
@@ -325,11 +329,11 @@ describe('lr-knowledge-base', () => {
     // error status).
     expect(stats.map((s) => s.value)).to.deep.equal(['3', '1', '1', '2']);
 
-    el.hideSummary = true;
+    el.withoutSummary = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="summary"]') == null).to.be.true;
 
-    el.hideSummary = false;
+    el.withoutSummary = false;
     el.sources = [];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="summary"]') == null).to.be.true;
@@ -396,12 +400,13 @@ describe('lr-knowledge-base', () => {
     expect(errorRowItems.find((i) => i.value === 'sync')!.disabled).to.be.false;
   });
 
-  it('does not leak the internal lr-table lr-row-click event through the host', async () => {
+  it('does not leak the internal lr-table row activation events through the host', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     await el.updateComplete;
     let leaked = false;
+    el.addEventListener('lr-row-activate', () => (leaked = true));
     el.addEventListener('lr-row-click', () => (leaked = true));
     const nameCell = rowCells(el, 'source-name')[0]!;
     nameCell.dispatchEvent(
@@ -887,5 +892,97 @@ describe('error state', () => {
     )) as LyraKnowledgeBase;
     await tableEl(el).updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-knowledge-base deprecated hide-summary and hide-create aliases', () => {
+  const ALIASES: DeprecatedUsage[] = [
+    { tag: 'lr-knowledge-base', kind: 'property', name: 'hideSummary' },
+    { tag: 'lr-knowledge-base', kind: 'property', name: 'hideCreate' },
+  ];
+  const chrome = (el: LyraKnowledgeBase): string =>
+    JSON.stringify({
+      create: el.shadowRoot!.querySelector('[part="create-button"]') !== null,
+      summary: el.shadowRoot!.querySelector('[part="summary"]') !== null,
+    });
+
+  it('renders the canonical without-summary and without-create without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = chrome(
+        await fixture<LyraKnowledgeBase>(
+          html`<lr-knowledge-base .sources=${sources} without-summary without-create></lr-knowledge-base>`
+        )
+      );
+      plain = chrome(
+        await fixture<LyraKnowledgeBase>(
+          html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
+        )
+      );
+    });
+    expect(JSON.parse(canonical)).to.deep.equal({ create: false, summary: false });
+    expect(JSON.parse(plain)).to.deep.equal({ create: true, summary: true });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps hide-summary and hide-create working with the same result, warning once per alias', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = chrome(
+        await fixture<LyraKnowledgeBase>(
+          html`<lr-knowledge-base .sources=${sources} without-summary without-create></lr-knowledge-base>`
+        )
+      );
+      alias = chrome(
+        await fixture<LyraKnowledgeBase>(
+          html`<lr-knowledge-base .sources=${sources} hide-summary hide-create></lr-knowledge-base>`
+        )
+      );
+      const el = await fixture<LyraKnowledgeBase>(
+        html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
+      );
+      el.hideSummary = true;
+      el.hideCreate = true;
+      await el.updateComplete;
+      property = chrome(el);
+      readback = [el.withoutSummary, el.withoutCreate, el.hideSummary, el.hideCreate];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, true, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-knowledge-base:property:hideSummary',
+      'lyra-deprecated:lr-knowledge-base:property:hideCreate',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-summary');
+    expect(warnings[1]!.message).to.contain('without-create');
+  });
+
+  it('keeps each alias reflecting alongside the canonical attribute, syncing in both directions', async () => {
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraKnowledgeBase>(
+        html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
+      );
+      el.hideCreate = true;
+      await el.updateComplete;
+      expect(el.hasAttribute('hide-create')).to.equal(true);
+      expect(el.hasAttribute('without-create')).to.equal(true);
+      el.hideCreate = false;
+      await el.updateComplete;
+      expect(el.hasAttribute('without-create')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="create-button"]')).to.not.equal(null);
+      el.withoutSummary = true;
+      await el.updateComplete;
+      expect(el.hideSummary).to.equal(true);
+      expect(el.hasAttribute('hide-summary')).to.equal(true);
+      el.withoutSummary = false;
+      await el.updateComplete;
+      expect(el.hideSummary).to.equal(false);
+      expect(el.hasAttribute('hide-summary')).to.equal(false);
+    });
   });
 });

@@ -162,7 +162,7 @@ export const NoProgressAndLightDismiss: Story = {
           <button id=${ids.filters}>Filters</button>
           <button id=${ids.create}>Create</button>
         </div>
-        <lr-tour .steps=${productTourSteps(ids)} .showProgress=${false} light-dismiss></lr-tour>
+        <lr-tour .steps=${productTourSteps(ids)} without-progress light-dismiss></lr-tour>
       </div>
     `;
   },

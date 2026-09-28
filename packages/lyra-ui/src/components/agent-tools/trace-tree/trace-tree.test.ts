@@ -4,6 +4,7 @@ import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -308,7 +309,7 @@ describe('lr-trace-tree', () => {
 
   it('includes visible token and cost metadata in each explicit row name', async () => {
     const el = (await fixture(
-      html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`,
+      html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost></lr-trace-tree>`,
     )) as LyraTraceTree;
     const label = el.shadowRoot!.querySelector('[data-id="search"]')!.getAttribute('aria-label')!;
     expect(label).to.include('Tokens in: 12');
@@ -346,7 +347,7 @@ describe('lr-trace-tree', () => {
       },
     ];
     const el = (await fixture(
-      html`<lr-trace-tree .spans=${invalid} show-tokens></lr-trace-tree>`,
+      html`<lr-trace-tree .spans=${invalid} with-tokens></lr-trace-tree>`,
     )) as LyraTraceTree;
     const row = el.shadowRoot!.querySelector('[data-id="invalid"]')!;
     expect(row.querySelector('[part="tokens-in"]')!.textContent).to.equal('');
@@ -546,12 +547,12 @@ describe('lr-trace-tree', () => {
     expect((el.shadowRoot!.querySelector('[part="bar"]') as HTMLElement).style.inlineSize).to.equal('1%');
   });
 
-  it('shows tokens/cost columns only when show-tokens/show-cost are set', async () => {
+  it('shows tokens/cost columns only when with-tokens/with-cost are set', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tokens-in"]')) == null).to.be.true;
-    el.showTokens = true;
-    el.showCost = true;
+    el.withTokens = true;
+    el.withCost = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="cost"]')).to.exist;
@@ -561,7 +562,7 @@ describe('lr-trace-tree', () => {
     const container = document.createElement('div');
     container.style.inlineSize = '900px';
     const el = (await fixture(
-      html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`,
+      html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost></lr-trace-tree>`,
       { parentNode: container },
     )) as LyraTraceTree;
     const pairs = [
@@ -686,7 +687,7 @@ describe('lr-trace-tree', () => {
   });
 
   it('is accessible', async () => {
-    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -852,13 +853,13 @@ describe('lr-trace-tree', () => {
   });
 
   it('shows only the tokens columns, or only the cost column, in the header row', async () => {
-    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} show-tokens></lr-trace-tree>`)) as LyraTraceTree;
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} with-tokens></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('.col-tokens')).to.exist;
     expect((el.shadowRoot!.querySelector('.col-cost')) == null).to.be.true;
 
-    el.showTokens = false;
-    el.showCost = true;
+    el.withTokens = false;
+    el.withCost = true;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('.col-tokens')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('.col-cost')).to.exist;
@@ -874,9 +875,9 @@ describe('lr-trace-tree', () => {
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('suppresses the duration bar (both header and rows) when hide-bars is set', async () => {
+  it('suppresses the duration bar (both header and rows) when without-bars is set', async () => {
     const el = (await fixture(
-      html`<lr-trace-tree .spans=${SPANS} show-tokens hide-bars></lr-trace-tree>`,
+      html`<lr-trace-tree .spans=${SPANS} with-tokens without-bars></lr-trace-tree>`,
     )) as LyraTraceTree;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('.col-bar')) == null).to.be.true;
@@ -933,7 +934,7 @@ describe('lr-trace-tree', () => {
   describe('active-row contrast', () => {
     const statusFixture = async (activeId: string): Promise<LyraTraceTree> => {
       const el = (await fixture(
-        html`<lr-trace-tree .spans=${STATUS_SPANS} .activeSpanId=${activeId} show-tokens show-cost></lr-trace-tree>`,
+        html`<lr-trace-tree .spans=${STATUS_SPANS} .activeSpanId=${activeId} with-tokens with-cost></lr-trace-tree>`,
       )) as LyraTraceTree;
       await el.updateComplete;
       return el;
@@ -1081,7 +1082,7 @@ describe('lr-trace-tree', () => {
 
     it('is accessible with an active row, for every status tone', async () => {
       const el = (await fixture(
-        html`<lr-trace-tree .spans=${STATUS_SPANS} show-tokens show-cost></lr-trace-tree>`,
+        html`<lr-trace-tree .spans=${STATUS_SPANS} with-tokens with-cost></lr-trace-tree>`,
       )) as LyraTraceTree;
       await el.updateComplete;
       for (const span of STATUS_SPANS) {
@@ -1186,5 +1187,101 @@ describe('lr-trace-tree active-row press', () => {
       await sendMouse({ type: 'up' });
       await resetMouse();
     }
+  });
+});
+
+describe('lr-trace-tree deprecated column aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-trace-tree', kind: 'property', name: 'showTokens' },
+    { tag: 'lr-trace-tree', kind: 'property', name: 'showCost' },
+    { tag: 'lr-trace-tree', kind: 'property', name: 'hideBars' },
+  ];
+  const columns = (el: LyraTraceTree): string => {
+    const root = el.shadowRoot!;
+    const style = getComputedStyle(el);
+    return JSON.stringify({
+      tokens: root.querySelector('[part="tokens-in"]') !== null,
+      cost: root.querySelector('[part="cost"]') !== null,
+      bar: root.querySelector('[part="bar-track"]') !== null,
+      tokensTrack: style.getPropertyValue('--_lr-trace-tree-tokens-in-column').trim(),
+      costTrack: style.getPropertyValue('--_lr-trace-tree-cost-column').trim(),
+      barTrack: style.getPropertyValue('--_lr-trace-tree-bar-column').trim(),
+    });
+  };
+
+  it('renders the canonical with-tokens, with-cost and without-bars without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = columns(
+        await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost without-bars></lr-trace-tree>`),
+      );
+      plain = columns(await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(JSON.parse(canonical)).to.include({ tokens: true, cost: true, bar: false });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-tokens, show-cost and hide-bars working with the same result, warning once per alias', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = columns(
+        await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost without-bars></lr-trace-tree>`),
+      );
+      alias = columns(
+        await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost hide-bars></lr-trace-tree>`),
+      );
+      const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`);
+      el.showTokens = true;
+      el.showCost = true;
+      el.hideBars = true;
+      await el.updateComplete;
+      property = columns(el);
+      expect([el.withTokens, el.withCost, el.withoutBars, el.showTokens, el.showCost, el.hideBars]).to.deep.equal([
+        true, true, true, true, true, true,
+      ]);
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-trace-tree:property:showTokens',
+      'lyra-deprecated:lr-trace-tree:property:showCost',
+      'lyra-deprecated:lr-trace-tree:property:hideBars',
+    ]);
+  });
+
+  it('applies the last write when an alias and its canonical property are both set', async () => {
+    let reads: boolean[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS} show-tokens></lr-trace-tree>`);
+      el.withTokens = false;
+      await el.updateComplete;
+      reads = [el.withTokens, el.showTokens];
+      el.showTokens = true;
+      await el.updateComplete;
+      reads.push(el.withTokens, el.showTokens);
+    });
+    expect(reads).to.deep.equal([false, false, true, true]);
+  });
+
+  it('syncs and reflects show-tokens, show-cost and hide-bars back from the canonical properties without warning', async () => {
+    const reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`);
+      el.withTokens = true;
+      el.withCost = true;
+      el.withoutBars = true;
+      await el.updateComplete;
+      reads.push(el.showTokens, el.showCost, el.hideBars);
+      reads.push(el.hasAttribute('show-tokens'), el.hasAttribute('show-cost'), el.hasAttribute('hide-bars'));
+      el.withTokens = false;
+      await el.updateComplete;
+      reads.push(el.showTokens, el.hasAttribute('show-tokens'));
+    });
+    expect(reads).to.deep.equal([true, true, true, true, true, true, false, false]);
+    expect(warnings).to.have.length(0);
   });
 });

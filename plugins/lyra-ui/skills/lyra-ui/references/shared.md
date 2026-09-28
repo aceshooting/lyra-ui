@@ -1210,7 +1210,7 @@ alongside `.dark`. Components are unaffected; they re-derive both on their own `
 sidebar tone, opt `lr-app-rail` in with one line:
 
 ```css
-lr-app-rail { --lr-app-rail-background: var(--lr-color-surface-raised); }
+lr-app-rail { --lr-app-rail-bg: var(--lr-color-surface-raised); }
 ```
 
 ### Where an override actually reaches
@@ -2769,15 +2769,15 @@ still opens hover surfaces through the browser's compatibility `mouseenter`. Cal
 scripted reveal; tests should move focus with a real Tab key or call `show()` rather than `.focus()`
 or synthetic focus events.
 
-**`accessibleLabel` binds to one of two different attributes depending on the component, and the
-two are not interchangeable.** Most components (e.g. `lr-card`, `lr-stat`) expose it as a direct
-alias of the native `aria-label` attribute — `accessible-label="…"` does nothing on those; write
-`aria-label="…"` instead. A minority (e.g. `lr-callout`, `lr-table`) separately compute an internal
-accessible name and expose `accessibleLabel` through the bespoke `accessible-label` attribute
-instead, specifically so the host's own native `aria-label` can still independently override that
-computed name. Check the component's own reference section (or its class JSDoc) for which
-convention it uses before writing markup — an `accessible-label` attribute on an `aria-label`-only
-component is a silent no-op, not an error.
+**Name a component with the host `aria-label`.** It is the library-wide attribute. Where a
+component also computes an internal accessible name (e.g. `lr-callout`, `lr-dialog`,
+`lr-progress-bar`), `accessibleLabel` is a property-only fallback, and a host `aria-label`
+still wins over it by presence. The older `accessible-label` attribute still sets
+`accessibleLabel` on those components, but it is a deprecated alias (removed in 23.0.0) that
+logs a one-time development warning. Write `aria-label="…"` instead.
+`lr-table` and `lr-sequence-strip` still take a current, non-deprecated `accessible-label`
+attribute that names their internal grid/list and wins over a host `aria-label`, which is only
+the fallback there.
 
 Lyra UI does not make a formal assistive-technology conformance claim or provide a VPAT. For the
 documented accessibility scope and how to report an accessibility issue, see

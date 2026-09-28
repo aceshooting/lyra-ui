@@ -7807,13 +7807,13 @@ it('localizes resize pixel values through .strings and the effective locale', as
   );
 });
 
-it('uses the separate row, control, sortable-header, and page-size interaction tokens live', async () => {
+async function expectInteractionTokens(style: string): Promise<void> {
   const element = await dataGrid(html`
     <lr-data-grid
       label="Interaction tokens"
       paginate
       resizable
-      style="--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-background: rgb(4, 5, 6); --lr-data-grid-control-hover-background: rgb(7, 8, 9); --lr-data-grid-control-active-background: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-background: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-background: rgb(16, 17, 18); --lr-data-grid-page-size-active-background: rgb(19, 20, 21)"
+      style=${style}
       .columns=${columns}
       .data=${rows}
     ></lr-data-grid>
@@ -7856,6 +7856,18 @@ it('uses the separate row, control, sortable-header, and page-size interaction t
     await sendMouse({ type: 'up' });
     await resetMouse();
   }
+}
+
+it('uses the separate row, control, sortable-header, and page-size interaction tokens live', async () => {
+  await expectInteractionTokens(
+    '--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-bg: rgb(4, 5, 6); --lr-data-grid-control-hover-bg: rgb(7, 8, 9); --lr-data-grid-control-active-bg: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-bg: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-bg: rgb(16, 17, 18); --lr-data-grid-page-size-active-bg: rgb(19, 20, 21)'
+  );
+});
+
+it('still honors the deprecated -background interaction tokens, with the -bg names winning when both are set', async () => {
+  await expectInteractionTokens(
+    '--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-bg: rgb(4, 5, 6); --lr-data-grid-row-active-background: rgb(99, 98, 97); --lr-data-grid-control-hover-background: rgb(7, 8, 9); --lr-data-grid-control-active-background: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-background: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-background: rgb(16, 17, 18); --lr-data-grid-page-size-active-background: rgb(19, 20, 21)'
+  );
 });
 
 it('retains the hover-strength fallback for a pressed page-size selector', async () => {

@@ -43,7 +43,7 @@ for (const method of ['search', 'searchNext', 'searchPrevious'] as const) {
     }, 'successful search navigation did not bring the selected row into the visible allocation');
 
     await collapse(viewer, `branch${selected}`);
-    viewer.collapsedDepth = 1;
+    viewer.expandDepth = 1;
     await viewer.updateComplete;
     expect(viewer.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
     expect(node(viewer, `branch${selected}`)?.querySelector('[part="toggle"]')?.getAttribute('aria-expanded')).to.equal('false');

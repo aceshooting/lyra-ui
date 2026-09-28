@@ -7,9 +7,9 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-cell-size` since `21.1.0`; use css-property `--lr-date-picker-cell-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 38 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -167,9 +167,10 @@ while its range is the current value),
 `view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
 `weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 
-**Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
-size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the
-default). An inherited or direct public value remains authoritative in every tier.
+**Themeable custom properties:** `--lr-date-picker-cell-size` (default `2.25rem`, controls
+day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
+`m` keeps the default). An inherited or direct public value remains authoritative in every tier.
+Deprecated alias: `--lr-cell-size` (use `--lr-date-picker-cell-size`; removed in 23.0.0).
 
 **Optional peer deps:** none.
 
@@ -329,10 +330,11 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-form-control-height`. All four defaults follow the shared size ladder, including
 `small`/`medium`/`large` aliases and inherited `--lr-theme-form-control-height-*` overrides.
 Inherited or direct public values win. `pill` changes the private radius default to
-`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-text-color`
+`--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-color`
 (default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
 `var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
-brand fill.
+brand fill. Deprecated alias: `--lr-date-input-text-color` (use `--lr-date-input-color`; removed in
+23.0.0).
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs

@@ -7,6 +7,10 @@ import {
   type LyraAppRailToggleDetail,
 } from "./app-rail.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 import { sendKeys } from '@web/test-runner-commands';
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
@@ -39,8 +43,8 @@ it("restores breakpoint, persistence, width, and automatic mode defaults after a
       icon-only-breakpoint="1200px"
       mobile-breakpoint="800px"
       persist="width"
-      min-rail-width-px="240"
-      max-rail-width-px="600"
+      min-rail-width="240"
+      max-rail-width="600"
     ></lr-app-rail>
   `)) as LyraAppRail;
   for (const name of [
@@ -48,16 +52,16 @@ it("restores breakpoint, persistence, width, and automatic mode defaults after a
     "icon-only-breakpoint",
     "mobile-breakpoint",
     "persist",
-    "min-rail-width-px",
-    "max-rail-width-px",
+    "min-rail-width",
+    "max-rail-width",
   ])
     el.removeAttribute(name);
   await el.updateComplete;
   expect(el.iconOnlyBreakpoint).to.equal("960px");
   expect(el.mobileBreakpoint).to.equal("600px");
   expect(el.persist).to.equal("open width");
-  expect(el.minRailWidthPx).to.equal(190);
-  expect(el.maxRailWidthPx).to.equal(440);
+  expect(el.minRailWidth).to.equal(190);
+  expect(el.maxRailWidth).to.equal(440);
   expect(el.forceMode).to.be.undefined;
   expect(el.mode).to.equal(automatic.mode);
 });
@@ -835,9 +839,9 @@ it('does not rewrite the reflected mode attribute on an update where mode did no
     // Two updates that never touch `mode` -- a same-value `mode` attribute rewrite here would
     // also fire once per pointermove tick during an active resize drag, which the component
     // does not need to do.
-    el.hideToggle = true;
+    el.withoutToggle = true;
     await el.updateComplete;
-    el.hideToggle = false;
+    el.withoutToggle = false;
     await el.updateComplete;
   } finally {
     observer.disconnect();
@@ -1362,7 +1366,7 @@ it("returns focus to whatever triggered it (via Escape) even when opened by sett
 
 it("returns focus to a direct `trigger` reference on close, opened without any click", async () => {
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   fireMobileChange(el, true);
   await el.updateComplete;
@@ -1384,7 +1388,7 @@ it("resolves an external trigger by id via `for`, the label/htmlFor-style altern
   external.id = "open-rail";
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle for="open-rail"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle for="open-rail"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   fireMobileChange(el, true);
   await el.updateComplete;
@@ -1405,7 +1409,7 @@ it("prefers a direct `trigger` over `for` when both resolve to different element
   const direct = document.createElement("button");
   document.body.appendChild(direct);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle for="open-rail-2"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle for="open-rail-2"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   fireMobileChange(el, true);
   await el.updateComplete;
@@ -1751,9 +1755,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -1770,9 +1774,9 @@ describe("resizable", () => {
       html`<lr-app-rail
         lang="ar-EG"
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
         .strings=${{ resizeValuePixels: 'العرض {value} بكسل' }}
       ></lr-app-rail>`
     )) as LyraAppRail;
@@ -1842,9 +1846,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -1862,7 +1866,7 @@ describe("resizable", () => {
       request = {
         widthPx: resize.detail.widthPx,
         cancelable: resize.cancelable,
-        widthAtDispatch: el.railWidthPx ?? -1,
+        widthAtDispatch: Number(el.railWidth ?? -1),
       };
     });
     el.addEventListener("lr-rail-resize", (event) => {
@@ -1870,14 +1874,14 @@ describe("resizable", () => {
       committed = {
         widthPx: resize.detail.widthPx,
         cancelable: resize.cancelable,
-        widthAtDispatch: el.railWidthPx ?? -1,
+        widthAtDispatch: Number(el.railWidth ?? -1),
       };
     });
 
     resizer.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
-    expect(el.railWidthPx).to.equal(248);
+    expect(el.railWidth).to.equal(248);
     expect(request).to.deep.equal({
       widthPx: 248,
       cancelable: true,
@@ -1889,26 +1893,26 @@ describe("resizable", () => {
       widthAtDispatch: 248,
     });
 
-    el.railWidthPx = 438;
+    el.railWidth = 438;
     resizer.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
-    expect(el.railWidthPx).to.equal(440); // clamped to maxRailWidthPx
+    expect(el.railWidth).to.equal(440); // clamped to maxRailWidth
 
-    el.railWidthPx = 192;
+    el.railWidth = 192;
     resizer.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
     );
-    expect(el.railWidthPx).to.equal(190); // clamped to minRailWidthPx
+    expect(el.railWidth).to.equal(190); // clamped to minRailWidth
   });
 
   it("admits only a primary left-button resize and commits once on genuine pointerup", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector(
@@ -1987,9 +1991,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="440"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="440"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector(
@@ -2017,9 +2021,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
         storage-key=${storageKey}
       ></lr-app-rail>`
     )) as LyraAppRail;
@@ -2037,7 +2041,7 @@ describe("resizable", () => {
       proposals.push({
         widthPx: resize.detail.widthPx,
         cancelable: resize.cancelable,
-        widthAtDispatch: el.railWidthPx ?? -1,
+        widthAtDispatch: Number(el.railWidth ?? -1),
       });
       resize.preventDefault();
     };
@@ -2062,7 +2066,7 @@ describe("resizable", () => {
         new PointerEvent("pointermove", { pointerId: 86, clientX: 40 })
       );
       await el.updateComplete;
-      expect(el.railWidthPx).to.equal(240);
+      expect(el.railWidth).to.equal(240);
       expect(el.dragging).to.be.true;
 
       const keydown = new KeyboardEvent("keydown", {
@@ -2072,7 +2076,7 @@ describe("resizable", () => {
       });
       resizer.dispatchEvent(keydown);
       expect(keydown.defaultPrevented).to.be.true;
-      expect(el.railWidthPx).to.equal(240);
+      expect(el.railWidth).to.equal(240);
       expect(committedEvents).to.equal(0);
       expect(localStorage.getItem(storageFullKey)).to.equal(null);
       expect(proposals).to.deep.equal([
@@ -2091,16 +2095,16 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector(
       '[part="resizer"]'
     ) as HTMLElement;
     const replace = (): void => {
-      el.railWidthPx = 320;
+      el.railWidth = 320;
     };
     el.addEventListener("lr-rail-resize", replace);
 
@@ -2108,15 +2112,15 @@ describe("resizable", () => {
       resizer.dispatchEvent(
         new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
       );
-      expect(el.railWidthPx).to.equal(320);
+      expect(el.railWidth).to.equal(320);
     } finally {
       el.removeEventListener("lr-rail-resize", replace);
     }
   });
 
-  it("sets [part=base]'s inline-size from railWidthPx only while resizable and in 'full' mode", async () => {
+  it("sets [part=base]'s inline-size from railWidth only while resizable and in 'full' mode", async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable rail-width-px="300"></lr-app-rail>`
+      html`<lr-app-rail resizable rail-width="300"></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -2131,7 +2135,7 @@ describe("resizable", () => {
       <lr-app-rail
         open
         resizable
-        rail-width-px="420"
+        rail-width="420"
         style="--lr-app-rail-mobile-width: 211px"
       ></lr-app-rail>
     `)) as LyraAppRail;
@@ -2153,9 +2157,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -2195,9 +2199,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     el.remove();
@@ -2244,7 +2248,7 @@ describe("resizable", () => {
         new PointerEvent("pointermove", { pointerId: 71, clientX: 40 })
       );
       expect(
-        el.railWidthPx,
+        el.railWidth,
         "the ambient window must not own the adopted drag"
       ).to.equal(240);
 
@@ -2254,7 +2258,7 @@ describe("resizable", () => {
           clientX: 40,
         })
       );
-      expect(el.railWidthPx).to.equal(280);
+      expect(el.railWidth).to.equal(280);
       expect(el.dragging).to.be.true;
 
       document.adoptNode(el);
@@ -2272,7 +2276,7 @@ describe("resizable", () => {
         })
       );
       expect(
-        el.railWidthPx,
+        el.railWidth,
         "the old owner window listener must be removed"
       ).to.equal(280);
     } finally {
@@ -2285,7 +2289,7 @@ describe("resizable", () => {
 
   it("aborts an active pointer resize when resizable is revoked", async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable rail-width-px="240"></lr-app-rail>`
+      html`<lr-app-rail resizable rail-width="240"></lr-app-rail>`
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector(
       '[part="resizer"]'
@@ -2307,14 +2311,14 @@ describe("resizable", () => {
       new PointerEvent("pointermove", { pointerId: 41, clientX: 100 })
     );
 
-    expect(el.railWidthPx).to.equal(240);
+    expect(el.railWidth).to.equal(240);
     expect(el.dragging).to.be.false;
     expect(events).to.equal(0);
   });
 
   it("aborts an active pointer resize when full mode is revoked", async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable rail-width-px="240"></lr-app-rail>`
+      html`<lr-app-rail resizable rail-width="240"></lr-app-rail>`
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector(
       '[part="resizer"]'
@@ -2334,7 +2338,7 @@ describe("resizable", () => {
       new PointerEvent("pointermove", { pointerId: 42, clientX: 100 })
     );
 
-    expect(el.railWidthPx).to.equal(240);
+    expect(el.railWidth).to.equal(240);
     expect(el.dragging).to.be.false;
   });
 
@@ -2342,9 +2346,9 @@ describe("resizable", () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        rail-width="240"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -2369,14 +2373,14 @@ describe("resizable", () => {
     expect(el.dragging).to.be.false;
   });
 
-  // -- numeric guard regressions (railWidthPx/minRailWidthPx/maxRailWidthPx) --
+  // -- numeric guard regressions (railWidth/minRailWidth/maxRailWidth) --
 
-  it("clamps a NaN or negative railWidthPx to a sane in-bounds width instead of leaking through to layout", async () => {
+  it("clamps a NaN or negative railWidth to a sane in-bounds width instead of leaking through to layout", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        min-rail-width-px="190"
-        max-rail-width-px="440"
+        min-rail-width="190"
+        max-rail-width="440"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -2385,24 +2389,24 @@ describe("resizable", () => {
       '[part="resizer"]'
     ) as HTMLElement;
 
-    el.railWidthPx = NaN;
+    el.railWidth = NaN;
     await el.updateComplete;
     expect(base.style.getPropertyValue("inline-size")).to.equal("190px");
     expect(resizer.getAttribute("aria-valuenow")).to.equal("190");
 
-    el.railWidthPx = -999;
+    el.railWidth = -999;
     await el.updateComplete;
     expect(base.style.getPropertyValue("inline-size")).to.equal("190px");
     expect(resizer.getAttribute("aria-valuenow")).to.equal("190");
   });
 
-  it("sanitizes a NaN minRailWidthPx/maxRailWidthPx instead of letting it poison every clamp", async () => {
+  it("sanitizes a NaN minRailWidth/maxRailWidth instead of letting it poison every clamp", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="9999"
-        min-rail-width-px="NaN"
-        max-rail-width-px="NaN"
+        rail-width="9999"
+        min-rail-width="NaN"
+        max-rail-width="NaN"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -2414,13 +2418,13 @@ describe("resizable", () => {
     expect(resizer.getAttribute("aria-valuenow")).to.equal("440"); // clamped down into the sanitized bounds
   });
 
-  it("keeps maxRailWidthPx from resolving below minRailWidthPx for an inverted pair", async () => {
+  it("keeps maxRailWidth from resolving below minRailWidth for an inverted pair", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         resizable
-        rail-width-px="240"
-        min-rail-width-px="500"
-        max-rail-width-px="100"
+        rail-width="240"
+        min-rail-width="500"
+        max-rail-width="100"
       ></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
@@ -2435,10 +2439,10 @@ describe("resizable", () => {
   });
 });
 
-describe("hideToggle", () => {
+describe("withoutToggle", () => {
   it("hides [part=toggle] when set, in mobile mode", async () => {
     const el = (await fixture(
-      html`<lr-app-rail hide-toggle></lr-app-rail>`
+      html`<lr-app-rail without-toggle></lr-app-rail>`
     )) as LyraAppRail;
     fireMobileChange(el, true);
     await el.updateComplete;
@@ -2456,16 +2460,16 @@ describe("hideToggle", () => {
     fireMobileChange(el, true);
     await el.updateComplete;
     await el.updateComplete;
-    expect(el.hideToggle).to.be.false;
+    expect(el.withoutToggle).to.be.false;
     const toggle = el.shadowRoot!.querySelector(
       '[part="toggle"]'
     ) as HTMLElement;
     expect(getComputedStyle(toggle).display).to.not.equal("none");
   });
 
-  it("survives hide-toggle once reparented inside the open panel, as the only in-panel dismiss control", async () => {
+  it("survives without-toggle once reparented inside the open panel, as the only in-panel dismiss control", async () => {
     const el = (await fixture(
-      html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+      html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
     )) as LyraAppRail;
     fireMobileChange(el, true);
     await el.updateComplete;
@@ -2474,7 +2478,7 @@ describe("hideToggle", () => {
     ) as HTMLButtonElement;
     expect(
       getComputedStyle(toggle).display,
-      "closed: hide-toggle still hides the outside open trigger"
+      "closed: without-toggle still hides the outside open trigger"
     ).to.equal("none");
 
     el.open = true;
@@ -2573,7 +2577,7 @@ describe("storage-key persistence", () => {
       } as unknown as MediaQueryList)) as typeof window.matchMedia;
   }
 
-  it("persists railWidthPx and restores it on a fresh mount", async () => {
+  it("persists railWidth and restores it on a fresh mount", async () => {
     const key = uniqueKey();
     const el = (await fixture(
       html`<lr-app-rail resizable storage-key=${key}
@@ -2581,7 +2585,7 @@ describe("storage-key persistence", () => {
       >`
     )) as LyraAppRail;
     await el.updateComplete;
-    el.railWidthPx = 260;
+    el.railWidth = 260;
     await el.updateComplete;
 
     const el2 = (await fixture(
@@ -2590,10 +2594,10 @@ describe("storage-key persistence", () => {
       >`
     )) as LyraAppRail;
     await el2.updateComplete;
-    expect(el2.railWidthPx).to.equal(260);
+    expect(el2.railWidth).to.equal(260);
   });
 
-  it("lets an explicit railWidthPx binding win over stale persisted state on mount, with default persist", async () => {
+  it("lets an explicit railWidth binding win over stale persisted state on mount, with default persist", async () => {
     const key = uniqueKey();
     localStorage.setItem(
       `lr-app-rail:${key}`,
@@ -2601,13 +2605,13 @@ describe("storage-key persistence", () => {
     );
 
     const el = (await fixture(
-      html`<lr-app-rail resizable storage-key=${key} .railWidthPx=${240}
+      html`<lr-app-rail resizable storage-key=${key} .railWidth=${240}
         ><a href="/a">A</a></lr-app-rail
       >`
     )) as LyraAppRail;
     await el.updateComplete;
 
-    expect(el.railWidthPx).to.equal(240);
+    expect(el.railWidth).to.equal(240);
   });
 
   it("does not touch localStorage when storage-key is unset", async () => {
@@ -2616,7 +2620,7 @@ describe("storage-key persistence", () => {
     )) as LyraAppRail;
     await el.updateComplete;
     const before = localStorage.length;
-    el.railWidthPx = 300;
+    el.railWidth = 300;
     await el.updateComplete;
     expect(localStorage.length).to.equal(before);
   });
@@ -2629,7 +2633,7 @@ describe("storage-key persistence", () => {
       >`
     )) as LyraAppRail;
     await el.updateComplete;
-    el.railWidthPx = 220;
+    el.railWidth = 220;
     await el.updateComplete;
     const stored = JSON.parse(
       localStorage.getItem(`lr-app-rail:${key}`)!
@@ -2647,7 +2651,7 @@ describe("storage-key persistence", () => {
     await el.updateComplete;
 
     el.open = true;
-    el.railWidthPx = 275;
+    el.railWidth = 275;
     el.preferredMode = "icon-only";
     await el.updateComplete;
 
@@ -2682,7 +2686,7 @@ describe("storage-key persistence", () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(el.railWidthPx).to.equal(260);
+    expect(el.railWidth).to.equal(260);
     expect(el.preferredMode).to.equal("icon-only");
     expect(el.mode).to.equal("icon-only");
   });
@@ -2834,7 +2838,7 @@ describe("storage-key persistence", () => {
     // The restored value reflects, exactly as a directly assigned one does -- `[open]` is what
     // the mobile panel/toggle rules key off.
     expect(el.hasAttribute("open")).to.be.true;
-    expect(el.railWidthPx).to.equal(260);
+    expect(el.railWidth).to.equal(260);
   });
 
   /**
@@ -2867,7 +2871,7 @@ describe("storage-key persistence", () => {
       expect(el.open).to.be.false;
       expect(el.hasAttribute("open")).to.be.false;
       // Only `open` carries the mobile-only invariant -- the width restore is untouched.
-      expect(el.railWidthPx).to.equal(260);
+      expect(el.railWidth).to.equal(260);
       // Undoing a restore is as silent as the restore itself: neither is a user action.
       expect(toggles).to.equal(0);
       // Outside 'mobile' the landmark renders as [part="base"] (it becomes [part="panel"] only
@@ -2967,7 +2971,7 @@ describe("storage-key persistence", () => {
     await el.updateComplete;
 
     expect(el.open).to.be.false;
-    expect(el.railWidthPx).to.equal(260);
+    expect(el.railWidth).to.equal(260);
   });
 
   it("keeps a declared open attribute authoritative over a persisted closed state", async () => {
@@ -3230,7 +3234,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     expect(getComputedStyle(panel).overflowY).to.equal("visible");
   });
 
-  it("renders --lr-app-rail-background/--lr-app-rail-panel-background byte-identical to their prior tokens when unset", async () => {
+  it("renders --lr-app-rail-bg/--lr-app-rail-panel-bg byte-identical to their prior tokens when unset", async () => {
     const el = (await fixture(
       html`<lr-app-rail><button>a</button></lr-app-rail>`
     )) as LyraAppRail;
@@ -3254,11 +3258,11 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     );
   });
 
-  it("recolors the base and panel surfaces independently via --lr-app-rail-background/--lr-app-rail-panel-background", async () => {
+  it("recolors the base and panel surfaces independently via --lr-app-rail-bg/--lr-app-rail-panel-bg", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         open
-        style="--lr-app-rail-background: rgb(10, 20, 30); --lr-app-rail-panel-background: rgb(40, 50, 60);"
+        style="--lr-app-rail-bg: rgb(10, 20, 30); --lr-app-rail-panel-bg: rgb(40, 50, 60);"
         ><button>a</button></lr-app-rail
       >`
     )) as LyraAppRail;
@@ -3386,7 +3390,7 @@ it('gives a direct `trigger` reference aria-expanded and aria-controls in mobile
   const external = document.createElement('button');
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   el.trigger = external;
   fireMobileChange(el, true);
@@ -3410,7 +3414,7 @@ it('gives a `for`-resolved trigger the same association', async () => {
   external.id = 'rail-aria-for';
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle for="rail-aria-for"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle for="rail-aria-for"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   fireMobileChange(el, true);
   await el.updateComplete;
@@ -3424,7 +3428,7 @@ it('releases the external trigger ARIA when the rail leaves mobile mode', async 
   const external = document.createElement('button');
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   el.trigger = external;
   fireMobileChange(el, true);
@@ -3444,7 +3448,7 @@ it('releases the external trigger ARIA when the rail disconnects', async () => {
   const external = document.createElement('button');
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   el.trigger = external;
   fireMobileChange(el, true);
@@ -3636,7 +3640,7 @@ it('restores the external trigger ARIA after the rail reconnects at an unchanged
   const external = document.createElement('button');
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   el.trigger = external;
   await el.updateComplete;
@@ -3662,7 +3666,7 @@ it('re-acquires the external trigger ARIA when a reconnect is followed by a brea
   const external = document.createElement('button');
   document.body.appendChild(external);
   const el = (await fixture(
-    html`<lr-app-rail hide-toggle><button>a</button></lr-app-rail>`
+    html`<lr-app-rail without-toggle><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   el.trigger = external;
   fireMobileChange(el, true);
@@ -3682,4 +3686,206 @@ it('re-acquires the external trigger ARIA when a reconnect is followed by a brea
   await el.updateComplete;
   expect(external.getAttribute('aria-expanded')).to.equal('false');
   external.remove();
+});
+
+describe("app-rail canonical names and their deprecated aliases", () => {
+  const usage = (name: string): DeprecatedUsage => ({ tag: "lr-app-rail", kind: "property", name });
+  const resizer = (el: LyraAppRail) =>
+    el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+  const base = (el: LyraAppRail) =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  it("keeps hide-toggle hiding the closed mobile toggle like without-toggle, and warns once", async () => {
+    const hidden: string[] = [];
+    const warnings = await captureDeprecationWarnings([usage("hideToggle")], async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
+        fireMobileChange(el, true);
+        await el.updateComplete;
+        await el.updateComplete;
+        expect(el.withoutToggle).to.equal(true);
+        expect(el.hasAttribute("without-toggle"), "the canonical attribute reflects").to.equal(true);
+        hidden.push(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).display);
+      }
+    });
+    expect(hidden).to.deep.equal(["none", "none"]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-app-rail:property:hideToggle"]);
+    expect(warnings[0]!.message).to.contain("without-toggle");
+  });
+
+  it("forwards the hideToggle property both ways, both attributes reflecting", async () => {
+    const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
+    await captureDeprecationWarnings([usage("hideToggle")], async () => {
+      el.hideToggle = true;
+      await el.updateComplete;
+    });
+    expect(el.withoutToggle).to.equal(true);
+    expect(el.hasAttribute("hide-toggle")).to.equal(true);
+    el.withoutToggle = false;
+    await el.updateComplete;
+    expect(el.hideToggle).to.equal(false);
+    expect(el.hasAttribute("hide-toggle")).to.equal(false);
+  });
+
+  it("accepts CSS lengths on rail-width, min-rail-width and max-rail-width, resolved live", async () => {
+    const el = (await fixture(html`
+      <lr-app-rail force-mode="full" resizable rail-width="15rem" min-rail-width="12rem" max-rail-width="20rem"></lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(el.railWidth).to.equal("15rem");
+    expect(resizer(el).getAttribute("aria-valuemin")).to.equal(String(12 * rootSize));
+    expect(resizer(el).getAttribute("aria-valuemax")).to.equal(String(20 * rootSize));
+    expect(resizer(el).getAttribute("aria-valuenow")).to.equal(String(15 * rootSize));
+    expect(base(el).style.getPropertyValue("inline-size")).to.equal(`${15 * rootSize}px`);
+    const previous = document.documentElement.style.fontSize;
+    try {
+      document.documentElement.style.fontSize = "20px";
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(resizer(el).getAttribute("aria-valuenow")).to.equal("300");
+    } finally {
+      document.documentElement.style.fontSize = previous;
+    }
+  });
+
+  it("parses a plain number on the width attributes as pixels", async () => {
+    const el = (await fixture(html`<lr-app-rail resizable rail-width="240" min-rail-width="200"></lr-app-rail>`)) as LyraAppRail;
+    expect(el.railWidth).to.equal(240);
+    expect(el.minRailWidth).to.equal(200);
+  });
+
+  it("keeps the -px aliases working with identical results, and warns once for each", async () => {
+    let aliased!: LyraAppRail;
+    const warnings = await captureDeprecationWarnings(
+      [usage("railWidthPx"), usage("minRailWidthPx"), usage("maxRailWidthPx")],
+      async () => {
+        aliased = (await fixture(html`
+          <lr-app-rail force-mode="full" resizable rail-width-px="250" min-rail-width-px="200" max-rail-width-px="300"></lr-app-rail>
+        `)) as LyraAppRail;
+        await aliased.updateComplete;
+      },
+    );
+    const canonical = (await fixture(html`
+      <lr-app-rail force-mode="full" resizable rail-width="250" min-rail-width="200" max-rail-width="300"></lr-app-rail>
+    `)) as LyraAppRail;
+    await canonical.updateComplete;
+    for (const attribute of ["aria-valuemin", "aria-valuemax", "aria-valuenow"]) {
+      expect(resizer(aliased).getAttribute(attribute), attribute).to.equal(resizer(canonical).getAttribute(attribute));
+    }
+    expect(base(aliased).style.getPropertyValue("inline-size")).to.equal("250px");
+    expect([aliased.railWidthPx, aliased.minRailWidthPx, aliased.maxRailWidthPx]).to.deep.equal([250, 200, 300]);
+    expect(aliased.railWidth).to.equal(250);
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      "lyra-deprecated:lr-app-rail:property:maxRailWidthPx",
+      "lyra-deprecated:lr-app-rail:property:minRailWidthPx",
+      "lyra-deprecated:lr-app-rail:property:railWidthPx",
+    ]);
+    expect(canonical.railWidthPx, "reading an alias never warns").to.equal(250);
+  });
+
+  it("reads a canonical CSS length back through the -px alias in pixels", async () => {
+    const el = (await fixture(html`<lr-app-rail resizable rail-width="10rem" min-rail-width="8rem"></lr-app-rail>`)) as LyraAppRail;
+    const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(el.railWidthPx).to.equal(10 * rootSize);
+    expect(el.minRailWidthPx).to.equal(8 * rootSize);
+    expect(el.maxRailWidthPx).to.equal(440);
+  });
+
+  it("lets the last authored attribute win between canonical names and their aliases", async () => {
+    let first!: LyraAppRail;
+    let second!: LyraAppRail;
+    await captureDeprecationWarnings([usage("railWidthPx")], async () => {
+      first = (await fixture(html`<lr-app-rail rail-width="300" rail-width-px="200"></lr-app-rail>`)) as LyraAppRail;
+      second = (await fixture(html`<lr-app-rail rail-width-px="200" rail-width="300"></lr-app-rail>`)) as LyraAppRail;
+    });
+    expect([first.railWidth, first.railWidthPx]).to.deep.equal([200, 200]);
+    expect([second.railWidth, second.railWidthPx]).to.deep.equal([300, 300]);
+  });
+
+  it("restores the alias defaults when an alias attribute is removed", async () => {
+    let el!: LyraAppRail;
+    await captureDeprecationWarnings([usage("minRailWidthPx"), usage("maxRailWidthPx")], async () => {
+      el = (await fixture(html`<lr-app-rail min-rail-width-px="240" max-rail-width-px="600"></lr-app-rail>`)) as LyraAppRail;
+      el.removeAttribute("min-rail-width-px");
+      el.removeAttribute("max-rail-width-px");
+      await el.updateComplete;
+    });
+    expect(el.minRailWidth).to.equal(190);
+    expect(el.maxRailWidth).to.equal(440);
+    expect(el.minRailWidthPx).to.equal(190);
+  });
+
+  it("lets the last write win in both directions after the first render", async () => {
+    const aliases = [usage("railWidthPx"), usage("minRailWidthPx"), usage("maxRailWidthPx"), usage("hideToggle")];
+    const warnings = await captureDeprecationWarnings(aliases, async () => {
+      const el = (await fixture(html`
+        <lr-app-rail resizable rail-width="20rem" min-rail-width="12rem" max-rail-width="30rem"></lr-app-rail>
+      `)) as LyraAppRail;
+      await el.updateComplete;
+      el.setAttribute("rail-width-px", "250");
+      el.setAttribute("min-rail-width-px", "150");
+      el.setAttribute("max-rail-width-px", "600");
+      el.setAttribute("hide-toggle", "");
+      await el.updateComplete;
+      expect([el.railWidth, el.minRailWidth, el.maxRailWidth]).to.deep.equal([250, 150, 600]);
+      expect(el.withoutToggle).to.equal(true);
+      el.railWidth = "10rem";
+      el.withoutToggle = false;
+      await el.updateComplete;
+      const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      expect(el.railWidthPx).to.equal(10 * rootSize);
+      expect(el.hideToggle).to.equal(false);
+      expect(el.hasAttribute("hide-toggle")).to.equal(false);
+    });
+    expect(warnings).to.have.length(4);
+  });
+
+  it("keeps a lone hide-toggle attribute driving without-toggle after the first render", async () => {
+    await captureDeprecationWarnings([usage("hideToggle")], async () => {
+      const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
+      await el.updateComplete;
+      expect(el.hasAttribute("without-toggle"), "reflected from the alias").to.equal(true);
+      el.removeAttribute("hide-toggle");
+      await el.updateComplete;
+      expect(el.withoutToggle).to.equal(false);
+      expect(el.hasAttribute("without-toggle")).to.equal(false);
+      el.setAttribute("hide-toggle", "");
+      await el.updateComplete;
+      expect(el.withoutToggle).to.equal(true);
+    });
+  });
+
+  it("recolors the base and panel through the deprecated -background custom properties", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail
+        open
+        style="--lr-app-rail-background: rgb(10, 20, 30); --lr-app-rail-panel-background: rgb(40, 50, 60);"
+        ><button>a</button></lr-app-rail
+      >`
+    )) as LyraAppRail;
+    expect(getComputedStyle(base(el)).backgroundColor).to.equal("rgb(10, 20, 30)");
+    el.style.setProperty("--lr-app-rail-bg", "rgb(1, 2, 3)");
+    expect(getComputedStyle(base(el)).backgroundColor, "the canonical name wins").to.equal("rgb(1, 2, 3)");
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).backgroundColor).to.equal("rgb(40, 50, 60)");
+  });
+
+  it("reports the overlay state as expanded beside the deprecated open key", async () => {
+    const el = (await fixture(html`<lr-app-rail><button>a</button></lr-app-rail>`)) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    const details: string[] = [];
+    el.addEventListener("lr-toggle", (event) => details.push(JSON.stringify((event as CustomEvent).detail)));
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    toggle.click();
+    await el.updateComplete;
+    expect(details).to.deep.equal([JSON.stringify({ open: true, expanded: true })]);
+    fireMobileChange(el, false);
+    await el.updateComplete;
+    expect(details.at(-1)).to.equal(JSON.stringify({ open: false, expanded: false }));
+  });
 });

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   FormAssociated,
   isBarredFromValidation,
@@ -148,8 +149,17 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    lineNumbers: ['withoutLineNumbers', invertAlias, invertAlias],
+  };
   /** Language identifier exposed as a reflected host styling hook. */
   @property({ reflect: true, useDefault: true }) language = '';
+  /** Omits the line-number gutter. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-line-numbers' })
+  withoutLineNumbers = false;
+  /**
+   * @deprecated Use `without-line-numbers` (inverted); removal not before 23.0.0.
+   */
   @property({
     converter: trueDefaultBooleanConverter,
     reflect: true,
@@ -716,7 +726,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     );
   }
   private countLines(): number {
-    if (!this.lineNumbers) return 0;
+    if (this.withoutLineNumbers) return 0;
     let count = 1;
     for (let index = 0; index < this.value.length; index++) {
       if (this.value.charCodeAt(index) === 10) count++;
@@ -771,7 +781,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
 
   private syncGutterGeometry(): void {
-    if (!this.lineNumbers) return;
+    if (this.withoutLineNumbers) return;
     const lines = this.renderRoot.querySelectorAll<HTMLElement>('.gutter-line');
     const start = Math.min(this.gutterWindowStart, Math.max(0, this.countLines() - 1));
     const offsets = this.wrapsText ? this.lineStarts() : undefined;
@@ -789,7 +799,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
 
   private observeTextGeometry(): void {
-    if (!this.lineNumbers || !this.isConnected) {
+    if (this.withoutLineNumbers || !this.isConnected) {
       this.textGeometryObserver?.disconnect();
       this.textGeometryObserver = undefined;
       return;
@@ -810,7 +820,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
 
   private onEditorScroll = (): void => {
     this.syncGutterInlinePosition();
-    if (!this.lineNumbers || !this.editor || !this.textarea) return;
+    if (this.withoutLineNumbers || !this.editor || !this.textarea) return;
     const computed = this.ownerDocument.defaultView?.getComputedStyle(
       this.textarea,
     );
@@ -920,7 +930,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         data-language=${this.language}
         @scroll=${this.onEditorScroll}
       >
-        ${this.lineNumbers
+        ${!this.withoutLineNumbers
           ? html`<div part="gutter" aria-hidden="true">${this.gutterRows(lineCount)}</div>`
           : nothing}
         <div class="editor-content" data-wrap=${this.wrap} style=${styleMap(contentStyle)}>

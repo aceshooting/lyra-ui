@@ -31,7 +31,6 @@ export const Default: Story = {
     html`<lr-terminal
       style="max-width:40rem"
       .content=${SAMPLE}
-      copyable
       downloadable
     ></lr-terminal>`,
 };
@@ -63,7 +62,7 @@ export const CompactInsideExistingChrome: Story = {
     docs: {
       description: {
         story:
-          'Nested inside a container that already draws a border: `frame="plain"` drops the terminal\'s own card chrome so the box is not doubled, and `compact` tightens the toolbar and line padding for a dense transcript row.',
+          'Nested inside a container that already draws a border: `frame="plain"` drops the terminal\'s own card chrome so the box is not doubled, and `size="s"` tightens the toolbar and line padding for a dense transcript row.',
       },
     },
   },
@@ -71,7 +70,7 @@ export const CompactInsideExistingChrome: Story = {
     <div
       style="max-width:40rem;border:1px solid var(--lr-color-border);border-radius:var(--lr-radius);background:var(--lr-color-surface);padding:var(--lr-space-s)"
     >
-      <lr-terminal compact frame="plain" copyable downloadable .content=${SAMPLE}></lr-terminal>
+      <lr-terminal size="s" frame="plain" downloadable .content=${SAMPLE}></lr-terminal>
     </div>
   `,
 };
@@ -89,7 +88,6 @@ export const SurfaceAndInteractionTokens: Story = {
     <lr-terminal
       style="max-width:40rem;--lr-terminal-surface-color:var(--lr-color-surface);--lr-terminal-toolbar-button-hover-bg:var(--lr-color-success-quiet);--lr-terminal-toolbar-button-active-bg:var(--lr-color-success);--lr-terminal-line-hover-bg:var(--lr-color-warning-quiet);--lr-terminal-line-active-bg:var(--lr-color-warning)"
       .content=${'\x1b[7mInverse ANSI fallback uses the terminal surface.\x1b[0m\nHover or press this ordinary output line.'}
-      copyable
       downloadable
     ></lr-terminal>
   `,

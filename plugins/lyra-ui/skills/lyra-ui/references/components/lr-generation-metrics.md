@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showStop` / `show-stop` since `21.1.0`; use property `without-stop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -45,16 +45,11 @@ generated framework members are removed rather than retained as aliases.
   integer; unset/non-finite values omit the `tokens` segment entirely.
 - `tokensPerSecond?: number` (attribute `tokens-per-second`) — finite values are clamped to zero or
   above; unset/non-finite values derive from `token-count`/elapsed time once one second has elapsed.
-- `showStop: boolean = true` (attribute `show-stop`, **not reflected**) — whether the built-in Stop
-  button renders at all. Uses a string-value-aware `ComplexAttributeConverter` (not Lit's default
-  presence-based `type: Boolean`), so a plain-HTML `show-stop="false"` content attribute correctly
-  turns it off — the literal string `"false"` maps to `false`; the attribute's mere presence with any
-  other value (or no value) maps to `true`. A Lit template can instead use a `.showStop=${false}`
-  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute _binding_ still can't turn
-  it off when the attribute was never present in markup to begin with — that binding only ever
-  removes the attribute when falsy, and removing an attribute that's already absent fires no
-  `attributeChangedCallback` (see AGENTS.md); use `.showStop=${false}` or the plain
-  `show-stop="false"` string form instead.
+- `withoutStop: boolean = false` (attribute `without-stop`, **not reflected**) — hides the built-in
+  Stop button, for a host that renders its own cancel control. A plain presence attribute, so
+  `?without-stop=${hidden}` works in a Lit template. Deprecated alias: `show-stop`/`showStop` (use
+  `without-stop`; removed in 23.0.0) — inverted, so `show-stop="false"` equals `without-stop`; any
+  other `show-stop` value (or none) keeps the button.
 
 **Events:** `lr-stop` (`detail: null`) — fired when the built-in Stop button is clicked while
 `status="running"`.
@@ -63,8 +58,8 @@ generated framework members are removed rather than retained as aliases.
 
 **CSS parts:** `base`, `elapsed` (always rendered, reads `"0.0s"` while idle), `tokens` (only
 rendered for a finite `token-count`), `throughput` (only rendered when
-a value is available, host-supplied or derived), `stop-button` (only rendered while `show-stop` is
-`true` and `status="running"`)
+a value is available, host-supplied or derived), `stop-button` (only rendered while `without-stop`
+is unset and `status="running"`)
 
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (base readout and
 tokens/throughput text color), `--lr-color-text` (the elapsed segment's higher-contrast color,
@@ -80,7 +75,6 @@ and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-ic
   status="running"
   started-at="1732000000000"
   token-count="340"
-  show-stop
 ></lr-generation-metrics>
 <script type="module">
   document
@@ -114,10 +108,8 @@ something that announces state _transitions_ instead. The Stop button gets a nor
 
 **Known gotchas:**
 
-- `showStop` defaults to `true` and is not a reflected property. Its `ComplexAttributeConverter`
-  makes the plain content attribute `show-stop="false"` work correctly, but a `?show-stop=${false}`
-  Lit boolean-attribute _binding_ still can't turn it off starting from absent markup — see the
-  property list above for the exact footgun.
+- The Stop button is on by default; `without-stop` is the only way to hide it (a presence
+  attribute, not reflected).
 - The derived `tokens-per-second` figure only appears once `elapsedMs >= 1000`; before that, the
   `throughput` part simply doesn't render — supply `tokens-per-second` yourself for a stable figure
   from the very first tick.

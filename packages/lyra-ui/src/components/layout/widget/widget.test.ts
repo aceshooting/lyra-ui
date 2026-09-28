@@ -10,6 +10,10 @@ import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
@@ -2313,66 +2317,162 @@ it("falls back to the default inset when fullscreen-inset is unset", async () =>
   );
 });
 
-it("reflects the compact attribute", async () => {
+it("defaults size to m and reflects it", async () => {
   const el = (await fixture(
-    html`<lr-widget compact><p>Body</p></lr-widget>`
+    html`<lr-widget><p>Body</p></lr-widget>`
   )) as LyraWidget;
-  expect(el.hasAttribute("compact")).to.be.true;
+  expect(el.size).to.equal("m");
+  expect(el.getAttribute("size")).to.equal("m");
 });
 
-it("applies tighter header/body padding when compact", async () => {
+/** Header/body padding and the header gap, read from the rendered parts. */
+function widgetDensity(el: LyraWidget): number[] {
+  const header = getComputedStyle(
+    el.shadowRoot!.querySelector('[part="header"]') as HTMLElement
+  );
+  const body = getComputedStyle(
+    el.shadowRoot!.querySelector('[part="body"]') as HTMLElement
+  );
+  return [
+    header.paddingBlockStart,
+    header.paddingInlineStart,
+    header.columnGap,
+    body.paddingBlockStart,
+    body.paddingInlineStart,
+  ].map((value) => parseFloat(value));
+}
+
+it('applies tighter header/body padding at size="s" and smaller', async () => {
   const normal = (await fixture(
     html`<lr-widget label="x"><p>Body</p></lr-widget>`
   )) as LyraWidget;
-  const compact = (await fixture(
-    html`<lr-widget label="x" compact><p>Body</p></lr-widget>`
+  const dense = (await fixture(
+    html`<lr-widget label="x" size="s"><p>Body</p></lr-widget>`
   )) as LyraWidget;
+  const regular = widgetDensity(normal);
+  const tight = widgetDensity(dense);
+  // The dense `--lr-space-xs`/`--lr-space-s` padding renders strictly smaller than the default
+  // `--lr-space-s`/`--lr-space-m` padding, and the header's icon-to-title gap shrinks alongside
+  // it -- a dense header that kept the regular gap would look disproportionately loose.
+  tight.forEach((value, index) => {
+    expect(value, `density metric ${index}`).to.be.lessThan(regular[index]!);
+  });
+  for (const size of ["xs", "2xs", "small"] as const) {
+    const el = (await fixture(
+      html`<lr-widget label="x" size=${size}><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    expect(widgetDensity(el), `size="${size}"`).to.deep.equal(tight);
+  }
+  for (const size of ["m", "l", "medium"] as const) {
+    const el = (await fixture(
+      html`<lr-widget label="x" size=${size}><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    expect(widgetDensity(el), `size="${size}"`).to.deep.equal(regular);
+  }
+});
 
-  expect(compact.hasAttribute("compact")).to.be.true;
+describe("the deprecated compact alias of size", () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: "lr-widget", kind: "property", name: "compact" },
+  ];
 
-  const normalHeader = normal.shadowRoot!.querySelector(
-    '[part="header"]'
-  ) as HTMLElement;
-  const compactHeader = compact.shadowRoot!.querySelector(
-    '[part="header"]'
-  ) as HTMLElement;
-  const normalBody = normal.shadowRoot!.querySelector(
-    '[part="body"]'
-  ) as HTMLElement;
-  const compactBody = compact.shadowRoot!.querySelector(
-    '[part="body"]'
-  ) as HTMLElement;
+  it('renders exactly like size="s", and warns once naming size', async () => {
+    const canonical = (await fixture(
+      html`<lr-widget label="x" size="s"><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    const aliased: LyraWidget[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        aliased.push(
+          (await fixture(
+            html`<lr-widget label="x" compact><p>Body</p></lr-widget>`
+          )) as LyraWidget
+        );
+      }
+    });
+    for (const el of aliased) {
+      expect(el.size).to.equal("s");
+      expect(el.compact).to.equal(true);
+      expect(el.getAttribute("size")).to.equal("s");
+      expect(widgetDensity(el)).to.deep.equal(widgetDensity(canonical));
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-widget:property:compact",
+    ]);
+    expect(warnings[0]!.message).to.contain('size');
+  });
 
-  const normalHeaderStyle = getComputedStyle(normalHeader);
-  const compactHeaderStyle = getComputedStyle(compactHeader);
-  const normalBodyStyle = getComputedStyle(normalBody);
-  const compactBodyStyle = getComputedStyle(compactBody);
+  it("reads compact from size and restores size m when cleared, without warning on reads", async () => {
+    const el = (await fixture(
+      html`<lr-widget label="x" size="xs"><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    let warnings = await captureDeprecationWarnings(aliasUsage, () => {
+      expect(el.compact).to.equal(true);
+      el.size = "l";
+      expect(el.compact).to.equal(false);
+    });
+    expect(warnings).to.have.length(0);
+    warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.compact = true;
+      await el.updateComplete;
+      expect(el.size).to.equal("s");
+      expect(el.hasAttribute("compact"), "the alias reflects").to.equal(true);
+      el.compact = false;
+      await el.updateComplete;
+    });
+    expect(el.size).to.equal("m");
+    expect(el.hasAttribute("compact")).to.equal(false);
+    expect(warnings).to.have.length(1);
+  });
 
-  // The compact `--lr-space-xs`/`--lr-space-s` padding renders strictly
-  // smaller than the default `--lr-space-s`/`--lr-space-m` padding.
-  expect(
-    parseFloat(compactHeaderStyle.paddingBlockStart),
-    "compact header padding should render smaller than the default"
-  ).to.be.lessThan(parseFloat(normalHeaderStyle.paddingBlockStart));
-  expect(
-    parseFloat(compactHeaderStyle.paddingInlineStart),
-    "compact header padding should render smaller than the default"
-  ).to.be.lessThan(parseFloat(normalHeaderStyle.paddingInlineStart));
-  expect(
-    parseFloat(compactBodyStyle.paddingBlockStart),
-    "compact body padding should render smaller than the default"
-  ).to.be.lessThan(parseFloat(normalBodyStyle.paddingBlockStart));
-  expect(
-    parseFloat(compactBodyStyle.paddingInlineStart),
-    "compact body padding should render smaller than the default"
-  ).to.be.lessThan(parseFloat(normalBodyStyle.paddingInlineStart));
-  // The header's icon-to-title gap must shrink alongside its padding -- a
-  // compact header that keeps the non-compact gap looks disproportionately
-  // loose despite its tighter outer padding.
-  expect(
-    parseFloat(compactHeaderStyle.columnGap),
-    "compact header gap should render smaller than the default"
-  ).to.be.lessThan(parseFloat(normalHeaderStyle.columnGap));
+  it("lets the last authored attribute win between size and the compact alias", async () => {
+    const sizes: string[] = [];
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      for (const markup of [
+        html`<lr-widget compact size="l"><p>Body</p></lr-widget>`,
+        html`<lr-widget size="l" compact><p>Body</p></lr-widget>`,
+      ]) {
+        const el = (await fixture(markup)) as LyraWidget;
+        sizes.push(el.size);
+      }
+    });
+    expect(sizes).to.deep.equal(["l", "s"]);
+  });
+
+  it("lets the last write win in both directions after the first render", async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = (await fixture(
+        html`<lr-widget size="l"><p>Body</p></lr-widget>`
+      )) as LyraWidget;
+      el.setAttribute("compact", "");
+      await el.updateComplete;
+      expect(el.size).to.equal("s");
+      expect(el.getAttribute("size")).to.equal("s");
+      el.size = "l";
+      await el.updateComplete;
+      expect(el.compact).to.equal(false);
+      expect(el.hasAttribute("compact")).to.equal(false);
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-widget:property:compact",
+    ]);
+  });
+
+  it("keeps a lone compact attribute driving size after the first render", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = (await fixture(
+        html`<lr-widget compact><p>Body</p></lr-widget>`
+      )) as LyraWidget;
+      expect(el.getAttribute("size"), "reflected from the alias").to.equal("s");
+      el.removeAttribute("compact");
+      await el.updateComplete;
+      expect(el.size).to.equal("m");
+      expect(el.getAttribute("size")).to.equal("m");
+      el.setAttribute("compact", "");
+      await el.updateComplete;
+      expect(el.size).to.equal("s");
+    });
+  });
 });
 
 describe("backdrop-inset", () => {

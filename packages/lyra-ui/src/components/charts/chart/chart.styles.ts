@@ -25,7 +25,7 @@ export const styles = css`
     --_lr-chart-tick-font-size: var(--lr-font-size-xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
-    --_lr-chart-tooltip-text: var(--lr-color-text);
+    --_lr-chart-tooltip-color: var(--lr-color-text);
   }
   [part='base'] {
     position: relative;

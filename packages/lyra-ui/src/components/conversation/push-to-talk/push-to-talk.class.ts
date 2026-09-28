@@ -1,6 +1,7 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -161,7 +162,7 @@ export interface LyraPushToTalkEventMap {
  * @csspart pulse - Wrapper around the `recording-icon` slot / default pulse glyph, rendered only
  *   while recording.
  * @csspart timer - The localized `M:SS` elapsed-time readout, rendered only while recording and
- *   `show-timer`.
+ *   `without-timer` is unset.
  * @csspart status - Visible status text for the `requesting`/`denied`/`error`/unsupported states.
  * @cssprop [--lr-push-to-talk-size=var(--lr-size-3rem)] - Preferred inline and block size of the
  *   circular `trigger` button; `--lr-icon-button-size` remains its minimum hit-area floor.
@@ -193,6 +194,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showTimer: ['withoutTimer', invertAlias, invertAlias],
+  };
 
   private _mode: PushToTalkMode = 'hold';
   @property({ reflect: true, converter: PUSH_TO_TALK_MODE })
@@ -225,7 +229,17 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  handling of its own duration-like property. Changes during recording reschedule the deadline
    *  relative to the original recording start; setting `0` cancels it. */
   @property({ type: Number, attribute: 'max-duration-ms' }) maxDurationMs = 0;
-  /** Shows and samples the elapsed timer. Changes take effect immediately while recording. */
+  /** Hides the elapsed timer and stops sampling it. Changes take effect immediately while
+   *  recording. */
+  @property({ type: Boolean, attribute: 'without-timer' }) withoutTimer = false;
+
+  /**
+   * Deprecated inverted alias of `without-timer` (`withoutTimer`): `show-timer="false"` equals
+   * `without-timer`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-timer`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     attribute: 'show-timer',
@@ -480,7 +494,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
     const owner = this.captureWindow;
     if (this._state !== 'recording' || !owner) return;
-    if (changed.has('showTimer')) this.syncElapsedTimer(owner);
+    if (changed.has('withoutTimer')) this.syncElapsedTimer(owner);
     if (changed.has('maxDurationMs')) this.syncMaxDurationTimer(owner);
     if (changed.has('levelEvents')) this.syncLevelMeter(owner);
   }
@@ -781,7 +795,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     this.tickTimer = undefined;
     const active = this.activeCapture;
     if (
-      !this.showTimer ||
+      this.withoutTimer ||
       this._state !== 'recording' ||
       !active ||
       active.owner.window !== owner ||
@@ -1058,7 +1072,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
           : nothing}
       </button>
       ${status ? html`<span part="status">${status}</span>` : nothing}
-      ${recording && this.showTimer
+      ${recording && !this.withoutTimer
         ? html`<span part="timer" aria-hidden="true">${this.formatElapsed(this.elapsedMs)}</span>`
         : nothing}
       <lr-live-region></lr-live-region>

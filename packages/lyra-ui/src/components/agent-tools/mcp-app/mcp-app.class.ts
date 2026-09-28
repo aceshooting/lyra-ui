@@ -1,8 +1,9 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFrameSrc, safeLinkHref } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -155,6 +156,16 @@ function withCsp(htmlSource: string, csp: McpAppCsp | undefined): string {
   return `${meta}${htmlSource}`;
 }
 
+/** Parses `height`/`max-height`: a numeric attribute stays the number it always was, and anything
+ *  else is kept as a CSS length string for `resolveCssLength()`. */
+const heightAttributeConverter: ComplexAttributeConverter<number | string | null> = {
+  fromAttribute(value: string | null): number | string | null {
+    if (value === null) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : value.trim();
+  },
+};
+
 function permissionPolicy(permissions: McpAppPermissions | undefined): string {
   const enabled = [
     permissions?.camera ? 'camera' : '',
@@ -213,8 +224,14 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
 
   /** Clone-owned resource snapshot. Reassign a new record after changing its CSP collections. */
   @property({ attribute: false }) resource: McpAppResource | null = null;
-  @property({ type: Number }) height = 320;
-  @property({ type: Number, attribute: 'max-height' }) maxHeight = 800;
+  /** Initial frame height: a number of pixels, or a CSS length in `px`, `rem`, `em`, `vw` or `vh`
+   *  (resolved when set). Clamped to at least 120px and at most `max-height`; an unresolvable value
+   *  uses the 320px default. */
+  @property({ converter: heightAttributeConverter }) height: number | string = 320;
+  /** Upper bound for `height` and for the frame's own resize requests: a number of pixels, or a CSS
+   *  length in `px`, `rem`, `em`, `vw` or `vh` (resolved when set). Clamped to 120px-10000px; an
+   *  unresolvable value uses the 800px default. */
+  @property({ attribute: 'max-height', converter: heightAttributeConverter }) maxHeight: number | string = 800;
   /** Purpose-specific iframe title used ahead of the resource title and localized fallback. */
   @property() label = '';
   /** Programmatic iframe title when no authored host `aria-label` attribute is present. An empty
@@ -337,12 +354,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       this.frameGeneration++;
     }
     if (changed.has('resource') || changed.has('height') || changed.has('maxHeight')) {
-      this.frameHeight = finiteRange(
-        this.height,
-        320,
-        120,
-        finiteRange(this.maxHeight, 800, 120, 10_000),
-      );
+      this.frameHeight = finiteRange(this.heightPx(), 320, 120, this.maxHeightPx());
     }
   }
 
@@ -421,14 +433,26 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.handleMessage(event.data);
   };
 
+  /** `height` in pixels, or `NaN` (the numeric fallback path) when it does not resolve. Relative
+   *  units read the live root/host font size and viewport on every call. */
+  private heightPx(): number {
+    return resolveCssLength(this.height, { host: this }) ?? Number.NaN;
+  }
+
+  /** `max-height` in pixels, clamped to 120px-10000px, with the 800px default for an unresolvable
+   *  value. */
+  private maxHeightPx(): number {
+    return finiteRange(resolveCssLength(this.maxHeight, { host: this }) ?? Number.NaN, 800, 120, 10_000);
+  }
+
   private handleMessage(data: unknown): void {
     const message = record(data);
     if (typeof this.frameNonce !== 'string' || message?.['nonce'] !== this.frameNonce) return;
     if (message?.['channel'] !== 'lyra-mcp-app' || message['version'] !== 1 || typeof message['type'] !== 'string') return;
     switch (message['type']) {
       case 'resize': {
-        const requested = typeof message['height'] === 'number' ? message['height'] : this.height;
-        const height = finiteRange(requested, this.height, 120, finiteRange(this.maxHeight, 800, 120, 10_000));
+        const requested = typeof message['height'] === 'number' ? message['height'] : this.heightPx();
+        const height = finiteRange(requested, this.heightPx(), 120, this.maxHeightPx());
         this.frameHeight = height;
         this.emit('lr-mcp-resize', { height });
         break;

@@ -7,6 +7,14 @@ import type { LyraMenu } from '../../layout/menu/menu.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+
+const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
+  { tag: 'lr-attachment-trigger', kind: 'attribute', name: 'accessible-label' },
+];
 
 /** The single-capability control. `[part="trigger"]` is a composed `<lr-icon-button>` as of
  *  16.0.0, which owns the accessible name, the activation API and the part names. */
@@ -125,7 +133,7 @@ it('uses an image-specific aria-label for a single image capability', async () =
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach an image');
 });
 
-it('leaves the localized default aria-label untouched when accessible-label is unset', async () => {
+it('leaves the localized default aria-label untouched when no name is supplied', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
   expect(el.accessibleLabel).to.be.undefined;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
@@ -135,9 +143,9 @@ it('leaves the localized default aria-label untouched when accessible-label is u
   expect(trigger(el).getAttribute('aria-label')).to.equal('Use camera');
 });
 
-it('overrides the active semantic owner with accessible-label regardless of shape', async () => {
+it('overrides the active semantic owner with the host aria-label regardless of shape', async () => {
   const el = (await fixture(
-    html`<lr-attachment-trigger accessible-label="Joindre des fichiers"></lr-attachment-trigger>`,
+    html`<lr-attachment-trigger aria-label="Joindre des fichiers"></lr-attachment-trigger>`,
   )) as LyraAttachmentTrigger;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
 
@@ -155,11 +163,11 @@ it('overrides the active semantic owner with accessible-label regardless of shap
   expect(menuEl(el).getAttribute('label')).to.equal('Joindre des fichiers');
 });
 
-it('lets a host aria-label win on the active single or menu semantic owners', async () => {
+it('lets a host aria-label win over accessibleLabel on the active single or menu semantic owners', async () => {
   const el = (await fixture(
     html`<lr-attachment-trigger
       aria-label="Author attachment action"
-      accessible-label="Trigger fallback"
+      .accessibleLabel=${'Trigger fallback'}
     ></lr-attachment-trigger>`,
   )) as LyraAttachmentTrigger;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Author attachment action');
@@ -174,9 +182,9 @@ it('lets a host aria-label win on the active single or menu semantic owners', as
   );
 });
 
-it('preserves explicit-empty host aria-label precedence over accessible-label', async () => {
+it('preserves explicit-empty host aria-label precedence over accessibleLabel', async () => {
   const el = (await fixture(html`
-    <lr-attachment-trigger aria-label="" accessible-label="Fallback"></lr-attachment-trigger>
+    <lr-attachment-trigger aria-label="" .accessibleLabel=${'Fallback'}></lr-attachment-trigger>
   `)) as LyraAttachmentTrigger;
   expect(trigger(el).getAttribute('aria-label')).to.equal('');
 
@@ -184,6 +192,71 @@ it('preserves explicit-empty host aria-label precedence over accessible-label', 
   await el.updateComplete;
   expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('');
   expect(menuEl(el).getAttribute('label')).to.equal('');
+});
+
+it('names the trigger from the accessibleLabel property when the host has no aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-attachment-trigger .accessibleLabel=${'Joindre des fichiers'}></lr-attachment-trigger>`,
+  )) as LyraAttachmentTrigger;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+  expect(el.hasAttribute('accessible-label'), 'the property never reflects').to.be.false;
+
+  el.setAttribute('aria-label', 'Host name');
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Host name');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+});
+
+describe('the deprecated accessible-label attribute', () => {
+  it('still sets accessibleLabel, exactly like the property, and warns once', async () => {
+    const names: (string | null)[] = [];
+    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(
+          html`<lr-attachment-trigger accessible-label="Joindre des fichiers"></lr-attachment-trigger>`,
+        )) as LyraAttachmentTrigger;
+        expect(el.accessibleLabel).to.equal('Joindre des fichiers');
+        names.push(trigger(el).getAttribute('aria-label'));
+
+        el.capabilities = ['files', 'image'];
+        await el.updateComplete;
+        names.push(menuTriggerButton(el).getAttribute('aria-label'));
+        expect(menuEl(el).getAttribute('label')).to.equal('Joindre des fichiers');
+      }
+    });
+    expect(names).to.deep.equal(Array(4).fill('Joindre des fichiers'));
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-attachment-trigger:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('loses to a host aria-label, including an explicitly empty one', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const named = (await fixture(html`
+        <lr-attachment-trigger aria-label="Author attachment action" accessible-label="Fallback"></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      expect(trigger(named).getAttribute('aria-label')).to.equal('Author attachment action');
+
+      const empty = (await fixture(html`
+        <lr-attachment-trigger aria-label="" accessible-label="Fallback"></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      expect(trigger(empty).getAttribute('aria-label')).to.equal('');
+    });
+  });
+
+  it('restores the localized default when removed', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const el = (await fixture(
+        html`<lr-attachment-trigger accessible-label="Fallback"></lr-attachment-trigger>`,
+      )) as LyraAttachmentTrigger;
+      el.removeAttribute('accessible-label');
+      await el.updateComplete;
+      expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
+    });
+  });
 });
 
 it('uses a camera-specific aria-label and renders no hidden file input for a single camera capability', async () => {

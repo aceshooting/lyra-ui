@@ -7,9 +7,13 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-task-list-background` since `21.1.0`; use css-property `--lr-task-list-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `collapsible` / `collapsible` since `21.1.0`; use property `without-collapse`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `expanded` / `expanded` since `21.1.0`; use property `collapsed`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecated property** `label` / `label` since `21.1.0`; use property `heading`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
-- **Themeable via** 11 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,16 +37,22 @@ top-level task and direct child must additionally have a globally unique `id`; d
 visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
-moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
-in the built-in English catalog); any supplied value is an explicit verbatim override, including
-`'Tasks'` under a non-English `.strings` catalog and `''`. `headingLevel: LyraHeadingLevel = '3'`
+moves or an announcement is made. `heading?: string` — the visible section title; omission
+localizes `taskListLabel` (`'Tasks'` in the built-in English catalog); any supplied value is an
+explicit verbatim override, including `'Tasks'` under a non-English `.strings` catalog and `''`.
+Deprecated alias: `label` (use `heading`; removed in 23.0.0). `headingLevel: LyraHeadingLevel = '3'`
 (attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
 level around either its disclosure button or static content, invalid untyped values retain level 3,
-and `none` is the explicit visual-only opt-out — `expanded: boolean = true` (reflected), and
-`collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
+and `none` is the explicit visual-only opt-out. `collapsed: boolean = false` (reflected) — hides the
+body; the list starts shown. Deprecated alias: `expanded` (use `collapsed`; removed in 23.0.0) —
+inverted, so `expanded="false"` equals `collapsed`. `withoutCollapse: boolean = false` (attribute
+`without-collapse`) — renders the header as a static heading with no toggle; `collapsed` can still
+be set programmatically. Deprecated alias: `collapsible` (use `without-collapse`; removed in 23.0.0)
+— inverted, so `collapsible="false"` equals `without-collapse`. `size: LyraSize = 'm'` (reflected)
+— density on the shared size scale: `s` (and the smaller `xs`/`2xs`) tightens header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
-convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
-and background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
+convention as `<lr-agent-run>`'s `size`; purely a density knob, the border and background stay.
+Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
 library-wide `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border,
 background, and corner radius so a list embedded in a container that already draws a border (an
 agent-run panel, a message bubble) doesn't double it. The exported alias `TaskListAppearance` is
@@ -59,10 +69,10 @@ nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
 
-**CSS parts:** `base`, `header` (a `<button>` when `collapsible`, plain content otherwise, within
-the configured semantic heading), `label`,
+**CSS parts:** `base`, `header` (a `<button>` unless `without-collapse` is set, plain content
+otherwise, within the configured semantic heading), `label` (the `heading` text),
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
-indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
+indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
 `item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
 valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
@@ -70,22 +80,23 @@ nested `role="list"` wrapper around a top-level item's children).
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
 icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
-`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `size` is `s` or smaller;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
-label/summary/toggle while `compact`, one step tighter than the header's uncompacted
-`--lr-space-xs`, so `compact` tightens the header's _interior_ spacing and not just its padding;
+label/summary/toggle at that size, one step tighter than the header's regular
+`--lr-space-xs`, so the dense tier tightens the header's _interior_ spacing and not just its padding;
 `--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
-font size while `compact`, completing the compact header's typography alongside its padding and
+font size at that size, completing the dense header's typography alongside its padding and
 gap;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
-rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
-var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
+rows at that size; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding at that size;
 `--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
-status icons without changing shared status tokens. `--lr-task-list-background` (default
+status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps.
+`frame="plain"` keeps. Deprecated alias: `--lr-task-list-background` (use `--lr-task-list-bg`;
+removed in 23.0.0).

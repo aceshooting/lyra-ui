@@ -23,6 +23,7 @@ import {
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -221,7 +222,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
 
 /**
  * `<lr-xml-viewer>` — collapsible, copyable, `DOMParser`-based tree view for XML documents,
- * mirroring `lr-json-viewer`'s UX (`collapsed-depth`, `copyable`, structural-path-keyed expand
+ * mirroring `lr-json-viewer`'s UX (`expand-depth`, `copyable`, structural-path-keyed expand
  * state that survives a same-shape `xml` reassignment -- e.g. a streaming document being patched
  * in place) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
  * sections, and processing instructions, rendered in their original mixed-child source order.
@@ -297,17 +298,27 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   `[part="attribute"]` an attribute-addressing `node-path` anchor resolved to.
  * @cssprop [--lr-xml-viewer-tag-color=var(--lr-color-brand)] - Text color of `[part="tag"]`, an
  *   element's rendered tag name, independent of the active-attribute outline above.
- * @cssprop [--lr-xml-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] - Row
+ * @cssprop [--lr-xml-viewer-highlight-accent-bg=var(--lr-color-brand-quiet)] - Row
  *   background of an accent-tone (the default tone) `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-success-background=var(--lr-color-success-quiet)] - Row
+ * @cssprop [--lr-xml-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
+ *   Deprecated alias of `--lr-xml-viewer-highlight-accent-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-xml-viewer-highlight-success-bg=var(--lr-color-success-quiet)] - Row
  *   background of a success-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] - Row
+ * @cssprop [--lr-xml-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
+ *   Deprecated alias of `--lr-xml-viewer-highlight-success-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-xml-viewer-highlight-warning-bg=var(--lr-color-warning-quiet)] - Row
  *   background of a warning-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] - Row
+ * @cssprop [--lr-xml-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
+ *   Deprecated alias of `--lr-xml-viewer-highlight-warning-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-xml-viewer-highlight-danger-bg=var(--lr-color-danger-quiet)] - Row
  *   background of a danger-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] - Row
+ * @cssprop [--lr-xml-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
+ *   Deprecated alias of `--lr-xml-viewer-highlight-danger-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-xml-viewer-highlight-neutral-bg=var(--lr-color-surface-raised)] - Row
  *   background of a neutral-tone `highlights` entry. Deliberately not `--lr-color-surface`: the
  *   viewer's own ambient background would render a neutral highlight as unhighlighted.
+ * @cssprop [--lr-xml-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
+ *   Deprecated alias of `--lr-xml-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-active-outline=var(--lr-color-brand)] - Outline color of the
  *   `highlights` entry currently named by `activeHighlightId`.
  * @cssprop [--lr-xml-viewer-max-height=none] - Maximum block size of the scrollable body before
@@ -356,6 +367,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, viewerLoadingStyles, srOnly];
 
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    collapsedDepth: 'expandDepth',
+  };
+
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
 
@@ -387,8 +403,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** Display name used as the viewer's accessible label. */
   @property() name = '';
 
+  /** Elements at or beyond this nesting depth (root = 0) start collapsed, so only the levels above
+   *  it start expanded. Omit/undefined: nothing auto-collapses. */
+  @property({ type: Number, attribute: 'expand-depth' }) expandDepth?: number;
   /** Elements at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined:
-   *  nothing auto-collapses. */
+   *  nothing auto-collapses.
+   *  @deprecated Use `expand-depth`; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with expandDepth, which safeExpandDepth finiteCount()-normalizes
   @property({ type: Number, attribute: 'collapsed-depth' }) collapsedDepth?: number;
 
   /** Shows copy-to-clipboard affordances: one for the whole document, plus one per element. */
@@ -405,7 +426,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   @state() private xmlState: XmlState = { kind: 'idle' };
 
   /** Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding the
-   *  `collapsedDepth`/search defaults once an element's toggle has been used. Pruned whenever the
+   *  `expandDepth`/search defaults once an element's toggle has been used. Pruned whenever the
    *  document reloads (see `setDoc()`), so a long-lived instance bound to reshaping/streaming XML
    *  doesn't accumulate one entry per path ever toggled for the life of the instance. */
   @state() private expandedOverrides = new Map<string, boolean>();
@@ -429,13 +450,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private copyGeneration = 0;
   private copyTimer?: { owner: Window; handle: number; generation: number };
 
-  /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
+  /** `expandDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
-   *  invalid one. A raw `NaN` (e.g. an invalid `collapsed-depth` attribute) would otherwise make
-   *  every `depth >= collapsedDepth` comparison false, silently disabling auto-collapse instead of
+   *  invalid one. A raw `NaN` (e.g. an invalid `expand-depth` attribute) would otherwise make
+   *  every `depth >= expandDepth` comparison false, silently disabling auto-collapse instead of
    *  falling back to a sane depth. Mirrors `<lr-json-viewer>`'s identical guard. */
-  private get safeCollapsedDepth(): number | undefined {
-    return this.collapsedDepth === undefined ? undefined : finiteCount(this.collapsedDepth);
+  private get safeExpandDepth(): number | undefined {
+    return this.expandDepth === undefined ? undefined : finiteCount(this.expandDepth);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -839,8 +860,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const override = this.expandedOverrides.get(pathKey);
     if (override !== undefined) return override;
     if (this.searchState.forceExpand.has(pathKey)) return true;
-    const collapsedDepth = this.safeCollapsedDepth;
-    if (collapsedDepth !== undefined && depth >= collapsedDepth) return false;
+    const expandDepth = this.safeExpandDepth;
+    if (expandDepth !== undefined && depth >= expandDepth) return false;
     return true;
   }
 

@@ -438,18 +438,24 @@ it('is a pure icon action/link rather than a partial form submitter', async () =
   expect(submits).to.equal(0);
 });
 
-it('honours --lr-icon-button-background and --lr-icon-button-color on the native button', async () => {
-  const el = await fixture(html`
-    <lr-icon-button
-      icon="close"
-      aria-label="Dismiss"
-      style="--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-color: rgb(7, 8, 9);"
-    ></lr-icon-button>
-  `);
-  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
-  expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
-  expect(cs.color).to.equal('rgb(7, 8, 9)');
-});
+for (const [name, style] of [
+  ['canonical --lr-icon-button-bg', '--lr-icon-button-bg: rgb(1, 2, 3);'],
+  ['deprecated --lr-icon-button-background', '--lr-icon-button-background: rgb(1, 2, 3);'],
+  ['canonical over deprecated', '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-background: rgb(9, 9, 9);'],
+] as const) {
+  it(`honours ${name} and --lr-icon-button-color on the native button`, async () => {
+    const el = await fixture(html`
+      <lr-icon-button
+        icon="close"
+        aria-label="Dismiss"
+        style=${`${style} --lr-icon-button-color: rgb(7, 8, 9);`}
+      ></lr-icon-button>
+    `);
+    const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+    expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(cs.color).to.equal('rgb(7, 8, 9)');
+  });
+}
 
 it('honours --lr-icon-button-border on the native button', async () => {
   const el = await fixture(html`
@@ -548,39 +554,51 @@ it('presses to a background stronger than -- and different from -- its hover', a
   }
 });
 
-it('honours the hover and press override tokens on the rendered button', async () => {
-  const el = await fixture(html`
-    <lr-icon-button
-      icon="close"
-      aria-label="Dismiss"
-      style="--lr-transition-fast: 0s; --lr-icon-button-background-hover: rgb(1, 2, 3); --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9); --lr-icon-button-background-active: rgb(10, 11, 12); --lr-icon-button-color-active: rgb(13, 14, 15); --lr-icon-button-border-active: 2px solid rgb(16, 17, 18);"
-    ></lr-icon-button>
-  `);
-  const button = el.shadowRoot!.querySelector('button')!;
-  try {
-    await hoverUntilMatched(button, 'icon button never received the pointer hover state');
-    await waitUntil(
-      () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
-      'hover background override never rendered',
-    );
-    const hovered = getComputedStyle(button);
-    expect(hovered.backgroundColor).to.equal('rgb(1, 2, 3)');
-    expect(hovered.color).to.equal('rgb(4, 5, 6)');
-    expect(hovered.borderTopColor).to.equal('rgb(7, 8, 9)');
-    await sendMouse({ type: 'down' });
-    await waitUntil(
-      () => getComputedStyle(button).backgroundColor === 'rgb(10, 11, 12)',
-      'press background override never rendered',
-    );
-    const pressed = getComputedStyle(button);
-    expect(pressed.backgroundColor).to.equal('rgb(10, 11, 12)');
-    expect(pressed.color).to.equal('rgb(13, 14, 15)');
-    expect(pressed.borderTopColor).to.equal('rgb(16, 17, 18)');
-  } finally {
-    await sendMouse({ type: 'up' });
-    await resetMouse();
-  }
-});
+for (const [name, backgrounds] of [
+  ['canonical', '--lr-icon-button-bg-hover: rgb(1, 2, 3); --lr-icon-button-bg-active: rgb(10, 11, 12);'],
+  [
+    'deprecated',
+    '--lr-icon-button-background-hover: rgb(1, 2, 3); --lr-icon-button-background-active: rgb(10, 11, 12);',
+  ],
+  [
+    'canonical over deprecated',
+    '--lr-icon-button-bg-hover: rgb(1, 2, 3); --lr-icon-button-bg-active: rgb(10, 11, 12); --lr-icon-button-background-hover: rgb(9, 9, 9); --lr-icon-button-background-active: rgb(8, 8, 8);',
+  ],
+] as const) {
+  it(`honours the ${name} hover and press override tokens on the rendered button`, async () => {
+    const el = await fixture(html`
+      <lr-icon-button
+        icon="close"
+        aria-label="Dismiss"
+        style=${`--lr-transition-fast: 0s; ${backgrounds} --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9); --lr-icon-button-color-active: rgb(13, 14, 15); --lr-icon-button-border-active: 2px solid rgb(16, 17, 18);`}
+      ></lr-icon-button>
+    `);
+    const button = el.shadowRoot!.querySelector('button')!;
+    try {
+      await hoverUntilMatched(button, 'icon button never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+        'hover background override never rendered',
+      );
+      const hovered = getComputedStyle(button);
+      expect(hovered.backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(hovered.color).to.equal('rgb(4, 5, 6)');
+      expect(hovered.borderTopColor).to.equal('rgb(7, 8, 9)');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(10, 11, 12)',
+        'press background override never rendered',
+      );
+      const pressed = getComputedStyle(button);
+      expect(pressed.backgroundColor).to.equal('rgb(10, 11, 12)');
+      expect(pressed.color).to.equal('rgb(13, 14, 15)');
+      expect(pressed.borderTopColor).to.equal('rgb(16, 17, 18)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+}
 
 it('falls the press tokens through to the hover ones when only those are set', async () => {
   const el = await fixture(html`

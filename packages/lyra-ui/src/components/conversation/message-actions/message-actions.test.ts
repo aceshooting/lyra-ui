@@ -1372,7 +1372,24 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
     expect(control.getBoundingClientRect().height).to.equal(24);
   });
 
-  it('reaches the same composed control directly through the forwarded regenerate-button__control part', async () => {
+  it('reaches the same composed control directly through the forwarded regenerate-button-control part', async () => {
+    const style = document.createElement('style');
+    style.textContent =
+      'lr-message-actions.dense::part(regenerate-button-control) { min-inline-size: 24px; min-block-size: 24px; }';
+    document.head.append(style);
+    try {
+      const el = (await fixture(
+        html`<lr-message-actions class="dense" .controls=${['regenerate']}></lr-message-actions>`,
+      )) as LyraMessageActions;
+      const control = composedControl(regenerateButton(el));
+      expect(control.getBoundingClientRect().width).to.equal(24);
+      expect(control.getBoundingClientRect().height).to.equal(24);
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('still reaches that control through the deprecated regenerate-button__control part alias', async () => {
     const style = document.createElement('style');
     style.textContent =
       'lr-message-actions.dense::part(regenerate-button__control) { min-inline-size: 24px; min-block-size: 24px; }';

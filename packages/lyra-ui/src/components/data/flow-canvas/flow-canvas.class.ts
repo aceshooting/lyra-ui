@@ -17,6 +17,7 @@ import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
@@ -148,16 +149,16 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
 /**
  * `<lr-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws
  * SVG edges between their handles, runs a shared layered auto-layout for unpositioned nodes, and owns
- * all selection/drag/connect interaction. Readonly (viewer) by default; opt into editor gestures
+ * all selection/drag/connect interaction. A viewer by default; opt into editor gestures
  * individually via `nodes-draggable`, `connectable`, `droppable`. `nodes` and `edges` remain
  * controlled and are never mutated internally. Selection is an internally applied interaction
  * state: `selectedNodeIds`/`selectedEdgeIds` can seed or replace it, and node/edge activation
  * updates those arrays before emitting `lr-selection-change`. Interaction announcements are
  * flushed to the document's shared light-DOM polite sink; mount is silent and repeated identical
  * messages remain separate announcements. `[part="live-region"]` is only an aria-hidden mirror.
- * Turning on `locked` is a live safety boundary: active pan, node-drag, connect, and palette-drop
+ * Turning on `readonly` is a live safety boundary: active pan, node-drag, connect, and palette-drop
  * previews are canceled and their window listeners are retired before later pointer events can
- * commit. Viewport-mutating imperative methods, including `focusNode()`, are inert while locked.
+ * commit. Viewport-mutating imperative methods, including `focusNode()`, are inert while readonly.
  * Replacing the controlled `nodes` model similarly retires node-drag and connect gestures before
  * their captured ids can outlive that model; background pan remains independent. Node and edge
  * collections reject blank ids and later duplicates at assignment, so the first valid occurrence
@@ -290,6 +291,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    locked: 'readonly',
+  };
 
   private _nodes: readonly FlowNode[] = Object.freeze([]);
   /** Controlled node model, deeply snapshotted and frozen at assignment, bounded to the first
@@ -340,7 +344,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   @property({ type: Boolean }) droppable = false;
   /** Freezes pan/zoom/edit gestures and viewport-mutating methods. Enabling it live cancels and
    * rolls back every active gesture before retiring its global listeners. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+  /**
+   * Deprecated alias of `readonly`, with identical behavior. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `readonly`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true }) locked = false;
+
   private _selectedNodeIds: readonly string[] = Object.freeze([]);
   /** The last-assigned candidate ids, syntactically sanitized (capped/deduped/nonblank) but not
    *  yet filtered against `nodes` -- kept separately so a selection assigned before its
@@ -775,7 +787,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this._selectedEdgeIds = this.snapshotSelectedIds(this._requestedSelectedEdgeIds, edgeIds);
     }
     if (
-      (changed.has('locked') && this.locked) ||
+      (changed.has('readonly') && this.readonly) ||
       changed.has('orientation')
     ) {
       this.cancelActiveGestures();
@@ -852,7 +864,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       changed.has('decorations') ||
       changed.has('minZoom') ||
       changed.has('maxZoom') ||
-      changed.has('locked') ||
+      changed.has('readonly') ||
       changed.has('orientation') ||
       changed.has('layerGap') ||
       changed.has('nodeGap')
@@ -1259,7 +1271,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   setViewport(next: { x: number; y: number; zoom: number }): void {
-    if (this.locked) return;
+    if (this.readonly) return;
     this.panX = finiteNumber(next.x, this.panX);
     this.panY = finiteNumber(next.y, this.panY);
     this.zoomLevel = this.clampZoom(next.zoom);
@@ -1272,24 +1284,24 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   /** Increase viewport zoom around the canvas center, clamped to the effective zoom bounds. */
   zoomIn(): void {
-    if (this.locked) return;
+    if (this.readonly) return;
     this.zoomAtCenter(this.zoomLevel * ZOOM_MULTIPLIER);
   }
 
   /** Decrease viewport zoom around the canvas center, clamped to the effective zoom bounds. */
   zoomOut(): void {
-    if (this.locked) return;
+    if (this.readonly) return;
     this.zoomAtCenter(this.zoomLevel / ZOOM_MULTIPLIER);
   }
 
   /** Restore zoom to 1 while preserving the current pan coordinates. */
   resetZoom(): void {
-    if (this.locked) return;
+    if (this.readonly) return;
     this.setViewport({ x: this.panX, y: this.panY, zoom: 1 });
   }
 
   fit(options?: { padding?: number }): void {
-    if (this.locked || this.nodes.length === 0) return;
+    if (this.readonly || this.nodes.length === 0) return;
     const padding = finiteRange(options?.padding ?? DEFAULT_FIT_PADDING, DEFAULT_FIT_PADDING, 0);
     let minX = Infinity;
     let minY = Infinity;
@@ -1317,7 +1329,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   focusNode(id: string, options?: { zoom?: number }): void {
-    if (this.locked) return;
+    if (this.readonly) return;
     const node = this.nodes.find((n) => n.id === id);
     if (!node) return;
     const resolved = this.resolvedNode(node);
@@ -1391,7 +1403,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
         minZoom: bounds.min,
         maxZoom: bounds.max,
       }),
-      locked: this.locked,
+      locked: this.readonly,
       orientation: this.orientation,
       layerGap: this.safeLayerGap,
       nodeGap: this.safeNodeGap,
@@ -1468,7 +1480,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onWheel = (e: WheelEvent): void => {
-    if (this.locked || !this.viewportEl) return;
+    if (this.readonly || !this.viewportEl) return;
     if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     e.preventDefault();
     // Wheel events arrive in dense bursts; neither the viewport's rect nor the resolved text
@@ -1489,7 +1501,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   };
 
   private onBackgroundPointerDown = (e: PointerEvent): void => {
-    if (this.locked) return;
+    if (this.readonly) return;
     if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     this.panDrag = {
       pointerId: e.pointerId,
@@ -1511,7 +1523,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onBackgroundPointerMove = (e: PointerEvent): void => {
     const drag = this.panDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    if (this.locked) {
+    if (this.readonly) {
       this.endBackgroundPan(true);
       return;
     }
@@ -1525,7 +1537,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onBackgroundPointerUp = (e: PointerEvent): void => {
     if (!this.panDrag || e.pointerId !== this.panDrag.pointerId) return;
-    this.endBackgroundPan(this.locked || e.type !== 'pointerup');
+    this.endBackgroundPan(this.readonly || e.type !== 'pointerup');
   };
 
   private endBackgroundPan(rollback: boolean): void {
@@ -1548,7 +1560,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onViewportKeyDown = (e: KeyboardEvent): void => {
     // Roving node/edge navigation is bound on each item individually and stops propagation, so
     // this only ever fires when the viewport region itself has focus.
-    if (e.target !== this.viewportEl || this.locked) return;
+    if (e.target !== this.viewportEl || this.readonly) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       this.zoomIn();
@@ -1590,7 +1602,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // ---------------------------------------------------------------------
 
   private onViewportDragOver = (e: DragEvent): void => {
-    if (!this.droppable || this.locked) return;
+    if (!this.droppable || this.readonly) return;
     if (!e.dataTransfer?.types.includes(FLOW_PALETTE_MIME_TYPE)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -1603,7 +1615,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onViewportDrop = (e: DragEvent): void => {
     this.viewportEl?.removeAttribute('data-drop-active');
-    if (!this.droppable || this.locked) return;
+    if (!this.droppable || this.readonly) return;
     const raw = e.dataTransfer?.getData(FLOW_PALETTE_MIME_TYPE);
     if (!raw) return;
     e.preventDefault();
@@ -1897,7 +1909,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onItemKeyDown(e: KeyboardEvent, index: number, activate: (additive: boolean) => void): void {
     const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-    if (this.nodesDraggable && !this.locked && (e.ctrlKey || e.metaKey) && arrowKeys.includes(e.key)) {
+    if (this.nodesDraggable && !this.readonly && (e.ctrlKey || e.metaKey) && arrowKeys.includes(e.key)) {
       const item = this.rovingItems()[index];
       if (item?.kind === 'node') {
         e.preventDefault();
@@ -1931,7 +1943,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       }
       return;
     }
-    if (this.connectable && !this.locked && e.key === 'c' && e.target === e.currentTarget) {
+    if (this.connectable && !this.readonly && e.key === 'c' && e.target === e.currentTarget) {
       const item = this.rovingItems()[index];
       if (item?.kind === 'node') {
         e.preventDefault();
@@ -2050,7 +2062,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onNodePointerDown(e: PointerEvent, node: FlowNode): void {
-    if (!this.nodesDraggable || this.locked || node.disabled) return;
+    if (!this.nodesDraggable || this.readonly || node.disabled) return;
     const wrapper = e.currentTarget as HTMLElement;
     if (this.isFromTopLayerSurface(e, wrapper)) return;
     // An unscoped `closest()` match cannot be trusted on its own here: `[part='viewport']` is an
@@ -2089,7 +2101,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodePointerMove = (e: PointerEvent): void => {
     const drag = this.nodeDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    if (this.locked || !this.nodesDraggable) {
+    if (this.readonly || !this.nodesDraggable) {
       this.endNodeDrag(false);
       return;
     }
@@ -2106,7 +2118,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodePointerUp = (e: PointerEvent): void => {
     const drag = this.nodeDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    this.endNodeDrag(!this.locked && e.type === 'pointerup');
+    this.endNodeDrag(!this.readonly && e.type === 'pointerup');
   };
 
   private endNodeDrag(commit: boolean): void {
@@ -2208,7 +2220,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onWorldPointerDown = (e: PointerEvent): void => {
-    if (!this.connectable || this.locked || this.connectState) return;
+    if (!this.connectable || this.readonly || this.connectState) return;
     if (this.isFromTopLayerSurface(e, this.viewportEl)) return;
     const path = e.composedPath();
     const handleEl = path.find((el) => isHtmlElement(el) && el.dataset['handleKind'] === 'output') as
@@ -2261,7 +2273,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onConnectPointerMove = (e: PointerEvent): void => {
     if (!this.connectState) return;
-    if (this.locked || !this.connectable) {
+    if (this.readonly || !this.connectable) {
       this.onConnectPointerCancel();
       return;
     }
@@ -2280,7 +2292,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onConnectPointerUp = (e: PointerEvent): void => {
     if (!this.connectState) return;
-    if (this.locked || !this.connectable) {
+    if (this.readonly || !this.connectable) {
       this.onConnectPointerCancel();
       return;
     }
@@ -2417,7 +2429,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (!target) return;
     const sourceOutputs = this.nodes.find((n) => n.id === sourceId)?.outputs ?? [{ id: 'out' }];
     const targetInputs = target.inputs ?? [{ id: 'in' }];
-    if (!this.connectable || this.locked) return;
+    if (!this.connectable || this.readonly) return;
     this.emit(
       'lr-connect',
       Object.freeze({

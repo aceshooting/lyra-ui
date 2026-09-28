@@ -58,7 +58,7 @@ dialog.addEventListener('lr-hide', (event) => {
 
 Veto points exist where an operation is worth intercepting — `lr-export` on `<lr-export-button>`,
 `lr-show` / `lr-hide` on `<lr-dialog>`, `<lr-details>`, `<lr-tooltip>` and `<lr-popover>`,
-`lr-remove` on `<lr-tag>` and `<lr-token-input>`, the approve/deny pair on
+`lr-remove` on `<lr-tag>`, `lr-token-remove-request` on `<lr-token-input>`, the approve/deny pair on
 `<lr-tool-approval-dialog>`. Each component's own page says which of its events are cancelable;
 everything else is a notification that has already happened.
 

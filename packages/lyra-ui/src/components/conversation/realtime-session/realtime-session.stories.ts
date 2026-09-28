@@ -42,7 +42,7 @@ export const CaptureVisibilityFocus: Story = {
       state="connected"
       @keydown=${(event: KeyboardEvent) => {
         if (event.key.toLocaleLowerCase() !== 'v') return;
-        (event.currentTarget as LyraRealtimeSession).showCapture = false;
+        (event.currentTarget as LyraRealtimeSession).withoutCapture = true;
       }}
     ></lr-realtime-session>
   `,

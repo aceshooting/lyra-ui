@@ -10,6 +10,8 @@ import {
 } from '../../../utilities/animation-registry.js';
 import { styles } from './animation.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   resolveCatalogAnimation,
   resolveNamedEasing,
@@ -292,15 +294,14 @@ function resolveTimingToken(
  * already mid-flight is not retroactively re-mirrored if an ancestor `dir`
  * flips while it plays; the next rebuild picks up the change.
  *
- * `respectReducedMotion` (default `true`) caps playback to one iteration and
- * calls `finish()` immediately instead of playing, whenever the OS/browser
- * reports `prefers-reduced-motion: reduce` -- the target snaps straight to
- * its resolved end state, and `lr-start`/`lr-finish` still fire in order
+ * By default, whenever the OS/browser reports `prefers-reduced-motion: reduce`, playback is
+ * capped to one iteration and `finish()` is called immediately instead of playing -- the target
+ * snaps straight to its resolved end state, and `lr-start`/`lr-finish` still fire in order
  * so a consumer sequencing further UI off those events keeps working even
- * though nothing visibly interpolated. Set `respectReducedMotion="false"`
+ * though nothing visibly interpolated. Set `ignore-reduced-motion`
  * only for genuine user-triggered feedback (e.g. a drag-confirm snap-back)
  * where a silent jump would be more confusing than a fast real animation --
- * ambient/decorative animation should always leave this at its default.
+ * ambient/decorative animation should always leave it unset.
  *
  * `timingPreset` (default `'custom'`) optionally derives `duration`/`easing`
  * from the shared `--lr-transition-fast`/`-base`/`-ambient` tokens instead
@@ -325,6 +326,9 @@ function resolveTimingToken(
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    respectReducedMotion: ['ignoreReducedMotion', invertAlias, invertAlias],
+  };
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
   @property() name: string = 'none';
@@ -341,6 +345,11 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
   @property({ attribute: 'timing-preset', reflect: true })
   timingPreset: LyraAnimationTimingPreset = 'custom';
+  /** Plays normally even under `prefers-reduced-motion: reduce` instead of instantly finishing.
+   *  Reserve it for genuine user-triggered feedback; see the class doc. */
+  @property({ type: Boolean, attribute: 'ignore-reduced-motion', reflect: true })
+  ignoreReducedMotion = false;
+  /** @deprecated Use `ignore-reduced-motion` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'respect-reduced-motion',
@@ -502,7 +511,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       'iterations',
       'iterationStart',
       'timingPreset',
-      'respectReducedMotion',
+      'ignoreReducedMotion',
     ] as const;
     const textDirection = this.effectiveDirection;
     const textDirectionChanged =
@@ -683,7 +692,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       keyframes = [{}, {}];
     }
     const reduced =
-      this.respectReducedMotion &&
+      !this.ignoreReducedMotion &&
       prefersReducedMotion(this.ownerDocument.defaultView);
     const timingPreset = this.safeTimingPreset;
     const { duration, easing } =

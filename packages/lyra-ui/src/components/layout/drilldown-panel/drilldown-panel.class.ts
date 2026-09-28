@@ -26,6 +26,7 @@ import '../../retrieval/source-card/source-card.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_drilldownUntitledNode, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
@@ -572,6 +573,9 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showFocusButton: ['withoutFocusButton', invertAlias, invertAlias],
+  };
 
   private effectivePath: readonly LyraDrilldownNode[] = EMPTY_PATH;
   private pathSourceCount = 0;
@@ -628,7 +632,13 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   /** Forwarded to every nested entity card. */
   @property({ attribute: 'community-label' }) communityLabel = '';
 
-  /** Forwarded to every nested entity card. */
+  /** Hides the built-in focus action of every nested entity card, for pages with no graph.
+   *  Forwarded to each card as its own `withoutFocusButton`. */
+  @property({ type: Boolean, attribute: 'without-focus-button' })
+  withoutFocusButton = false;
+
+  /** Forwarded to every nested entity card.
+   *  @deprecated Use `without-focus-button` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-focus-button',
@@ -947,7 +957,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
         <lr-source-card
           part="evidence-item"
           source-id=${item.evidenceId}
-          title=${item.title}
+          heading=${item.title}
           .page=${item.page}
           href=${item.href ?? nothing}
           @lr-expand=${(event: CustomEvent<{ expanded: boolean }>) =>
@@ -1023,7 +1033,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           .entity=${this.entityCardValue(entity)}
           .types=${this.effectiveTypes}
           .communityLabel=${this.communityLabel}
-          .showFocusButton=${this.showFocusButton}
+          .withoutFocusButton=${this.withoutFocusButton}
           @lr-entity-select=${(event: CustomEvent<{ entityId: string }>) =>
             this.onEntityActivate(nodeId, entity.entityId, event)}
         ></lr-entity-card>

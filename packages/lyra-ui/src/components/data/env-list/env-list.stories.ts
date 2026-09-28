@@ -30,7 +30,7 @@ export const Default: Story = {
 };
 
 export const ScreenShareSafe: Story = {
-  name: 'Screen-share safe (revealable=false)',
+  name: 'Screen-share safe (without-reveal)',
   parameters: {
     docs: {
       description: {
@@ -41,7 +41,7 @@ export const ScreenShareSafe: Story = {
     },
   },
   render: () =>
-    html`<lr-env-list style="max-width:32rem" .entries=${entries} .revealable=${false}></lr-env-list>`,
+    html`<lr-env-list style="max-width:32rem" .entries=${entries} without-reveal></lr-env-list>`,
 };
 
 export const AllSecretsMasked: Story = {

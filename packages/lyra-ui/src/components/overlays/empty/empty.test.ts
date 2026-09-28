@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // A stand-in for a component that forwards its own light-DOM content into
 // `lr-empty`'s slots through nested `<slot>` elements (e.g. a card/widget
@@ -670,14 +671,20 @@ it('reacts to icon and actions content added or removed after initial mount (slo
   expect(actions.hasAttribute('hidden')).to.be.true;
 });
 
-it('reflects the compact attribute', async () => {
-  const el = (await fixture(html`<lr-empty heading="Nothing here" compact></lr-empty>`)) as LyraEmpty;
-  expect(el.compact).to.be.true;
-  expect(el.hasAttribute('compact')).to.be.true;
+it('reflects size and leaves it unset by default', async () => {
+  const el = (await fixture(html`<lr-empty heading="Nothing here" size="s"></lr-empty>`)) as LyraEmpty;
+  expect(el.size).to.equal('s');
+  expect(el.getAttribute('size')).to.equal('s');
 
-  el.compact = false;
+  el.size = 'huge' as LyraEmpty['size'];
   await el.updateComplete;
-  expect(el.hasAttribute('compact')).to.be.false;
+  expect(el.size).to.be.undefined;
+  expect(el.hasAttribute('size')).to.be.false;
+
+  const bare = (await fixture(html`<lr-empty heading="Nothing here"></lr-empty>`)) as LyraEmpty;
+  expect(bare.size).to.be.undefined;
+  expect(bare.hasAttribute('size')).to.be.false;
+  expect(bare.compact).to.be.false;
 });
 
 it('keeps the default (non-compact) base/heading styling unchanged', async () => {
@@ -715,15 +722,15 @@ it('lets the description slot override the description attribute instead of conc
   expect(assigned[0]?.textContent).to.equal('rich');
 });
 
-it('applies compact styling to [part="base"] and [part="heading"] when compact', async () => {
+it('applies the compact density to [part="base"] and [part="heading"] at size="s"', async () => {
   const normal = (await fixture(
     html`<lr-empty heading="Nothing here" description="Try again."></lr-empty>`,
   )) as LyraEmpty;
   const compact = (await fixture(
-    html`<lr-empty heading="Nothing here" description="Try again." compact></lr-empty>`,
+    html`<lr-empty heading="Nothing here" description="Try again." size="s"></lr-empty>`,
   )) as LyraEmpty;
 
-  expect(compact.hasAttribute('compact')).to.be.true;
+  expect(compact.getAttribute('size')).to.equal('s');
 
   const normalBase = normal.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const compactBase = compact.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -741,12 +748,12 @@ it('applies compact styling to [part="base"] and [part="heading"] when compact',
   ).to.be.lessThan(parseFloat(getComputedStyle(normalBase).paddingBlockStart));
 });
 
-it('shrinks the icon/heading/description gap in compact mode, not just the padding', async () => {
+it('shrinks the icon/heading/description gap at the compact density, not just the padding', async () => {
   const normal = (await fixture(
     html`<lr-empty heading="Nothing here" description="Try again."></lr-empty>`,
   )) as LyraEmpty;
   const compact = (await fixture(
-    html`<lr-empty heading="Nothing here" description="Try again." compact></lr-empty>`,
+    html`<lr-empty heading="Nothing here" description="Try again." size="s"></lr-empty>`,
   )) as LyraEmpty;
   const normalGap = parseFloat(getComputedStyle(normal.shadowRoot!.querySelector('[part="base"]')!).gap);
   const compactGap = parseFloat(getComputedStyle(compact.shadowRoot!.querySelector('[part="base"]')!).gap);
@@ -754,9 +761,9 @@ it('shrinks the icon/heading/description gap in compact mode, not just the paddi
 });
 
 it('--lr-empty-compact-gap overrides the default compact gap', async () => {
-  const defaultEl = (await fixture(html`<lr-empty compact heading="Nothing here"></lr-empty>`)) as LyraEmpty;
+  const defaultEl = (await fixture(html`<lr-empty size="s" heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const overriddenEl = (await fixture(
-    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-gap: 6px;"></lr-empty>`,
+    html`<lr-empty size="s" heading="Nothing here" style="--lr-empty-compact-gap: 6px;"></lr-empty>`,
   )) as LyraEmpty;
   const defaultGap = getComputedStyle(defaultEl.shadowRoot!.querySelector('[part="base"]')!).gap;
   const overriddenGap = getComputedStyle(overriddenEl.shadowRoot!.querySelector('[part="base"]')!).gap;
@@ -765,9 +772,9 @@ it('--lr-empty-compact-gap overrides the default compact gap', async () => {
 });
 
 it('--lr-empty-compact-padding overrides the default compact padding', async () => {
-  const defaultEl = (await fixture(html`<lr-empty compact heading="Nothing here"></lr-empty>`)) as LyraEmpty;
+  const defaultEl = (await fixture(html`<lr-empty size="s" heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const overriddenEl = (await fixture(
-    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-padding: 8px 2px;"></lr-empty>`,
+    html`<lr-empty size="s" heading="Nothing here" style="--lr-empty-compact-padding: 8px 2px;"></lr-empty>`,
   )) as LyraEmpty;
   const defaultPadding = getComputedStyle(defaultEl.shadowRoot!.querySelector('[part="base"]')!).padding;
   const overriddenPadding = getComputedStyle(overriddenEl.shadowRoot!.querySelector('[part="base"]')!).padding;
@@ -775,9 +782,9 @@ it('--lr-empty-compact-padding overrides the default compact padding', async () 
   expect(overriddenPadding).to.not.equal(defaultPadding);
 });
 
-it('--lr-empty-compact-align: center overrides both align-items and text-align in compact mode', async () => {
+it('--lr-empty-compact-align: center overrides both align-items and text-align at the compact density', async () => {
   const el = (await fixture(
-    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-align: center;"></lr-empty>`,
+    html`<lr-empty size="s" heading="Nothing here" style="--lr-empty-compact-align: center;"></lr-empty>`,
   )) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const style = getComputedStyle(base);
@@ -785,8 +792,8 @@ it('--lr-empty-compact-align: center overrides both align-items and text-align i
   expect(style.textAlign).to.equal('center');
 });
 
-it('compact mode still defaults to flex-start/start when --lr-empty-compact-align is unset', async () => {
-  const el = (await fixture(html`<lr-empty compact heading="Nothing here"></lr-empty>`)) as LyraEmpty;
+it('the compact density still defaults to flex-start/start when --lr-empty-compact-align is unset', async () => {
+  const el = (await fixture(html`<lr-empty size="s" heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const style = getComputedStyle(base);
   expect(style.alignItems).to.equal('flex-start');
@@ -795,7 +802,7 @@ it('compact mode still defaults to flex-start/start when --lr-empty-compact-alig
 
 it('--lr-empty-compact-font-size overrides the compact heading font size', async () => {
   const el = (await fixture(
-    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-font-size: 20px;"></lr-empty>`,
+    html`<lr-empty size="s" heading="Nothing here" style="--lr-empty-compact-font-size: 20px;"></lr-empty>`,
   )) as LyraEmpty;
   const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
   expect(getComputedStyle(heading).fontSize).to.equal('20px');
@@ -806,7 +813,7 @@ it('leaves the compact heading font size inherited when the token is unset, so i
     html`<lr-empty heading="Nothing here"></lr-empty>`,
   )) as LyraEmpty;
   const compact = (await fixture(
-    html`<lr-empty compact heading="Nothing here"></lr-empty>`,
+    html`<lr-empty size="s" heading="Nothing here"></lr-empty>`,
   )) as LyraEmpty;
   const normalHeading = normal.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
   const compactHeading = compact.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
@@ -895,4 +902,87 @@ it('colours the icon with the muted text role, not the border token', async () =
   const el = (await fixture(html`<lr-empty heading="Nothing here" style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-neutral-fill-quiet: rgb(1, 2, 3); --lr-theme-color-neutral-fill-normal: rgb(4, 5, 6); --lr-theme-color-text-quiet: rgb(7, 8, 9)"><span>*</span></lr-empty>`)) as LyraEmpty;
   const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
   expect(getComputedStyle(icon).color).to.equal('rgb(7, 8, 9)');
+});
+
+describe('size ladder and the deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-empty', kind: 'property', name: 'compact' }];
+  const densityOf = (el: LyraEmpty): Record<string, string> => {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
+    const heading = getComputedStyle(el.shadowRoot!.querySelector('[part="heading"]')!);
+    return {
+      alignItems: base.alignItems,
+      textAlign: base.textAlign,
+      padding: base.padding,
+      gap: base.gap,
+      fontWeight: heading.fontWeight,
+    };
+  };
+  const mount = async (attributes: string): Promise<LyraEmpty> => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    host.innerHTML = `<lr-empty heading="Nothing here" description="Try again." ${attributes}></lr-empty>`;
+    const el = host.firstElementChild as LyraEmpty;
+    await el.updateComplete;
+    return el;
+  };
+
+  it('selects the compact density at s and below, and the default at m and above', async () => {
+    const normal = densityOf(await mount(''));
+    const compact = densityOf(await mount('size="s"'));
+    expect(compact).to.not.deep.equal(normal);
+    for (const size of ['2xs', 'xs', 'small']) {
+      expect(densityOf(await mount(`size="${size}"`)), size).to.deep.equal(compact);
+    }
+    for (const size of ['m', 'l', 'xl', 'medium', 'large']) {
+      expect(densityOf(await mount(`size="${size}"`)), size).to.deep.equal(normal);
+    }
+  });
+
+  it('renders compact exactly like size="s", keeps reflecting it, and warns once, naming size', async () => {
+    const canonical = densityOf(await mount('size="s"'));
+    let aliased!: LyraEmpty;
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      aliased = await mount('compact');
+      await mount('compact');
+    });
+    expect(densityOf(aliased)).to.deep.equal(canonical);
+    expect(aliased.compact).to.be.true;
+    expect(aliased.hasAttribute('compact')).to.be.true;
+    expect(aliased.size).to.equal('s');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-empty:property:compact']);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('keeps compact in step with size, last write winning, and never warns for size writes', async () => {
+    const normal = densityOf(await mount(''));
+    const compact = densityOf(await mount('size="s"'));
+    const quiet = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await mount('size="xs"');
+      expect(el.compact).to.be.true;
+      el.size = 'l';
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+    });
+    expect(quiet).to.have.length(0);
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await mount('compact');
+      sizeLast.size = 'm';
+      await sizeLast.updateComplete;
+      expect(sizeLast.compact).to.be.false;
+      expect(sizeLast.hasAttribute('compact')).to.be.false;
+      expect(densityOf(sizeLast)).to.deep.equal(normal);
+      const sizeAttributeLast = await mount('compact size="m"');
+      expect(sizeAttributeLast.size, 'the later size attribute wins').to.equal('m');
+      expect(sizeAttributeLast.getAttribute('size')).to.equal('m');
+      expect(sizeAttributeLast.compact).to.be.false;
+      expect(densityOf(sizeAttributeLast)).to.deep.equal(normal);
+      const compactLast = await mount('size="m" compact');
+      expect(compactLast.size).to.equal('s');
+      expect(densityOf(compactLast)).to.deep.equal(compact);
+      compactLast.compact = false;
+      await compactLast.updateComplete;
+      expect(compactLast.size).to.be.undefined;
+      expect(densityOf(compactLast)).to.deep.equal(normal);
+    });
+  });
 });

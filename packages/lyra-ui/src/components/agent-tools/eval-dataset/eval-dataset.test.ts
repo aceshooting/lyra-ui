@@ -5,6 +5,15 @@ import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// The locale-collation fixture deliberately retains the unregistered English messages.
+expectLocaleFallback('de', [
+  'evalDatasetAddExample', 'evalDatasetColumnExpectedOutput', 'evalDatasetColumnInput',
+  'evalDatasetColumnTags', 'evalDatasetImportLabel', 'evalDatasetLabel', 'evalDatasetRemoveExample',
+  'evalDatasetTagFilterLabel', 'exportButtonLabel', 'exportFormatMenuLabel', 'fileInputDefaultLabel',
+  'tableFilterLabel', 'tableFilterPlaceholder',
+]);
 
 function examples(): EvalExample[] {
   return [
@@ -24,7 +33,9 @@ it('uses one compact localized import instruction with a matching accessible nam
   }}></lr-eval-dataset>`);
   const picker = el.shadowRoot!.querySelector<LyraFileInput>('lr-file-input')!;
   await picker.updateComplete;
-  expect(picker.compact).to.equal(true);
+  // The tight dropzone density comes from the dropzone hooks, not the deprecated `compact`.
+  expect(picker.hasAttribute('compact')).to.equal(false);
+  expect(getComputedStyle(picker.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).paddingTop).to.equal('8px');
   expect(picker.label).to.equal(undefined);
   expect(picker.querySelector('[slot="dropzone"]')!.textContent).to.equal('Importer les exemples');
   expect(picker.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!.hidden).to.equal(true);
@@ -198,27 +209,53 @@ it('gates search, tags, and row selection while disabled', async () => {
   expect(table.selectionMode).to.equal('none');
   let selected = 0;
   el.addEventListener('lr-example-select', () => selected++);
-  table.dispatchEvent(new CustomEvent('lr-row-click', {
-    bubbles: true,
-    composed: true,
-    detail: { row: examples()[0] },
-  }));
+  table.shadowRoot!.querySelector<HTMLElement>('tbody tr[part="row"]')!.click();
   expect(selected).to.equal(0);
 });
 
 it('does not leak raw composed child events alongside its translated request events', async () => {
   const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
-  let rawRows = 0;
-  let translatedRows = 0;
-  el.addEventListener('lr-row-click', () => rawRows++);
-  el.addEventListener('lr-example-select', () => translatedRows++);
-  el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-row-click', {
+  const rawRows: string[] = [];
+  const selectedIds: (string | null)[] = [];
+  el.addEventListener('lr-row-activate', () => rawRows.push('lr-row-activate'));
+  el.addEventListener('lr-row-click', () => rawRows.push('lr-row-click'));
+  el.addEventListener('lr-example-select', (e) =>
+    selectedIds.push((e as CustomEvent<{ exampleId: string | null }>).detail.exampleId),
+  );
+  // A real row activation: the table fires the canonical lr-row-activate and then its deprecated
+  // lr-row-click alias, and the wrapper must translate once and contain both.
+  const table = el.shadowRoot!.querySelector('lr-table') as LyraTable<EvalExample>;
+  table.shadowRoot!.querySelectorAll<HTMLElement>('tbody tr[part="row"]')[1]!.click();
+  expect(rawRows).to.deep.equal([]);
+  expect(selectedIds).to.deep.equal(['ex-2']);
+
+  // The deprecated row alias is contained even when it arrives on its own.
+  table.dispatchEvent(new CustomEvent('lr-row-click', {
     bubbles: true,
     composed: true,
     detail: { row: examples()[0] },
   }));
-  expect(rawRows).to.equal(0);
-  expect(translatedRows).to.equal(1);
+  expect(rawRows).to.deep.equal([]);
+});
+
+it('contains both tag-chip toggle events while still applying the tag filter', async () => {
+  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+  const leaked: string[] = [];
+  for (const type of ['lr-chip-toggle-request', 'lr-chip-select']) {
+    el.addEventListener(type, () => leaked.push(type));
+  }
+  const mathChip = ([...el.shadowRoot!.querySelectorAll('lr-chip')] as LyraChip[]).find((chip) => chip.value === 'math')!;
+  mathChip.click();
+  await el.updateComplete;
+  expect(leaked).to.deep.equal([]);
+  expect(gridRowCount(el)).to.equal(2);
+  expect(mathChip.selected).to.be.true;
+
+  mathChip.click();
+  await el.updateComplete;
+  expect(leaked).to.deep.equal([]);
+  expect(gridRowCount(el)).to.equal(3);
+  expect(mathChip.selected).to.be.false;
 });
 
 it('contains auxiliary native/child events while deliberately passing through table sorting', async () => {

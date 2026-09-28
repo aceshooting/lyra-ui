@@ -40,7 +40,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-toggle-border-color, var(--_lr-toggle-border-default));
     border-radius: var(--lr-toggle-radius, var(--lr-form-control-radius));
-    background: var(--lr-toggle-background, transparent);
+    background: var(--lr-toggle-bg, var(--lr-toggle-background, transparent));
     color: var(--lr-toggle-color, var(--lr-color-text));
     font: inherit;
     font-size: var(--lr-form-control-font-size);
@@ -59,22 +59,32 @@ export const styles = css`
      WCAG 1.4.11 against the surface. */
   :host([pressed]) [part~='button'] {
     z-index: var(--lr-layer-content);
-    background: var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet));
+    background: var(--lr-toggle-pressed-bg, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet)));
     color: var(--lr-toggle-pressed-color, var(--lr-color-on-quiet));
     border-color: var(--lr-toggle-pressed-border-color, var(--lr-color-border-loud));
   }
 
   :where([part~='button']):not(:disabled):hover {
     background: var(
-      --lr-toggle-hover-background,
-      color-mix(in oklab, var(--lr-toggle-background, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      --lr-toggle-hover-bg,
+      var(
+        --lr-toggle-hover-background,
+        color-mix(
+          in oklab,
+          var(--lr-toggle-bg, var(--lr-toggle-background, transparent)),
+          var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+        )
+      )
     );
   }
 
   :where([part~='button']):not(:disabled):active {
     background: color-mix(
       in oklab,
-      var(--lr-toggle-hover-background, var(--lr-toggle-background, transparent)),
+      var(
+        --lr-toggle-hover-bg,
+        var(--lr-toggle-hover-background, var(--lr-toggle-bg, var(--lr-toggle-background, transparent)))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -82,7 +92,13 @@ export const styles = css`
   :host([pressed]) :where([part~='button']):not(:disabled):hover {
     background: color-mix(
       in oklab,
-      var(--lr-toggle-hover-background, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet))),
+      var(
+        --lr-toggle-hover-bg,
+        var(
+          --lr-toggle-hover-background,
+          var(--lr-toggle-pressed-bg, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet)))
+        )
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
@@ -90,7 +106,13 @@ export const styles = css`
   :host([pressed]) :where([part~='button']):not(:disabled):active {
     background: color-mix(
       in oklab,
-      var(--lr-toggle-hover-background, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet))),
+      var(
+        --lr-toggle-hover-bg,
+        var(
+          --lr-toggle-hover-background,
+          var(--lr-toggle-pressed-bg, var(--lr-toggle-pressed-background, var(--lr-color-fill-quiet)))
+        )
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showUnknownOption` / `show-unknown-option` since `21.1.0`; use property `with-unknown-option`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -139,9 +139,10 @@ exactly like the multi-option case, until the trigger is actually activated.
   from pushing it off-screen; `--lr-popover-viewport-clamp` does **not** apply to a synced listbox,
   and still does with `sync` unset. Assignment while open repositions in place without closing;
   unsetting it releases the inline width the positioner wrote
-- `showUnknownOption: boolean = false` (attribute `show-unknown-option`, reflected) — appends every
+- `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
-  keyboard-reachable, re-selectable row. Off by default
+  keyboard-reachable, re-selectable row. Off by default. Deprecated alias: `show-unknown-option`/`showUnknownOption`
+  (use `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
   row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank
@@ -152,7 +153,7 @@ exactly like the multi-option case, until the trigger is actually activated.
   flight). While `true`, a committed value that currently matches no option renders the localized
   `loading` placeholder in the trigger label or the relevant `multiple` tag instead of the raw
   value, with no `notInCatalog`/`[part='unknown-value']` badge and no synthetic
-  `showUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
+  `withUnknownOption` listbox row — "not yet resolved" is a different state from "known to be
   missing". It covers an **empty** selection too: with nothing selected — a create form whose
   catalogue is still being fetched, or an edit form whose saved selection is legitimately empty —
   the trigger renders that same localized text in place of `placeholder`, from the same `loading`
@@ -218,7 +219,7 @@ stale-value row — see `--lr-select-unknown-value-border-style`/`-color` below.
 that same value's own `<lr-option>` catalog simply hasn't arrived yet (unlike `<lr-combobox>`,
 `<lr-select>` has no async `source` of its own, so this is consumer-driven rather than automatic):
 a still-unmatched value then renders the localized `loading` placeholder instead of the raw value,
-with no `unknown-value` badge and no synthetic `showUnknownOption` row, since it is not yet known
+with no `unknown-value` badge and no synthetic `withUnknownOption` row, since it is not yet known
 to be missing. Once the matching option mounts, the real label renders on the next render with no
 `value`/`selectedOptions` re-assignment needed, whether or not `loading` is also flipped back to
 `false`. The same flag covers the other half of that state: with **nothing** selected the trigger
@@ -305,7 +306,7 @@ following option rows; options with an empty `group` get no heading or group wra
 `lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set),
 `option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
-only while `show-unknown-option` is set), `expand-icon`, `error`, and
+only while `with-unknown-option` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
@@ -407,7 +408,7 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 `--lr-select-unknown-value-border-color` (default `var(--lr-color-border)`) retheme the
 `[part='unknown-value']` badge described above under "Unknown committed values".
 `--lr-select-option-badge-bg` (default `var(--lr-color-brand-quiet)`) retints the
-`[part='option-badge']` "not in catalog" badge `show-unknown-option` renders on the synthetic
+`[part='option-badge']` "not in catalog" badge `with-unknown-option` renders on the synthetic
 listbox row, independent of the unknown-value chip's border above.
 
 `--lr-select-tag-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) retints a hovered

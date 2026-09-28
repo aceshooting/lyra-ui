@@ -688,6 +688,7 @@ describe('loading / error / empty status region', () => {
     const empty = el.shadowRoot!.querySelector('[part="empty"]')!;
     expect(empty != null).to.equal(true);
     expect(empty.tagName.toLowerCase()).to.equal('lr-empty');
+    expect(empty.getAttribute('size')).to.equal('s');
   });
 
   it('announces only a later settled zero-result transition from light DOM', async () => {

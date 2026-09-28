@@ -27,8 +27,11 @@ export const styles = css`
     --_lr-callout-close-background-active: color-mix(
       in oklab,
       var(
-        --lr-icon-button-background-hover,
-        var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg))
+        --lr-icon-button-bg-hover,
+        var(
+          --lr-icon-button-background-hover,
+          var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg))
+        )
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
@@ -48,7 +51,7 @@ export const styles = css`
     padding: var(--lr-callout-padding, var(--_lr-callout-padding));
     border: var(--lr-border-width-thin) solid var(--lr-callout-border, var(--_lr-callout-border));
     border-radius: var(--lr-radius-xs);
-    background: var(--lr-callout-background, var(--_lr-callout-background));
+    background: var(--lr-callout-bg, var(--lr-callout-background, var(--_lr-callout-background)));
     color: var(--lr-callout-color, var(--_lr-callout-color));
     font-size: var(--lr-callout-font-size, var(--_lr-callout-font-size));
   }

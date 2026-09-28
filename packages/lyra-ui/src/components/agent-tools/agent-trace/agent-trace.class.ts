@@ -1,4 +1,5 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -128,6 +129,13 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['spans']);
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showTokens: 'withTokens',
+    showCost: 'withCost',
+    showBars: ['withoutBars', invertAlias, invertAlias],
+  };
+
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-span-visibility-change',
   ]);
@@ -152,15 +160,28 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  string, including `''`, is forwarded verbatim. See `<lr-trace-tree>`'s own `label` property. */
   @property() label?: string;
 
-  /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
+  /** Adds the tokens-in/tokens-out columns; forwarded verbatim to the composed `<lr-trace-tree>`. */
+  @property({ type: Boolean, attribute: 'with-tokens' }) withTokens = false;
+
+  /** Adds the cost column; forwarded verbatim to the composed `<lr-trace-tree>`. */
+  @property({ type: Boolean, attribute: 'with-cost' }) withCost = false;
+
+  /** Suppresses the inline duration bar on the composed `<lr-trace-tree>`, for dense/narrow
+   *  embeddings. */
+  @property({ type: Boolean, attribute: 'without-bars' }) withoutBars = false;
+
+  /** Forwarded verbatim to the composed `<lr-trace-tree>`.
+   *  @deprecated Use `with-tokens`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-tokens' }) showTokens = false;
 
-  /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
+  /** Forwarded verbatim to the composed `<lr-trace-tree>`.
+   *  @deprecated Use `with-cost`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-cost' }) showCost = false;
 
   /** Shows the inline duration bar on the composed `<lr-trace-tree>`, matching the
    *  positive-polarity `showTokens`/`showCost` convention on this same element. Defaults to
-   *  `true`; set `show-bars="false"` to suppress the bar for dense/narrow embeddings. */
+   *  `true`; set `show-bars="false"` to suppress the bar for dense/narrow embeddings.
+   *  @deprecated Use `without-bars`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-bars', converter: trueDefaultBooleanConverter }) showBars = true;
 
   private presentKinds(spans: readonly LyraSpan[]): LyraSpan['kind'][] {
@@ -273,9 +294,9 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
           .spans=${filteredSpans}
           .activeSpanId=${this.activeSpanId}
           .label=${this.label}
-          ?show-tokens=${this.showTokens}
-          ?show-cost=${this.showCost}
-          ?hide-bars=${!this.showBars}
+          ?with-tokens=${this.withTokens}
+          ?with-cost=${this.withCost}
+          ?without-bars=${this.withoutBars}
           @lr-span-select=${this.onTreeSpanSelect}
         ></lr-trace-tree>
       </div>

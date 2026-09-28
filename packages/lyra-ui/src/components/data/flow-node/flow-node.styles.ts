@@ -55,22 +55,33 @@ export const styles = css`
        patterned/gridded canvas background, not a flat panel. */
     box-shadow: var(--lr-shadow-s);
   }
-  /* Density escape -- same convention as lr-source-card's compact. Inline var() fallbacks rather
-     than a :host declaration (which every instance re-declares, shadowing any ancestor value), so
-     a canvas or palette can retune every card from outside; the fallbacks are the pre-existing
-     values scaled down one step, leaving an unset card unchanged.
+  /* Compact density (size s and below). The deprecated compact alias sets size s once upgraded;
+     its own selector only covers server-rendered markup before hydration, while no size is
+     authored -- the :where() keeps that qualifier from adding specificity. Inline var()
+     fallbacks rather than a :host declaration (which every instance re-declares, shadowing any
+     ancestor value), so a canvas or palette can retune every card from outside; the fallbacks are
+     the pre-existing values scaled down one step, leaving an unset card unchanged.
 
      BEFORE the :host([selected]) and :host([status='running']) rules below -- all three are
      :host([x]) .card, so source order decides. Nothing collides today (they carry border-color and
      the run-state ring, this one only padding/gap), but state last stops a future border/shadow
      tweak here winning over selection or run state. */
-  :host([compact]) .card {
+  :host([compact]:where(:not([size]))) .card,
+  :host([size='2xs']) .card,
+  :host([size='xs']) .card,
+  :host([size='s']) .card,
+  :host([size='small']) .card {
     padding: var(--lr-flow-node-compact-padding, var(--lr-space-xs));
     gap: var(--lr-flow-node-compact-gap, var(--lr-space-2xs));
   }
-  /* The header's own icon-to-heading gap is separate from .card's row gap above, so compact must
-     tighten it too or the header visibly stays at full density while everything around it shrinks. */
-  :host([compact]) [part='header'] {
+  /* The header's own icon-to-heading gap is separate from .card's row gap above, so the compact
+     density must tighten it too or the header visibly stays at full density while everything
+     around it shrinks. */
+  :host([compact]:where(:not([size]))) [part='header'],
+  :host([size='2xs']) [part='header'],
+  :host([size='xs']) [part='header'],
+  :host([size='s']) [part='header'],
+  :host([size='small']) [part='header'] {
     gap: var(--lr-flow-node-compact-header-gap, var(--lr-space-2xs));
   }
   :host([selected]) .card {

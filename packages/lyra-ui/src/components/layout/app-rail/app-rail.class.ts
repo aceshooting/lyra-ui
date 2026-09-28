@@ -1,9 +1,18 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import type { LyraFrame } from '../../../internal/variants.js';
@@ -49,6 +58,21 @@ export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';
 
 const APP_RAIL_FRAME = optionalLiteralSetConverter<LyraFrame>(['card', 'plain']);
 
+/** Width attributes: any value `Number()` reads as a number parses exactly as the pixel-only
+ *  attributes these replace did; any other value stays the authored CSS length string. */
+const RAIL_WIDTH_CONVERTER: ComplexAttributeConverter<number | string | undefined> = {
+  fromAttribute: (value) => {
+    // A removed attribute writes `null` back, exactly as the pixel-only attributes' `Number`
+    // conversion did; `null` is outside the declared type but every read treats it as unset.
+    if (value === null) return value as unknown as undefined;
+    const number = Number(value);
+    return Number.isNaN(number) ? value : number;
+  },
+};
+
+type WidthInput = number | string | undefined;
+const pixelsOrNaN = (value: WidthInput): number => resolveCssLength(value) ?? Number.NaN;
+
 const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'open',
   'width',
@@ -73,7 +97,10 @@ export interface LyraAppRailModeChangeDetail {
 }
 
 export interface LyraAppRailToggleDetail {
+  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
+  /** Whether the mobile overlay is (or, on a cancelable proposal, would be) open. */
+  expanded?: boolean;
 }
 
 export interface LyraAppRailResizeDetail {
@@ -167,13 +194,14 @@ export interface LyraAppRailEventMap {
  *   `open`/`close()` split). `detail: LyraAppRailToggleDetail`. Conditionally cancelable: every
  *   interactive trigger can be vetoed, but the forced mode-change close always applies
  *   (vetoing it would leave `open` stuck `true` in a mode where it's
- *   meaningless) -- call `preventDefault()` to keep the overlay as it is.
+ *   meaningless) -- call `preventDefault()` to keep the overlay as it is. `expanded` is the
+ *   proposed overlay state; the deprecated `open` key carries the same value.
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
- *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidthPx` unchanged. Not fired
- *   when a consumer sets `railWidthPx` directly. `detail: LyraAppRailResizeDetail`.
+ *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidth` unchanged. Not fired
+ *   when a consumer sets `railWidth` directly. `detail: LyraAppRailResizeDetail`.
  * @event lr-rail-resize - The `resizable` rail's width was committed: immediately after a genuine
  *   keyboard step, or once on pointerup after a genuine drag. Non-cancelable; no event is emitted
- *   for clamped no-ops, canceled/lost gestures, or direct `railWidthPx` writes.
+ *   for clamped no-ops, canceled/lost gestures, or direct `railWidth` writes.
  *   `detail: LyraAppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
@@ -181,7 +209,7 @@ export interface LyraAppRailEventMap {
  * @csspart footer - The wrapper around the `footer` slot.
  * @csspart toggle - The mobile hamburger/close toggle button. Hidden via
  *   CSS outside `'mobile'` mode, or -- while it is not also serving as the panel's only in-panel
- *   dismiss control (see below) -- entirely via `hideToggle`; it inherits the rail's typography
+ *   dismiss control (see below) -- entirely via `withoutToggle`; it inherits the rail's typography
  *   and its glyph scales at 1em. Reparented to be the first child of `[part="panel"]` for exactly
  *   as long as the mobile overlay is open, so the shared focus trap (scoped to the panel alone)
  *   can reach it and Tab cycles through it like `<lr-dialog>`'s in-panel close button; moved back
@@ -189,9 +217,9 @@ export interface LyraAppRailEventMap {
  *   the same element throughout (never destroyed/recreated), so a reference captured before
  *   opening remains valid after closing. Rendered as its own reserved row ahead of the `header`
  *   slot while inside the panel, never absolutely overlaid on top of it, so a wide/slotted header
- *   is never obscured. `hideToggle` only suppresses it in its OUTSIDE/closed position (the "open"
- *   trigger, redundant once a consumer wires an external `trigger`/`for`); it stays visible once
- *   reparented inside the open panel, since it is then the only in-panel dismiss control.
+ *   is never obscured. `withoutToggle` only suppresses it in its OUTSIDE/closed position (the
+ *   "open" trigger, redundant once a consumer wires an external `trigger`/`for`); it stays visible
+ *   once reparented inside the open panel, since it is then the only in-panel dismiss control.
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart collapse-toggle - The opt-in desktop collapse control, rendered inside
  *   `[part="header"]` only while `collapsible` is set and `mode` is not `'mobile'`. Carries the
@@ -223,7 +251,7 @@ export interface LyraAppRailEventMap {
  *   larger hit target (mirrors `<lr-swatch-picker>`'s `[part="swatch"]`/`[part="swatch-fill"]`
  *   split). Colors on hover/focus the same way the whole handle previously did.
  * @cssprop [--lr-app-rail-width=var(--lr-size-15rem)] - The inline rail's width in `'full'` mode.
- *   Overridden by an inline width while a `resizable` rail has an explicit `railWidthPx`.
+ *   Overridden by an inline width while a `resizable` rail has an explicit `railWidth`.
  * @cssprop [--lr-app-rail-icon-width=var(--lr-size-4rem)] - The inline rail's width in
  *   `'icon-only'` mode, and the maximum width of each slotted `<lr-app-rail-item>` in that mode.
  * @cssprop [--lr-app-rail-mobile-width=var(--lr-size-18rem)] - The mobile overlay panel's width,
@@ -266,12 +294,16 @@ export interface LyraAppRailEventMap {
  *   `visible` axis paired with a non-`visible` other axis computes as `auto` instead, which still
  *   clips -- set `--lr-app-rail-panel-overflow-block` to `visible` too to actually stop the
  *   clipping, accepting that wide header/footer content can then scroll/bleed both ways instead.
- * @cssprop [--lr-app-rail-background=var(--lr-color-surface)] - `[part="base"]`'s background
- *   (the docked, non-overlay presentation); the unset fallback is transparent under frame="plain".
- * @cssprop [--lr-app-rail-panel-background=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
+ * @cssprop [--lr-app-rail-bg=var(--lr-color-surface)] - `[part="base"]`'s background (the docked,
+ *   non-overlay presentation); the unset fallback is transparent under frame="plain".
+ * @cssprop [--lr-app-rail-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-app-rail-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-app-rail-panel-bg=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
  *   background (the mobile overlay presentation) -- kept separate from
- *   `--lr-app-rail-background`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel
- *   is deliberately themed as a modal surface, not the docked rail chrome.
+ *   `--lr-app-rail-bg`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel is
+ *   deliberately themed as a modal surface, not the docked rail chrome.
+ * @cssprop [--lr-app-rail-panel-background=var(--lr-color-surface-overlay)] - Deprecated alias of
+ *   `--lr-app-rail-panel-bg`; removal not before 23.0.0.
  * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - `[part="panel"]`'s elevation while the
  *   mobile overlay is open. Read only in the open state: the closed, off-canvas panel never casts a
  *   shadow, whatever this is set to. Set `none` to remove the open elevation.
@@ -321,7 +353,7 @@ export interface LyraAppRailEventMap {
  *   lr-app-rail lr-divider { align-self: stretch; }
  * </style>
  * <div class="shell">
- *   <lr-app-rail id="nav" label="Workspace" frame="card" hide-toggle trigger-collapses
+ *   <lr-app-rail id="nav" label="Workspace" frame="card" without-toggle trigger-collapses
  *     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
  *     <lr-app-rail-group heading="Platform">
  *       <lr-app-rail-item href="/inbox" current tooltip>
@@ -364,6 +396,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideToggle: 'withoutToggle',
+    // The pixel aliases read a CSS length canonical value resolved to pixels (`em` against the
+    // document root); writing them writes the number through unchanged.
+    railWidthPx: ['railWidth', undefined, (value) => resolveCssLength(value as WidthInput)],
+    minRailWidthPx: ['minRailWidth', undefined, (value) => pixelsOrNaN(value as WidthInput)],
+    maxRailWidthPx: ['maxRailWidth', undefined, (value) => pixelsOrNaN(value as WidthInput)],
+  };
 
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
@@ -478,6 +518,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  open: at that point it has been reparented inside the trapped `[part="panel"]` (see the
    *  `toggle` csspart doc) as the panel's only in-panel dismiss control, and hiding it there too
    *  would leave the open panel with no in-panel way to close it at all -- only Escape/backdrop. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-toggle' }) withoutToggle = false;
+
+  /** @deprecated Use `without-toggle`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
 
   /** Opts in the desktop collapse control: a `[part="collapse-toggle"]` button rendered inside
@@ -494,7 +537,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Direct reference to an external element that opens this rail's mobile overlay -- e.g. a
    *  hamburger button living in application chrome rather than this component's own built-in
-   *  `[part="toggle"]` (typically paired with `hideToggle`). When set (or resolved through
+   *  `[part="toggle"]` (typically paired with `withoutToggle`). When set (or resolved through
    *  `for`), closing the overlay by ANY path -- Escape, backdrop click, a nav-item click, or the
    *  built-in toggle itself -- returns focus to it, the same guarantee the built-in toggle's own
    *  click already gets. The return is attempted as the overlay closes and, when that attempt
@@ -504,7 +547,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  while focus is still inside the rail or has fallen to `<body>` -- focus moved elsewhere in the
    *  meantime is never taken back -- and focuses the first candidate that can hold focus: this
    *  trigger, then the element that held focus when the overlay opened (none when focus was on
-   *  `<body>`), then the built-in `[part="toggle"]` (unavailable under `hideToggle`), then this
+   *  `<body>`), then the built-in `[part="toggle"]` (unavailable under `withoutToggle`), then this
    *  rail's host, then `focusFallback` when set; when none of them can take focus (the host hidden,
    *  or inert -- under an inert ancestor or behind a stacked modal), focus is left where it is. The
    *  host receives a temporary `tabindex="-1"` only when it has no
@@ -563,7 +606,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
-   *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the fields selected by
+   *  `[minRailWidth, maxRailWidth]`. Set `storageKey` to persist the fields selected by
    *  `persist`; otherwise listen for `lr-rail-resize` and persist its committed `widthPx` yourself.
    *  Call `preventDefault()` on `lr-rail-resize-request` to keep the current width. A request
    *  listener that disables resizing, leaves full mode, or disconnects the rail also cancels the
@@ -588,10 +631,33 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    */
   @property({ useDefault: true }) persist = 'open width';
 
-  /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
+  /** The rail's current width while `resizable` — settable/gettable. A CSS length (`px`, `rem`,
+   *  `em`, `vw`, `vh`; a bare number is pixels) resolved live against the document root (`rem`) or
+   *  this element (`em`); a drag or keyboard resize writes a number of pixels. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
+  @property({ attribute: 'rail-width', converter: RAIL_WIDTH_CONVERTER, noAccessor: true })
+  railWidth?: number | string;
+
+  /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
+   *  `--lr-app-rail-width` CSS token's own resolved width.
+   *  @deprecated Use `rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with railWidth, which effectiveRailWidthPx
+  // finiteRange()-normalizes.
   @property({ type: Number, attribute: 'rail-width-px', noAccessor: true })
   railWidthPx?: number;
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    // `railWidthPx` starts `undefined`, so the shared alias sync cannot tell a first authored
+    // attribute from the field's own initialization; warn for the attribute here instead.
+    if (name === 'rail-width-px' && value !== null && !this.hasUpdated) {
+      warnDeprecatedUsage(this, 'property', 'railWidthPx', 'rail-width');
+    }
+  }
 
   static {
     definePersistedProperty(this.prototype, 'open', {
@@ -609,13 +675,49 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       attribute: 'rail-width-px',
       type: Number,
     });
+    definePersistedProperty(this.prototype, 'railWidth', {
+      initial: undefined,
+      attribute: 'rail-width',
+      converter: RAIL_WIDTH_CONVERTER,
+    });
   }
 
-  /** Minimum `railWidthPx` a drag/keyboard resize can reach. */
+  /** Minimum `railWidth` a drag/keyboard resize can reach: a CSS length or a number of pixels,
+   *  resolved like `railWidth`.
+   *  @default 190 */
+  @property({ attribute: 'min-rail-width', converter: RAIL_WIDTH_CONVERTER, useDefault: true })
+  minRailWidth: number | string = 190;
+
+  /** Maximum `railWidth` a drag/keyboard resize can reach: a CSS length or a number of pixels,
+   *  resolved like `railWidth`.
+   *  @default 440 */
+  @property({ attribute: 'max-rail-width', converter: RAIL_WIDTH_CONVERTER, useDefault: true })
+  maxRailWidth: number | string = 440;
+
+  /** Minimum `railWidthPx` a drag/keyboard resize can reach.
+   *  @deprecated Use `min-rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with minRailWidth, which safeMinRailWidthPx
+  // finiteRange()-normalizes.
   @property({ type: Number, attribute: 'min-rail-width-px', useDefault: true }) minRailWidthPx = 190;
 
-  /** Maximum `railWidthPx` a drag/keyboard resize can reach. */
+  /** Maximum `railWidthPx` a drag/keyboard resize can reach.
+   *  @deprecated Use `max-rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with maxRailWidth, which safeMaxRailWidthPx
+  // finiteRange()-normalizes.
   @property({ type: Number, attribute: 'max-rail-width-px', useDefault: true }) maxRailWidthPx = 440;
+
+  /** A width input in pixels: a number as given, a CSS length resolved live against this element,
+   *  `undefined` for anything unset or unresolvable. */
+  private pixelsOf(value: number | string | null | undefined): number | undefined {
+    if (typeof value === 'number') return value;
+    return typeof value === 'string' ? resolveCssLength(value, { host: this }) : undefined;
+  }
+
+  /** `railWidth` in pixels, passing `null`/`undefined` through unchanged. */
+  private get railWidthInPixels(): number | undefined {
+    const width = this.railWidth;
+    return typeof width === 'string' ? this.pixelsOf(width) : width;
+  }
 
   /** `true` for the duration of an active pointer-driven resize drag (not a keyboard step) --
    *  reflected so a consumer (or this component's own styles) can suppress `[part='base']`'s
@@ -770,30 +872,38 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this._mode;
   }
 
-  /** `minRailWidthPx` normalized to a finite, non-negative px floor -- an invalid attribute value
-   *  would otherwise poison every `Math.min(maxRailWidthPx, Math.max(minRailWidthPx, ...))` clamp
+  /** `minRailWidth` normalized to a finite, non-negative px floor -- an invalid attribute value
+   *  would otherwise poison every `Math.min(maxRailWidth, Math.max(minRailWidth, ...))` clamp
    *  below (both the drag and keyboard-step handlers) and the resizer's own `aria-valuemin`. */
   private get safeMinRailWidthPx(): number {
-    return finiteRange(this.minRailWidthPx, 190, 0);
+    return finiteRange(this.pixelsOf(this.minRailWidth) ?? Number.NaN, 190, 0);
   }
 
-  /** `maxRailWidthPx` normalized the same way, then cross-referenced against the already-sanitized
-   *  minimum so an inverted/invalid pair (e.g. `maxRailWidthPx` left below a since-raised
-   *  `minRailWidthPx`) can never produce a negative-width clamp range. */
+  /** `maxRailWidth` normalized the same way, then cross-referenced against the already-sanitized
+   *  minimum so an inverted/invalid pair (e.g. `maxRailWidth` left below a since-raised
+   *  `minRailWidth`) can never produce a negative-width clamp range. */
   private get safeMaxRailWidthPx(): number {
-    return Math.max(this.safeMinRailWidthPx, finiteRange(this.maxRailWidthPx, 440, 0));
+    return Math.max(
+      this.safeMinRailWidthPx,
+      finiteRange(this.pixelsOf(this.maxRailWidth) ?? Number.NaN, 440, 0),
+    );
   }
 
-  /** The rail's current effective width in px, whether or not `railWidthPx` has ever been
+  /** The rail's current effective width in px, whether or not `railWidth` has ever been
    *  explicitly set — falls back to the live measured width of `[part=base]` so the resizer's
    *  `aria-valuenow` and the first drag/keyboard step's start-width reflect the real rendered
-   *  width even before a consumer ever sets `railWidthPx`. A set `railWidthPx` is clamped into
-   *  `[safeMinRailWidthPx, safeMaxRailWidthPx]` here -- a NaN/negative/out-of-bounds direct
-   *  assignment would otherwise reach `updated()`'s inline-size write and this resizer's own
-   *  `aria-valuenow` exactly as given. */
+   *  width even before a consumer ever sets `railWidth`. A set `railWidth` is clamped into
+   *  `[safeMinRailWidthPx, safeMaxRailWidthPx]` here -- a NaN/negative/out-of-bounds/unresolvable
+   *  direct assignment would otherwise reach `updated()`'s inline-size write and this resizer's
+   *  own `aria-valuenow` exactly as given. */
   private get effectiveRailWidthPx(): number {
-    if (this.railWidthPx != null) {
-      return finiteRange(this.railWidthPx, this.safeMinRailWidthPx, this.safeMinRailWidthPx, this.safeMaxRailWidthPx);
+    if (this.railWidth != null) {
+      return finiteRange(
+        this.railWidthInPixels ?? Number.NaN,
+        this.safeMinRailWidthPx,
+        this.safeMinRailWidthPx,
+        this.safeMaxRailWidthPx,
+      );
     }
     return this.baseEl?.getBoundingClientRect().width ?? 240;
   }
@@ -821,7 +931,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Restore the selected persisted fields. Runs once, before the first render, and never
    *  overwrites a field the consumer already assigned before this point -- a controlled
-   *  `.open=${false}`/`.railWidthPx=${240}` binding stays authoritative over stale `localStorage`
+   *  `.open=${false}`/`.railWidth=${240}` binding stays authoritative over stale `localStorage`
    *  state instead of being silently clobbered by it, with no `lr-toggle` (or equivalent) firing
    *  for a change the consumer never asked for. Effective `mode` remains breakpoint-derived; only
    *  the optional non-mobile `preferredMode` input is restorable.
@@ -855,11 +965,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     if (
       fields.has('width') &&
-      !isPersistedPropertyExplicitlySet(this, 'railWidthPx') &&
+      !isPersistedPropertyExplicitlySet(this, 'railWidth') &&
       typeof parsed.railWidthPx === 'number' &&
       Number.isFinite(parsed.railWidthPx)
     ) {
-      this.railWidthPx = parsed.railWidthPx;
+      // The stored field keeps its pixel name, so state written by earlier releases restores.
+      this.railWidth = parsed.railWidthPx;
     }
     if (
       fields.has('preferred-mode') &&
@@ -881,7 +992,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       preferredMode?: LyraAppRailPreferredMode | null;
     } = {};
     if (fields.has('open')) state.open = this.open;
-    if (fields.has('width')) state.railWidthPx = this.railWidthPx;
+    if (fields.has('width')) state.railWidthPx = this.railWidthInPixels;
     if (fields.has('preferred-mode')) state.preferredMode = this.preferredMode ?? null;
     writePersistedState(this.storageFullKey, state);
   }
@@ -1022,7 +1133,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (
       this.persistReady &&
       (changed.has('open') ||
-        (changed.has('railWidthPx') && !this.dragging) ||
+        (changed.has('railWidth') && !this.dragging) ||
         changed.has('preferredMode') ||
         changed.has('persist'))
     ) {
@@ -1030,7 +1141,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     this.persistReady = true;
     if (this.baseEl) {
-      if (this.resizable && this.railWidthPx != null && this._mode === 'full') {
+      if (this.resizable && this.railWidth != null && this._mode === 'full') {
         this.baseEl.style.setProperty('inline-size', `${this.effectiveRailWidthPx}px`);
       } else {
         this.baseEl.style.removeProperty('inline-size');
@@ -1203,10 +1314,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  back. It then focuses the first candidate that can actually hold focus -- the return target
    *  (built-in toggle click, external `trigger`/`for`, or the element focused when the overlay
    *  opened), then the element focused when the overlay opened (none when focus was on `<body>`),
-   *  then the built-in `[part="toggle"]` (unavailable under `hideToggle`), then the rail host, then
-   *  `focusFallback` when set; when none of them can take focus (the host hidden, or inert -- under
-   *  an inert ancestor or behind a stacked modal), focus is left where it is. The pass runs whether
-   *  or not `trigger`/`for` is set -- only the trigger candidate
+   *  then the built-in `[part="toggle"]` (unavailable under `withoutToggle`), then the rail host,
+   *  then `focusFallback` when set; when none of them can take focus (the host hidden, or inert --
+   *  under an inert ancestor or behind a stacked modal), focus is left where it is. The pass runs
+   *  whether or not `trigger`/`for` is set -- only the trigger candidate
    *  depends on that association. A reopen, another close, or a disconnect before the frame
    *  arrives abandons the pass. */
   private scheduleDeferredFocusReturn(): void {
@@ -1386,7 +1497,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     this._mode = next;
     if (this.baseEl) {
-      if (!(this.resizable && this.railWidthPx != null && next === 'full')) {
+      if (!(this.resizable && this.railWidth != null && next === 'full')) {
         this.baseEl.style.removeProperty('inline-size');
       }
     }
@@ -1416,12 +1527,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // `mode` is no longer `'mobile'` (where `open` is documented as meaningless).
     if (options?.force) {
       this.open = next;
-      this.emit('lr-toggle', { open: next });
+      this.emit('lr-toggle', { open: next, expanded: next });
       return;
     }
     const mode = this._mode;
     const open = this.open;
-    const event = this.emit('lr-toggle', { open: next }, { cancelable: true });
+    const event = this.emit('lr-toggle', { open: next, expanded: next }, { cancelable: true });
     // A listener can synchronously take ownership of mode or open while the
     // proposal is dispatching. Do not overwrite that state after it returns.
     if (event.defaultPrevented || this._mode !== mode || this.open !== open) return;
@@ -1631,7 +1742,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       return false;
     }
     if (event.defaultPrevented) return false;
-    this.railWidthPx = next;
+    this.railWidth = next;
     if (commit) this.emit('lr-rail-resize', { widthPx: next });
     else this.resizeGestureChanged = true;
     return true;

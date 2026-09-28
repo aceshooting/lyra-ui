@@ -5,7 +5,7 @@ import './code-block-core.js';
 import type { LyraCodeBlock } from './code-block.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function copyButton(el: Element): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="copy-button"]')!;
@@ -37,6 +37,10 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
     it('composes a real lr-icon-button as the copy control', async () => {
       const el = await mount();
       expect(copyButton(el).localName).to.equal('lr-icon-button');
+      expect(copyButton(el).getAttribute('exportparts')).to.contain(
+        'button:copy-button-control'
+      );
+      // The deprecated double-underscore spelling stays forwarded from the same native button.
       expect(copyButton(el).getAttribute('exportparts')).to.contain(
         'button:copy-button__control'
       );
@@ -166,7 +170,7 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
 
     it('brings the header into existence for a child appended after first render', async () => {
       const wrapper = await fixture(
-        html`<div>${unsafeTemplate(`<${tag} code="const a = 1;" copyable="false"></${tag}>`)}</div>`
+        html`<div>${unsafeTemplate(`<${tag} code="const a = 1;" without-copy-button></${tag}>`)}</div>`
       );
       const el = wrapper.querySelector(tag)! as Element & {
         updateComplete: Promise<unknown>;

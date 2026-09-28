@@ -470,7 +470,6 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         heading=${file.name || nothing}
         label=${this.localize('documentViewerLabel')}
         aria-label=${hostAriaLabel(this) ?? nothing}
-        closable
         @lr-show=${this.containShellEvent}
         @lr-after-show=${this.containShellEvent}
         @lr-initial-focus=${this.containShellEvent}

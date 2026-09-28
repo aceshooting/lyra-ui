@@ -16,31 +16,31 @@ export const styles = css`
       var(--_lr-stack-trace-max-height)
     );
     overflow: auto;
-    /* Card chrome behind inline var() fallbacks, same convention as the compact density below:
+    /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below:
        each fallback is the pre-existing token, so an unset trace paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
     border: var(--lr-border-width-thin) solid
       var(--lr-stack-trace-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-stack-trace-radius, var(--lr-radius));
-    background: var(--lr-stack-trace-background, var(--lr-color-surface));
+    background: var(--lr-stack-trace-bg, var(--lr-stack-trace-background, var(--lr-color-surface)));
     padding: var(--lr-space-s);
   }
-  /* Density escape, same convention as lr-agent-run's and lr-thinking-panel's compact. Inline
+  /* Density escape, same convention as lr-agent-run's and lr-thinking-panel's dense size tier. Inline
      var() fallbacks, not a :host declaration, which every instance would re-declare and so shadow
      an ancestor value. Purely density: border, radius and background stay; frame="plain" below
      drops them. */
-  :host([compact]) [part="base"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="base"] {
     padding: var(--lr-stack-trace-compact-padding, var(--lr-space-2xs));
   }
-  :host([compact]) [part="message"],
-  :host([compact]) [part="group"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="message"],
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="group"] {
     margin-block-end: var(--lr-stack-trace-compact-gap, var(--lr-space-2xs));
   }
-  :host([compact]) [part="group"]:last-child {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="group"]:last-child {
     margin-block-end: 0;
   }
-  /* MUST stay after :host([compact]) [part='base']: equal specificity, so source order decides
-     the padding when a trace is both compact and frame="plain", and plain (no chrome at all) is
+  /* MUST stay after the dense size rule's [part='base']: equal specificity, so source order decides
+     the padding when a trace is both dense and frame="plain", and plain (no chrome at all) is
      the stronger statement. The shared frame="plain" treatment, like lr-callout's [inline]: a
      trace nested in an already-bordered lr-result-card or lr-agent-run would double the box. Only
      box decoration goes -- the max-block-size cap, overflow, and the copy button's and frames'

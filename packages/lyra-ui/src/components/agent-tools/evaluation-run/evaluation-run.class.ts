@@ -383,7 +383,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
 
   private onExampleToggle(id: string, event: CustomEvent<LyraDetailsEventMap['lr-toggle']['detail']>): void {
     event.stopPropagation();
-    const expanded = event.detail.open;
+    const expanded = event.detail.expanded ?? event.detail.open;
     const next = new Set(this.expandedIds);
     if (expanded) next.add(id);
     else next.delete(id);
@@ -553,8 +553,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
             part="progress"
             value=${completed}
             max=${Math.max(resolvedTotal, 1)}
-            show-value
-            accessible-label=${this.localize('evaluationRunProgressLabel')}
+            with-value
+            aria-label=${this.localize('evaluationRunProgressLabel')}
           ></lr-progress-bar>
           <span part="summary"
             >${this.localize('evaluationRunProgressSummary', undefined, {

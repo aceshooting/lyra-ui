@@ -7,7 +7,8 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `pending` / `pending` since `21.1.0`; use property `pending-action`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -33,7 +34,10 @@ leaves that handoff landing on `[part="status"]` exactly as it always has.
 
 **Properties:** `toolName: string = ''` (attribute `tool-name`) — drives the default heading through
 the existing `toolApprovalHeading`/`toolApprovalGenericTool` dialog keys. `heading: string = ''` —
-free-form heading override for non-tool proposals; wins over `toolName`. `args: unknown = undefined`
+free-form heading override for non-tool proposals; wins over `toolName`. `headingLevel:
+LyraHeadingLevel = 'none'` (attribute `heading-level`) — the heading labels the `role="group"` and
+is not a document heading by default; `1`–`6` also expose it to heading navigation at that level.
+`args: unknown = undefined`
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically and
@@ -41,32 +45,34 @@ emits no `lr-approve`/`lr-deny` of its own; `lr-decision-settled` still fires, b
 really did render). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
-`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `compact: boolean = false`
-(reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
-inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
-action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
-treatment is switched off — a compact bar is _expected_ to be narrow, so stretching the buttons to
-fill would be exactly wrong. It is a density knob only: the border, corner radius and background
-stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `size: LyraSize = 'm'`
+(reflected) — density on the shared size scale: `s` (and the smaller `xs`/`2xs`) collapses the bar
+from a stacked `display: block` card into a single tightly-padded inline row, for a confirmation
+that has to live inside an existing container: a table cell, a card's action row, a toolbar. The
+host becomes `inline-flex`, and the narrow-allocation `@container` treatment is switched off — a
+dense bar is _expected_ to be narrow, so stretching the buttons to fill would be exactly wrong. It
+is a density knob only: the border, corner radius and background stay. Deprecated alias: `compact`
+(use `size="s"`; removed in 23.0.0). Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
 event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
 heading label. `frame: LyraFrame = 'card'` (reflected) — `'card' | 'plain'`, imported from the
 library's shared container-frame vocabulary and behaving exactly as it does on `lr-agent-run`,
 `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel`:
 `'plain'` removes the border, background, padding and corner radius so a bar nested inside a
-container that already draws a border doesn't double it, and wins over `compact` when both are set.
-Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
-`compact frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
-`pending: ApprovalAction | null = null` (reflected) — which action is awaiting host
-resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
-now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
-to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
+container that already draws a border doesn't double it, and wins over the dense `size` tier when
+both are set. Before 9.0.0 the density knob alone did both jobs; a bar that relied on that now needs
+`size="s" frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
+`pendingAction: ApprovalAction | null = null` (attribute `pending-action`, reflected) — which action
+is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on
+the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
+`.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
+state. Deprecated alias: `pending` (use `pending-action`; removed in 23.0.0).
 `waitUntil(promise)` in the event detail is the declarative form of that same state machine and
-needs no `preventDefault()`: the bar sets `pending` itself, and the promise's settlement finalizes
-`decision` or clears `pending` and returns focus to the control that can retry.
+needs no `preventDefault()`: the bar sets `pendingAction` itself, and the promise's settlement
+finalizes `decision` or clears `pendingAction` and returns focus to the control that can retry.
 `disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
-a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
-`pending` marks one specific action as awaiting the host while the other stays interactive;
-`disabled` blocks both regardless of `pending`. `autofocus: boolean = false` (reflected) — opt-in
+a no-op, without discarding any in-flight `decision`/`pendingAction` state. Distinct from
+`pendingAction`, which marks one specific action as awaiting the host while the other stays
+interactive; `disabled` blocks both regardless of `pendingAction`. `autofocus: boolean = false` (reflected) — opt-in
 focus-on-mount: moves focus into the bar after its own first render, once this element and (when
 present) the Deny `<lr-button>` have both completed it. Named after the native global attribute it
 stands in for, since the platform's own `autofocus` algorithm only fires for an element already in
@@ -74,7 +80,7 @@ the document when it finishes parsing, never for one a host swaps in afterward �
 use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
 hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
 `escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
-A no-op while `disabled`, already decided, or `pending`, exactly like clicking Deny itself, and
+A no-op while `disabled`, already decided, or `pendingAction` is set, exactly like clicking Deny itself, and
 never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
 still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar
 is inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
@@ -91,7 +97,7 @@ and moves focus there if it has since appeared and nothing else has claimed focu
 this is what makes the swap-a-trigger-for-this-bar case actually work, rather than only working when
 the host happens to re-create its control before the decision lands. A plain element value is
 resolved once, synchronously, and never retried: it names something that either already exists or
-never will. It applies to every path that reaches a decision, a `pending` decision finalized
+never will. It applies to every path that reaches a decision, a pending decision finalized
 externally included. A named target that is missing, detached, `inert`, or otherwise refuses focus
 falls back to `[part="status"]` rather than to `<body>` — an `inert` element refuses `focus()`
 silently. Left unset, the handoff is byte-identical to the shipped one. The pending state is
@@ -107,14 +113,14 @@ same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
-listener holds the bar in its `pending` presentation — `loading` on the activated control,
+listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,
 `disabled` on the other — until the promise settles: a resolution finalizes `decision`, a rejection
 restores the undecided state and returns focus to the control that can retry. Several `waitUntil()`
 calls, from one listener or from several, are awaited together. Calling it after its own dispatch
 has finished does nothing (and warns in dev mode); the promise it receives may settle whenever it
 likes. It needs no `preventDefault()`, and the imperative path it replaces — `preventDefault()`,
-then writing `pending` and later `decision` by hand — still works unchanged. A listener that
-resolves the decision itself synchronously, by writing `decision` or `pending` during the dispatch,
+then writing `pendingAction` and later `decision` by hand — still works unchanged. A listener that
+resolves the decision itself synchronously, by writing `decision` or `pendingAction` during the dispatch,
 wins outright over both: the bar applies no bookkeeping of its own, `waitUntil()`'s included.
 
 `waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve`/
@@ -145,23 +151,22 @@ landing spot).
 
 **Themeable custom properties:** `--lr-confirm-bar-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the default tier every approval prompt renders at, and the
-companion to the `compact` density levers below; `frame="plain"` still drops the fill entirely.
-The `compact` density is retunable through two further properties, both
-scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (default
+companion to the dense-tier levers below; `frame="plain"` still drops the fill entirely.
+The dense `size` tier is retunable through two further properties, both
+scoped to `[part="base"]` while `size` is `s` or smaller: `--lr-confirm-bar-compact-padding` (default
 `var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
 `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
 are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
-be set on the element _or on any ancestor_, which is what makes "tighten every compact confirm bar
-in this panel" a one-rule change on the panel. The chrome-removing
-`--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
-`--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
-behavior: chrome is now `frame`'s job, so keep the default `frame="card"` (and restyle via
-`::part(base)`) instead of re-chroming a chrome-less compact bar.
+be set on the element _or on any ancestor_, which is what makes "tighten every dense confirm bar
+in this panel" a one-rule change on the panel. The dense tier's former chrome-removing border,
+fill and radius properties were removed in 9.0.0 along with its chrome behavior: chrome is now
+`frame`'s job, so keep the default `frame="card"` (and restyle via `::part(base)`) instead of
+re-chroming a chrome-less dense bar.
 
 Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
 `var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —
 `[part="status"]`'s text/icon color under `:host([decision='approved'])` and
-`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the compact set.
+`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the dense-tier set.
 They exist because `::part(status)[decision]` is invalid CSS, so recoloring just this component's
 decided state previously meant re-pointing the library-wide `--lr-color-success`/`-danger` tokens and
 repainting everything else that reads them.
@@ -182,13 +187,13 @@ repainting everything else that reads them.
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above. If that same listener resolves the
-  decision itself synchronously (setting `.decision` or `.pending` directly before returning), that
-  wins outright: the component's own built-in `pending` bookkeeping only applies when the listener
+  its own async work is in flight — see `pendingAction` above. If that same listener resolves the
+  decision itself synchronously (setting `.decision` or `.pendingAction` directly before returning),
+  that wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the listener
   left both untouched, so a listener finalizing out of band is never silently clobbered back into
   the built-in loading/disabled presentation.
 - `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
-  above. It is independent of, and composes with, `pending`.
+  above. It is independent of, and composes with, `pendingAction`.
 - `autofocus`/`escape-denies` are both opt-in and default to `false`; neither changes any
   existing bar's behavior unless a host sets it. `escape-denies` is intentionally *not* routed
   through the shared overlay Escape manager (`src/internal/overlay-manager.ts`) — this component
@@ -207,7 +212,7 @@ repainting everything else that reads them.
 ```
 
 An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
-`preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
+`preventDefault()` and sets `.decision` (or clears `.pendingAction`) once it resolves:
 
 ```ts
 bar.addEventListener("lr-approve", (e) => {
@@ -217,7 +222,7 @@ bar.addEventListener("lr-approve", (e) => {
       bar.decision = "approved";
     })
     .catch(() => {
-      bar.pending = null;
+      bar.pendingAction = null;
     }); // bounce back, retry
 });
 ```
@@ -238,7 +243,7 @@ bar.addEventListener("lr-approve", (e) => {
       bar.decision = "approved"; // the host's own state clear can happen before or after this
     })
     .catch(() => {
-      bar.pending = null;
+      bar.pendingAction = null;
     });
 });
 ```

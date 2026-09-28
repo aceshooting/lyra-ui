@@ -42,16 +42,18 @@ structured points retain their y-value formatting.
 - `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
   axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
   `both`. Radial charts ignore this setting. Use `grid` when only grid lines should disappear.
-- `compact: boolean = false` — hides cartesian axes and removes automatic plot padding. Combine
-  with `withoutLegend` and a short `height` (for example `64px`) for an inline histogram or
-  sparkline. Tooltips, accessible data, formatting and keyboard activation remain available.
-  `config` still wins over generated options, so explicit scale visibility or layout padding
-  can override the preset. Leaving compact mode restores `axes`. Radial charts are unaffected.
+- `size: LyraSize = 'm'` — plot density on the shared size scale. `s` (and the smaller `xs`/`2xs`)
+  hides cartesian axes and removes automatic plot padding; `m` and larger keep the full plot.
+  Combine `size="s"` with `withoutLegend` and a short `height` (for example `64px`) for an inline
+  histogram or sparkline. Tooltips, accessible data, formatting and keyboard activation remain
+  available. `config` still wins over generated options, so explicit scale visibility or layout
+  padding can override the preset. Leaving the compact tier restores `axes`. Radial charts are
+  unaffected. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 
   For a monthly histogram above `lr-slider`, give both controls the same inline allocation and
-  use `lr-bar-chart compact without-legend height="64px"`. Map range values to bin edges: with
+  use `lr-bar-chart size="s" without-legend height="64px"`. Map range values to bin edges: with
   twelve months, set the slider's `min=0`, `max=12`, `step=1` and treat its values as the half-open
-  interval `[minValue, maxValue)`. Equal edges select no months. Use `show-value`,
+  interval `[minValue, maxValue)`. Equal edges select no months. Use `with-value`,
   `value-display="formatted"` and `value-placement="label"` to display application-formatted month
   names without a separate readout listener. Commit filtering on `lr-change`; `lr-input` remains
   available for live previews. Chart categories retain their authored physical order: for an RTL
@@ -95,7 +97,7 @@ structured points retain their y-value formatting.
   percentiles, file sizes) honestly, where a linear axis collapses everything below the maximum
   into the baseline. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
   applied to the secondary `y2` axis too when one is present. A logarithmic axis cannot represent
-  zero (`log(0)` is `-Infinity`), so `beginAtZero` is not forwarded in that mode and non-positive
+  zero (`log(0)` is `-Infinity`), so the zero baseline is not forwarded in that mode and non-positive
   points are dropped by Chart.js's own log scale. Chart.js rejects an unregistered scale type at
   construction, so `LogarithmicScale` is registered with the core — it ships inside the `chart.js`
   module already loaded, adding no download weight
@@ -201,7 +203,7 @@ structured points retain their y-value formatting.
   so without it one formatter cannot render a secondary axis correctly. `datasetIndex`, `index`,
   `label` and `seriesLabel` reach the `tooltip`, `legend`, `visual`, `table`, `export` and `spoken`
   surfaces, with indexes in source space — the same space the data table, the CSV export and
-  `lr-point-click` use. A `tick` call carries `axis` but none of those four. A
+  `lr-point-activate` use. A `tick` call carries `axis` but none of those four. A
   `stackTotals`/`tableTotals` stack total is also an exception: it is a sum
   *across* the stack's datasets, so it carries `statistic: 'total'`, the category `index`/`label`
   and the stack's own `axis`, but no `datasetIndex` and no `seriesLabel` — naming the topmost
@@ -219,15 +221,19 @@ structured points retain their y-value formatting.
   footer.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
-- `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
-  range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
+- `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
+  zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
+  Deprecated alias: `zoom` (use `zoomable`; removed in 23.0.0).
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
 - `xLabel: string | null = null` (attribute `x-label`)
 - `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
-- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets a linear value
+  axis start at the data minimum instead of always including zero. Deprecated alias:
+  `begin-at-zero` (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`;
+  removed in 23.0.0).
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
@@ -249,7 +255,7 @@ structured points retain their y-value formatting.
   data-labels>` never affects any other chart on the page. If the peer is unavailable or cannot
   register, the core chart remains usable, labels stay disabled, and a localized visible
   `feature-warning` plus assertive announcement explains the nonfatal limitation. The screen-reader
-  equivalent is the always-present accessible data table (`show-data-table` makes it visible) —
+  equivalent is the always-present accessible data table (`with-data-table` makes it visible) —
   labels are a purely visual, canvas-only addition and add no new a11y surface.
 - `stackTotals: boolean = false` (attribute `stack-totals`) — on an actually-stacked axis (`stacked`
   or `stackedAxes`, bar/line only), draws the per-category stack total above each stack, via the
@@ -285,16 +291,17 @@ structured points retain their y-value formatting.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
-  accessible data table visible rather than screen-reader-only
+- `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
+  accessible data table visible rather than screen-reader-only. Deprecated alias: `show-data-table`
+  (`showDataTable`; use `with-data-table`; removed in 23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
-  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
-  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  `withDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Until the
-  reader activates it, the disclosure follows `showDataTable`; afterwards the reader's selected
+  reader activates it, the disclosure follows `withDataTable`; afterwards the reader's selected
   state remains authoritative for that mounted chart. A supplied `slot="data-table"` follows this
   same disclosure state. Unset, nothing renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
@@ -390,7 +397,7 @@ const series = [
 ```
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
-`resetZoom()`), `lr-point-click` (fired when pointer input lands on an intersecting data
+`resetZoom()`), `lr-point-activate` (fired when pointer input lands on an intersecting data
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
@@ -402,7 +409,8 @@ including a string or finite-number `id` when supplied; invalid ids are omitted.
 `LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
 checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
-`lr-point-click` remains as a compatibility event. Also
+Deprecated alias: `lr-point-click` (use `lr-point-activate`; removed in 23.0.0) — it still fires
+right after `lr-point-activate` from the same activation with an identical detail. Also
 `lr-legend-visibility-change-request` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
@@ -465,7 +473,8 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
-`--lr-chart-tooltip-text` (default `var(--lr-color-text)`) — each resolved fresh via
+`--lr-chart-tooltip-color` (default `var(--lr-color-text)`; deprecated alias:
+`--lr-chart-tooltip-text`, removed in 23.0.0) — each resolved fresh via
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
@@ -538,8 +547,8 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 - `--line-border-width` → `--lr-border-width-medium`; `--point-radius` → `--lr-space-2xs`
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
-regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
-later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
+regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoomable` is
+— or later becomes — `true`; never fetched for a chart that keeps `zoomable` unset/false, since the plugin
 has a hard dependency on `hammerjs`), `chartjs-plugin-datalabels` only when `data-labels` or
 `stack-totals` is enabled, and `chartjs-plugin-annotation` only when `annotations` contains a usable
 entry. Each capability load is memoized once per page, registering only the tree-shaken
@@ -572,7 +581,7 @@ announced. In particular, unavailable data labels do not remove generated table 
 - generated `scales` are keyed off the *effective* type (`config.type` ?? `type`, see
   `effectiveType()`) and are type-appropriate: no scale at all for `type="pie"`/`"doughnut"` (true of
   `<lr-chart type="pie">` directly, not just the `lr-pie-chart`/`lr-doughnut-chart` subclasses),
-  and a single radial `r` scale (respecting `beginAtZero`) for `type="radar"`/`"polarArea"`
+  and a single radial `r` scale (respecting `withoutZeroBaseline`) for `type="radar"`/`"polarArea"`
   (`lr-radar-chart`/`lr-polar-area-chart`), instead of always generating the cartesian `x`/`y`/
   `y2` block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those types (a
   radial scale and "no scale" both have nowhere to put an axis title) — reach a titled radial scale
@@ -598,12 +607,12 @@ announced. In particular, unavailable data labels do not remove generated table 
   the observer, drawing starts when the peer and canvas are ready. An empty delivered callback
   retains the visible fallback. Peer loading and accessible DOM may settle while visibility is
   pending. Independently, `updated()` only reaches
-  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `compact`, `indexAxis`,
+  Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `axes`, `size`, `indexAxis`,
   `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`,
-  `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  `height`, `xLabel`, `yLabel`, `y2Label`, `withoutZeroBaseline`,
   `stacked`, `stackedAxes`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
-  slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
+  slotted config, `zoomable`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an
   unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
   ignore unchanged inline sizes and coalesce into one animation-frame task; a responsive legend
@@ -650,22 +659,26 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings
   continue to render.
-- `legend: boolean = false`
+- `withLegend: boolean = false` (attribute `with-legend`) — renders the static legend row.
+  Deprecated alias: `legend` (use `with-legend`; removed in 23.0.0).
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
-- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the `<svg>`'s auto-derived
+- `aria-label` (host attribute) — names the chart's `<svg>` ahead of every other source, by
+  presence. Deprecated alias: `accessible-label` (use `aria-label`; removed in 23.0.0).
+- `accessibleLabel?: string` (attribute: false) — overrides the `<svg>`'s auto-derived
   `aria-label` (`datasets.map(d => d.label).join(', ') || 'Chart'`); a host `aria-label` still wins.
-  Unset keeps the auto-derived (English-fallback) label. `lr-lite-chart` keeps this property under
-  its original `accessible-label` name, unrelated to the deprecated `accessible-label` alias that
-  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property.
+  Unset keeps the auto-derived (English-fallback) label.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
 - `xLabel: string = ''` (attribute `x-label`)
 - `yLabel: string = ''` (attribute `y-label`)
-- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets the value axis
+  start at the data minimum instead of always including zero. Deprecated alias: `begin-at-zero`
+  (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`; removed in
+  23.0.0).
 - `stacked: boolean = false` — sums each category's bars into one segmented bar instead of grouping
   them side by side; ignored for `type="line"`
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
@@ -687,13 +700,14 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
   multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
   grouped bars, line charts, and the single-series `data-list`.
-- `showDataTable: boolean = false` (attribute `show-data-table`, new in 11.1.0) — makes the
-  generated accessible table visible rather than screen-reader-only. Same meaning as `lr-chart`'s
-  property of the same name.
+- `withDataTable: boolean = false` (attribute `with-data-table`) — makes the generated accessible
+  table visible rather than screen-reader-only. Same meaning as `lr-chart`'s property of the same
+  name. Deprecated alias: `show-data-table` (`showDataTable`; use `with-data-table`; removed in
+  23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
   localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
   `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
-  `showDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
+  `withDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
   The table stays in the DOM in both states, so assistive technology never loses it. This matters
   more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
   app that chose it for exactly that reason had to either hand-roll a `<details>` around a
@@ -761,7 +775,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `legendText?: (label: string, datasetIndex: number) => string` (attribute: false) — appends
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
-  the label alone when unset; no-op while `legend` is `false`.
+  the label alone when unset; no-op while `withLegend` is `false`.
 - `axisLabelText?: (label: string, index: number) => string | null` (attribute: false) — a
   display-only override for one category-axis tick's text; returning `null` renders no tick there at
   all. `labels` stays the single authoritative source for the generated accessible table's row
@@ -809,7 +823,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   powers of ten across whole decades, with positive numeric steps for spans smaller than a decade.
   Both domain bounds remain represented, with space reserved between interior ticks and the bounds.
   Linear and square-root tick selection is unchanged. Its lower bound is the smallest *positive* datum rather than the
-  linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, which has no logarithm —
+  linear `lo`: the zero baseline is on by default, so `lo` is normally `0`, which has no logarithm —
   deriving the floor from the data is what makes a 1…1000 series span three even decades instead of
   collapsing onto one. Values at or below that floor (including zero and negatives, which have no
   real logarithm) pin to the axis floor rather than producing `-Infinity` geometry, and a degenerate
@@ -843,10 +857,12 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   oldest categories
 
 **Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
-`datasetIndex`, `index`, `label`, and `value`. The compatibility `lr-point-click` event is emitted
-for the same pointer or Enter/Space activation. When different series' expanded
-line-point targets overlap, pointer activation selects the closest rendered point in two-dimensional
-screen space; an exact distance tie retains the point whose target received the click.
+`datasetIndex`, `index`, `label`, and `value`. `lr-point-activate` is emitted for the same pointer
+or Enter/Space activation with the `lr-chart`-compatible detail. Deprecated alias: `lr-point-click`
+(use `lr-point-activate`; removed in 23.0.0), fired right after it with an identical detail. When
+different series' expanded line-point targets overlap, pointer activation selects the closest
+rendered point in two-dimensional screen space; an exact distance tie retains the point whose
+target received the click.
 
 **Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
 markup. CSV rows cover the canonical record count — the maximum of `labels.length` and every
@@ -935,7 +951,7 @@ substituted.
 **Optional peer deps:** none. This is the point of the component.
 
 ```html
-<lr-lite-chart type="bar" stacked legend x-label="Week" y-label="Commits"></lr-lite-chart>
+<lr-lite-chart type="bar" stacked with-legend x-label="Week" y-label="Commits"></lr-lite-chart>
 <script>
   const c = document.querySelector('lr-lite-chart');
   c.labels = ['W1', 'W2', 'W3', 'W4'];
@@ -981,23 +997,25 @@ Everything else is inherited verbatim from `lr-chart`; each name below has the s
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
 
-**Properties:** `description`, `grid`, `axes`, `compact`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
+**Properties:** `description`, `grid`, `axes`, `size`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `hiddenDatums`, `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`),
 `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
 `stacked`, `stackedAxes`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`,
-`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoom`,
-`height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
-(`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
-(`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
-`type` differs only in its initial value.
+`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoomable`,
+`height`, `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`), `dataLabels`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `withDataTable`
+(`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
+`type` differs only in its initial value. The inherited deprecated aliases `compact`, `zoom`,
+`begin-at-zero`/`beginAtZero` and `show-data-table`/`showDataTable` keep working until 23.0.0 (see
+`lr-chart`).
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
 `refreshTheme()`.
 
-**Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-click` (`detail: { datasetIndex,
-index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
+**Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-activate` (`detail: { datasetIndex,
+index, label, value }`; deprecated alias `lr-point-click`, removed in 23.0.0), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
 complete `hiddenDatasets` snapshot). `lr-before-legend-visibility-change` is a **deprecated** alias
 of `lr-legend-visibility-change-request` (removal not before 21.0.0).
@@ -1016,7 +1034,7 @@ failure transition is announced through the shared document-level light-DOM asse
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-tooltip-color` (deprecated alias `--lr-chart-tooltip-text`), `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
@@ -1030,7 +1048,7 @@ together. The mirrored hooks are `--border-color-1`,
 `--grid-color`, `--line-border-width`, and `--point-radius`, also identical to the core chart.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set, `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set, and
+`zoomable` is set, `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set, and
 `chartjs-plugin-annotation` only once `annotations` contains a usable entry.
 
 ```html
@@ -1073,24 +1091,27 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
-- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `compact`, `indexAxis`
+- All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `size`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
   `legendMode` (`legend-mode`), `legendDisplay` (`legend-display`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `tooltipTitleFormatter`,
-  `tooltipFooterFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
-  `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
-  (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
+  `tooltipFooterFormatter`, `area`, `zoomable`, `config`, `height`, `xLabel` (`x-label`),
+  `yLabel` (`y-label`), `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`),
+  `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `withDataTable`
+  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly). The
+  inherited deprecated aliases `compact`, `zoom`, `begin-at-zero`/`beginAtZero` and
+  `show-data-table`/`showDataTable` keep working until 23.0.0 (see `lr-chart`).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
-**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-datum-visibility-change-request`
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate` (deprecated alias `lr-point-click`,
+removed in 23.0.0), `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
-`lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
+`lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 `lr-before-datum-visibility-change`/`lr-before-legend-visibility-change` are deprecated aliases of
 the two `*-request` events above (removal not before 21.0.0).
@@ -1107,7 +1128,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
+`--lr-chart-tooltip-color` (deprecated alias `--lr-chart-tooltip-text`), `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
@@ -1120,7 +1141,7 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set,
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoomable` is set,
 `chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set, and
 `chartjs-plugin-annotation` when `annotations` contains a usable entry.
 
@@ -1179,8 +1200,9 @@ apply when the component reconnects.
 - `labels`, `datasets`, and `hiddenDatasets` are clone-owned, bounded, frozen snapshots. Mutating a
   previously assigned array or nested series data has no effect; create and reassign a new
   collection.
-- `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
-  visibility without clipping long labels.
+- `withLegend: boolean = false` (attribute `with-legend`) — renders a wrapping DOM legend whose
+  buttons toggle box-series visibility without clipping long labels. Deprecated alias: `legend`
+  (use `with-legend`; removed in 23.0.0).
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,
   responsive DOM legend placement
 - `height: string = '280px'` — valid CSS height used as a private fallback only. A consumer-set
@@ -1188,7 +1210,10 @@ apply when the component reconnects.
   token/default in control.
 - `xLabel: string = ''` (attribute `x-label`) — category axis title, mirroring `yLabel`
 - `yLabel: string = ''` (attribute `y-label`)
-- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets the value axis
+  start at the data minimum instead of always including zero. Deprecated alias: `begin-at-zero`
+  (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`; removed in
+  23.0.0).
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
@@ -1199,12 +1224,14 @@ apply when the component reconnects.
   context-object formatter takes precedence. Tick calls name `axis: 'y'`, and a tooltip value now
   carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
   `statistic: 'median'` instead of discarding what the callback was handed.
-- `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
+- `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
+  table. Deprecated alias: `show-data-table` (`showDataTable`; use `with-data-table`; removed in
+  23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
-  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
-  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  `withDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
   table stays in the DOM in both states, so assistive technology never loses it, and the button
   carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. A supplied
   `slot="data-table"` follows this same disclosure state. Unset, nothing renders and behavior is
@@ -1215,8 +1242,9 @@ PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an 
 change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
 its computed color swatches.
 
-**Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-click`
-(compatibility), `lr-legend-visibility-change-request` (cancelable proposed legend
+**Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-activate`,
+`lr-point-click` (deprecated alias of `lr-point-activate`),
+`lr-legend-visibility-change-request` (cancelable proposed legend
 toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
@@ -1225,8 +1253,10 @@ proposal leaves state untouched and suppresses the commit event.
 `lr-legend-visibility-change-request`, fired immediately after it from the same gesture with the
 same detail; either event may veto (removal not before 21.0.0).
 
-`lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
-keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its
+`lr-point-activate` fires when pointer input lands on a box, or when Enter/Space activates the
+keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose.
+Deprecated alias: `lr-point-click` (use `lr-point-activate`; removed in 23.0.0), fired right after it
+with an identical detail. Its
 `detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: LyraBoxPlotSummary |
 null }`, where `value` is a fresh copy of that box's five-number summary (never the object you
 passed in `datasets`, which the underlying peer may annotate in place). A pointer click that misses every
@@ -1257,10 +1287,11 @@ bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text` — same public host-level precedence, token names, and defaults as `lr-chart`
+`--lr-chart-tooltip-color` (deprecated alias `--lr-chart-tooltip-text`, removed in 23.0.0) — same
+public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a
-re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here. A `LyraBoxPlotSeries`
+re-export: `lr-box-plot` has no `zoomable`, so no `reset-zoom-button` chrome exists here. A `LyraBoxPlotSeries`
 that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` ramp `lr-chart` uses,
 so `--lr-theme-color-chart-*` retheming reaches box plots too. That resolved color then layers two
 further per-series override tokens for the canvas paint, each wrapping modulo 8 like the underlying

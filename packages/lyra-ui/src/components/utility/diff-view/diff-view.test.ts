@@ -2065,3 +2065,55 @@ describe('highlights', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(3);
   });
 });
+
+describe('-bg custom properties and their deprecated -background aliases', () => {
+  const oldText = ['a', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'z'].join('\n');
+  const newText = ['A', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'Z'].join('\n');
+  const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+  const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
+  const kinds = ['add', 'remove', 'fold'] as const;
+
+  const declarations = (suffix: 'bg' | 'background', offset: number): string =>
+    [
+      ...kinds.map((kind, index) => `--lr-diff-view-${kind}-${suffix}: ${colorFor(index + offset)};`),
+      ...tones.map((tone, index) => `--lr-diff-view-highlight-${tone}-${suffix}: ${colorFor(index + 10 + offset)};`),
+    ].join(' ');
+
+  const paints = async (style: string): Promise<Record<string, string>> => {
+    const el = (await fixture(
+      html`<lr-diff-view style=${style} .oldText=${oldText} .newText=${newText} .contextLines=${1}></lr-diff-view>`,
+    )) as LyraDiffView;
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    const background = (selector: string): string =>
+      getComputedStyle(root.querySelector(selector) as HTMLElement).backgroundColor;
+    const result: Record<string, string> = {
+      add: background('[part="line"][data-type="add"]'),
+      remove: background('[part="line"][data-type="remove"]'),
+      fold: background('[part="line"][data-type="fold"]'),
+    };
+    for (const tone of tones) {
+      el.highlights = [{ id: tone, anchor: { kind: 'line-range', start: 0 }, tone }];
+      await el.updateComplete;
+      result[tone] = background(`[part="line"][data-highlight="${tone}"]`);
+    }
+    return result;
+  };
+
+  const expected = (offset: number): Record<string, string> => ({
+    ...Object.fromEntries(kinds.map((kind, index) => [kind, colorFor(index + offset)])),
+    ...Object.fromEntries(tones.map((tone, index) => [tone, colorFor(index + 10 + offset)])),
+  });
+
+  it('paints every line and highlight tone from the canonical -bg properties', async () => {
+    expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+  });
+
+  it('still honors the deprecated -background spellings with the same result', async () => {
+    expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
+  });
+
+  it('lets the canonical -bg property win when both spellings are set', async () => {
+    expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
+  });
+});

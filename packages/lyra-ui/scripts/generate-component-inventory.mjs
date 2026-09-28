@@ -3924,7 +3924,7 @@ const DECISION_NOTES = new Map([
   ],
   [
     'wa-video-playlist',
-    'Lyra preserves the reviewed direct-child, first-active, navigation, control-forwarding, immutable event-snapshot, and ended auto-advance behavior. It adds autoAdvance and repeat controls without removing or changing the mapped upstream surface.',
+    'Lyra preserves the reviewed direct-child, first-active, navigation, control-forwarding, immutable event-snapshot, and ended auto-advance behavior. It adds without-auto-advance and repeat controls without removing or changing the mapped upstream surface.',
   ],
 ]);
 

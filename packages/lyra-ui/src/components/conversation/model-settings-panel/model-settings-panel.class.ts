@@ -257,7 +257,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .step=${domain.step}
             .valueAsNumber=${this.temperature}
             .valueFormatter=${this.formatTemperature}
-            .showValue=${false}
+            .withValue=${false}
             .disabled=${this.disabled}
             @focus=${this.containNativeEvent}
             @blur=${this.containNativeEvent}

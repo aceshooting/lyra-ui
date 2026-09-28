@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `hideAxis` / `hide-axis` since `21.1.0`; use property `without-axis`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -41,7 +41,9 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
-window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
+window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
+`label: string = ''`. Deprecated alias: `hide-axis`/`hideAxis` (use `without-axis`; removed in
+23.0.0).
 
 The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
@@ -52,7 +54,7 @@ exports.
 **Events:** `lr-span-select` — `detail: { spanId: string }`, a bar/row was activated (click, Enter,
 Space).
 
-**CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,
+**CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.

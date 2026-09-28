@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,7 +29,7 @@ active cell, not from the center of the whole strip. The tooltip is visual only 
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
 cell, or pressing Enter/Space on the roving cell, emits `lr-item-activate`. Selection is controlled,
-so the consumer updates `selectedIndex` when it accepts that activation. Setting `showLegend`
+so the consumer updates `selectedIndex` when it accepts that activation. Setting `withLegend`
 additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
 mapping is readable without visiting each cell.
 
@@ -85,16 +85,17 @@ readonly color, readonly label? }`; `color`
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item
   still gets a row, and an item whose `categoryId` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
-  once — and it wraps onto further rows in a narrow allocation rather than overflowing
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing. Deprecated
+  alias: `show-legend`/`showLegend` (use `with-legend`; removed in 23.0.0)
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
-  `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
+  `"Subagent"`). Setting it does two things: with `withLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
   per-category only. The marker count is reported as its own clause rather than folded into any
@@ -131,7 +132,7 @@ Enter/Space — it has a pointer cursor plus paired hover/press treatments, and 
 it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
 item's label, hidden until a cell is hovered or focused),
-`legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
+`legend` (the static category key rendered below the strip when `withLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
@@ -178,7 +179,7 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 **Known gotchas:**
 
-- the activation event is `lr-item-activate`, not `lr-cell-click`. Click and Enter/Space emit the
+- the activation event is `lr-item-activate`, not `lr-cell-activate`. Click and Enter/Space emit the
   activated item's `index`/`id`, but do not mutate the controlled `selectedIndex`; listen for the
   event and update that property when the application accepts the activation.
 - an `items` entry whose `categoryId` has no matching `categories` entry still contributes to the

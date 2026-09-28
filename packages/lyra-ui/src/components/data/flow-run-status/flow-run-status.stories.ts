@@ -46,7 +46,7 @@ export const Default: Story = {
 export const HiddenSummary: Story = {
   render: () => html`
     <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes} .edges=${edges}>
-      <lr-flow-run-status slot="top-end" hide-summary .decorations=${decorations}></lr-flow-run-status>
+      <lr-flow-run-status slot="top-end" without-summary .decorations=${decorations}></lr-flow-run-status>
     </lr-flow-canvas>
   `,
 };

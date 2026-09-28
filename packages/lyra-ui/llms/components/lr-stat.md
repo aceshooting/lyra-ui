@@ -7,6 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Deprecated slot** default slot since `21.1.0`; use slot `slot="start"`; removal not before `23.0.0` — start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected.
 - **Optional peers** none
 - **Themeable via** 14 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -76,13 +77,18 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
-- `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
-  `lr-widget`'s `compact`
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
+  density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
+  and removes the attribute. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it
+  still renders exactly like `size="s"`; the two stay in step, the last write wins, and `compact`
+  reads `true` whenever `size` is `s` or smaller
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
   `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
-  `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
+  `plain` wins over the compact density when both are set (there is no padding left to tighten), and it drops
   `emphasis`'s accent edge — that edge is card chrome — while `emphasis`'s brand value tint still
   applies. A `plain` stat with a safe `href` swaps the card's border-color/lift hover affordance
   (invisible with no border) for an underline on `[part="value"]`; the `:focus-visible` ring is
@@ -118,7 +124,7 @@ the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default
 `--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
 `--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
-rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
+rendering path — the default card, the compact density (`size="s"` and below; own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
 `.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
 unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)

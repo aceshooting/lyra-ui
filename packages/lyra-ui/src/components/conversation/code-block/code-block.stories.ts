@@ -241,7 +241,7 @@ export const FillHeightContainer: Story = {
 export const NotCopyable: Story = {
   render: () => html`
     <lr-code-block
-      .copyable=${false}
+      without-copy-button
       language="typescript"
       filename="readonly.ts"
       .code=${tsSample}

@@ -169,14 +169,14 @@ export const ErrorWithRetry: Story = {
 };
 
 export const NotRemovable: Story = {
-  name: 'removable=false (already-sent message attachment)',
+  name: 'without-remove-button (already-sent message attachment)',
   render: () => html`
     <lr-attachment-chip
       name="roof-photo.jpg"
       bytes="2415919"
       mime-type="image/jpeg"
       status="success"
-      .removable=${false}
+      without-remove-button
     ></lr-attachment-chip>
   `,
 };
@@ -187,14 +187,14 @@ export const Compact: Story = {
     docs: {
       description: {
         story:
-          'The `compact` presentation reduces the thumbnail, text, spacing, and outer chrome while retaining the filename and status information.',
+          'The compact density (`size="s"` and below) reduces the thumbnail, text, spacing, and outer chrome while retaining the filename and status information.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem;">
-      <lr-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="success"></lr-attachment-chip>
-      <lr-attachment-chip compact .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lr-attachment-chip>
+      <lr-attachment-chip size="s" .file=${samplePngFile('site-photo.png')} status="success"></lr-attachment-chip>
+      <lr-attachment-chip size="s" .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lr-attachment-chip>
     </div>
   `,
 };
@@ -205,20 +205,20 @@ export const ThumbnailOnly: Story = {
     docs: {
       description: {
         story:
-          'Combining `compact` and `thumbnail-only` hides metadata only for image attachments, including images supplied as real `File` objects. Non-image files retain their identifying text.',
+          'Combining the compact density (`size="s"`) and `thumbnail-only` hides metadata only for image attachments, including images supplied as real `File` objects. Non-image files retain their identifying text.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
       <lr-attachment-chip
-        compact
+        size="s"
         thumbnail-only
         .file=${samplePngFile('site-photo.png')}
         status="success"
       ></lr-attachment-chip>
       <lr-attachment-chip
-        compact
+        size="s"
         thumbnail-only
         .file=${sampleTextFile('notes.txt', 2048)}
         status="pending"

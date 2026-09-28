@@ -106,7 +106,7 @@ describe('lr-heatmap calendar cell spacing', () => {
       expect(alpha(el, 43, 30)).to.be.lessThan(255);
 
       const clicks: unknown[] = [];
-      el.addEventListener('lr-cell-click', event => clicks.push(event.detail));
+      el.addEventListener('lr-cell-activate', event => clicks.push(event.detail));
       click(el, 41, 35);
       click(el, 48, 28.5);
       expect(clicks.length).to.equal(0);
@@ -181,7 +181,7 @@ describe('lr-heatmap calendar cell spacing', () => {
     expect(alpha(el, 105, 35)).to.equal(255);
     expect(alpha(el, 98, 35)).to.equal(0);
     const clicks: unknown[] = [];
-    el.addEventListener('lr-cell-click', event => clicks.push(event.detail));
+    el.addEventListener('lr-cell-activate', event => clicks.push(event.detail));
     click(el, 125, 47);
     expect(clicks).to.deep.equal([{ date: '2026-01-12', value: 9 }]);
   });

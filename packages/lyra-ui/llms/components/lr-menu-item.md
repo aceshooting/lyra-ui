@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-menu-item-change` since `21.1.0`; use event `addEventListener('lr-menu-item-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 13 custom properties — see `lr-menu.md`
 - **Documented with** `lr-menu`: see [lr-menu.md](./lr-menu.md).

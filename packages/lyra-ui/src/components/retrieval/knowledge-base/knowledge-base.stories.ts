@@ -64,12 +64,12 @@ export const Default: Story = {
 
 export const NoSummary: Story = {
   name: 'Summary hidden',
-  render: () => html`<lr-knowledge-base style="max-width:56rem" .sources=${sources} hide-summary></lr-knowledge-base>`,
+  render: () => html`<lr-knowledge-base style="max-width:56rem" .sources=${sources} without-summary></lr-knowledge-base>`,
 };
 
 export const ReadOnly: Story = {
   name: 'Read-only (create hidden)',
-  render: () => html`<lr-knowledge-base style="max-width:56rem" .sources=${sources} hide-create></lr-knowledge-base>`,
+  render: () => html`<lr-knowledge-base style="max-width:56rem" .sources=${sources} without-create></lr-knowledge-base>`,
 };
 
 export const ActionTriggerTheming: Story = {

@@ -77,8 +77,8 @@ export const WrappingFileInput: Story = {
 };
 
 /** `size` scales the overlay's padding, icon and instructional text -- identical scale to
- *  `lr-file-input`'s own `size` -- so a drop-zone can match a neighboring compact `lr-file-input`
- *  in the same dense layout. Drag a file over each panel to see the overlay at that tier. */
+ *  `lr-file-input`'s own `size` -- so a drop-zone can match a neighboring small-tier
+ *  `lr-file-input` in the same dense layout. Drag a file over each panel to see the overlay at that tier. */
 export const SizeLadder: Story = {
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">

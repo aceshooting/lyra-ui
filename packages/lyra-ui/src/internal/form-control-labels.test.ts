@@ -68,7 +68,7 @@ interface TestControl extends HTMLElement {
   schema?: unknown;
   keys?: unknown[];
   type?: string;
-  showFlags?: boolean;
+  withoutFlags?: boolean;
   updateComplete?: Promise<unknown>;
 }
 
@@ -115,7 +115,7 @@ const FACE_CASES: FaceCase[] = [
   { name: 'native-time-input' },
   { name: 'number-input' },
   { name: 'time-input' },
-  { name: 'locale-picker', setup: (control) => { control.showFlags = false; } },
+  { name: 'locale-picker', setup: (control) => { control.withoutFlags = true; } },
   { name: 'otp-input' },
   { name: 'phone-input' },
   { name: 'radio-button', setup: (control) => { control.textContent = 'Option'; } },

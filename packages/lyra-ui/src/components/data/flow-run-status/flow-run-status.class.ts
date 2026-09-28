@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -81,6 +82,9 @@ export class LyraFlowRunStatus extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideSummary: 'withoutSummary',
+  };
 
   @property() for = '';
   private _decorations: FlowRunDecorations = Object.freeze({});
@@ -95,7 +99,17 @@ export class LyraFlowRunStatus extends LyraElement {
     this._decorations = snapshotFlowDecorations(value);
     this.requestUpdate('decorations', previous);
   }
+  /** Omits the visible strip -- the `[part="summary"]` line and every `[part="count"]` -- while
+   *  still pushing `decorations` into the canvas and announcing step transitions. */
+  @property({ type: Boolean, attribute: 'without-summary' }) withoutSummary = false;
+  /**
+   * Deprecated alias of `without-summary`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-summary`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'hide-summary' }) hideSummary = false;
+
   @property() label = '';
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating strip. `'plain'` removes the border, background, shadow,
@@ -267,7 +281,7 @@ export class LyraFlowRunStatus extends LyraElement {
     const { done, total, counts } = this.summary();
     const number = getNumberFormat(this.effectiveLocale);
     return html`<div part="base" role="group" aria-label=${ariaLabel}>
-      ${this.hideSummary
+      ${this.withoutSummary
         ? ''
         : html`
             <div part="summary">${this.localize('flowRunSummary', undefined, {

@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -218,14 +219,14 @@ it('uses themeable running motion and lets footer actions wrap', async () => {
   expect(getComputedStyle(footer).flexWrap).to.equal('wrap');
 });
 
-it('toggles maximized and emits lr-maximize-change when the maximize button is clicked', async () => {
+it('toggles maximized and emits lr-maximize-change-request when the maximize button is clicked', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   await el.updateComplete;
   expect(el.maximized).to.be.false;
 
-  const listener = oneEvent(el, 'lr-maximize-change');
+  const listener = oneEvent(el, 'lr-maximize-change-request');
   (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -234,7 +235,7 @@ it('toggles maximized and emits lr-maximize-change when the maximize button is c
   expect(el.maximized).to.be.true;
   expect(el.hasAttribute('maximized')).to.be.true;
 
-  const restoreListener = oneEvent(el, 'lr-maximize-change');
+  const restoreListener = oneEvent(el, 'lr-maximize-change-request');
   (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
   const restoreEvent = await restoreListener;
 
@@ -251,8 +252,8 @@ it('lets a host veto the maximize toggle via preventDefault, leaving maximized u
   await el.updateComplete;
   expect(el.maximized).to.be.false;
 
-  el.addEventListener('lr-maximize-change', (event) => event.preventDefault());
-  const listener = oneEvent(el, 'lr-maximize-change');
+  el.addEventListener('lr-maximize-change-request', (event) => event.preventDefault());
+  const listener = oneEvent(el, 'lr-maximize-change-request');
   (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
   const event = await listener;
 
@@ -764,4 +765,53 @@ it('uses the quiet foreground and transparent background defaults for pending st
 
   expect(getComputedStyle(status).color).to.equal(quietColor);
   expect(getComputedStyle(status).backgroundColor).to.equal(transparentBackground);
+});
+
+describe('lr-tool-result-dialog deprecated lr-maximize-change alias', () => {
+  const MAXIMIZE: readonly DeprecatedUsage[] = [
+    { tag: 'lr-tool-result-dialog', kind: 'event', name: 'lr-maximize-change' },
+  ];
+  const clickMaximize = (el: LyraToolResultDialog): void =>
+    (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
+
+  it('still fires the alias right after the canonical request, with an equal cancelable detail, without warning', async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
+    const seen: CustomEvent<{ readonly maximized: boolean }>[] = [];
+    el.addEventListener('lr-maximize-change-request', (event) => seen.push(event));
+    el.addEventListener('lr-maximize-change', (event) => seen.push(event));
+    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
+      clickMaximize(el);
+      await el.updateComplete;
+    });
+    expect(seen.map((event) => event.type)).to.deep.equal(['lr-maximize-change-request', 'lr-maximize-change']);
+    expect(seen.map((event) => event.cancelable)).to.deep.equal([true, true]);
+    expect(seen[1]!.detail).to.deep.equal(seen[0]!.detail);
+    expect(seen[1]!.detail === seen[0]!.detail).to.be.false;
+    expect(el.maximized).to.be.true;
+    expect(warnings).to.have.length(0);
+  });
+
+  it('lets a listener bound only to the alias veto the toggle, warning once', async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
+    el.addEventListener('lr-maximize-change', (event) => event.preventDefault());
+    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
+      clickMaximize(el);
+      await el.updateComplete;
+      clickMaximize(el);
+      await el.updateComplete;
+    });
+    expect(el.maximized).to.be.false;
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-result-dialog:event:lr-maximize-change']);
+  });
+
+  it('does not warn when the canonical request is the one that vetoes', async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
+    el.addEventListener('lr-maximize-change-request', (event) => event.preventDefault());
+    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
+      clickMaximize(el);
+      await el.updateComplete;
+    });
+    expect(el.maximized).to.be.false;
+    expect(warnings).to.have.length(0);
+  });
 });

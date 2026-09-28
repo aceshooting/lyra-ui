@@ -126,7 +126,7 @@ it('renders entities as lr-entity-chip with resolved typeLabel from types', asyn
   ).to.equal('Marie Curie');
 });
 
-it('renders relationships as lr-path-strip, communities as compact lr-community-card, chunks as compact lr-chunk-inspector', async () => {
+it('renders relationships as lr-path-strip, communities as size="s" lr-community-card, chunks as size="s" lr-chunk-inspector', async () => {
   const el = (await fixture(
     html`<lr-provenance-panel></lr-provenance-panel>`
   )) as LyraProvenancePanel;
@@ -134,9 +134,32 @@ it('renders relationships as lr-path-strip, communities as compact lr-community-
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('lr-path-strip')).to.exist;
   const communityCard = el.shadowRoot!.querySelector('lr-community-card')!;
-  expect(communityCard.hasAttribute('compact')).to.be.true;
+  expect(communityCard.getAttribute('size')).to.equal('s');
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector')!;
-  expect(inspector.hasAttribute('compact')).to.be.true;
+  expect(inspector.getAttribute('size')).to.equal('s');
+});
+
+it('surfaces an embedded chunk inspector lr-chunk-toggle, then its deprecated lr-expand alias', async () => {
+  const el = (await fixture(
+    html`<lr-provenance-panel .provenance=${provenance}></lr-provenance-panel>`
+  )) as LyraProvenancePanel;
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as HTMLElement & {
+    size: string;
+    updateComplete: Promise<boolean>;
+  };
+  // The panel renders its inspector at the dense size, which has no text toggle; the regular size
+  // exposes the toggle whose events the panel surfaces.
+  inspector.size = 'm';
+  await inspector.updateComplete;
+  const seen: string[] = [];
+  for (const type of ['lr-chunk-toggle', 'lr-expand']) {
+    el.addEventListener(type, (event) =>
+      seen.push(`${type}:${JSON.stringify((event as CustomEvent).detail)}`)
+    );
+  }
+  (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+  const detail = JSON.stringify({ chunkId: 'ch1', expanded: true });
+  expect(seen).to.deep.equal([`lr-chunk-toggle:${detail}`, `lr-expand:${detail}`]);
 });
 
 it('all four sections start expanded, and toggling one emits lr-toggle without collapsing the others', async () => {

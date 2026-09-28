@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './generation-metrics.styles.js';
@@ -97,7 +98,7 @@ function formatThroughput(value: number, locale: string): string {
 }
 
 /**
- * String-aware boolean attribute converter for `show-stop`. Lit's built-in
+ * String-aware boolean attribute converter for the deprecated `show-stop`. Lit's built-in
  * `type: Boolean` converter is presence-based -- the attribute's mere
  * presence (regardless of its string value) maps to `true`, so a plain-
  * markup consumer writing the literal `show-stop="false"` would actually get
@@ -186,7 +187,7 @@ const GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
  * @csspart elapsed - The elapsed-time segment, e.g. `"12.3s"`. Always rendered (reads `"0.0s"` while idle).
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
- * @csspart stop-button - The built-in Stop button. Only rendered while `status="running"` and `show-stop` is true.
+ * @csspart stop-button - The built-in Stop button. Only rendered while `status="running"` and `without-stop` is unset.
  * @status stable
  * @since 9.0.0
  */
@@ -205,6 +206,9 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showStop: ['withoutStop', invertAlias, invertAlias],
+  };
 
   private _status: GenerationMetricsStatus = 'idle';
 
@@ -239,12 +243,16 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
    *  one second has elapsed. */
   @property({ type: Number, attribute: 'tokens-per-second' }) tokensPerSecond?: number;
 
-  /** Whether the built-in Stop button renders at all. Defaults to `true`.
-   *  Uses {@link showStopConverter} rather than Lit's default presence-based
-   *  `type: Boolean` handling, so a plain-HTML consumer with no way to write
-   *  a `.showStop` property binding can still turn this off with
-   *  `show-stop="false"`; a Lit template can do the same with either that
-   *  attribute string or a `.showStop=${false}` property binding. */
+  /** Hides the built-in Stop button. */
+  @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;
+
+  /**
+   * Deprecated inverted alias of `without-stop` (`withoutStop`): `show-stop="false"` equals
+   * `without-stop`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-stop`; removal not before 23.0.0.
+   */
   @property({ attribute: 'show-stop', converter: showStopConverter }) showStop = true;
 
   // Recomputed on activation and on every ~1s tick; frozen (not reset) once
@@ -462,7 +470,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
               })}</span
             >`
           : nothing}
-        ${this.showStop && this.status === 'running'
+        ${!this.withoutStop && this.status === 'running'
           ? html`
               <button
                 part="stop-button"

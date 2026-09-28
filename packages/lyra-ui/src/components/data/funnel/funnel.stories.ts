@@ -94,7 +94,7 @@ export const WithoutDropoff: StoryObj = {
   render: () => html`
     <lr-funnel
       label="Self-serve signup"
-      dropoff="false"
+      without-dropoff
       .stages=${SIGNUP}
       style="max-inline-size: 32rem"
     ></lr-funnel>

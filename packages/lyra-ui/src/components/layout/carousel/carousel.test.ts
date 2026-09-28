@@ -12,11 +12,20 @@ import {
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `layout` slice (a side effect, like every
 // translation module) so the "formats generated slide indices with the effective locale" test
 // below can render `locale="ar-EG"` without tripping the dev-mode locale-fallback warning that
 // strict-console platform lanes treat as fatal -- see that test for detail.
 import "../../../translations/ar/layout.js";
+
+// Two tests below pin the deprecated `accessible-label` attribute's behavior, which must keep
+// working until its removal.
+expectDeprecatedUsage('lr-carousel', 'attribute', 'accessible-label');
 
 async function carousel(
   template = html`
@@ -2074,6 +2083,65 @@ it("keeps an explicitly empty accessible-label distinct from an omitted one", as
   expect(
     explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
   ).to.equal("");
+});
+
+describe('lr-carousel: host aria-label and the deprecated accessible-label attribute', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-carousel', kind: 'attribute', name: 'accessible-label' },
+  ];
+  const regionName = (el: LyraCarousel): string | null =>
+    el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label');
+
+  it('names the carousel from the host aria-label without a warning', async () => {
+    let el!: LyraCarousel;
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el = await carousel(html`
+        <lr-carousel aria-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
+      `);
+    });
+    expect(warnings).to.have.length(0);
+    expect(regionName(el)).to.equal('Product screenshots');
+  });
+
+  it('keeps the accessible-label alias naming the carousel, and warns once naming aria-label', async () => {
+    const names: (string | null)[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await carousel(html`
+          <lr-carousel accessible-label="Product screenshots"><div>One</div><div>Two</div></lr-carousel>
+        `);
+        names.push(regionName(el));
+      }
+    });
+    expect(names).to.deep.equal(['Product screenshots', 'Product screenshots']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-carousel:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('lets the host aria-label win over the accessible-label alias', async () => {
+    let el!: LyraCarousel;
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      el = await carousel(html`
+        <lr-carousel accessible-label="Old" aria-label="New"><div>One</div><div>Two</div></lr-carousel>
+      `);
+    });
+    expect(regionName(el)).to.equal('New');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(regionName(el)).to.equal('Old');
+  });
+
+  it('does not warn for a property-only accessibleLabel assignment', async () => {
+    const el = await carousel(html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`);
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.accessibleLabel = 'Assigned';
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+    expect(regionName(el)).to.equal('Assigned');
+  });
 });
 
 it("preserves an explicitly empty host aria-label on both carousel landmarks", async () => {

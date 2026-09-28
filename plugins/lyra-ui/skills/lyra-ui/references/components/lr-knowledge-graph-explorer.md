@@ -7,7 +7,9 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `searchQuery` / `search-query` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,7 +23,7 @@ neighborhood expansion, pinned nodes, path finding between pins, node selection,
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
 `lr-path-strip`, and `lr-popover.showAt()`.
 
-Removing `search-query` retains `null` property readback while clearing the search input, results
+Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
 Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
@@ -30,24 +32,25 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
-- `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
+- `nodes: LyraGraphNode[] = []`, `edges: LyraGraphEdge[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
   `communities: LyraGraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
   projected through `lr-graph`'s shared nonblank, first-wins identity policy before derived lookups
   and forwarding: `LyraGraphNode { id: string; label?: string; accessibleLabel?: string;
   description?: string; radius?: number; color?: string; type?: string; expandable?: boolean;
-  communityId?: string }`, `LyraGraphLink { id?: string; source: string; target: string; width?:
+  communityId?: string }`, `LyraGraphEdge { id?: string; source: string; target: string; width?:
   number; label?: string; accessibleLabel?: string; description?: string; directed?: boolean;
   color?: string; dash?: number[] }` (source/target are node ids), `LyraNodeTypeStyle { id: string;
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
-  field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
-  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list
+  field-by-field semantics (color/shape resolution precedence, dangling-edge handling, hull
+  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list.
+  Deprecated alias: `links` (use `edges`; removed in 23.0.0)
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
   node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
-  `links`, `description`/`properties` are omitted
+  `edges`, `description`/`properties` are omitted
 - `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
 directed?: boolean; reverse?: boolean }`). Empty renders no strip
@@ -62,7 +65,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the filter applied to the visible node
+- `query: string = ''` — the filter applied to the visible node
   set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`. A node
   matches when the query appears in **any** name it can be known by — its `id`, its `label` or its
   `accessibleLabel` — each folded with the active locale, so a node named only through
@@ -70,7 +73,8 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
   either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
   box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
-  while the node's valid string id remains searchable
+  while the node's valid string id remains searchable. Deprecated alias: `search-query`
+  (`searchQuery`; use `query`; removed in 23.0.0)
 
 (presentation)
 
@@ -79,16 +83,18 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
   it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
   which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
-  keeps forwarding the numeric `width`/`height` below unchanged. See `fitTo`'s own entry in
+  keeps forwarding the requested `width`/`height` below unchanged. See `fitTo`'s own entry in
   `llms/components/lr-graph.md`
-- `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
-  rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
-  chain `lr-graph.height` uses on its own host
+- `width: number | string = 800`, `height: number | string = 600` — a number of CSS pixels, or a
+  CSS length in `px`, `rem`, `em`, `vw` or `vh` that the composed graph resolves to pixels; any other
+  value uses the default. `height` also sizes the composed graph's own rendered box
+  (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback chain
+  `lr-graph.height` uses on its own host
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
   `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
   per-renderer default — see `nodeLabels`'s own entry in `llms/components/lr-graph.md`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
-  `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
+  `lr-graph`'s `dimmedNodeIds`/`dimmedEdgeIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
@@ -117,12 +123,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
   this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
   There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
-  has already applied the query to its own `searchQuery` property before emitting, so reassigning
+  has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
-  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
+  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
+  Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
+  equal detail; removed in 23.0.0).
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -134,7 +142,7 @@ pin toggle; no effect while `details` is overridden.
 
 **CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
 `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `query` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
@@ -144,8 +152,8 @@ while `path` is non-empty), `detail-popover`, `detail-card`.
 reservation. The composed graph's own `[part="graph"]` box additionally falls back to the
 explorer's `height` property (through a private custom property) beneath this same reservation
 name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overrides `height` for
-the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
-`--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
+the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-graph-node-fill`,
+`--lr-graph-edge-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
 `--lr-graph-hull-fill`/`-opacity` — documented in `llms/components/lr-graph.md`'s own
 **Themeable custom properties** list.

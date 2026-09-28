@@ -302,23 +302,26 @@ describe('lr-eval-result', () => {
     `)) as LyraEvalResult;
     let rawInputs = 0;
     let reviewInputs = 0;
-    let rawRows = 0;
-    let runSelects = 0;
+    const rawRows: string[] = [];
+    const activatedRunIds: string[] = [];
     el.addEventListener('lr-input', () => rawInputs++);
     el.addEventListener('lr-review-input', () => reviewInputs++);
-    el.addEventListener('lr-row-click', () => rawRows++);
-    el.addEventListener('lr-run-activate', () => runSelects++);
+    el.addEventListener('lr-row-activate', () => rawRows.push('lr-row-activate'));
+    el.addEventListener('lr-row-click', () => rawRows.push('lr-row-click'));
+    el.addEventListener('lr-run-activate', (e) => activatedRunIds.push((e as CustomEvent<{ runId: string }>).detail.runId));
     el.shadowRoot!.querySelector('lr-rubric-form')!.dispatchEvent(new CustomEvent('lr-input', {
       bubbles: true,
       composed: true,
       detail: { value: { accuracy: 4 } },
     }));
-    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-row-click', {
-      bubbles: true,
-      composed: true,
-      detail: { row: RUNS[1] },
-    }));
-    expect([rawInputs, reviewInputs, rawRows, runSelects]).to.deep.equal([0, 1, 0, 1]);
+    // A real row activation: the table fires the canonical lr-row-activate and then its
+    // deprecated lr-row-click alias, and the wrapper must translate once and contain both.
+    const table = el.shadowRoot!.querySelector('lr-table') as LyraTable<EvalRunResult>;
+    const rows = table.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]');
+    rows[1]!.click();
+    expect([rawInputs, reviewInputs]).to.deep.equal([0, 1]);
+    expect(rawRows).to.deep.equal([]);
+    expect(activatedRunIds).to.deep.equal(['run-b']);
   });
 
   it('contains auxiliary table, rubric, and diff events not declared by the wrapper', async () => {
@@ -326,9 +329,15 @@ describe('lr-eval-result', () => {
       <lr-eval-result .runs=${RUNS} .columns=${COLUMNS} .rubricKeys=${RUBRIC_KEYS}></lr-eval-result>
     `);
     const leaked: string[] = [];
-    for (const type of ['lr-selection-change', 'lr-page-change', 'lr-invalid', 'lr-copy', 'lr-copy-error']) {
+    for (const type of ['lr-selection-change', 'lr-page-change', 'lr-invalid', 'lr-copy', 'lr-copy-error', 'lr-row-click']) {
       el.addEventListener(type, () => leaked.push(type));
     }
+    // The deprecated row alias is contained even when it arrives on its own.
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-row-click', {
+      bubbles: true,
+      composed: true,
+      detail: { row: RUNS[1] },
+    }));
     el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-selection-change', {
       bubbles: true,
       composed: true,

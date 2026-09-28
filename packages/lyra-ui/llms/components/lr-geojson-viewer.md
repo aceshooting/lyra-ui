@@ -36,7 +36,7 @@ metadata before serialization or peer handoff. It then walks every coordinate un
 approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
-collapsed-depth="2">` of the raw value instead of the map.
+expand-depth="2">` of the raw value instead of the map.
 
 The root owns the named `region` landmark while loading, in fallback/error/idle states, and while a
 lazy map initializes. After `lr-map-load`, landmark ownership transfers to the map canvas so there

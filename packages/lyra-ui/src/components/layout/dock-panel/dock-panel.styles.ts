@@ -15,28 +15,28 @@ export const styles = css`
     --_lr-dock-panel-collapsed-size: var(--lr-icon-button-size);
     position: relative;
   }
-  :host([edge="start"]),
-  :host([edge="end"]) {
+  :host([placement="start"]),
+  :host([placement="end"]) {
     block-size: 100%;
   }
-  :host([edge="top"]),
-  :host([edge="bottom"]) {
+  :host([placement="top"]),
+  :host([placement="bottom"]) {
     inline-size: 100%;
   }
-  /* The collapsed-rail floor applies only once collapsed -- scoped here, not on the bare [edge]
+  /* The collapsed-rail floor applies only once collapsed -- scoped here, not on the bare [placement]
      selectors above, so it can never override a smaller explicit min-extent (resolved in JS by
      resolveBoundsPx()) while expanded. Unconditional it would silently win over a min-extent below
      the rail token's width: a CSS min-inline-size/min-block-size always beats an inline size
      style, whatever applySize() computed and announced via aria-valuenow. */
-  :host([edge="start"][collapsed]),
-  :host([edge="end"][collapsed]) {
+  :host([placement="start"][collapsed]),
+  :host([placement="end"][collapsed]) {
     min-inline-size: var(
       --lr-dock-panel-collapsed-size,
       var(--_lr-dock-panel-collapsed-size)
     );
   }
-  :host([edge="top"][collapsed]),
-  :host([edge="bottom"][collapsed]) {
+  :host([placement="top"][collapsed]),
+  :host([placement="bottom"][collapsed]) {
     min-block-size: var(
       --lr-dock-panel-collapsed-size,
       var(--_lr-dock-panel-collapsed-size)
@@ -105,25 +105,25 @@ export const styles = css`
     inset: var(--lr-size-neg-6px);
   }
 
-  :host([edge="start"]) [part="handle"] {
+  :host([placement="start"]) [part="handle"] {
     inset-block: 0;
     inset-inline-end: 0;
     inline-size: var(--lr-size-3px);
     cursor: col-resize;
   }
-  :host([edge="end"]) [part="handle"] {
+  :host([placement="end"]) [part="handle"] {
     inset-block: 0;
     inset-inline-start: 0;
     inline-size: var(--lr-size-3px);
     cursor: col-resize;
   }
-  :host([edge="top"]) [part="handle"] {
+  :host([placement="top"]) [part="handle"] {
     inset-inline: 0;
     inset-block-end: 0;
     block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
-  :host([edge="bottom"]) [part="handle"] {
+  :host([placement="bottom"]) [part="handle"] {
     inset-inline: 0;
     inset-block-start: 0;
     block-size: var(--lr-size-3px);
@@ -183,22 +183,22 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  :host([edge="start"]) [part="collapse-toggle"] {
+  :host([placement="start"]) [part="collapse-toggle"] {
     inset-inline-end: var(--lr-space-xs);
     inset-block-start: 50%;
     transform: translateY(-50%);
   }
-  :host([edge="end"]) [part="collapse-toggle"] {
+  :host([placement="end"]) [part="collapse-toggle"] {
     inset-inline-start: var(--lr-space-xs);
     inset-block-start: 50%;
     transform: translateY(-50%);
   }
-  :host([edge="top"]) [part="collapse-toggle"] {
+  :host([placement="top"]) [part="collapse-toggle"] {
     inset-block-end: var(--lr-space-xs);
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }
-  :host([edge="bottom"]) [part="collapse-toggle"] {
+  :host([placement="bottom"]) [part="collapse-toggle"] {
     inset-block-start: var(--lr-space-xs);
     inset-inline-start: 50%;
     transform: translateX(-50%);
@@ -207,8 +207,8 @@ export const styles = css`
      physical right edge under RTL, so translateX(-50%) must flip sign or the toggle sits a full
      box-width off center. The start/end edges center on the block axis (translateY), which no text
      direction affects. */
-  :host(:dir(rtl)[edge="top"]) [part="collapse-toggle"],
-  :host(:dir(rtl)[edge="bottom"]) [part="collapse-toggle"] {
+  :host(:dir(rtl)[placement="top"]) [part="collapse-toggle"],
+  :host(:dir(rtl)[placement="bottom"]) [part="collapse-toggle"] {
     transform: translateX(50%);
   }
   /* Collapse-toggle chevron mirroring for the start/end edges (the top/bottom rotation stays
@@ -219,28 +219,28 @@ export const styles = css`
      no JS re-render required, unlike the inline-style rotation this replaces. The more specific
      collapsed/dir(rtl) combinations below rely on selector specificity (more attribute selectors
      always outrank fewer), not source order, to win. */
-  :host([edge="start"]) [part="collapse-toggle"] span {
+  :host([placement="start"]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host([edge="start"][collapsed]) [part="collapse-toggle"] span {
+  :host([placement="start"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
-  :host([edge="end"]) [part="collapse-toggle"] span {
+  :host([placement="end"]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
-  :host([edge="end"][collapsed]) [part="collapse-toggle"] span {
+  :host([placement="end"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host(:dir(rtl)[edge="start"]) [part="collapse-toggle"] span {
+  :host(:dir(rtl)[placement="start"]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
-  :host(:dir(rtl)[edge="start"][collapsed]) [part="collapse-toggle"] span {
+  :host(:dir(rtl)[placement="start"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host(:dir(rtl)[edge="end"]) [part="collapse-toggle"] span {
+  :host(:dir(rtl)[placement="end"]) [part="collapse-toggle"] span {
     transform: rotate(180deg);
   }
-  :host(:dir(rtl)[edge="end"][collapsed]) [part="collapse-toggle"] span {
+  :host(:dir(rtl)[placement="end"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
   @media (prefers-reduced-motion: reduce) {

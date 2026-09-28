@@ -285,7 +285,7 @@ function builtInState(
     return html`<lr-empty
       part=${prefix}
       exportparts=${exportParts}
-      ?compact=${compact}
+      size=${compact ? 's' : nothing}
       heading-level=${headingLevel}
       heading=${config.loadingLabel ?? api.localize('loading')}
       description=""
@@ -295,7 +295,7 @@ function builtInState(
     return html`<lr-empty
       part=${prefix}
       exportparts=${exportParts}
-      ?compact=${compact}
+      size=${compact ? 's' : nothing}
       heading-level=${headingLevel}
       heading=${config.emptyHeading ?? api.localize('noData')}
       description=${config.emptyDescription ?? ''}
@@ -318,7 +318,7 @@ function builtInState(
   return html`<lr-empty
     part=${prefix}
     exportparts=${exportParts}
-    ?compact=${compact}
+    size=${compact ? 's' : nothing}
     heading-level=${headingLevel}
     heading=${config.errorHeading ?? api.localize('tableLoadFailed')}
     description=${config.errorDescription ?? ''}

@@ -696,6 +696,16 @@ export function renderCodeBlockPlainCode(
  */
 export type LyraCodeBlockCopyAppearance = 'text' | 'icon';
 
+/** `lr-toggle-request`/`lr-toggle` detail of `<lr-code-block>` and `<lr-code-block-core>`. */
+export interface LyraCodeBlockToggleDetail {
+  /** Whether the code region is shown in the resulting (on `lr-toggle-request`, the proposed)
+   *  state. */
+  expanded?: boolean;
+  /** The inverse of `expanded`.
+   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
+  collapsed: boolean;
+}
+
 /** The two-rectangle copy glyph, matching `<lr-copy-button>`'s own so the library reads as one
  *  visual language. Same 24x24 viewBox and 1.75 stroke as `internal/icons.ts`; not added to that
  *  shared set because only these two components render it and the set is imported wholesale. */
@@ -776,7 +786,7 @@ function renderCodeBlockHeader(
           ? html`
               <lr-icon-button
                 part=${options.copyAppearance === 'icon' ? 'copy-button copy-button-icon' : 'copy-button copy-button-text'}
-                exportparts="button:copy-button__control"
+                exportparts="button:copy-button-control, button:copy-button__control"
                 aria-label=${codeBlockCopyLabel(
                   options.localize,
                   options.justCopied,

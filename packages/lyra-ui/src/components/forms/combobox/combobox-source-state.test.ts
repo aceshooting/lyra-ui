@@ -261,7 +261,7 @@ describe('lr-combobox refresh()', () => {
 
   it('keeps the expanded combobox pointing at a valid popup role while the source failed', async () => {
     const el = await fixture<LyraCombobox>(
-      html`<lr-combobox label="Pick" source-delay="0" open show-unknown-option></lr-combobox>`
+      html`<lr-combobox label="Pick" source-delay="0" open with-unknown-option></lr-combobox>`
     );
     await withSilencedWarning(async () => {
       el.source = async () => {

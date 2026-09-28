@@ -1,13 +1,16 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
 
 describe('lr-env-list', () => {
-  it('defaults to revealable=true and copyable=true', async () => {
+  it('defaults to without-reveal=false and without-copy-button=false', async () => {
     const el = (await fixture(html`<lr-env-list></lr-env-list>`)) as LyraEnvList;
-    expect(el.revealable).to.be.true;
-    expect(el.copyable).to.be.true;
+    expect(el.withoutReveal).to.be.false;
+    expect(el.withoutCopyButton).to.be.false;
+    expect(el.hasAttribute('without-reveal')).to.be.false;
+    expect(el.hasAttribute('without-copy-button')).to.be.false;
   });
 
   it('clone-owns and freezes readonly entry snapshots while retaining valid partial input', async () => {
@@ -126,9 +129,9 @@ describe('lr-env-list', () => {
     expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).textContent!.trim()).to.equal('secret2');
   });
 
-  it('revealable=false renders no reveal button', async () => {
+  it('without-reveal renders no reveal button', async () => {
     const el = (await fixture(
-      html`<lr-env-list .entries=${[{ name: 'X', value: 'y' }]} .revealable=${false}></lr-env-list>`,
+      html`<lr-env-list .entries=${[{ name: 'X', value: 'y' }]} without-reveal></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
@@ -143,7 +146,7 @@ describe('lr-env-list', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset['masked']).to.equal('false');
 
-    el.revealable = false;
+    el.withoutReveal = true;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset['masked']).to.equal('true');
     expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
@@ -196,12 +199,12 @@ describe('lr-env-list', () => {
     expect(base.getAttribute('aria-label')).to.equal('Deployment variables');
   });
 
-  it('accepts revealable="false" and copyable="false" as plain-HTML attribute strings, not just property bindings', async () => {
+  it('omits both row buttons with the plain-HTML without-reveal and without-copy-button attributes', async () => {
     const el = (await fixture(
-      html`<lr-env-list revealable="false" copyable="false"></lr-env-list>`,
+      html`<lr-env-list without-reveal without-copy-button></lr-env-list>`,
     )) as LyraEnvList;
-    expect(el.revealable).to.be.false;
-    expect(el.copyable).to.be.false;
+    expect(el.withoutReveal).to.be.true;
+    expect(el.withoutCopyButton).to.be.true;
     el.entries = [{ name: 'X', value: 'y', secret: true }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
@@ -543,4 +546,103 @@ it('reads its reveal/copy button border widths from --lr-border-width-thin, not 
   // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
   expect(getComputedStyle(reveal).borderTopWidth).to.equal('11px');
   expect(getComputedStyle(copy).borderTopWidth).to.equal('11px');
+});
+
+describe('lr-env-list deprecated revealable and copyable aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-env-list', kind: 'property', name: 'revealable' },
+    { tag: 'lr-env-list', kind: 'property', name: 'copyable' },
+  ];
+  const entries = [{ name: 'API_KEY', value: 'secret', secret: true }];
+  const buttonCounts = (el: LyraEnvList): [number, number] => [
+    el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length,
+    el.shadowRoot!.querySelectorAll('[part="copy-button"]').length,
+  ];
+
+  it('treats revealable="false" and copyable="false" exactly like the without- attributes, warning once each', async () => {
+    const canonical = await fixture<LyraEnvList>(
+      html`<lr-env-list .entries=${entries} without-reveal without-copy-button></lr-env-list>`,
+    );
+    let aliased!: LyraEnvList;
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      aliased = await fixture<LyraEnvList>(
+        html`<lr-env-list .entries=${entries} revealable="false" copyable="false"></lr-env-list>`,
+      );
+      const second = await fixture<LyraEnvList>(
+        html`<lr-env-list .entries=${entries} revealable="false" copyable="false"></lr-env-list>`,
+      );
+      await second.updateComplete;
+    });
+    expect(buttonCounts(aliased)).to.deep.equal(buttonCounts(canonical));
+    expect(buttonCounts(aliased)).to.deep.equal([0, 0]);
+    expect([aliased.withoutReveal, aliased.withoutCopyButton]).to.deep.equal([true, true]);
+    expect([aliased.revealable, aliased.copyable]).to.deep.equal([false, false]);
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      'lyra-deprecated:lr-env-list:property:copyable',
+      'lyra-deprecated:lr-env-list:property:revealable',
+    ]);
+    expect(warnings.map(({ message }) => message).join(' ')).to.contain('without-reveal');
+    expect(warnings.map(({ message }) => message).join(' ')).to.contain('without-copy-button');
+  });
+
+  it('never warns for the canonical attributes or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
+      el.withoutReveal = true;
+      el.withoutCopyButton = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('forwards alias property writes and restores the default when the alias attribute is removed', async () => {
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
+      el.revealable = false;
+      el.copyable = false;
+      await el.updateComplete;
+      expect(buttonCounts(el)).to.deep.equal([0, 0]);
+      expect(el.hasAttribute('without-reveal')).to.be.true;
+      el.revealable = true;
+      el.copyable = true;
+      await el.updateComplete;
+      expect(buttonCounts(el)).to.deep.equal([1, 1]);
+
+      const attr = await fixture<LyraEnvList>(
+        html`<lr-env-list .entries=${entries} revealable="false"></lr-env-list>`,
+      );
+      expect(buttonCounts(attr)[0]).to.equal(0);
+      attr.removeAttribute('revealable');
+      await attr.updateComplete;
+      expect(buttonCounts(attr)[0]).to.equal(1);
+      expect(attr.withoutReveal).to.be.false;
+    });
+  });
+
+  it('lets the last write win in both directions and syncs the alias back from the canonical', async () => {
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const aliasLast = await fixture<LyraEnvList>(
+        html`<lr-env-list .entries=${entries} without-reveal revealable without-copy-button copyable></lr-env-list>`,
+      );
+      expect([aliasLast.withoutReveal, aliasLast.withoutCopyButton]).to.deep.equal([false, false]);
+      expect(buttonCounts(aliasLast)).to.deep.equal([1, 1]);
+
+      const canonicalLast = await fixture<LyraEnvList>(
+        html`<lr-env-list .entries=${entries} revealable without-reveal copyable without-copy-button></lr-env-list>`,
+      );
+      expect([canonicalLast.withoutReveal, canonicalLast.withoutCopyButton]).to.deep.equal([true, true]);
+      expect([canonicalLast.revealable, canonicalLast.copyable]).to.deep.equal([false, false]);
+      expect(buttonCounts(canonicalLast)).to.deep.equal([0, 0]);
+
+      canonicalLast.revealable = true;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.withoutReveal).to.be.false;
+      expect(canonicalLast.hasAttribute('without-reveal')).to.be.false;
+      canonicalLast.removeAttribute('without-copy-button');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.copyable).to.be.true;
+      expect(canonicalLast.hasAttribute('copyable')).to.be.false;
+      expect(buttonCounts(canonicalLast)).to.deep.equal([1, 1]);
+    });
+  });
 });

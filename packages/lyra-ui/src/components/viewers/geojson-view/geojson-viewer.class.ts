@@ -748,7 +748,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
             <pre part="metadata">${metadata}</pre>
             <lr-json-viewer
               .data=${value}
-              collapsed-depth="2"
+              expand-depth="2"
               @lr-copy=${this.stopChildEvent}
               @lr-search-change=${this.stopChildEvent}
               @lr-error=${this.stopChildEvent}

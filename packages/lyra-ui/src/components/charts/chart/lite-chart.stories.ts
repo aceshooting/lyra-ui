@@ -27,7 +27,7 @@ export const Default: Story = {
         type="bar"
         height="16rem"
         style="width: 22rem"
-        legend
+        with-legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
       ></lr-lite-chart>
@@ -48,7 +48,7 @@ export const NarrowLongContent: Story = {
           aria-label="Quarterly revenue from subscriptions and professional services"
           type="bar"
           height="16rem"
-          legend
+          with-legend
           max-labels="4"
           .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
           .datasets=${series}
@@ -69,7 +69,7 @@ export const GroupedBars: Story = {
         type="bar"
         height="16rem"
         style="width: 24rem"
-        legend
+        with-legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
       ></lr-lite-chart>
@@ -91,7 +91,7 @@ export const StackedBars: Story = {
         stacked
         height="16rem"
         style="width: 24rem"
-        legend
+        with-legend
         x-label="Week"
         y-label="Commits"
         .labels=${['W1', 'W2', 'W3', 'W4']}
@@ -172,7 +172,7 @@ export const Line: Story = {
         type="line"
         height="16rem"
         style="width: 24rem"
-        legend
+        with-legend
         .labels=${['00:00', '00:05', '00:10', '00:15', '00:20']}
         .datasets=${series}
       ></lr-lite-chart>
@@ -180,7 +180,7 @@ export const Line: Story = {
   },
 };
 
-/** Clicking (or Enter/Space on a focused) bar/point fires `lr-point-click`, same detail shape as `lr-chart`'s. */
+/** Clicking (or Enter/Space on a focused) bar/point fires `lr-point-activate`, same detail shape as `lr-chart`'s. */
 export const ClickToFilter: Story = {
   render: () => {
     const series: LyraLiteChartSeries[] = [{ label: 'Runs', data: [12, 19, 14, 22] }];
@@ -191,7 +191,7 @@ export const ClickToFilter: Story = {
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-        @lr-point-click=${(e: CustomEvent) => alert(JSON.stringify(e.detail))}
+        @lr-point-activate=${(e: CustomEvent) => alert(JSON.stringify(e.detail))}
       ></lr-lite-chart>
     `;
   },
@@ -202,7 +202,7 @@ export const SelectedLinePoint: Story = {
   render: () => html`
     <lr-lite-chart
       type="line"
-      legend
+      with-legend
       legend-position="start"
       height="16rem"
       style="
@@ -285,8 +285,8 @@ export const RightToLeftFormattedLabels: Story = {
         <lr-lite-chart
           type="line"
           value-axis-gutter="auto"
-          legend
-          show-data-table
+          with-legend
+          with-data-table
           height="16rem"
           .labels=${['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM']}
           .datasets=${series}
@@ -409,8 +409,8 @@ export const LogarithmicScaleCanary: Story = {
         type="bar"
         scale="logarithmic"
         height="16rem"
-        legend
-        show-data-table
+        with-legend
+        with-data-table
         x-label="Scenario"
         y-label="Latency in milliseconds, logarithmic scale"
         .labels=${['1 ms', '10 ms', '100 ms', '1,000 ms']}
@@ -425,7 +425,7 @@ export const LogarithmicScaleCanary: Story = {
 export const ManyGroupedSeries: Story = {
   render: () => html`
     <lr-lite-chart
-      type="bar" height="16rem" bar-gap-ratio="0.8" show-data-table
+      type="bar" height="16rem" bar-gap-ratio="0.8" with-data-table
       style="inline-size: 32rem; max-inline-size: 100%;"
       .labels=${['Current', 'Previous']}
       .datasets=${Array.from({ length: 12 }, (_, index) => ({ label: `Series ${index + 1}`, data: [index + 1, 12 - index] }))}
@@ -437,7 +437,7 @@ export const ManyGroupedSeries: Story = {
 export const LogarithmicStacks: Story = {
   render: () => html`
     <lr-lite-chart
-      type="bar" scale="logarithmic" stacked legend show-data-table height="16rem"
+      type="bar" scale="logarithmic" stacked with-legend with-data-table height="16rem"
       style="inline-size: 26rem; max-inline-size: 100%;"
       .labels=${['Small total', 'Large total']}
       .datasets=${[{ label: 'First', data: [1, 10] }, { label: 'Second', data: [1, 30] }]}

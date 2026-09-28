@@ -7,7 +7,11 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `legend` / `legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showDataTable` / `show-data-table` since `21.1.0`; use property `with-data-table`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 18 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -47,22 +51,26 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings
   continue to render.
-- `legend: boolean = false`
+- `withLegend: boolean = false` (attribute `with-legend`) — renders the static legend row.
+  Deprecated alias: `legend` (use `with-legend`; removed in 23.0.0).
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
-- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the `<svg>`'s auto-derived
+- `aria-label` (host attribute) — names the chart's `<svg>` ahead of every other source, by
+  presence. Deprecated alias: `accessible-label` (use `aria-label`; removed in 23.0.0).
+- `accessibleLabel?: string` (attribute: false) — overrides the `<svg>`'s auto-derived
   `aria-label` (`datasets.map(d => d.label).join(', ') || 'Chart'`); a host `aria-label` still wins.
-  Unset keeps the auto-derived (English-fallback) label. `lr-lite-chart` keeps this property under
-  its original `accessible-label` name, unrelated to the deprecated `accessible-label` alias that
-  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property.
+  Unset keeps the auto-derived (English-fallback) label.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
 - `xLabel: string = ''` (attribute `x-label`)
 - `yLabel: string = ''` (attribute `y-label`)
-- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets the value axis
+  start at the data minimum instead of always including zero. Deprecated alias: `begin-at-zero`
+  (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`; removed in
+  23.0.0).
 - `stacked: boolean = false` — sums each category's bars into one segmented bar instead of grouping
   them side by side; ignored for `type="line"`
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
@@ -84,13 +92,14 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
   multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
   grouped bars, line charts, and the single-series `data-list`.
-- `showDataTable: boolean = false` (attribute `show-data-table`, new in 11.1.0) — makes the
-  generated accessible table visible rather than screen-reader-only. Same meaning as `lr-chart`'s
-  property of the same name.
+- `withDataTable: boolean = false` (attribute `with-data-table`) — makes the generated accessible
+  table visible rather than screen-reader-only. Same meaning as `lr-chart`'s property of the same
+  name. Deprecated alias: `show-data-table` (`showDataTable`; use `with-data-table`; removed in
+  23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
   localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
   `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
-  `showDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
+  `withDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
   The table stays in the DOM in both states, so assistive technology never loses it. This matters
   more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
   app that chose it for exactly that reason had to either hand-roll a `<details>` around a
@@ -158,7 +167,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `legendText?: (label: string, datasetIndex: number) => string` (attribute: false) — appends
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
-  the label alone when unset; no-op while `legend` is `false`.
+  the label alone when unset; no-op while `withLegend` is `false`.
 - `axisLabelText?: (label: string, index: number) => string | null` (attribute: false) — a
   display-only override for one category-axis tick's text; returning `null` renders no tick there at
   all. `labels` stays the single authoritative source for the generated accessible table's row
@@ -206,7 +215,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   powers of ten across whole decades, with positive numeric steps for spans smaller than a decade.
   Both domain bounds remain represented, with space reserved between interior ticks and the bounds.
   Linear and square-root tick selection is unchanged. Its lower bound is the smallest *positive* datum rather than the
-  linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, which has no logarithm —
+  linear `lo`: the zero baseline is on by default, so `lo` is normally `0`, which has no logarithm —
   deriving the floor from the data is what makes a 1…1000 series span three even decades instead of
   collapsing onto one. Values at or below that floor (including zero and negatives, which have no
   real logarithm) pin to the axis floor rather than producing `-Infinity` geometry, and a degenerate
@@ -240,10 +249,12 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   oldest categories
 
 **Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
-`datasetIndex`, `index`, `label`, and `value`. The compatibility `lr-point-click` event is emitted
-for the same pointer or Enter/Space activation. When different series' expanded
-line-point targets overlap, pointer activation selects the closest rendered point in two-dimensional
-screen space; an exact distance tie retains the point whose target received the click.
+`datasetIndex`, `index`, `label`, and `value`. `lr-point-activate` is emitted for the same pointer
+or Enter/Space activation with the `lr-chart`-compatible detail. Deprecated alias: `lr-point-click`
+(use `lr-point-activate`; removed in 23.0.0), fired right after it with an identical detail. When
+different series' expanded line-point targets overlap, pointer activation selects the closest
+rendered point in two-dimensional screen space; an exact distance tie retains the point whose
+target received the click.
 
 **Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
 markup. CSV rows cover the canonical record count — the maximum of `labels.length` and every
@@ -332,7 +343,7 @@ substituted.
 **Optional peer deps:** none. This is the point of the component.
 
 ```html
-<lr-lite-chart type="bar" stacked legend x-label="Week" y-label="Commits"></lr-lite-chart>
+<lr-lite-chart type="bar" stacked with-legend x-label="Week" y-label="Commits"></lr-lite-chart>
 <script>
   const c = document.querySelector('lr-lite-chart');
   c.labels = ['W1', 'W2', 'W3', 'W4'];

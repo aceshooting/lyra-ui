@@ -1189,7 +1189,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       min=${min}
       max=${max}
       step=${step}
-      show-value
+      with-value
       aria-label=${accessibleLabel}
       .value=${numeric}
       ?disabled=${disabled}

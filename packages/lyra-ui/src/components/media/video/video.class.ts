@@ -235,8 +235,10 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  *   The poster play action defaults to `var(--lr-color-text)` against its surface background.
  * @cssprop [--poster-play-button-background=var(--lr-color-surface-overlay)] - Poster play-button
  *   background.
- * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Poster play-button
- *   hover background.
+ * @cssprop [--lr-video-poster-play-button-hover-bg=color-mix(...)] - Poster play-button hover
+ *   background.
+ * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Deprecated alias of
+ *   `--lr-video-poster-play-button-hover-bg`; removal not before 23.0.0.
  * @cssprop [--lr-video-poster-play-button-hover-border-color=var(--lr-color-brand)] - Poster
  *   play-button hover border color.
  * @status experimental

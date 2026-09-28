@@ -4,6 +4,8 @@ import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
   finiteCount,
@@ -72,6 +74,10 @@ export interface LyraChunkInspectorEventMap {
     sourceId: string;
     anchor?: LyraChunkAnchor;
   }>>;
+  /** A chunk's text toggle changed its expanded state. */
+  'lr-chunk-toggle': CustomEvent<{ chunkId: string; expanded: boolean }>;
+  /** @deprecated Use `lr-chunk-toggle`; removal not before 23.0.0. Fired right after it from the
+   *  same toggle, with an equal detail. */
   'lr-expand': CustomEvent<{ chunkId: string; expanded: boolean }>;
 }
 
@@ -79,6 +85,12 @@ type Tier = 'high' | 'medium' | 'low';
 
 /** How `<lr-chunk-inspector>` orders the chunks it was given. */
 export type ChunkInspectorSort = 'score' | 'none';
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /**
  * `<lr-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
@@ -102,7 +114,10 @@ export type ChunkInspectorSort = 'score' | 'none';
  * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
  * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { chunkId,
  * sourceId, anchor? }`.
- * @event lr-expand - A chunk's text toggle was activated. `detail: { chunkId, expanded }`.
+ * @event lr-chunk-toggle - A chunk's text toggle was activated, expanding or collapsing it.
+ *   `detail: { chunkId, expanded }`. Fires before `lr-expand`, from the same toggle.
+ * @event lr-expand - Deprecated alias of `lr-chunk-toggle`, kept firing unchanged right after it
+ *   with an equal `detail: { chunkId, expanded }`. Removal not before 23.0.0.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
@@ -120,10 +135,10 @@ export type ChunkInspectorSort = 'score' | 'none';
  * `open-button` (rather than a dual part name on one element) because an exact-match
  * `[part="..."]` CSS attribute selector -- as used by this component's own tests -- cannot match
  * a multi-token `part` attribute value.
- * @csspart text - The chunk's text preview. Omitted when `compact`.
+ * @csspart text - The chunk's text preview. Omitted while `size` is `s` or smaller.
  * @csspart text-clamped - Additional part on a `text` preview that is still collapsed
  * (line-clamped); dropped once that chunk is expanded.
- * @csspart toggle - The "Show more"/"Show less" button. Omitted when `compact`.
+ * @csspart toggle - The "Show more"/"Show less" button. Omitted while `size` is `s` or smaller.
  * @csspart empty - The empty-state message, shown when `chunks` is empty.
  * @cssprop [--lr-chunk-inspector-current-bg=var(--lr-color-brand-quiet)] - Background of the chunk
  *   matching `activeChunkId`. **Contrast-sensitive:** paired with
@@ -156,6 +171,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-chunk-open',
   ]);
@@ -173,13 +191,25 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   @property({ attribute: 'active-chunk-id' }) activeChunkId = '';
   /** Row count at which rendering switches to the internal virtual list. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
-  /** Compact rows render title + score bar + open button only. */
+  /**
+   * Row density on the shared size scale. `s` (and the smaller `xs`/`2xs`) renders dense rows:
+   * title, score bar and open button only, without the text preview and its toggle. `m` (the
+   * default) and larger render the full rows.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Compact rows render title + score bar + open button only.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Fallback name for the populated chunk group. A non-empty host `aria-label` makes the host the
    *  sole overall owner; an explicitly empty host label stays empty on the group. */
   @property() label = '';
 
   @state() private expandedIds = new Set<string>();
+
+  /** Whether `size` selects the dense rows (`s` or smaller). */
+  private get dense(): boolean {
+    return isDenseSize(this.size);
+  }
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
    *  own default of `50`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
@@ -192,7 +222,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // Memoizes the sorted view for as long as neither input actually changed. `<lr-virtual-list>`
   // keys its own O(n) offset/identity rebuild and its memoized activeIndex on the *reference*
   // identity of the `items` array it is handed, so returning a freshly-allocated sort on every
-  // render made every unrelated update (a new `activeChunkId`, `compact`) rebuild the whole list.
+  // render made every unrelated update (a new `activeChunkId`, `size`) rebuild the whole list.
   private sortedChunksCache?: {
     source: readonly LyraChunk[];
     sort: ChunkInspectorSort;
@@ -254,6 +284,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     if (expanded) next.add(chunkId);
     else next.delete(chunkId);
     this.expandedIds = next;
+    this.emit('lr-chunk-toggle', { chunkId, expanded });
+    // Deprecated alias, dispatched with its own equal detail right after the canonical event.
     this.emit('lr-expand', { chunkId, expanded });
   }
 
@@ -326,7 +358,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         >
           <span part="title">${titleWithPage}</span>
         </button>
-        ${!this.compact
+        ${!this.dense
           ? html`<p
                 part=${expanded ? 'text' : 'text text-clamped'}
                 ?data-clamped=${!expanded}

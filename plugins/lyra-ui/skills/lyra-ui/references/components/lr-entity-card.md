@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,16 +35,20 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
-- `showFocusButton: boolean = true` (attribute `show-focus-button`)
-- `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a
-  dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
-  as this component's sibling `lr-community-card`. Purely a density knob: the border and background
-  stay. `false` (the default) keeps the full card padding.
+- `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — hides the built-in
+  focus action, for pages with no graph. Deprecated alias: `show-focus-button`/`showFocusButton` (use
+  `without-focus-button`; `show-focus-button="false"` equals `without-focus-button`; removed in
+  23.0.0)
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and row gap for dense contexts (a dossier rendered in a
+  sidebar, a result list) — the same convention as this component's sibling `lr-community-card`.
+  Purely a density knob: the border and background stay. `m` (the default) and larger keep the full
+  card padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
-  container that already draws a border doesn't double it. `plain` wins over `compact` when both are
-  set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
+  container that already draws a border doesn't double it. `plain` wins over the dense `size` tier
+  when both are set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
   name for the same union.
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
@@ -56,11 +61,11 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 `focus-button`, `empty` (shown when `entity` is `null`).
 
 **Themeable custom properties:** `--lr-entity-card-bg` (default `var(--lr-color-surface)`) —
-`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`[part='base']`'s RESTING background, the companion to the dense `size` tier's levers below;
 `frame='plain'` still drops the fill entirely. `--lr-entity-card-compact-padding` (default
-`var(--lr-space-s)`) — `[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
-`var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
-the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
+`var(--lr-space-s)`) — `[part='base']`'s padding while `size` is `s` or smaller;
+`--lr-entity-card-compact-gap` (default `var(--lr-space-xs)`) — the gap between `[part='base']`'s
+rows at that size. Both apply only in the dense tier, so a dense card can be tuned without re-pointing shared spacing tokens for
 everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as
 sanitized inline `--lr-badge-*` overrides on the type badge only (the one "type color is
 data-driven by design" exception this library already grants graph nodes) — every other color comes

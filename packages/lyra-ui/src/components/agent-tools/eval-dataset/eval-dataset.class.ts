@@ -107,7 +107,7 @@ export interface LyraEvalDatasetEventMap {
  * @csspart toolbar - The row of add/remove/import/export controls.
  * @csspart add-button - The "Add example" button.
  * @csspart remove-button - The "Remove" button, disabled while nothing is selected.
- * @csspart import - The internal `compact` `<lr-file-input>`; its dropzone text and accessible name
+ * @csspart import - The internal tight-density `<lr-file-input>`; its dropzone text and accessible name
  *   are the localized `evalDatasetImportLabel`.
  * @csspart export - The internal `<lr-export-button>`.
  * @csspart search - The search field's wrapper. Only rendered while `searchable`.
@@ -326,7 +326,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.emit('lr-example-remove-request', { exampleId: this.selectedId });
   };
 
-  private onGridRowClick = (e: CustomEvent<{ row: EvalExample }>): void => {
+  private onGridRowActivate = (e: CustomEvent<{ row: EvalExample }>): void => {
     e.stopPropagation();
     if (this.disabled) return;
     const id = e.detail.row.id;
@@ -351,7 +351,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.emit('lr-export-request', { format: e.detail.format });
   };
 
-  private onTagChipSelect(tag: string, e: CustomEvent<ChipSelectDetail>): void {
+  private onTagChipToggle(tag: string, e: CustomEvent<ChipSelectDetail>): void {
     e.stopPropagation();
     if (this.disabled) return;
     const next = new Set(this.activeTags);
@@ -409,8 +409,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         <lr-file-input
           part="import"
           accept=${this.accept}
-          compact
-          accessible-label=${this.localize('evalDatasetImportLabel')}
+          aria-label=${this.localize('evalDatasetImportLabel')}
           ?disabled=${this.disabled}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}
@@ -481,7 +480,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
               .value=${tag}
               .selected=${this.activeTags.has(tag)}
               .disabled=${this.disabled}
-              @lr-chip-select=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipSelect(tag, e)}
+              @lr-chip-toggle-request=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipToggle(tag, e)}
+              @lr-chip-select=${this.stopOwnedEvent}
               >${tag}</lr-chip
             >`,
           )}
@@ -531,7 +531,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @lr-page-change=${this.stopOwnedEvent}
           @lr-cell-edit=${this.stopOwnedEvent}
           @lr-column-resize=${this.stopOwnedEvent}
-          @lr-row-click=${this.onGridRowClick}
+          @lr-row-activate=${this.onGridRowActivate}
+          @lr-row-click=${this.stopOwnedEvent}
         ></lr-table>
       </div>
     `;

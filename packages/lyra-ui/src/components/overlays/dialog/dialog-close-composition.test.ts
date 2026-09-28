@@ -4,7 +4,7 @@ import './dialog.js';
 import type { LyraDialog } from './dialog.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function closeButton(el: LyraDialog): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="close-button"]')!;
@@ -21,6 +21,7 @@ describe('lr-dialog: composed close lr-icon-button', () => {
     )) as LyraDialog;
     await el.updateComplete;
     expect(closeButton(el).localName).to.equal('lr-icon-button');
+    expect(closeButton(el).getAttribute('exportparts')).to.contain('button:close-button-control');
     expect(closeButton(el).getAttribute('exportparts')).to.contain('button:close-button__control');
   });
 

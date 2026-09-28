@@ -13,6 +13,7 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -290,6 +291,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showLegend: 'withLegend',
+  };
 
   private _words: readonly WordCloudWord[] = [];
   private inputDroppedCount = 0;
@@ -365,7 +369,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.requestUpdate('palette', previous);
   }
 
-  /** Named color overrides shown in the optional legend. When omitted, `show-legend` derives
+  /** Named color overrides shown in the optional legend. When omitted, `with-legend` derives
    *  entries from grouped words and explicitly colored words. This is useful when `words[].color`
    *  or grouped colors carry semantic meaning that should not be discoverable only by visual
    *  inspection. Assignment freezes at most 100 entries; reassign to update. */
@@ -387,6 +391,14 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Renders the supplied or derived legend entries below the cloud. It is non-interactive and
    *  does not alter word activation or palette selection. */
+  @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
@@ -742,7 +754,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     entries: readonly WordCloudLegendItem[],
     explicitInput: boolean,
   ): TemplateResult | typeof nothing {
-    if (!this.showLegend) return nothing;
+    if (!this.withLegend) return nothing;
     const hasLimit = explicitInput && (this.legendDroppedCount > 0 || this.legendTruncatedCount > 0);
     if (entries.length === 0 && !hasLimit) return nothing;
     const limitText = hasLimit

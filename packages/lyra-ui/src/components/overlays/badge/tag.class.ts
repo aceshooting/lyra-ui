@@ -109,8 +109,11 @@ function isSourceLabelAvailable(node: Node): boolean {
  *   the same node.
  * @cssprop [--lr-tag-remove-radius=var(--lr-badge-radius)] - Corner radius of the remove button,
  * defaulting to the tag's own corner so retuning one retunes both.
- * @cssprop [--lr-tag-remove-hover-background=color-mix(in srgb, currentColor 16%, transparent)] -
+ * @cssprop [--lr-tag-remove-hover-bg=color-mix(in srgb, currentColor 16%, transparent)] -
  * Background of the remove button on hover.
+ * @cssprop [--lr-tag-remove-hover-background=color-mix(in srgb, currentColor 16%, transparent)] -
+ * Deprecated alias of `--lr-tag-remove-hover-bg`, read only as its fallback; removal not before
+ * 23.0.0.
  * @status stable
  * @since 4.0.0
  */

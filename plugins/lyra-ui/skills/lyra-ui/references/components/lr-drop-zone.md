@@ -51,7 +51,7 @@ reimplemented.
 - `readonly dragging: boolean` — `true` during an active drag session
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
-  can match a neighboring compact `lr-file-input` in the same dense layout.
+  can match a neighboring small-tier `lr-file-input` in the same dense layout.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`
@@ -116,8 +116,8 @@ and a drop target covering the whole surrounding panel:
 
 **Known gotchas:**
 
-- No paste-from-clipboard handling (unlike `lr-file-input`'s `paste`) — this component is drag/drop
-  only.
+- No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
+  `without-paste` is set) — this component is drag/drop only.
 - Dragged folders are traversed recursively while `multiple` (the default), with the same
   10,000-entry budget and `'read'`/`'limit'` failure reasons as `lr-file-input`. While not
   `multiple`, a dropped folder is rejected outright with reason `'directory'`.

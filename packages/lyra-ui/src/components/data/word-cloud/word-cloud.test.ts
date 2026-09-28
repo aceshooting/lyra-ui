@@ -5,6 +5,7 @@ import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-la
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -39,7 +40,7 @@ it('checks typography tokens after an out-of-band theme invalidation', async () 
 });
 
 it('rejects url and declaration-breaking word and legend paint values', async () => {
-  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend></lr-word-cloud>`);
   el.words = [{ text: 'unsafe', weight: 1, color: 'url("data:image/svg+xml,<svg/>")' }];
   el.legend = [{ label: 'Unsafe', color: 'red;position:fixed' }];
   await el.updateComplete;
@@ -154,7 +155,7 @@ it('shows a tokenized hover outline on the interactive SVG surface', async () =>
 
 it('renders named color overrides in an optional legend', async () => {
   const el = (await fixture(html`<lr-word-cloud
-    show-legend
+    with-legend
     .words=${[{ text: 'alpha', weight: 1, color: 'rgb(1, 2, 3)' }]}
     .legend=${[{ label: 'Important', color: 'rgb(1, 2, 3)' }]}
   ></lr-word-cloud>`)) as LyraWordCloud;
@@ -166,7 +167,7 @@ it('renders named color overrides in an optional legend', async () => {
 
 it('derives legend entries for grouped and explicitly colored words', async () => {
   const el = (await fixture(html`<lr-word-cloud
-    show-legend
+    with-legend
     .words=${[
       { text: 'alpha', weight: 2, group: 'Group A' },
       { text: 'beta', weight: 1, group: 'Group A' },
@@ -671,10 +672,10 @@ it('resets the roving-focus cursor when words changes', async () => {
   expect((el.shadowRoot!.querySelector('[part="focus-ring"]')) == null).to.be.true;
 });
 
-it('does not render a legend when show-legend is left at its default (unset regression)', async () => {
+it('does not render a legend when with-legend is left at its default (unset regression)', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
-  expect(el.showLegend).to.be.false;
+  expect(el.withLegend).to.be.false;
   expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
 });
 
@@ -779,7 +780,7 @@ it('retains valid partial data while rejecting malformed records and hostile get
   Object.defineProperty(hostileWord, 'weight', { get: () => { throw new Error('hostile weight'); } });
   const hostileLegend = { label: 'hostile' } as { label: string; color?: string };
   Object.defineProperty(hostileLegend, 'color', { get: () => { throw new Error('hostile color'); } });
-  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend></lr-word-cloud>`);
 
   const warnings = await captureWarnings(async () => {
     el.words = [null, 'not-a-record', hostileWord, { text: 'valid', weight: 2 }, { text: 'finite', weight: Infinity }] as never;
@@ -812,7 +813,7 @@ it('bounds per-item text and explicit legend nodes with visible localized disclo
     label: `${index}-${'l'.repeat(400)}`,
     color: '#123456',
   }));
-  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend></lr-word-cloud>`);
   el.words = [{ text: hugeText, weight: 1 }];
   el.legend = legend;
   await el.updateComplete;
@@ -860,7 +861,7 @@ it('constrains its rendered SVG to a host-assigned height instead of overflowing
 it('contains long unbroken legend labels at a 320px allocation', async () => {
   const el = (await fixture(html`<lr-word-cloud
     style="inline-size: 320px;"
-    show-legend
+    with-legend
     .words=${[{ text: 'alpha', weight: 1, color: 'rgb(1, 2, 3)' }]}
     .legend=${[
       {
@@ -1207,7 +1208,7 @@ it('normalizes an omitted runtime weight to zero', async () => {
 
 it('normalizes non-array runtime collections without retaining stale words or legend entries', async () => {
   const el = await fixture<LyraWordCloud>(html`
-    <lr-word-cloud show-legend .words=${WORDS}></lr-word-cloud>
+    <lr-word-cloud with-legend .words=${WORDS}></lr-word-cloud>
   `);
   el.legend = [{ label: 'Existing', color: '#123456' }];
   el.palette = ['#654321'];
@@ -1310,7 +1311,7 @@ it('draws a focus ring with rotated geometry for a keyboard-focused mixed word',
 });
 
 it('drops a legend entry whose label is blank/whitespace-only, keeping valid neighbors', async () => {
-  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend></lr-word-cloud>`);
   el.legend = [{ label: '   ', color: '#123456' }, { label: 'Valid', color: '#654321' }];
   await el.updateComplete;
   expect(el.legend.map((item) => item.label)).to.deep.equal(['Valid']);
@@ -1379,7 +1380,7 @@ it('falls back to the default palette tokens when palette is assigned a revoked 
 });
 
 it('shows only a legend-limit disclosure (no legend list) when every explicit legend entry is invalid', async () => {
-  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${WORDS}></lr-word-cloud>`);
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend .words=${WORDS}></lr-word-cloud>`);
   el.legend = [null, 'not-a-record', { label: 123 }] as never;
   await el.updateComplete;
   expect(el.legend).to.deep.equal([]);
@@ -1432,4 +1433,79 @@ it('requests an update for a redundant scale/wordRotation assignment that still 
   } finally {
     el.requestUpdate = originalRequestUpdate;
   }
+});
+
+describe('lr-word-cloud deprecated show-legend alias', () => {
+  const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-word-cloud', kind: 'property', name: 'showLegend' }];
+  const legendLabels = (el: LyraWordCloud): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
+
+  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
+    const canonical = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend .words=${[{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }]}></lr-word-cloud>`);
+    let aliased!: LyraWordCloud;
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      aliased = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${[{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }]}></lr-word-cloud>`);
+      const second = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+      await second.updateComplete;
+    });
+    await canonical.updateComplete;
+    await aliased.updateComplete;
+    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
+    expect(legendLabels(aliased).length).to.be.greaterThan(0);
+    expect(aliased.withLegend).to.equal(true);
+    expect(aliased.showLegend).to.equal(true);
+    expect(aliased.hasAttribute('with-legend')).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-word-cloud:property:showLegend']);
+    expect(warnings[0]!.message).to.contain('with-legend');
+  });
+
+  it('never warns for with-legend or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+      expect(el.showLegend).to.equal(false);
+      el.withLegend = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const words = [{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }];
+      const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${words}></lr-word-cloud>`);
+      expect(el.withLegend).to.equal(true);
+      el.removeAttribute('show-legend');
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(false);
+      expect(el.hasAttribute('with-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+      el.showLegend = true;
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(true);
+      expect(legendLabels(el).length).to.be.greaterThan(0);
+      el.withLegend = false;
+      await el.updateComplete;
+      expect(el.showLegend).to.equal(false);
+      expect(el.hasAttribute('show-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
+
+  it('lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const words = [{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }];
+      const aliasLast = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend show-legend .words=${words}></lr-word-cloud>`);
+      aliasLast.showLegend = false;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withLegend).to.equal(false);
+      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+
+      const canonicalLast = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend with-legend .words=${words}></lr-word-cloud>`);
+      canonicalLast.removeAttribute('with-legend');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.showLegend).to.equal(false);
+      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
+      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
 });

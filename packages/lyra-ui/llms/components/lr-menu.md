@@ -173,23 +173,25 @@ A row with no label text carries **no** `aria-label` attribute rather than an em
 browser falls back to the row's own content; an `aria-label` or `aria-labelledby` you set yourself,
 including an explicitly empty value, still wins.
 
-A checkbox activation first emits cancelable `lr-menu-item-change` with the proposed
+A checkbox activation first emits cancelable `lr-menu-item-change-request` with the proposed
 `detail: { value, checked }`. Preventing that event retains the current checked state; the owning
 menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
 activation opens its submenu and emits neither checkbox-change nor selection.
 
 A `type="radio"` item works the same way, with exclusive-choice semantics layered on top:
-activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change`, no state
-change, matching native `<input type="radio">` — but still falls through to the owning menu's
-usual selection. Activating an unchecked radio fires `lr-menu-item-change` with
+activating an already-checked radio is a no-op on `checked` — no `lr-menu-item-change-request`, no
+state change, matching native `<input type="radio">` — but still falls through to the owning menu's
+usual selection. Activating an unchecked radio fires `lr-menu-item-change-request` with
 `checked: true`; once not prevented, this item becomes `checked` and every other `type="radio"`
 item the same owning `<lr-menu>` owns directly whose `group` matches is unchecked directly
-(without an `lr-menu-item-change` of its own).
+(without an `lr-menu-item-change-request` of its own).
 
 **Events:**
 
-- `lr-menu-item-change` — cancelable checkbox/radio-state proposal; never fired when activating an
-  already-checked radio
+- `lr-menu-item-change-request` — cancelable checkbox/radio-state proposal; never fired when
+  activating an already-checked radio. Deprecated alias: `lr-menu-item-change` (use
+  `lr-menu-item-change-request`; removed in 23.0.0) — it still fires right after the request with an
+  equal detail, and either event may veto.
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -286,6 +288,9 @@ while a link opening a new context can never lose the guard.
 
 **Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
 the focusable host gains or loses focus, plus the shared menu-item events above.
+
+**CSS parts:** the shared menu-item parts, except that the loading spinner is `spinner-base` (beside
+`spinner`). Deprecated alias: `spinner__base` (use `spinner-base`; removed in 23.0.0).
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
 `--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and

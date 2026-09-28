@@ -7,7 +7,8 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-tour-step-change` since `21.1.0`; use event `addEventListener('lr-tour-step-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated property** `showProgress` / `show-progress` since `21.1.0`; use property `without-progress`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -35,12 +36,16 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   step; resolved through `rtlAwarePlacement()`
 - `distance: number = 12` — px offset between target and popover. Tour-level only (no per-step
   override); may be negative for overlap
-- `spotlightPadding: number = 4` (attribute `spotlight-padding`) — extra px between the target's box
-  and the cutout/ring; overridable per step
+- `spotlightPadding: number | string = 4` (attribute `spotlight-padding`) — extra space between the
+  target's box and the cutout/ring: a number of px, or a CSS length in `px`, `rem`, `em`, `vw` or
+  `vh`, resolved to px on every paint (`rem` against the root font size, `em` against the tour's
+  own); any other value uses the 4px default. Overridable per step (in px)
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
   `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
-- `showProgress: boolean = true` (attribute `show-progress`) — renders the "Step X of Y" text + dots
+- `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
+  dots. Deprecated alias: `show-progress` (`showProgress`; use `without-progress`;
+  `show-progress="false"` equals `without-progress`; removed in 23.0.0)
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
@@ -65,10 +70,12 @@ and capped at 10,000px. Provider mutation after assignment cannot change renderi
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
 `skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
-**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change`
+**Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
-departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end`
+departure from `lr-carousel`'s non-cancelable `lr-slide-change`). Deprecated alias:
+`lr-tour-step-change` (use `lr-tour-step-change-request`; still fires right after it with an equal
+detail and can still veto; removed in 23.0.0); `lr-tour-end`
 (`detail: LyraTourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
 element is removed while still open by something other than its own `end()`);
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
@@ -76,7 +83,7 @@ it renders that step viewport-centered with no spotlight).
 
 **Slots:** default — rich content replacing the active step's plain-text `content`. Not scoped per
 step: a consumer needing different rich content per step swaps the slotted children itself (e.g. on
-`lr-tour-step-change`).
+`lr-tour-step-change-request`).
 
 **CSS parts:** `backdrop` (the full-viewport `<svg>` scrim with the cutout, `aria-hidden`),
 `spotlight` (the decorative ring around the padded target rect, `pointer-events: none`),

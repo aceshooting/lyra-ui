@@ -7,6 +7,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -199,7 +200,7 @@ function normalizeTimestamp(
  * misfires the table's row-click handling), `<lr-badge>` for the sync-status/indexing-health/
  * permission indicators, `<lr-stat>` for the aggregate summary row above the table, and
  * `<lr-dropdown>` + `<lr-menu>` for the per-row action affordances. The table's own
- * `lr-row-click` is intentionally stopped from
+ * `lr-row-activate` (and its deprecated `lr-row-click` alias) is intentionally stopped from
  * propagating further (this component doesn't expose row-click/selection semantics -- only the
  * per-row action menu is interactive).
  *
@@ -231,8 +232,8 @@ function normalizeTimestamp(
  * @csspart base - The root.
  * @csspart toolbar - The heading + "Add source" row.
  * @csspart heading - The heading text.
- * @csspart create-button - The "Add source" `<lr-button>`, omitted while `hideCreate` is set.
- * @csspart summary - The aggregate-stats row, omitted while `hideSummary` is set or `sources` is empty.
+ * @csspart create-button - The "Add source" `<lr-button>`, omitted while `withoutCreate` is set.
+ * @csspart summary - The aggregate-stats row, omitted while `withoutSummary` is set or `sources` is empty.
  * @csspart summary-stat - One `<lr-stat>` inside `summary`.
  * @csspart table - The `<lr-table>` listing every source.
  * @csspart name-cell - A row's source-name cell wrapper.
@@ -307,6 +308,10 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideSummary: 'withoutSummary',
+    hideCreate: 'withoutCreate',
+  };
 
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -318,10 +323,20 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property() label?: string;
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
+  @property({ type: Boolean, attribute: 'without-summary', reflect: true })
+  withoutSummary = false;
+
+  /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view. */
+  @property({ type: Boolean, attribute: 'without-create', reflect: true })
+  withoutCreate = false;
+
+  /** Hides the aggregate summary row (total/synced/syncing/needs-attention).
+   *  @deprecated Use `without-summary`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'hide-summary', reflect: true })
   hideSummary = false;
 
-  /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view. */
+  /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view.
+   *  @deprecated Use `without-create`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'hide-create', reflect: true })
   hideCreate = false;
 
@@ -638,7 +653,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       <div part="base">
         <div part="toolbar">
           <h3 part="heading">${heading}</h3>
-          ${!this.hideCreate
+          ${!this.withoutCreate
             ? html`<lr-button
                 part="create-button"
                 variant="brand"
@@ -649,7 +664,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
               </lr-button>`
             : nothing}
         </div>
-        ${!this.hideSummary && sources.length > 0
+        ${!this.withoutSummary && sources.length > 0
           ? this.renderSummary(sources)
           : nothing}
         <lr-table
@@ -667,6 +682,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           ?error=${this.error}
           error-heading=${this.errorHeading ?? nothing}
           error-description=${this.errorDescription}
+          @lr-row-activate=${(e: Event) => e.stopPropagation()}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
           @lr-retry=${this.onTableRetry}
         >${this.hasErrorSlot

@@ -39,7 +39,10 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-browser-frame-controller-background, var(--lr-color-brand-quiet));
+    background: var(
+      --lr-browser-frame-controller-bg,
+      var(--lr-browser-frame-controller-background, var(--lr-color-brand-quiet))
+    );
     color: var(--lr-browser-frame-controller-color, var(--lr-color-brand));
     min-inline-size: 0;
     overflow-wrap: anywhere;

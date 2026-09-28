@@ -157,7 +157,10 @@ export interface LyraMultiSplitCollapseChangeDetail {
 }
 
 export interface LyraMultiSplitToggleDetail {
+  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   readonly open: boolean;
+  /** Whether the floating drawer is (or, on a cancelable proposal, would be) open. */
+  readonly expanded?: boolean;
 }
 
 export interface LyraMultiSplitResizeDetail {
@@ -268,7 +271,8 @@ export interface LyraMultiSplitEventMap {
  *   when an effective collapse transition leaves `'floating'` while open. `detail:
  *   LyraMultiSplitToggleDetail`. Escape/backdrop proposals are cancelable and fire before `open`
  *   changes; the forced responsive close is non-cancelable and fires after `open` is false. Direct
- *   `open` writes and no-op dismissals do not emit this event.
+ *   `open` writes and no-op dismissals do not emit this event. `expanded` is the proposed (or
+ *   forced) drawer state; the deprecated `open` key carries the same value.
  * @event lr-multi-split-constraints-invalid - `detail: LyraMultiSplitConstraintIssueDetail`,
  *   fired once when the configured panel minimums/maximums cannot describe a
  *   layout that fits the track. The splitter rejects that infeasible set for
@@ -1108,7 +1112,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (options?.force) {
       this.open = next;
       this.forcedCloseVersion += 1;
-      this.emit('lr-toggle', { open: next });
+      this.emit('lr-toggle', { open: next, expanded: next });
       return;
     }
     if (this.open === next) return;
@@ -1117,7 +1121,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const mutationVersion = this.toggleProposalMutationVersion;
     this.toggleProposalDepth += 1;
     try {
-      const event = this.emit('lr-toggle', { open: next }, { cancelable: true });
+      const event = this.emit('lr-toggle', { open: next, expanded: next }, { cancelable: true });
       if (
         event.defaultPrevented ||
         this.toggleProposalMutationVersion !== mutationVersion ||

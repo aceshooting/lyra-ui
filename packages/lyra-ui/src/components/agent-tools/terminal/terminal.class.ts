@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
@@ -34,7 +35,7 @@ export type {
   TextSelectDetail,
 } from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -103,6 +104,12 @@ const TONE_BACKGROUND_VAR: Record<LyraHighlightTone, string> = {
   neutral: 'var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface))',
 };
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 function plainTextOfLine(line: TerminalLine): string {
   return line.cells.map((c) => c.char).join('');
 }
@@ -162,7 +169,7 @@ export interface LyraTerminalEventMap {
  * most 4,096 characters; an overlong unterminated control sequence is dropped so later chunks
  * resume without an unbounded hidden carry.
  *
- * `compact` tightens the toolbar and line padding for dense transcript rows, and `frame="plain"`
+ * `size="s"` tightens the toolbar and line padding for dense transcript rows, and `frame="plain"`
  * removes the outer card chrome when a surrounding container already supplies it — the same pair
  * `lr-result-card`, `lr-stack-trace`, `lr-task-list`, and `lr-thinking-panel` expose.
  *
@@ -173,10 +180,10 @@ export interface LyraTerminalEventMap {
  * `20rem`) already is that cap, retunable the same way. A second, differently-shaped "grows until
  * capped" property would fight that always-scrolling model rather than complement it.
  *
- * Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out
+ * Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out
  * left-to-right too, so a long line scrolls from its start and, under `dir="rtl"`, the vertical
  * scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the
- * page direction. With `wrap`, the scrollport follows the page direction.
+ * page direction. By default (lines soft-wrap), the scrollport follows the page direction.
  *
  * @customElement lr-terminal
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
@@ -250,11 +257,11 @@ export interface LyraTerminalEventMap {
  * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Outline color for
  *   the active search match's line.
  * @cssprop [--lr-terminal-compact-toolbar-padding=var(--lr-space-2xs) var(--lr-space-xs)] -
- *   `[part="toolbar"]` padding while `compact`.
+ *   `[part="toolbar"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-terminal-compact-toolbar-gap=var(--lr-space-2xs)] - Gap between
- *   `[part="toolbar"]`'s buttons while `compact`.
+ *   `[part="toolbar"]`'s buttons while `size` is `s` or smaller.
  * @cssprop [--lr-terminal-compact-line-padding-inline=var(--lr-space-xs)] - Inline padding of each
- *   rendered `[part="line"]` while `compact`.
+ *   rendered `[part="line"]` while `size` is `s` or smaller.
  * @cssprop [--lr-terminal-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the toolbar/log divider, which `frame="plain"` keeps.
  * @cssprop [--lr-terminal-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -285,12 +292,26 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    wrap: ['withoutWrap', invertAlias, invertAlias],
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) normalize to a
    *  1..10,000 range; total retained cells and cells per line have independent hard ceilings. */
   @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
+  /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */
+  @property({ type: Boolean, attribute: 'without-wrap', reflect: true }) withoutWrap = false;
+  /** Soft-wraps long lines; `false` keeps each line on one horizontally scrollable row.
+   *  @deprecated Use `without-wrap`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) wrap = true;
+  /** Hides the copy-to-clipboard toolbar button. */
+  @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
+  /** Renders the copy-to-clipboard toolbar button.
+   *  @deprecated Use `without-copy-button`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
   @property({ type: Boolean, reflect: true }) downloadable = false;
   @property() filename = 'terminal.log';
@@ -316,17 +337,27 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return this.highlights;
   }
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the toolbar's
+   * padding/gap and each rendered line's inline padding for a terminal embedded in an already-padded
+   * transcript row -- same convention as `lr-task-list`'s and `lr-thinking-panel`'s `size`. `m` (the
+   * default) and larger keep the full padding. Purely a density knob: the card border and background
+   * stay, so use `frame="plain"` to drop the chrome.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   /** Tightens the toolbar's padding/gap and each rendered line's inline padding for a terminal
    *  embedded in an already-padded transcript row -- same convention as `lr-task-list`'s and
    *  `lr-thinking-panel`'s `compact`. Defaults to `false`, i.e. the full padding. Purely a density
-   *  knob: the card border and background stay, so use `frame="plain"` to drop the chrome. */
+   *  knob: the card border and background stay, so use `frame="plain"` to drop the chrome.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps `[part="base"]`'s border, corner radius, and raised surface; `'plain'` removes all
    *  three so a terminal nested inside a container that already draws a border (an agent-run
    *  panel, a message bubble) doesn't double it. Plain keeps the toolbar/log divider and whichever
-   *  regular or compact padding applies -- it controls outer chrome only. */
+   *  regular or dense padding applies -- it controls outer chrome only. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Feature-detectable capability mirror -- the same pattern `DocumentAnchorTarget`-adopting
@@ -1016,7 +1047,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   override render(): TemplateResult {
-    const hasToolbar = this.copyable || this.downloadable;
+    const hasToolbar = !this.withoutCopyButton || this.downloadable;
     const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
     // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
     // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
@@ -1029,7 +1060,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         ${hasToolbar
           ? html`
               <div part="toolbar">
-                ${this.copyable
+                ${!this.withoutCopyButton
                   ? html`<button part="copy-button" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
                       ${this.copyStatus === 'success'
                         ? this.localize('copied')
@@ -1067,7 +1098,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
               )}
             .keyFunction=${this.terminalLineKey}
             .activeItemId=${this.scrollTargetLineNumber ?? ''}
-            row-height=${this.wrap ? 'auto' : '24'}
+            row-height=${this.withoutWrap ? '24' : 'auto'}
             @lr-visible-range-change=${this.onVisibleRangeChanged}
           ></lr-virtual-list>
           ${!this.follow && this.lines.length > 0

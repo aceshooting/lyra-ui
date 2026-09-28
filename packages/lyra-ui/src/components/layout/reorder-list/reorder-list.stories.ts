@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A generic flat-list reorder primitive: per-row move-up/move-down buttons, plus Ctrl/Cmd+ArrowUp/ArrowDown from focus inside a row. Emits `lr-reorder` with the full new order so the host can persist it without hand-rolled splice/resort logic.',
+          'A generic flat-list reorder primitive: per-row move-up/move-down buttons, plus Ctrl/Cmd+ArrowUp/ArrowDown from focus inside a row. Emits `lr-reorder-request` with the full new order so the host can persist it without hand-rolled splice/resort logic.',
       },
     },
   },
@@ -35,7 +35,7 @@ export const Default: StoryObj = {
     <lr-reorder-list
       label="Form fields"
       style="max-width: 20rem;"
-      @lr-reorder=${(e: CustomEvent) => console.log('lr-reorder', e.detail)}
+      @lr-reorder-request=${(e: CustomEvent) => console.log('lr-reorder-request', e.detail)}
     >
       <lr-reorder-item value="name">Name</lr-reorder-item>
       <lr-reorder-item value="email">Email</lr-reorder-item>
@@ -70,7 +70,7 @@ export const CancelableMove: StoryObj = {
     <lr-reorder-list
       label="Steps (async persist)"
       style="max-width: 20rem;"
-      @lr-reorder=${(e: CustomEvent) => {
+      @lr-reorder-request=${(e: CustomEvent) => {
         e.preventDefault();
         const list = e.target as LyraReorderList;
         // Simulate a network round trip: 50% chance of failure, so the story demonstrates both
@@ -111,7 +111,7 @@ export const Controlled: StoryObj = {
         controlled
         label="Form fields (controlled)"
         style="max-width: 20rem;"
-        @lr-reorder=${(e: Event) => {
+        @lr-reorder-request=${(e: Event) => {
           order = (e as CustomEvent<{ order: readonly string[] }>).detail.order.slice();
           const root = (e.currentTarget as HTMLElement).parentElement;
           // Storybook's `render()` return value isn't reactive on its own -- force a re-render

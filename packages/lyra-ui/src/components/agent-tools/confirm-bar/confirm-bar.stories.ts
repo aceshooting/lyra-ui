@@ -54,7 +54,7 @@ export const AlreadyDecided: Story = {
 };
 
 /** `lr-approve`/`lr-deny` are cancelable: a listener that calls `preventDefault()` and keeps its
- *  own async work in flight sets `pending` to show a `loading` button and a `disabled` sibling,
+ *  own async work in flight sets `pendingAction` to show a `loading` button and a `disabled` sibling,
  *  instead of the bar resolving synchronously. */
 export const AsyncPending: Story = {
   name: 'Async pending decision',
@@ -65,7 +65,7 @@ export const AsyncPending: Story = {
       @lr-approve=${(e: CustomEvent) => {
         e.preventDefault();
         const bar = (e.currentTarget as HTMLElement).closest('lr-confirm-bar') as HTMLElement & {
-          pending: string | null;
+          pendingAction: string | null;
           decision: string | null;
         };
         setTimeout(() => {
@@ -76,14 +76,14 @@ export const AsyncPending: Story = {
   `,
 };
 
-/** `compact` collapses the bar into a single dense inline row, for a confirmation that has to live
+/** `size="s"` collapses the bar into a single dense inline row, for a confirmation that has to live
  *  inside an existing container. It is density only — the card border, radius and background stay.
- *  The narrow-allocation container query is switched off with it: a compact bar is *expected* to be
+ *  The narrow-allocation container query is switched off with it: a dense bar is *expected* to be
  *  narrow, so stretching the buttons to fill would be exactly wrong. */
 export const Compact: Story = {
   render: () => html`
     <div style="display:flex;align-items:center;gap:0.75rem;max-inline-size:32rem;">
-      <lr-confirm-bar compact variant="danger" heading="Delete row 42?"></lr-confirm-bar>
+      <lr-confirm-bar size="s" variant="danger" heading="Delete row 42?"></lr-confirm-bar>
     </div>
   `,
 };
@@ -100,10 +100,10 @@ export const FramePlain: Story = {
 };
 
 /** The motivating case: a confirmation inside a table cell, where both knobs are wanted at once.
- *  Without `compact` the bar's stacked `display: block` surface blows the row apart, and without
+ *  Without `size="s"` the bar's stacked `display: block` surface blows the row apart, and without
  *  `frame="plain"` its own border and background double the cell's. */
 export const CompactInTableCell: Story = {
-  name: 'compact + frame="plain" (inside a table cell)',
+  name: 'size="s" + frame="plain" (inside a table cell)',
   render: () => html`
     <table style="border-collapse:collapse;font:inherit;">
       <thead>
@@ -116,13 +116,13 @@ export const CompactInTableCell: Story = {
         <tr style="border-block-start:1px solid var(--lr-color-border);">
           <td style="padding:0.4rem 0.75rem;"><code>run_shell</code></td>
           <td style="padding:0.4rem 0.75rem;">
-            <lr-confirm-bar compact frame="plain" heading="Run?"></lr-confirm-bar>
+            <lr-confirm-bar size="s" frame="plain" heading="Run?"></lr-confirm-bar>
           </td>
         </tr>
         <tr style="border-block-start:1px solid var(--lr-color-border);">
           <td style="padding:0.4rem 0.75rem;"><code>delete_database</code></td>
           <td style="padding:0.4rem 0.75rem;">
-            <lr-confirm-bar compact frame="plain" variant="danger" heading="Delete?"></lr-confirm-bar>
+            <lr-confirm-bar size="s" frame="plain" variant="danger" heading="Delete?"></lr-confirm-bar>
           </td>
         </tr>
       </tbody>
@@ -130,13 +130,13 @@ export const CompactInTableCell: Story = {
   `,
 };
 
-/** The compact density itself is retunable through `--lr-confirm-bar-compact-padding`/`-gap`, e.g.
+/** The dense tier itself is retunable through `--lr-confirm-bar-compact-padding`/`-gap`, e.g.
  *  to sit as a tighter pill inside a card's action row. */
 export const CompactRetuned: Story = {
-  name: 'compact (retuned density)',
+  name: 'size="s" (retuned density)',
   render: () => html`
     <lr-confirm-bar
-      compact
+      size="s"
       heading="Apply the suggested patch?"
       style="--lr-confirm-bar-compact-padding:0.35rem 0.6rem;--lr-confirm-bar-compact-gap:0.4rem;"
     ></lr-confirm-bar>
@@ -154,7 +154,7 @@ export const Narrow320px: Story = {
 /** The declarative async path: `lr-approve`/`lr-deny`'s detail carries `waitUntil(promise)`,
  *  ExtendableEvent-style. Calling it holds the bar pending for the promise's lifetime and the
  *  settlement finalizes the decision — no `preventDefault()`, no cast of `currentTarget`, no manual
- *  `pending` bookkeeping. Deny here rejects, so the bar bounces back for a retry. */
+ *  `pendingAction` bookkeeping. Deny here rejects, so the bar bounces back for a retry. */
 export const WaitUntil: Story = {
   name: 'waitUntil (declarative async decision)',
   render: () => html`
@@ -199,7 +199,7 @@ export const ReturnFocus: Story = {
       >
       <lr-confirm-bar
         hidden
-        compact
+        size="s"
         frame="plain"
         variant="danger"
         heading="Delete this project?"
@@ -262,7 +262,7 @@ export const RestingBackgroundToken: Story = {
     docs: {
       description: {
         story:
-          '`--lr-confirm-bar-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so an embedded approval prompt can be retinted without a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
+          '`--lr-confirm-bar-bg` is the resting companion to the dense `size` tier\'s existing padding/gap levers, so an embedded approval prompt can be retinted without a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
       },
     },
   },

@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -128,7 +129,9 @@ function argsPresent(args: unknown): boolean {
  * @csspart error - The error section.
  * @csspart error-label - The error section label.
  * @csspart empty - The message shown when there are no details yet.
- * @cssprop [--lr-tool-call-block-background=var(--lr-color-surface)] - Card fill.
+ * @cssprop [--lr-tool-call-block-bg=var(--lr-color-surface)] - Card fill.
+ * @cssprop [--lr-tool-call-block-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-tool-call-block-bg`; removal not before 23.0.0.
  * @cssprop [--lr-tool-call-block-border-color=var(--lr-color-border)] - Card edge and header/body divider.
  * @cssprop [--lr-tool-call-block-radius=var(--lr-radius)] - Card corner radius.
  * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied, neutral while pending or incomplete).
@@ -173,6 +176,10 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    error: 'errorText',
+  };
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['redactedFields']);
 
@@ -222,6 +229,10 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   @property({ attribute: false }) result: unknown;
 
   /** Error text. A non-empty string renders the error section. */
+  @property({ attribute: 'error-text' }) errorText?: string;
+
+  /** Error text. A non-empty string renders the error section.
+   *  @deprecated Use `error-text`; removal not before 23.0.0. */
   @property() error?: string;
 
   /** Dotted paths within `args`/`result`/`error` to mask; a bare `'args'`/`'result'`/`'error'`
@@ -296,7 +307,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   private detail(): DetailMemo {
     const detail = redactToolDetail(
-      { args: this.args, result: this.result, error: this.error },
+      { args: this.args, result: this.result, error: this.errorText },
       this.projectedPaths,
       this.localize('envListValueHidden'),
       this.detailMemo?.detail,

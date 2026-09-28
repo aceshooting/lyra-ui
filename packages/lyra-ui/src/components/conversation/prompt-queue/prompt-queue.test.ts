@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from "@open-wc/testing";
 import type { DocumentRef } from "../../../ai/types.js";
 import "./prompt-queue.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 import type {
   LyraPromptQueue,
   PromptQueueChangeDetail,
@@ -678,7 +679,7 @@ it("uses the nearest enabled action when the equivalent action becomes disabled 
   );
 });
 
-it("moves focus from an editor to the nearest enabled row action when editable becomes false", async () => {
+it("moves focus from an editor to the nearest enabled row action when readonly becomes true", async () => {
   const el = (await fixture(
     html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`
   )) as LyraPromptQueue;
@@ -688,7 +689,7 @@ it("moves focus from an editor to the nearest enabled row action when editable b
   await editor.updateComplete;
   editor.focus();
 
-  el.editable = false;
+  el.readonly = true;
   await el.updateComplete;
 
   const focusedAction = el.shadowRoot!.activeElement as HTMLElement | null;
@@ -784,14 +785,61 @@ it("gives every repeated action a row-contextual accessible name", async () => {
   ]);
 });
 
-it('honors editable="false" and is accessible while populated', async () => {
+it("honors readonly and is accessible while populated", async () => {
   const el = (await fixture(
-    html`<lr-prompt-queue editable="false" .items=${items}></lr-prompt-queue>`
+    html`<lr-prompt-queue readonly .items=${items}></lr-prompt-queue>`
   )) as LyraPromptQueue;
-  expect(el.editable).to.be.false;
+  expect(el.readonly).to.be.true;
   expect(el.shadowRoot!.querySelectorAll("lr-textarea")).to.have.lengthOf(0);
   expect(el.shadowRoot!.querySelectorAll('[part="value"]')).to.have.lengthOf(2);
   await expect(el).to.be.accessible();
+});
+
+it('keeps the deprecated editable="false" alias equal to readonly, warning once', async () => {
+  let el!: LyraPromptQueue;
+  let both!: LyraPromptQueue;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-prompt-queue", kind: "property", name: "editable" }],
+    async () => {
+      el = (await fixture(
+        html`<lr-prompt-queue editable="false" .items=${items}></lr-prompt-queue>`
+      )) as LyraPromptQueue;
+      both = (await fixture(
+        html`<lr-prompt-queue readonly editable .items=${items}></lr-prompt-queue>`
+      )) as LyraPromptQueue;
+      expect(el.readonly).to.be.true;
+      expect(el.editable).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll("lr-textarea")).to.have.lengthOf(0);
+      el.removeAttribute("editable");
+      await el.updateComplete;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    "lyra-deprecated:lr-prompt-queue:property:editable",
+  ]);
+  expect(both.readonly, "the later editable attribute wins").to.be.false;
+  expect(both.editable).to.be.true;
+  expect(el.readonly).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll("lr-textarea")).to.have.lengthOf(2);
+});
+
+it("syncs the deprecated editable alias back from readonly, and the last write wins", async () => {
+  let el!: LyraPromptQueue;
+  await captureDeprecationWarnings(
+    [{ tag: "lr-prompt-queue", kind: "property", name: "editable" }],
+    async () => {
+      el = (await fixture(html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`)) as LyraPromptQueue;
+      el.editable = false;
+      await el.updateComplete;
+    }
+  );
+  expect(el.readonly).to.be.true;
+  expect(el.hasAttribute("readonly")).to.be.true;
+  el.readonly = false;
+  await el.updateComplete;
+  expect(el.editable).to.be.true;
+  expect(el.hasAttribute("editable")).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll("lr-textarea")).to.have.lengthOf(2);
 });
 
 it("applies per-instance localized strings", async () => {

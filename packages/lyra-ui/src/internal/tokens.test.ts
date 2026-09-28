@@ -420,7 +420,7 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
 // inheriting name it was missing without changing what the published one means.
 it('lets an ancestor-set icon-button token that the shared base layer does not re-declare reach a component nested below another host', async () => {
   expect(await probeNestedVar('--lr-icon-button-radius', '--lr-icon-button-radius: 999px')).to.equal('999px');
-  expect(await probeNestedVar('--lr-icon-button-background', '--lr-icon-button-background: red')).to.equal('red');
+  expect(await probeNestedVar('--lr-icon-button-bg', '--lr-icon-button-bg: red')).to.equal('red');
 });
 
 // `TokenProbe` composes only `[palette, tokens]`, so `forceCoarsePointer` (test/coarse-pointer-

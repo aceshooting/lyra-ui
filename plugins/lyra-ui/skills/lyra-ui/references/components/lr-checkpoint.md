@@ -7,7 +7,8 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `confirmRestore` / `confirm-restore` since `21.1.0`; use property `without-restore-confirmation`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `restorable` / `restorable` since `21.1.0`; use property `without-restore`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -28,17 +29,21 @@ fallback renders while empty. `timestamp?: LyraTimestamp` (`Date | string | numb
 false) — optional creation
 time, rendered as `<time datetime>`, default `hour:minute` in `effectiveLocale`; invalid strings are
 treated as unset. `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the
-default rendering. `restorable: boolean = true` — when `false`, renders a plain marker with no
-button. `confirmRestore: boolean = true` (attribute `confirm-restore`) — gates the event behind an
-inline confirm step; a string-aware converter parses `confirm-restore="false"` correctly from plain
-HTML. `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
+default rendering. `withoutRestore: boolean = false` (attribute `without-restore`) — renders a
+plain marker with no button (deprecated alias: `restorable`, use `without-restore`, removed in
+23.0.0; inverted, so `restorable="false"` equals `without-restore`).
+`withoutRestoreConfirmation: boolean = false` (attribute `without-restore-confirmation`) — skips
+the inline confirm step so Restore fires the event immediately (deprecated alias:
+`confirm-restore`/`confirmRestore`, use `without-restore-confirmation`, removed in 23.0.0;
+inverted, so `confirm-restore="false"` equals `without-restore-confirmation`).
+`restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
 `aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
 
 **Slots:** default — optional supplemental content under the marker row (e.g. what changed since
 this point).
 
 **Events:** `lr-restore` — `detail: { checkpointId, label }`; fired on Restore activation, after
-the inline confirm when `confirmRestore` is on. Not cancelable.
+the inline confirm unless `without-restore-confirmation` is set. Not cancelable.
 
 **Methods:** `click()` forwards to the current Restore action only when restoration is available.
 The confirm prompt names both Confirm and Cancel through `aria-describedby`; Escape/cancel restores
@@ -46,7 +51,7 @@ focus transactionally, and a same-turn controlled change that removes confirmati
 stale focus continuation win.
 
 **CSS parts:** `base` (`role="group"`), `line` (each of the two flanking rules), `icon` (bookmark
-glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
+glyph), `label`, `timestamp`, `restore-button` (not rendered while `without-restore`), `confirm-group`,
 `confirm-prompt`, `confirm-button`, `cancel-button`.
 
 **Themeable custom properties:** `--lr-checkpoint-spin-duration` (default

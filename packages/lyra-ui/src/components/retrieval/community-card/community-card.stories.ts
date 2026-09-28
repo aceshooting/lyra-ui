@@ -32,7 +32,7 @@ export const WithOverflow: Story = {
 };
 
 export const Compact: Story = {
-  render: () => html`<lr-community-card .community=${community} .members=${members} compact></lr-community-card>`,
+  render: () => html`<lr-community-card .community=${community} .members=${members} size="s"></lr-community-card>`,
 };
 
 export const Empty: Story = {

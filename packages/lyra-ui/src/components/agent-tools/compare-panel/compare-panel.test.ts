@@ -378,7 +378,7 @@ describe('lr-compare-panel', () => {
       <lr-compare-panel
         vote="a"
         style="
-          --lr-compare-panel-selected-background: rgb(1, 2, 3);
+          --lr-compare-panel-selected-bg: rgb(1, 2, 3);
           --lr-compare-panel-selected-border-color: rgb(4, 5, 6);
           --lr-compare-panel-selected-color: rgb(7, 8, 9);
           --lr-compare-panel-selected-font-weight: 700;
@@ -492,7 +492,7 @@ describe('selected vote-button pointer feedback', () => {
     const el = (await fixture(html`
       <lr-compare-panel
         vote="a"
-        style="--lr-transition-fast: 0s; --lr-compare-panel-selected-background: rgb(0, 51, 102);"
+        style="--lr-transition-fast: 0s; --lr-compare-panel-selected-bg: rgb(0, 51, 102);"
       ></lr-compare-panel>
     `)) as LyraComparePanel;
     await el.updateComplete;
@@ -681,5 +681,28 @@ describe('collecting already-slotted prompt content without relying on the initi
     } finally {
       el.remove();
     }
+  });
+});
+
+describe('lr-compare-panel deprecated --lr-compare-panel-selected-background alias', () => {
+  const fill = (el: LyraComparePanel): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLElement).backgroundColor;
+
+  it('paints the selected vote from the canonical name, still honours the old one, and lets the canonical name win', async () => {
+    const canonical = await fixture<LyraComparePanel>(
+      html`<lr-compare-panel vote="a" style="--lr-compare-panel-selected-bg: rgb(1, 2, 3)"></lr-compare-panel>`,
+    );
+    const alias = await fixture<LyraComparePanel>(
+      html`<lr-compare-panel vote="a" style="--lr-compare-panel-selected-background: rgb(1, 2, 3)"></lr-compare-panel>`,
+    );
+    const both = await fixture<LyraComparePanel>(
+      html`<lr-compare-panel
+        vote="a"
+        style="--lr-compare-panel-selected-bg: rgb(4, 5, 6); --lr-compare-panel-selected-background: rgb(1, 2, 3)"
+      ></lr-compare-panel>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });

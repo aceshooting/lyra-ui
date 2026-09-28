@@ -7,6 +7,8 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './animated-image.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -31,7 +33,7 @@ export interface LyraAnimatedImageEventMap {
  * `<lr-animated-image>` -- displays an animated GIF/APNG/WebP with a
  * play/pause control, defaulting to a frozen first frame both at rest and
  * automatically under `prefers-reduced-motion: reduce` (unless the page
- * author explicitly opts back in via `respect-reduced-motion="false"`), so
+ * author explicitly opts back in via `ignore-reduced-motion`), so
  * motion is never forced on a user who asked for less of it.
  *
  * **Freeze-frame mechanism.** The live `<img>`'s `load` event handler
@@ -47,8 +49,8 @@ export interface LyraAnimatedImageEventMap {
  *
  * **`play` vs. `playing`.** `play` is the caller's intent (settable and
  * reflected). `playing` is the read-only, reflected effect
- * after reduced-motion arbitration: `play && !(respectReducedMotion &&
- * <OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while
+ * after reduced-motion arbitration: `play && (ignoreReducedMotion ||
+ * !<OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while
  * reduced motion still keeps the visual frozen -- `lr-play`/`lr-pause`
  * only fire on a real transition of the resolved `playing` value, never on a
  * `play` assignment that reduced motion blocks from taking visible effect.
@@ -66,7 +68,7 @@ export interface LyraAnimatedImageEventMap {
  * play/pause button remains independently named with localized action text.
  *
  * Lyra deliberately adds a reduced-motion safety policy and a bounded `--lr-animated-image-max-height`
- * default beyond the mirrored components. Set `respect-reduced-motion="false"` when preserving
+ * default beyond the mirrored components. Set `ignore-reduced-motion` when preserving
  * upstream playback under a reduced-motion preference is required, and override the max-height
  * hook with `none` when the upstream unconstrained block-size is required.
  *
@@ -115,6 +117,9 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    respectReducedMotion: ['ignoreReducedMotion', invertAlias, invertAlias],
+  };
 
   /** The path to the image to load. Always re-validated against a
    *  safe-scheme allowlist before use -- see the class doc. */
@@ -127,11 +132,18 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
    *  effect -- see the class doc's "`play` vs. `playing`" section. */
   @property({ type: Boolean, reflect: true }) play = false;
 
+  /** Lets `play` take effect even when the platform reports `prefers-reduced-motion: reduce` -- a
+   *  deliberate, page-author-level override. Unset (the default), a reduced-motion preference
+   *  keeps playback frozen and disables `[part="play-button"]` regardless of `play`. */
+  @property({ type: Boolean, reflect: true, attribute: 'ignore-reduced-motion' })
+  ignoreReducedMotion = false;
+
   /** When `true` (default) and the platform reports
    *  `prefers-reduced-motion: reduce`, playback stays frozen and
    *  `[part="play-button"]` is disabled regardless of `play`. Set to `false`
    *  to let `play` take effect even under a reduced-motion preference -- a
-   *  deliberate, page-author-level override. */
+   *  deliberate, page-author-level override.
+   *  @deprecated Use `ignore-reduced-motion` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -222,7 +234,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     }
 
     const nextPlaying = this.play && !(
-      this.respectReducedMotion && prefersReducedMotion(this.ownerWindow)
+      !this.ignoreReducedMotion && prefersReducedMotion(this.ownerWindow)
     );
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
@@ -327,7 +339,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     // local so the two never drift out of sync with each other.
     const frozen = this.hasLoaded && !this.playing;
     const showControls = this.hasLoaded && !this.hasError;
-    const disabled = this.respectReducedMotion && prefersReducedMotion(this.ownerWindow);
+    const disabled = !this.ignoreReducedMotion && prefersReducedMotion(this.ownerWindow);
 
     return html`
       <div part="base">

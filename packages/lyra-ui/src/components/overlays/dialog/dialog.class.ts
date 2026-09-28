@@ -19,6 +19,9 @@ import {
 } from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   animateRegistered,
   type RegisteredAnimationSpec,
@@ -36,7 +39,7 @@ const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
  * Reason a dialog was dismissed, forwarded as the `lr-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
  * dismiss triggers; `'close-button'` by the built-in header close button
- * (rendered when `closable` is set); `'unmount'` is emitted when the dialog is
+ * (rendered unless `without-close-button` is set); `'unmount'` is emitted when the dialog is
  * removed from the DOM while still open by something other than its own
  * `close()` (e.g. a consumer's own cleanup code, or a parent re-render that
  * drops it); any other string is whatever a caller passes to `close()` (e.g. a
@@ -84,7 +87,7 @@ export interface LyraDialogEventMap {
  * scroll-locks the document for as long as it's open. While open it is promoted into the
  * browser top layer, so no consumer stacking context can render on top of it. The mapped
  * `label` property renders as a visible title and the close affordance is present by default;
- * `closable="false"` plus either header-suppression spelling support custom chrome. `no-header` is
+ * `without-close-button` plus either header-suppression spelling support custom chrome. `no-header` is
  * Shoelace's name for it and `without-header` is Web Awesome's; both are current upstream
  * spellings, neither is deprecated, and both are read.
  *
@@ -108,7 +111,7 @@ export interface LyraDialogEventMap {
  * over a page default, while keyframes-only overrides retain the dialog's token-derived timing.
  *
  * Accessible naming and visible-title precedence are independent. A host `aria-label` wins by
- * attribute presence, including an explicitly empty value, followed by `accessible-label`, then
+ * attribute presence, including an explicitly empty value, followed by `accessibleLabel`, then
  * the text of a direct light-DOM heading. Otherwise the visible title wrapper names the panel.
  * Within that wrapper the rich `label` slot wins over the `label` property, which wins over the
  * legacy `heading` property. Explicit accessible-only naming never suppresses that visible title.
@@ -126,9 +129,9 @@ export interface LyraDialogEventMap {
  * `1`–`6` to fit the surrounding outline, or `none` for visual-only title text. A direct
  * light-DOM heading retains its own level instead.
  *
- * `closable` defaults to true and renders a close (X) button in the header row (creating one, with
- * no heading text, if neither `heading` nor the `label` slot is set) that closes the dialog via
- * the same `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
+ * A close (X) button renders in the header row by default (creating one, with no heading text, if
+ * neither `heading` nor the `label` slot is set) and closes the dialog via the same `close()` path
+ * as Escape/backdrop-dismiss, with reason `'close-button'`; `without-close-button` removes it.
  *
  * The `body` part is the element that scrolls, so it carries `tabindex="0"` only while it
  * actually overflows; a short body keeps `tabindex="-1"`. A dialog holding only prose, a table,
@@ -214,15 +217,16 @@ export interface LyraDialogEventMap {
  * @csspart dialog - Web Awesome alias on the panel.
  * @csspart header - The header row, rendered when the `label` slot is filled, `label`/`heading`
  *   is set (and no heading is slotted into the default slot), `header-actions` is filled, and/or
- *   `closable` is `true` — and never when `noHeader` or `withoutHeader` is set.
+ *   the close button is rendered (`without-close-button` is not set) — and never when `noHeader` or
+ *   `withoutHeader` is set.
  * @csspart heading - The visible title inside `header`; also carries `title` and `label`, and owns
  *   the configured heading semantics unless opted out.
  * @csspart title - Mapped alias on the visible title.
  * @csspart header-actions - The wrapper around the `header-actions` slot.
  * @csspart close-button - The built-in close button, rendered inside `header`
- *   only when `closable` is `true`.
+ *   unless `without-close-button` is set.
  * @csspart close-button__base - Exported mapped alias on the close button, on the same node.
- * @csspart close-button__control - The composed `<lr-icon-button>`'s own native control, forwarded
+ * @csspart close-button-control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface now sits one shadow boundary deeper than `close-button`. As of
  *   16.0.0 the close button IS an `<lr-icon-button>`, so its background, radius, hover/press mixes,
  *   focus ring and hit-area floor come from `--lr-icon-button-*`; a rule that painted through
@@ -230,6 +234,8 @@ export interface LyraDialogEventMap {
  *   `--lr-icon-button-size-scope` (or the application-wide `--lr-theme-icon-button-size`) on this
  *   element or an ancestor -- NOT `--lr-icon-button-size` itself, which every `LyraElement`
  *   re-declares on its own `:host` and so never reaches this composed child.
+ * @csspart close-button__control - Deprecated alias of `close-button-control` on the same node;
+ *   removal not before 23.0.0.
  * @csspart label - Mapped alias on the visible title.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
@@ -289,6 +295,16 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    closable: ['withoutCloseButton', invertAlias, invertAlias],
+  };
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
 
   private _open = false;
 
@@ -328,13 +344,20 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  no effect when a direct light-DOM heading already supplies custom title chrome. */
   @property() heading?: string;
 
+  /** Removes the built-in close (X) button from the header row. Without it the button renders
+   *  (creating the header row, with no heading text, if `label` and `heading` are unset), wired to
+   *  the same `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`. */
+  @property({ type: Boolean, attribute: 'without-close-button', reflect: true })
+  withoutCloseButton = false;
+
   /** Renders a built-in close (X) button in the header row (creating one,
    *  with no heading text, if `label` and `heading` are unset), wired to the same
    *  `close()` path Escape/backdrop-dismiss already use, with reason
-   *  `'close-button'`. */
+   *  `'close-button'`.
+   *  @deprecated Use `without-close-button`; removal not before 23.0.0. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) closable = true;
 
-  /** Suppresses the header row entirely, whatever `heading`, `closable`, the `label` slot or the
+  /** Suppresses the header row entirely, whatever `heading`, the close button, the `label` slot or the
    *  `header-actions` slot would otherwise render. For a dialog that owns its own chrome. This is
    *  Web Awesome's spelling (`wa-dialog`'s `without-header`); `noHeader` below is Shoelace's. Both
    *  are current upstream names, both are read, and neither is deprecated. */
@@ -355,7 +378,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  `--lr-dialog-max-width` override still wins over any tier. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /** Explicit accessible-only panel name. Unlike `label`, it never renders visible text. */
+  /** Explicit accessible-only panel name. Unlike `label`, it never renders visible text. In
+   *  markup, name the panel with the host `aria-label`; the `accessible-label` attribute spelling
+   *  is deprecated (removal not before 23.0.0) and logs a one-time development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
 
   /** Host-level `aria-label` override for the panel's accessible name — wins by attribute
@@ -1006,7 +1031,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override render(): TemplateResult {
-    // Naming precedence (see class doc): host aria-label, accessible-label, a direct light-DOM
+    // Naming precedence (see class doc): host aria-label, accessibleLabel, a direct light-DOM
     // heading, then the shadow-owned visible title. Only the final case uses aria-labelledby.
     const suppressHeader = this.withoutHeader || this.noHeader;
     const renderHeading =
@@ -1016,7 +1041,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const hasExplicitName = hasHostName || Boolean(explicitName);
     const useHeadingForName = !hasExplicitName && renderHeading;
     const showHeader =
-      !suppressHeader && (renderHeading || this.hasHeaderActionsSlot || this.closable);
+      !suppressHeader && (renderHeading || this.hasHeaderActionsSlot || !this.withoutCloseButton);
     const headingLevel = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
@@ -1044,11 +1069,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                   ${this.hasHeaderActionsSlot
                     ? html`<span part="header-actions"><slot name="header-actions"></slot></span>`
                     : nothing}
-                  ${this.closable
+                  ${!this.withoutCloseButton
                     ? html`
                         <lr-icon-button
                           part="close-button close-button__base"
-                          exportparts="button:close-button__control"
+                          exportparts="button:close-button-control, button:close-button__control"
                           aria-label=${this.localize('close')}
                           @click=${this.onCloseButtonClick}
                         >

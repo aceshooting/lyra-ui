@@ -9,6 +9,1906 @@
       "aliasRemovalMajor": 23,
       "renames": [
         {
+          "tag": "lr-activity-feed",
+          "kind": "attribute",
+          "from": "show-timestamps",
+          "to": "with-timestamps"
+        },
+        {
+          "tag": "lr-activity-feed",
+          "kind": "css-property",
+          "from": "--lr-activity-feed-background",
+          "to": "--lr-activity-feed-bg"
+        },
+        {
+          "tag": "lr-activity-feed",
+          "kind": "property",
+          "from": "showTimestamps",
+          "to": "withTimestamps"
+        },
+        {
+          "tag": "lr-agent-eval-dashboard",
+          "kind": "attribute",
+          "from": "show-chart",
+          "to": "without-chart",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-eval-dashboard",
+          "kind": "css-property",
+          "from": "--lr-agent-eval-dashboard-active-background",
+          "to": "--lr-agent-eval-dashboard-active-bg"
+        },
+        {
+          "tag": "lr-agent-eval-dashboard",
+          "kind": "property",
+          "from": "showChart",
+          "to": "withoutChart",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "attribute",
+          "from": "show-cancel",
+          "to": "without-cancel",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "attribute",
+          "from": "show-retry",
+          "to": "without-retry",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "css-property",
+          "from": "--lr-agent-run-background",
+          "to": "--lr-agent-run-bg"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "property",
+          "from": "showCancel",
+          "to": "withoutCancel",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "property",
+          "from": "showRetry",
+          "to": "withoutRetry",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "attribute",
+          "from": "show-bars",
+          "to": "without-bars",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "attribute",
+          "from": "show-cost",
+          "to": "with-cost"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "attribute",
+          "from": "show-tokens",
+          "to": "with-tokens"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "property",
+          "from": "showBars",
+          "to": "withoutBars",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "property",
+          "from": "showCost",
+          "to": "withCost"
+        },
+        {
+          "tag": "lr-agent-trace",
+          "kind": "property",
+          "from": "showTokens",
+          "to": "withTokens"
+        },
+        {
+          "tag": "lr-agent-workspace",
+          "kind": "attribute",
+          "from": "show-composer",
+          "to": "without-composer",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-workspace",
+          "kind": "attribute",
+          "from": "show-details",
+          "to": "without-details",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-workspace",
+          "kind": "property",
+          "from": "showComposer",
+          "to": "withoutComposer",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-agent-workspace",
+          "kind": "property",
+          "from": "showDetails",
+          "to": "withoutDetails",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-animated-image",
+          "kind": "attribute",
+          "from": "respect-reduced-motion",
+          "to": "ignore-reduced-motion",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-animated-image",
+          "kind": "property",
+          "from": "respectReducedMotion",
+          "to": "ignoreReducedMotion",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-animation",
+          "kind": "attribute",
+          "from": "respect-reduced-motion",
+          "to": "ignore-reduced-motion",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-animation",
+          "kind": "property",
+          "from": "respectReducedMotion",
+          "to": "ignoreReducedMotion",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "attribute",
+          "from": "hide-toggle",
+          "to": "without-toggle"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "attribute",
+          "from": "max-rail-width-px",
+          "to": "max-rail-width"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "attribute",
+          "from": "min-rail-width-px",
+          "to": "min-rail-width"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "attribute",
+          "from": "rail-width-px",
+          "to": "rail-width"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "css-property",
+          "from": "--lr-app-rail-background",
+          "to": "--lr-app-rail-bg"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "css-property",
+          "from": "--lr-app-rail-panel-background",
+          "to": "--lr-app-rail-panel-bg"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "property",
+          "from": "hideToggle",
+          "to": "withoutToggle"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "property",
+          "from": "maxRailWidthPx",
+          "to": "maxRailWidth"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "property",
+          "from": "minRailWidthPx",
+          "to": "minRailWidth"
+        },
+        {
+          "tag": "lr-app-rail",
+          "kind": "property",
+          "from": "railWidthPx",
+          "to": "railWidth"
+        },
+        {
+          "tag": "lr-app-rail-group",
+          "kind": "attribute",
+          "from": "open",
+          "to": "collapsed",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-app-rail-group",
+          "kind": "property",
+          "from": "open",
+          "to": "collapsed",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-approval-queue",
+          "kind": "attribute",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-approval-queue",
+          "kind": "property",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-accent-background",
+          "to": "--lr-archive-viewer-highlight-accent-bg"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-active-background",
+          "to": "--lr-archive-viewer-highlight-active-bg"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-danger-background",
+          "to": "--lr-archive-viewer-highlight-danger-bg"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-neutral-background",
+          "to": "--lr-archive-viewer-highlight-neutral-bg"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-success-background",
+          "to": "--lr-archive-viewer-highlight-success-bg"
+        },
+        {
+          "tag": "lr-archive-viewer",
+          "kind": "css-property",
+          "from": "--lr-archive-viewer-highlight-warning-background",
+          "to": "--lr-archive-viewer-highlight-warning-bg"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "attribute",
+          "from": "previewable",
+          "to": "without-preview",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "attribute",
+          "from": "removable",
+          "to": "without-remove-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "property",
+          "from": "previewable",
+          "to": "withoutPreview",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "property",
+          "from": "removable",
+          "to": "withoutRemoveButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-attachment-trigger",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-attachment-trigger",
+          "kind": "part",
+          "from": "menu-trigger__control",
+          "to": "menu-trigger-control"
+        },
+        {
+          "tag": "lr-attachment-trigger",
+          "kind": "part",
+          "from": "trigger__control",
+          "to": "trigger-control"
+        },
+        {
+          "tag": "lr-avatar-group",
+          "kind": "event",
+          "from": "lr-overflow-click",
+          "to": "lr-overflow-activate"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "attribute",
+          "from": "legend",
+          "to": "with-legend"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "property",
+          "from": "legend",
+          "to": "withLegend"
+        },
+        {
+          "tag": "lr-box-plot",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-browser-frame",
+          "kind": "attribute",
+          "from": "controls",
+          "to": "without-controls",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-browser-frame",
+          "kind": "css-property",
+          "from": "--lr-browser-frame-controller-background",
+          "to": "--lr-browser-frame-controller-bg"
+        },
+        {
+          "tag": "lr-browser-frame",
+          "kind": "property",
+          "from": "controls",
+          "to": "withoutControls",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-button",
+          "kind": "css-property",
+          "from": "--lr-button-active-background",
+          "to": "--lr-button-active-bg"
+        },
+        {
+          "tag": "lr-button",
+          "kind": "css-property",
+          "from": "--lr-button-hover-background",
+          "to": "--lr-button-hover-bg"
+        },
+        {
+          "tag": "lr-button",
+          "kind": "css-property",
+          "from": "--lr-button-quiet-text",
+          "to": "--lr-button-quiet-color"
+        },
+        {
+          "tag": "lr-callout",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-callout",
+          "kind": "css-property",
+          "from": "--lr-callout-background",
+          "to": "--lr-callout-bg"
+        },
+        {
+          "tag": "lr-callout",
+          "kind": "part",
+          "from": "close-button__control",
+          "to": "close-button-control"
+        },
+        {
+          "tag": "lr-carousel",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-chat-composer",
+          "kind": "attribute",
+          "from": "stoppable",
+          "to": "without-stop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chat-composer",
+          "kind": "attribute",
+          "from": "submit-on-enter",
+          "to": "without-enter-submit",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chat-composer",
+          "kind": "css-property",
+          "from": "--lr-chat-composer-background",
+          "to": "--lr-chat-composer-bg"
+        },
+        {
+          "tag": "lr-chat-composer",
+          "kind": "property",
+          "from": "stoppable",
+          "to": "withoutStop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chat-composer",
+          "kind": "property",
+          "from": "submitOnEnter",
+          "to": "withoutEnterSubmit",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chat-message",
+          "kind": "attribute",
+          "from": "actions-position",
+          "to": "actions-placement"
+        },
+        {
+          "tag": "lr-chat-message",
+          "kind": "attribute",
+          "from": "attachments-position",
+          "to": "attachments-placement"
+        },
+        {
+          "tag": "lr-chat-message",
+          "kind": "property",
+          "from": "actionsPosition",
+          "to": "actionsPlacement"
+        },
+        {
+          "tag": "lr-chat-message",
+          "kind": "property",
+          "from": "attachmentsPosition",
+          "to": "attachmentsPlacement"
+        },
+        {
+          "tag": "lr-checkpoint",
+          "kind": "attribute",
+          "from": "confirm-restore",
+          "to": "without-restore-confirmation",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-checkpoint",
+          "kind": "attribute",
+          "from": "restorable",
+          "to": "without-restore",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-checkpoint",
+          "kind": "property",
+          "from": "confirmRestore",
+          "to": "withoutRestoreConfirmation",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-checkpoint",
+          "kind": "property",
+          "from": "restorable",
+          "to": "withoutRestore",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-chip",
+          "kind": "event",
+          "from": "lr-chip-select",
+          "to": "lr-chip-toggle-request"
+        },
+        {
+          "tag": "lr-chunk-inspector",
+          "kind": "event",
+          "from": "lr-expand",
+          "to": "lr-chunk-toggle"
+        },
+        {
+          "tag": "lr-code-block",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-code-block",
+          "kind": "part",
+          "from": "copy-button__control",
+          "to": "copy-button-control"
+        },
+        {
+          "tag": "lr-code-block",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-code-block-core",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-code-block-core",
+          "kind": "part",
+          "from": "copy-button__control",
+          "to": "copy-button-control"
+        },
+        {
+          "tag": "lr-code-block-core",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-code-editor",
+          "kind": "attribute",
+          "from": "line-numbers",
+          "to": "without-line-numbers",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-code-editor",
+          "kind": "property",
+          "from": "lineNumbers",
+          "to": "withoutLineNumbers",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-combobox",
+          "kind": "attribute",
+          "from": "show-unknown-option",
+          "to": "with-unknown-option"
+        },
+        {
+          "tag": "lr-combobox",
+          "kind": "css-property",
+          "from": "--lr-combobox-text-color",
+          "to": "--lr-combobox-color"
+        },
+        {
+          "tag": "lr-combobox",
+          "kind": "property",
+          "from": "showUnknownOption",
+          "to": "withUnknownOption"
+        },
+        {
+          "tag": "lr-commit-card",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-commit-card",
+          "kind": "css-property",
+          "from": "--lr-commit-card-background",
+          "to": "--lr-commit-card-bg"
+        },
+        {
+          "tag": "lr-commit-card",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-compare-panel",
+          "kind": "css-property",
+          "from": "--lr-compare-panel-selected-background",
+          "to": "--lr-compare-panel-selected-bg"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "attribute",
+          "from": "pending",
+          "to": "pending-action"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "property",
+          "from": "pending",
+          "to": "pendingAction"
+        },
+        {
+          "tag": "lr-context-meter",
+          "kind": "attribute",
+          "from": "show-legend",
+          "to": "with-legend"
+        },
+        {
+          "tag": "lr-context-meter",
+          "kind": "property",
+          "from": "showLegend",
+          "to": "withLegend"
+        },
+        {
+          "tag": "lr-conversation-item",
+          "kind": "attribute",
+          "from": "renamable",
+          "to": "without-rename",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-conversation-item",
+          "kind": "property",
+          "from": "renamable",
+          "to": "withoutRename",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-copy-button",
+          "kind": "part",
+          "from": "base__control",
+          "to": "base-control"
+        },
+        {
+          "tag": "lr-csv-viewer",
+          "kind": "attribute",
+          "from": "has-header-row",
+          "to": "without-header-row",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-csv-viewer",
+          "kind": "property",
+          "from": "hasHeaderRow",
+          "to": "withoutHeaderRow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-dashboard-grid",
+          "kind": "attribute",
+          "from": "locked",
+          "to": "readonly"
+        },
+        {
+          "tag": "lr-dashboard-grid",
+          "kind": "property",
+          "from": "locked",
+          "to": "readonly"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-control-active-background",
+          "to": "--lr-data-grid-control-active-bg"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-control-hover-background",
+          "to": "--lr-data-grid-control-hover-bg"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-page-size-active-background",
+          "to": "--lr-data-grid-page-size-active-bg"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-row-active-background",
+          "to": "--lr-data-grid-row-active-bg"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-sortable-header-active-background",
+          "to": "--lr-data-grid-sortable-header-active-bg"
+        },
+        {
+          "tag": "lr-data-grid",
+          "kind": "css-property",
+          "from": "--lr-data-grid-sortable-header-hover-background",
+          "to": "--lr-data-grid-sortable-header-hover-bg"
+        },
+        {
+          "tag": "lr-date-input",
+          "kind": "css-property",
+          "from": "--lr-date-input-text-color",
+          "to": "--lr-date-input-color"
+        },
+        {
+          "tag": "lr-date-picker",
+          "kind": "css-property",
+          "from": "--lr-cell-size",
+          "to": "--lr-date-picker-cell-size"
+        },
+        {
+          "tag": "lr-dialog",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-dialog",
+          "kind": "attribute",
+          "from": "closable",
+          "to": "without-close-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-dialog",
+          "kind": "part",
+          "from": "close-button__control",
+          "to": "close-button-control"
+        },
+        {
+          "tag": "lr-dialog",
+          "kind": "property",
+          "from": "closable",
+          "to": "withoutCloseButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-add-background",
+          "to": "--lr-diff-view-add-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-fold-background",
+          "to": "--lr-diff-view-fold-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-highlight-accent-background",
+          "to": "--lr-diff-view-highlight-accent-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-highlight-danger-background",
+          "to": "--lr-diff-view-highlight-danger-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-highlight-neutral-background",
+          "to": "--lr-diff-view-highlight-neutral-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-highlight-success-background",
+          "to": "--lr-diff-view-highlight-success-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-highlight-warning-background",
+          "to": "--lr-diff-view-highlight-warning-bg"
+        },
+        {
+          "tag": "lr-diff-view",
+          "kind": "css-property",
+          "from": "--lr-diff-view-remove-background",
+          "to": "--lr-diff-view-remove-bg"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "attribute",
+          "from": "edge",
+          "to": "placement"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "attribute",
+          "from": "resizable",
+          "to": "without-resize",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "property",
+          "from": "edge",
+          "to": "placement"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "property",
+          "from": "resizable",
+          "to": "withoutResize",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-document-compare",
+          "kind": "attribute",
+          "from": "sync-scroll",
+          "to": "without-sync-scroll",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-document-compare",
+          "kind": "property",
+          "from": "syncScroll",
+          "to": "withoutSyncScroll",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-accent-background",
+          "to": "--lr-docx-viewer-highlight-accent-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-active-background",
+          "to": "--lr-docx-viewer-highlight-active-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-danger-background",
+          "to": "--lr-docx-viewer-highlight-danger-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-neutral-background",
+          "to": "--lr-docx-viewer-highlight-neutral-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-success-background",
+          "to": "--lr-docx-viewer-highlight-success-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-highlight-warning-background",
+          "to": "--lr-docx-viewer-highlight-warning-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-search-match-active-background",
+          "to": "--lr-docx-viewer-search-match-active-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-search-match-active-foreground",
+          "to": "--lr-docx-viewer-search-match-active-color"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-search-match-background",
+          "to": "--lr-docx-viewer-search-match-bg"
+        },
+        {
+          "tag": "lr-docx-viewer",
+          "kind": "css-property",
+          "from": "--lr-docx-viewer-table-header-background",
+          "to": "--lr-docx-viewer-table-header-bg"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-drawer",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-drawer",
+          "kind": "attribute",
+          "from": "closable",
+          "to": "without-close-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-drawer",
+          "kind": "part",
+          "from": "close-button__control",
+          "to": "close-button-control"
+        },
+        {
+          "tag": "lr-drawer",
+          "kind": "property",
+          "from": "closable",
+          "to": "withoutCloseButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-drilldown-panel",
+          "kind": "attribute",
+          "from": "show-focus-button",
+          "to": "without-focus-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-drilldown-panel",
+          "kind": "property",
+          "from": "showFocusButton",
+          "to": "withoutFocusButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-dropdown",
+          "kind": "part",
+          "from": "popup__arrow",
+          "to": "popup-arrow"
+        },
+        {
+          "tag": "lr-dropdown",
+          "kind": "part",
+          "from": "popup__popup",
+          "to": "popup-popup"
+        },
+        {
+          "tag": "lr-dropdown-item",
+          "kind": "event",
+          "from": "lr-menu-item-change",
+          "to": "lr-menu-item-change-request"
+        },
+        {
+          "tag": "lr-dropdown-item",
+          "kind": "part",
+          "from": "spinner__base",
+          "to": "spinner-base"
+        },
+        {
+          "tag": "lr-entity-card",
+          "kind": "attribute",
+          "from": "show-focus-button",
+          "to": "without-focus-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-entity-card",
+          "kind": "property",
+          "from": "showFocusButton",
+          "to": "withoutFocusButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-entity-dossier",
+          "kind": "attribute",
+          "from": "show-focus-button",
+          "to": "without-focus-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-entity-dossier",
+          "kind": "event",
+          "from": "lr-expand",
+          "to": "lr-chunk-toggle"
+        },
+        {
+          "tag": "lr-entity-dossier",
+          "kind": "property",
+          "from": "showFocusButton",
+          "to": "withoutFocusButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-env-list",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-env-list",
+          "kind": "attribute",
+          "from": "revealable",
+          "to": "without-reveal",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-env-list",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-env-list",
+          "kind": "property",
+          "from": "revealable",
+          "to": "withoutReveal",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-export-button",
+          "kind": "css-property",
+          "from": "--lr-export-button-active-background",
+          "to": "--lr-export-button-active-bg"
+        },
+        {
+          "tag": "lr-export-button",
+          "kind": "css-property",
+          "from": "--lr-export-button-background",
+          "to": "--lr-export-button-bg"
+        },
+        {
+          "tag": "lr-export-button",
+          "kind": "css-property",
+          "from": "--lr-export-button-hover-background",
+          "to": "--lr-export-button-hover-bg"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "attribute",
+          "from": "paste",
+          "to": "without-paste",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "property",
+          "from": "paste",
+          "to": "withoutPaste",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-flow-canvas",
+          "kind": "attribute",
+          "from": "locked",
+          "to": "readonly"
+        },
+        {
+          "tag": "lr-flow-canvas",
+          "kind": "property",
+          "from": "locked",
+          "to": "readonly"
+        },
+        {
+          "tag": "lr-flow-controls",
+          "kind": "attribute",
+          "from": "hide-lock",
+          "to": "without-lock"
+        },
+        {
+          "tag": "lr-flow-controls",
+          "kind": "property",
+          "from": "hideLock",
+          "to": "withoutLock"
+        },
+        {
+          "tag": "lr-flow-run-status",
+          "kind": "attribute",
+          "from": "hide-summary",
+          "to": "without-summary"
+        },
+        {
+          "tag": "lr-flow-run-status",
+          "kind": "property",
+          "from": "hideSummary",
+          "to": "withoutSummary"
+        },
+        {
+          "tag": "lr-funnel",
+          "kind": "attribute",
+          "from": "dropoff",
+          "to": "without-dropoff",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-funnel",
+          "kind": "property",
+          "from": "dropoff",
+          "to": "withoutDropoff",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-gauge",
+          "kind": "attribute",
+          "from": "show-value",
+          "to": "without-value",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-gauge",
+          "kind": "property",
+          "from": "showValue",
+          "to": "withoutValue",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-generation-metrics",
+          "kind": "attribute",
+          "from": "show-stop",
+          "to": "without-stop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-generation-metrics",
+          "kind": "property",
+          "from": "showStop",
+          "to": "withoutStop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "attribute",
+          "from": "link-distance",
+          "to": "edge-distance"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "attribute",
+          "from": "show-edge-labels",
+          "to": "with-edge-labels"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "css-property",
+          "from": "--lr-link-color",
+          "to": "--lr-graph-edge-color"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "css-property",
+          "from": "--lr-node-fill",
+          "to": "--lr-graph-node-fill"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "from": "lr-community-click",
+          "to": "lr-community-activate"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "from": "lr-link-enter",
+          "to": "lr-edge-enter"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "event",
+          "from": "lr-link-leave",
+          "to": "lr-edge-leave"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "property",
+          "from": "dimmedLinkIds",
+          "to": "dimmedEdgeIds"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "property",
+          "from": "linkDistance",
+          "to": "edgeDistance"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "property",
+          "from": "links",
+          "to": "edges"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "property",
+          "from": "selectedLinkIds",
+          "to": "selectedEdgeIds"
+        },
+        {
+          "tag": "lr-graph",
+          "kind": "property",
+          "from": "showEdgeLabels",
+          "to": "withEdgeLabels"
+        },
+        {
+          "tag": "lr-graph-legend",
+          "kind": "attribute",
+          "from": "interactive",
+          "to": "without-interaction",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-graph-legend",
+          "kind": "property",
+          "from": "interactive",
+          "to": "withoutInteraction",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-grounding-summary",
+          "kind": "attribute",
+          "from": "show-claims",
+          "to": "without-claims",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-grounding-summary",
+          "kind": "property",
+          "from": "showClaims",
+          "to": "withoutClaims",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-heatmap",
+          "kind": "css-property",
+          "from": "--lr-heatmap-tooltip-text",
+          "to": "--lr-heatmap-tooltip-color"
+        },
+        {
+          "tag": "lr-heatmap",
+          "kind": "event",
+          "from": "lr-cell-click",
+          "to": "lr-cell-activate"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "attribute",
+          "from": "interactive",
+          "to": "without-interaction",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-accent-background",
+          "to": "--lr-highlight-layer-accent-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-danger-background",
+          "to": "--lr-highlight-layer-danger-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-flash-background",
+          "to": "--lr-highlight-layer-flash-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-neutral-background",
+          "to": "--lr-highlight-layer-neutral-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-success-background",
+          "to": "--lr-highlight-layer-success-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "css-property",
+          "from": "--lr-highlight-layer-warning-background",
+          "to": "--lr-highlight-layer-warning-bg"
+        },
+        {
+          "tag": "lr-highlight-layer",
+          "kind": "property",
+          "from": "interactive",
+          "to": "withoutInteraction",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-icon-button",
+          "kind": "css-property",
+          "from": "--lr-icon-button-background",
+          "to": "--lr-icon-button-bg"
+        },
+        {
+          "tag": "lr-icon-button",
+          "kind": "css-property",
+          "from": "--lr-icon-button-background-active",
+          "to": "--lr-icon-button-bg-active"
+        },
+        {
+          "tag": "lr-icon-button",
+          "kind": "css-property",
+          "from": "--lr-icon-button-background-hover",
+          "to": "--lr-icon-button-bg-hover"
+        },
+        {
+          "tag": "lr-include",
+          "kind": "attribute",
+          "from": "cache",
+          "to": "without-cache",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-include",
+          "kind": "property",
+          "from": "cache",
+          "to": "withoutCache",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-error-bg",
+          "to": "--lr-json-schema-viewer-error-bg"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-error-border",
+          "to": "--lr-json-schema-viewer-error-border"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-info-bg",
+          "to": "--lr-json-schema-viewer-info-bg"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-info-border",
+          "to": "--lr-json-schema-viewer-info-border"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-max-indent",
+          "to": "--lr-json-schema-viewer-max-indent"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-selected-border",
+          "to": "--lr-json-schema-viewer-selected-border"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-warning-bg",
+          "to": "--lr-json-schema-viewer-warning-bg"
+        },
+        {
+          "tag": "lr-json-schema-viewer",
+          "kind": "css-property",
+          "from": "--lr-schema-viewer-warning-border",
+          "to": "--lr-json-schema-viewer-warning-border"
+        },
+        {
+          "tag": "lr-json-viewer",
+          "kind": "attribute",
+          "from": "collapsed-depth",
+          "to": "expand-depth"
+        },
+        {
+          "tag": "lr-json-viewer",
+          "kind": "attribute",
+          "from": "search",
+          "to": "query"
+        },
+        {
+          "tag": "lr-json-viewer",
+          "kind": "property",
+          "from": "collapsedDepth",
+          "to": "expandDepth"
+        },
+        {
+          "tag": "lr-json-viewer",
+          "kind": "property",
+          "from": "search",
+          "to": "query"
+        },
+        {
+          "tag": "lr-knowledge-base",
+          "kind": "attribute",
+          "from": "hide-create",
+          "to": "without-create"
+        },
+        {
+          "tag": "lr-knowledge-base",
+          "kind": "attribute",
+          "from": "hide-summary",
+          "to": "without-summary"
+        },
+        {
+          "tag": "lr-knowledge-base",
+          "kind": "property",
+          "from": "hideCreate",
+          "to": "withoutCreate"
+        },
+        {
+          "tag": "lr-knowledge-base",
+          "kind": "property",
+          "from": "hideSummary",
+          "to": "withoutSummary"
+        },
+        {
+          "tag": "lr-knowledge-base-admin",
+          "kind": "attribute",
+          "from": "hide-ingestion",
+          "to": "without-ingestion"
+        },
+        {
+          "tag": "lr-knowledge-base-admin",
+          "kind": "property",
+          "from": "hideIngestion",
+          "to": "withoutIngestion"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "attribute",
+          "from": "search-query",
+          "to": "query"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "event",
+          "from": "lr-community-click",
+          "to": "lr-community-activate"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "property",
+          "from": "links",
+          "to": "edges"
+        },
+        {
+          "tag": "lr-knowledge-graph-explorer",
+          "kind": "property",
+          "from": "searchQuery",
+          "to": "query"
+        },
+        {
+          "tag": "lr-lightbox",
+          "kind": "attribute",
+          "from": "show-counter",
+          "to": "without-counter",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-lightbox",
+          "kind": "property",
+          "from": "showCounter",
+          "to": "withoutCounter",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "attribute",
+          "from": "legend",
+          "to": "with-legend"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "property",
+          "from": "legend",
+          "to": "withLegend"
+        },
+        {
+          "tag": "lr-lite-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-locale-picker",
+          "kind": "attribute",
+          "from": "show-flags",
+          "to": "without-flags",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-locale-picker",
+          "kind": "property",
+          "from": "showFlags",
+          "to": "withoutFlags",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-map",
+          "kind": "event",
+          "from": "lr-map-legend-panel-toggle",
+          "to": "lr-map-legend-panel-toggle-request"
+        },
+        {
+          "tag": "lr-map",
+          "kind": "event",
+          "from": "lr-map-legend-toggle",
+          "to": "lr-map-legend-toggle-request"
+        },
+        {
           "tag": "lr-markdown",
           "kind": "attribute",
           "from": "code-block-chrome",
@@ -16,9 +1916,37 @@
         },
         {
           "tag": "lr-markdown",
+          "kind": "attribute",
+          "from": "gfm",
+          "to": "without-gfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown",
+          "kind": "attribute",
+          "from": "highlight-code",
+          "to": "without-syntax-highlighting",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown",
           "kind": "property",
           "from": "codeBlockChrome",
           "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-markdown",
+          "kind": "property",
+          "from": "gfm",
+          "to": "withoutGfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown",
+          "kind": "property",
+          "from": "highlightCode",
+          "to": "withoutSyntaxHighlighting",
+          "polarity": "inverted"
         },
         {
           "tag": "lr-markdown-core",
@@ -28,9 +1956,37 @@
         },
         {
           "tag": "lr-markdown-core",
+          "kind": "attribute",
+          "from": "gfm",
+          "to": "without-gfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "attribute",
+          "from": "highlight-code",
+          "to": "without-syntax-highlighting",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown-core",
           "kind": "property",
           "from": "codeBlockChrome",
           "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "property",
+          "from": "gfm",
+          "to": "withoutGfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-markdown-core",
+          "kind": "property",
+          "from": "highlightCode",
+          "to": "withoutSyntaxHighlighting",
+          "polarity": "inverted"
         },
         {
           "tag": "lr-media-card",
@@ -39,6 +1995,30 @@
           "to": "lr-media-download-request"
         },
         {
+          "tag": "lr-memory-panel",
+          "kind": "event",
+          "from": "lr-expand",
+          "to": "lr-memory-toggle"
+        },
+        {
+          "tag": "lr-menu-item",
+          "kind": "event",
+          "from": "lr-menu-item-change",
+          "to": "lr-menu-item-change-request"
+        },
+        {
+          "tag": "lr-message-actions",
+          "kind": "part",
+          "from": "edit-button__control",
+          "to": "edit-button-control"
+        },
+        {
+          "tag": "lr-message-actions",
+          "kind": "part",
+          "from": "regenerate-button__control",
+          "to": "regenerate-button-control"
+        },
+        {
           "tag": "lr-message-parts",
           "kind": "attribute",
           "from": "code-block-chrome",
@@ -46,9 +2026,29 @@
         },
         {
           "tag": "lr-message-parts",
+          "kind": "attribute",
+          "from": "show-reasoning",
+          "to": "without-reasoning",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "css-property",
+          "from": "--lr-message-parts-error-background",
+          "to": "--lr-message-parts-error-bg"
+        },
+        {
+          "tag": "lr-message-parts",
           "kind": "property",
           "from": "codeBlockChrome",
           "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-message-parts",
+          "kind": "property",
+          "from": "showReasoning",
+          "to": "withoutReasoning",
+          "polarity": "inverted"
         },
         {
           "tag": "lr-mutation-observer",
@@ -58,11 +2058,647 @@
         },
         {
           "tag": "lr-mutation-observer",
+          "kind": "attribute",
+          "from": "subtree",
+          "to": "without-subtree",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-mutation-observer",
           "kind": "property",
           "from": "characterData",
           "to": "charData"
         },
         {
+          "tag": "lr-mutation-observer",
+          "kind": "property",
+          "from": "subtree",
+          "to": "withoutSubtree",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-native-time-input",
+          "kind": "attribute",
+          "from": "no-spin-buttons",
+          "to": "without-spin-buttons"
+        },
+        {
+          "tag": "lr-native-time-input",
+          "kind": "property",
+          "from": "noSpinButtons",
+          "to": "withoutSpinButtons"
+        },
+        {
+          "tag": "lr-notebook-viewer",
+          "kind": "css-property",
+          "from": "--lr-notebook-viewer-highlight-accent-background",
+          "to": "--lr-notebook-viewer-highlight-accent-bg"
+        },
+        {
+          "tag": "lr-notebook-viewer",
+          "kind": "css-property",
+          "from": "--lr-notebook-viewer-highlight-danger-background",
+          "to": "--lr-notebook-viewer-highlight-danger-bg"
+        },
+        {
+          "tag": "lr-notebook-viewer",
+          "kind": "css-property",
+          "from": "--lr-notebook-viewer-highlight-neutral-background",
+          "to": "--lr-notebook-viewer-highlight-neutral-bg"
+        },
+        {
+          "tag": "lr-notebook-viewer",
+          "kind": "css-property",
+          "from": "--lr-notebook-viewer-highlight-success-background",
+          "to": "--lr-notebook-viewer-highlight-success-bg"
+        },
+        {
+          "tag": "lr-notebook-viewer",
+          "kind": "css-property",
+          "from": "--lr-notebook-viewer-highlight-warning-background",
+          "to": "--lr-notebook-viewer-highlight-warning-bg"
+        },
+        {
+          "tag": "lr-number-input",
+          "kind": "attribute",
+          "from": "steppers",
+          "to": "without-steppers",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-number-input",
+          "kind": "property",
+          "from": "steppers",
+          "to": "withoutSteppers",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-page",
+          "kind": "event",
+          "from": "lr-nav-toggle",
+          "to": "lr-nav-toggle-request"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-popover",
+          "kind": "attribute",
+          "from": "arrow",
+          "to": "without-arrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-popover",
+          "kind": "property",
+          "from": "arrow",
+          "to": "withoutArrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-progress-bar",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-progress-bar",
+          "kind": "attribute",
+          "from": "show-value",
+          "to": "with-value"
+        },
+        {
+          "tag": "lr-progress-bar",
+          "kind": "property",
+          "from": "showValue",
+          "to": "withValue"
+        },
+        {
+          "tag": "lr-progress-ring",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-progress-ring",
+          "kind": "attribute",
+          "from": "show-value",
+          "to": "with-value"
+        },
+        {
+          "tag": "lr-progress-ring",
+          "kind": "property",
+          "from": "showValue",
+          "to": "withValue"
+        },
+        {
+          "tag": "lr-prompt-input",
+          "kind": "attribute",
+          "from": "submit-on-enter",
+          "to": "without-enter-submit",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-prompt-input",
+          "kind": "property",
+          "from": "submitOnEnter",
+          "to": "withoutEnterSubmit",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-prompt-queue",
+          "kind": "attribute",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-prompt-queue",
+          "kind": "property",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-prompt-studio",
+          "kind": "event",
+          "from": "lr-message-reorder",
+          "to": "lr-message-reorder-request"
+        },
+        {
+          "tag": "lr-provenance-panel",
+          "kind": "event",
+          "from": "lr-expand",
+          "to": "lr-chunk-toggle"
+        },
+        {
+          "tag": "lr-push-to-talk",
+          "kind": "attribute",
+          "from": "show-timer",
+          "to": "without-timer",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-push-to-talk",
+          "kind": "property",
+          "from": "showTimer",
+          "to": "withoutTimer",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-qr-code",
+          "kind": "css-property",
+          "from": "--lr-qr-code-background",
+          "to": "--lr-qr-code-bg"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-rag-answer",
+          "kind": "attribute",
+          "from": "show-claims",
+          "to": "without-claims",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-rag-answer",
+          "kind": "attribute",
+          "from": "show-sources",
+          "to": "without-sources",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-rag-answer",
+          "kind": "property",
+          "from": "showClaims",
+          "to": "withoutClaims",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-rag-answer",
+          "kind": "property",
+          "from": "showSources",
+          "to": "withoutSources",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-rag-eval-dashboard",
+          "kind": "attribute",
+          "from": "show-chart",
+          "to": "without-chart",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-rag-eval-dashboard",
+          "kind": "property",
+          "from": "showChart",
+          "to": "withoutChart",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-realtime-session",
+          "kind": "attribute",
+          "from": "show-capture",
+          "to": "without-capture",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-realtime-session",
+          "kind": "property",
+          "from": "showCapture",
+          "to": "withoutCapture",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-reorder-item",
+          "kind": "attribute",
+          "from": "accessible-label",
+          "to": "aria-label"
+        },
+        {
+          "tag": "lr-reorder-item",
+          "kind": "part",
+          "from": "move-down-button__control",
+          "to": "move-down-button-control"
+        },
+        {
+          "tag": "lr-reorder-item",
+          "kind": "part",
+          "from": "move-up-button__control",
+          "to": "move-up-button-control"
+        },
+        {
+          "tag": "lr-reorder-list",
+          "kind": "event",
+          "from": "lr-reorder",
+          "to": "lr-reorder-request"
+        },
+        {
+          "tag": "lr-result-card",
+          "kind": "css-property",
+          "from": "--lr-result-card-background",
+          "to": "--lr-result-card-bg"
+        },
+        {
+          "tag": "lr-retrieval-results",
+          "kind": "attribute",
+          "from": "dedupe",
+          "to": "without-dedupe",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-retrieval-results",
+          "kind": "attribute",
+          "from": "selectable",
+          "to": "without-selection",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-retrieval-results",
+          "kind": "property",
+          "from": "dedupe",
+          "to": "withoutDedupe",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-retrieval-results",
+          "kind": "property",
+          "from": "selectable",
+          "to": "withoutSelection",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "attribute",
+          "from": "begin-at-zero",
+          "to": "without-zero-baseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "attribute",
+          "from": "show-data-table",
+          "to": "with-data-table"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "attribute",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "css-property",
+          "from": "--lr-chart-tooltip-text",
+          "to": "--lr-chart-tooltip-color"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "event",
+          "from": "lr-point-click",
+          "to": "lr-point-activate"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "property",
+          "from": "beginAtZero",
+          "to": "withoutZeroBaseline",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "property",
+          "from": "showDataTable",
+          "to": "withDataTable"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "property",
+          "from": "zoom",
+          "to": "zoomable"
+        },
+        {
+          "tag": "lr-select",
+          "kind": "attribute",
+          "from": "show-unknown-option",
+          "to": "with-unknown-option"
+        },
+        {
+          "tag": "lr-select",
+          "kind": "property",
+          "from": "showUnknownOption",
+          "to": "withUnknownOption"
+        },
+        {
+          "tag": "lr-sequence-playback",
+          "kind": "attribute",
+          "from": "loop",
+          "to": "without-loop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-sequence-playback",
+          "kind": "property",
+          "from": "loop",
+          "to": "withoutLoop",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-sequence-strip",
+          "kind": "attribute",
+          "from": "show-legend",
+          "to": "with-legend"
+        },
+        {
+          "tag": "lr-sequence-strip",
+          "kind": "property",
+          "from": "showLegend",
+          "to": "withLegend"
+        },
+        {
+          "tag": "lr-slider",
+          "kind": "attribute",
+          "from": "show-value",
+          "to": "with-value"
+        },
+        {
+          "tag": "lr-slider",
+          "kind": "property",
+          "from": "showValue",
+          "to": "withValue"
+        },
+        {
+          "tag": "lr-source-card",
+          "kind": "attribute",
+          "from": "title",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-source-card",
+          "kind": "property",
+          "from": "title",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-source-picker",
+          "kind": "attribute",
+          "from": "searchable",
+          "to": "without-search",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-source-picker",
+          "kind": "attribute",
+          "from": "show-select-all",
+          "to": "without-select-all",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-source-picker",
+          "kind": "property",
+          "from": "searchable",
+          "to": "withoutSearch",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-source-picker",
+          "kind": "property",
+          "from": "showSelectAll",
+          "to": "withoutSelectAll",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-span-waterfall",
+          "kind": "attribute",
+          "from": "hide-axis",
+          "to": "without-axis"
+        },
+        {
+          "tag": "lr-span-waterfall",
+          "kind": "property",
+          "from": "hideAxis",
+          "to": "withoutAxis"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "attribute",
+          "from": "collapse-internal",
+          "to": "expand-internal",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "css-property",
+          "from": "--lr-stack-trace-background",
+          "to": "--lr-stack-trace-bg"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "property",
+          "from": "collapseInternal",
+          "to": "expandInternal",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
           "tag": "lr-streaming-text",
           "kind": "attribute",
           "from": "code-block-chrome",
@@ -70,9 +2706,37 @@
         },
         {
           "tag": "lr-streaming-text",
+          "kind": "attribute",
+          "from": "gfm",
+          "to": "without-gfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text",
+          "kind": "attribute",
+          "from": "highlight-code",
+          "to": "without-syntax-highlighting",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text",
           "kind": "property",
           "from": "codeBlockChrome",
           "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-streaming-text",
+          "kind": "property",
+          "from": "gfm",
+          "to": "withoutGfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text",
+          "kind": "property",
+          "from": "highlightCode",
+          "to": "withoutSyntaxHighlighting",
+          "polarity": "inverted"
         },
         {
           "tag": "lr-streaming-text-core",
@@ -82,18 +2746,700 @@
         },
         {
           "tag": "lr-streaming-text-core",
+          "kind": "attribute",
+          "from": "gfm",
+          "to": "without-gfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text-core",
+          "kind": "attribute",
+          "from": "highlight-code",
+          "to": "without-syntax-highlighting",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text-core",
           "kind": "property",
           "from": "codeBlockChrome",
           "to": "codeBlockHeader"
+        },
+        {
+          "tag": "lr-streaming-text-core",
+          "kind": "property",
+          "from": "gfm",
+          "to": "withoutGfm",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-streaming-text-core",
+          "kind": "property",
+          "from": "highlightCode",
+          "to": "withoutSyntaxHighlighting",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-subagent-panel",
+          "kind": "css-property",
+          "from": "--lr-subagent-panel-background",
+          "to": "--lr-subagent-panel-bg"
+        },
+        {
+          "tag": "lr-subagent-panel",
+          "kind": "css-property",
+          "from": "--lr-subagent-panel-hover-background",
+          "to": "--lr-subagent-panel-hover-bg"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "event",
+          "from": "lr-row-click",
+          "to": "lr-row-activate"
+        },
+        {
+          "tag": "lr-tag",
+          "kind": "css-property",
+          "from": "--lr-tag-remove-hover-background",
+          "to": "--lr-tag-remove-hover-bg"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "attribute",
+          "from": "collapsible",
+          "to": "without-collapse",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "attribute",
+          "from": "expanded",
+          "to": "collapsed",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "attribute",
+          "from": "label",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "css-property",
+          "from": "--lr-task-list-background",
+          "to": "--lr-task-list-bg"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "property",
+          "from": "collapsible",
+          "to": "withoutCollapse",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "property",
+          "from": "expanded",
+          "to": "collapsed",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "property",
+          "from": "label",
+          "to": "heading"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "attribute",
+          "from": "copyable",
+          "to": "without-copy-button",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "attribute",
+          "from": "wrap",
+          "to": "without-wrap",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "property",
+          "from": "copyable",
+          "to": "withoutCopyButton",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "property",
+          "from": "wrap",
+          "to": "withoutWrap",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-test-results",
+          "kind": "attribute",
+          "from": "auto-expand-failures",
+          "to": "without-auto-expand-failures",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-test-results",
+          "kind": "property",
+          "from": "autoExpandFailures",
+          "to": "withoutAutoExpandFailures",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-thinking-panel",
+          "kind": "css-property",
+          "from": "--lr-thinking-panel-background",
+          "to": "--lr-thinking-panel-bg"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "attribute",
+          "from": "renamable",
+          "to": "without-rename",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "attribute",
+          "from": "show-archived",
+          "to": "with-archived"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "css-property",
+          "from": "--lr-thread-list-excerpt-highlight-background",
+          "to": "--lr-thread-list-excerpt-highlight-bg"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "css-property",
+          "from": "--lr-thread-list-excerpt-highlight-foreground",
+          "to": "--lr-thread-list-excerpt-highlight-color"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "property",
+          "from": "renamable",
+          "to": "withoutRename",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-thread-list",
+          "kind": "property",
+          "from": "showArchived",
+          "to": "withArchived"
+        },
+        {
+          "tag": "lr-toggle",
+          "kind": "css-property",
+          "from": "--lr-toggle-background",
+          "to": "--lr-toggle-bg"
+        },
+        {
+          "tag": "lr-toggle",
+          "kind": "css-property",
+          "from": "--lr-toggle-hover-background",
+          "to": "--lr-toggle-hover-bg"
+        },
+        {
+          "tag": "lr-toggle",
+          "kind": "css-property",
+          "from": "--lr-toggle-pressed-background",
+          "to": "--lr-toggle-pressed-bg"
+        },
+        {
+          "tag": "lr-token-input",
+          "kind": "event",
+          "from": "lr-add",
+          "to": "lr-token-add-request"
+        },
+        {
+          "tag": "lr-token-input",
+          "kind": "event",
+          "from": "lr-remove",
+          "to": "lr-token-remove-request"
+        },
+        {
+          "tag": "lr-token-input",
+          "kind": "event",
+          "from": "lr-token-edit",
+          "to": "lr-token-edit-request"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "attribute",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "attribute",
+          "from": "pending",
+          "to": "pending-action"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "property",
+          "from": "editable",
+          "to": "readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tool-approval-dialog",
+          "kind": "property",
+          "from": "pending",
+          "to": "pendingAction"
+        },
+        {
+          "tag": "lr-tool-call-block",
+          "kind": "attribute",
+          "from": "error",
+          "to": "error-text"
+        },
+        {
+          "tag": "lr-tool-call-block",
+          "kind": "css-property",
+          "from": "--lr-tool-call-block-background",
+          "to": "--lr-tool-call-block-bg"
+        },
+        {
+          "tag": "lr-tool-call-block",
+          "kind": "property",
+          "from": "error",
+          "to": "errorText"
+        },
+        {
+          "tag": "lr-tool-result-dialog",
+          "kind": "event",
+          "from": "lr-maximize-change",
+          "to": "lr-maximize-change-request"
+        },
+        {
+          "tag": "lr-tool-timeline",
+          "kind": "attribute",
+          "from": "approval-editable",
+          "to": "approval-readonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tool-timeline",
+          "kind": "property",
+          "from": "approvalEditable",
+          "to": "approvalReadonly",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tooltip",
+          "kind": "attribute",
+          "from": "arrow",
+          "to": "without-arrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tooltip",
+          "kind": "css-property",
+          "from": "--lr-tooltip-background",
+          "to": "--lr-tooltip-bg"
+        },
+        {
+          "tag": "lr-tooltip",
+          "kind": "property",
+          "from": "arrow",
+          "to": "withoutArrow",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tour",
+          "kind": "attribute",
+          "from": "show-progress",
+          "to": "without-progress",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-tour",
+          "kind": "event",
+          "from": "lr-tour-step-change",
+          "to": "lr-tour-step-change-request"
+        },
+        {
+          "tag": "lr-tour",
+          "kind": "property",
+          "from": "showProgress",
+          "to": "withoutProgress",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "attribute",
+          "from": "hide-bars",
+          "to": "without-bars"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "attribute",
+          "from": "show-cost",
+          "to": "with-cost"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "attribute",
+          "from": "show-tokens",
+          "to": "with-tokens"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "property",
+          "from": "hideBars",
+          "to": "withoutBars"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "property",
+          "from": "showCost",
+          "to": "withCost"
+        },
+        {
+          "tag": "lr-trace-tree",
+          "kind": "property",
+          "from": "showTokens",
+          "to": "withTokens"
+        },
+        {
+          "tag": "lr-transcript-feed",
+          "kind": "attribute",
+          "from": "show-timestamps",
+          "to": "with-timestamps"
+        },
+        {
+          "tag": "lr-transcript-feed",
+          "kind": "property",
+          "from": "showTimestamps",
+          "to": "withTimestamps"
+        },
+        {
+          "tag": "lr-typing-indicator",
+          "kind": "css-property",
+          "from": "--lr-typing-dot-size",
+          "to": "--lr-typing-indicator-dot-size"
+        },
+        {
+          "tag": "lr-typing-indicator",
+          "kind": "css-property",
+          "from": "--lr-typing-dot-stagger-1",
+          "to": "--lr-typing-indicator-dot-stagger-1"
+        },
+        {
+          "tag": "lr-typing-indicator",
+          "kind": "css-property",
+          "from": "--lr-typing-dot-stagger-2",
+          "to": "--lr-typing-indicator-dot-stagger-2"
+        },
+        {
+          "tag": "lr-typing-indicator",
+          "kind": "css-property",
+          "from": "--lr-typing-duration",
+          "to": "--lr-typing-indicator-duration"
+        },
+        {
+          "tag": "lr-typing-indicator",
+          "kind": "css-property",
+          "from": "--lr-typing-gap",
+          "to": "--lr-typing-indicator-gap"
+        },
+        {
+          "tag": "lr-video",
+          "kind": "css-property",
+          "from": "--lr-video-poster-play-button-hover-background",
+          "to": "--lr-video-poster-play-button-hover-bg"
+        },
+        {
+          "tag": "lr-video-playlist",
+          "kind": "attribute",
+          "from": "auto-advance",
+          "to": "without-auto-advance",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-video-playlist",
+          "kind": "css-property",
+          "from": "--lr-video-playlist-item-current-background",
+          "to": "--lr-video-playlist-item-current-bg"
+        },
+        {
+          "tag": "lr-video-playlist",
+          "kind": "property",
+          "from": "autoAdvance",
+          "to": "withoutAutoAdvance",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-voice-picker",
+          "kind": "attribute",
+          "from": "preview",
+          "to": "without-preview",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-voice-picker",
+          "kind": "property",
+          "from": "preview",
+          "to": "withoutPreview",
+          "polarity": "inverted"
+        },
+        {
+          "tag": "lr-word-cloud",
+          "kind": "attribute",
+          "from": "show-legend",
+          "to": "with-legend"
+        },
+        {
+          "tag": "lr-word-cloud",
+          "kind": "property",
+          "from": "showLegend",
+          "to": "withLegend"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "attribute",
+          "from": "collapsed-depth",
+          "to": "expand-depth"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "css-property",
+          "from": "--lr-xml-viewer-highlight-accent-background",
+          "to": "--lr-xml-viewer-highlight-accent-bg"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "css-property",
+          "from": "--lr-xml-viewer-highlight-danger-background",
+          "to": "--lr-xml-viewer-highlight-danger-bg"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "css-property",
+          "from": "--lr-xml-viewer-highlight-neutral-background",
+          "to": "--lr-xml-viewer-highlight-neutral-bg"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "css-property",
+          "from": "--lr-xml-viewer-highlight-success-background",
+          "to": "--lr-xml-viewer-highlight-success-bg"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "css-property",
+          "from": "--lr-xml-viewer-highlight-warning-background",
+          "to": "--lr-xml-viewer-highlight-warning-bg"
+        },
+        {
+          "tag": "lr-xml-viewer",
+          "kind": "property",
+          "from": "collapsedDepth",
+          "to": "expandDepth"
+        },
+        {
+          "tag": "lr-zoomable-frame",
+          "kind": "css-property",
+          "from": "--lr-zoomable-frame-control-hover-background",
+          "to": "--lr-zoomable-frame-control-hover-bg"
         }
       ],
       "defaults": [],
       "detailChanges": [],
       "reviews": [
         {
+          "tag": "lr-activity-feed",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-activity-feed",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-attachment-chip",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-bar-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-bubble-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-chunk-inspector",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-chunk-inspector",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-claim-evidence",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-claim-evidence",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-commit-card",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-commit-card",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-community-card",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-community-card",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-confirm-bar",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-conversation-item",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-conversation-item",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-doughnut-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-empty",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-empty",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-entity-card",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-entity-card",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-file-input",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-flow-node",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-flow-node",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
           "tag": "lr-geojson-view",
           "kind": "component",
           "name": "lr-geojson-view"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-histogram",
+          "kind": "property",
+          "name": "compact"
         },
         {
           "tag": "lr-icon",
@@ -111,6 +3457,16 @@
           "name": "fixedWidth"
         },
         {
+          "tag": "lr-line-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-line-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
           "tag": "lr-mutation-observer",
           "kind": "attribute",
           "name": "attributes"
@@ -119,6 +3475,76 @@
           "tag": "lr-mutation-observer",
           "kind": "property",
           "name": "observeAttributes"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-pie-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-polar-area-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-radar-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-result-card",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-result-card",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-scatter-chart",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-source-card",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-source-card",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-source-list",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-source-list",
+          "kind": "property",
+          "name": "compact"
         },
         {
           "tag": "lr-sparkline",
@@ -136,9 +3562,119 @@
           "name": "split-panel"
         },
         {
+          "tag": "lr-stack-trace",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-stack-trace",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-stat",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-stat",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
           "tag": "lr-stat",
           "kind": "slot",
           "name": ""
+        },
+        {
+          "tag": "lr-subagent-panel",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-subagent-panel",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "attribute",
+          "name": "empty-compact"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "attribute",
+          "name": "hide-columns-label"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "attribute",
+          "name": "no-columns-description"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "attribute",
+          "name": "no-columns-heading"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "property",
+          "name": "emptyCompact"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "property",
+          "name": "hideColumnsLabel"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "property",
+          "name": "noColumnsDescription"
+        },
+        {
+          "tag": "lr-table",
+          "kind": "property",
+          "name": "noColumnsHeading"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-task-list",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-terminal",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-thinking-panel",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-thinking-panel",
+          "kind": "property",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-widget",
+          "kind": "attribute",
+          "name": "compact"
+        },
+        {
+          "tag": "lr-widget",
+          "kind": "property",
+          "name": "compact"
         }
       ],
       "slotContent": [

@@ -749,11 +749,13 @@ describe('code-block header parse contract', () => {
     expect(nested.records.length).to.equal(1);
   });
 
-  it('reparses and resets highlight bookkeeping for either header spelling', () => {
-    for (const key of ['codeBlockHeader', 'codeBlockChrome']) {
-      expect(markdownNeedsReparse(new Map([[key, undefined]])), key).to.equal(true);
-      expect(markdownHighlightConfigChanged(new Map([[key, undefined]])), key).to.equal(true);
-    }
+  it('reparses and resets highlight bookkeeping when the canonical header property changes', () => {
+    expect(markdownNeedsReparse(new Map([['codeBlockHeader', undefined]]))).to.equal(true);
+    expect(markdownHighlightConfigChanged(new Map([['codeBlockHeader', undefined]]))).to.equal(true);
+    // The deprecated codeBlockChrome alias is kept in step with codeBlockHeader by the element, so
+    // only the canonical key drives the render bookkeeping.
+    expect(markdownNeedsReparse(new Map([['codeBlockChrome', undefined]]))).to.equal(false);
+    expect(markdownHighlightConfigChanged(new Map([['codeBlockChrome', undefined]]))).to.equal(false);
   });
 
   it('builds a fresh sanitizer policy only for sanitize mode', () => {

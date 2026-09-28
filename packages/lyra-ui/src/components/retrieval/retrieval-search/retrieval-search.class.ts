@@ -79,7 +79,7 @@ export interface LyraRetrievalSearchEventMap {
  * selector (the same small-closed-set-choice-in-a-toolbar role it already fills, left at the shared
  * default size so it resolves the same `--lr-form-control-height` as the query field and the submit
  * button and the row reads as one flush line), `<lr-chip>`/`<lr-chip-group>` for removable active-filter/scope
- * chips, `<lr-spinner>` for the loading state, and `<lr-empty>` (compact) for the empty state.
+ * chips, `<lr-spinner>` for the loading state, and `<lr-empty>` (`size="s"`) for the empty state.
  * `filters`/`scope` chip removal updates this component's own copy first, then emits
  * `lr-filters-change` with the complete next state -- the same "update, then emit; reassign to
  * control" round-trip `<lr-source-picker>`'s `selectedSourceIds` already establishes. `empty` is a
@@ -555,7 +555,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
           : this.empty
           ? html`<lr-empty
               part="empty"
-              compact
+              size="s"
               heading=${this.localize('noMatches')}
               description=${this.localize(
                 'retrievalSearchEmptyDescription',

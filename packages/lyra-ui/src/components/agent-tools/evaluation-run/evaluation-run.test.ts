@@ -4,6 +4,16 @@ import type { LyraEvalRun, EvalExampleResult } from './evaluation-run.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraToolTimeline, ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import type { LyraProgressBar } from '../../overlays/progress/progress-bar.class.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+// The locale-formatting fixture deliberately retains the unregistered English messages.
+expectLocaleFallback('ar-EG', [
+  'evaluationRunExampleLabel', 'evaluationRunFailedCount', 'evaluationRunLabel',
+  'evaluationRunProgressLabel', 'evaluationRunProgressSummary', 'evaluationRunRunningCount',
+  'progress', 'statusError', 'statusRunning', 'statusSuccess',
+]);
 
 const examples: EvalExampleResult[] = [
   {
@@ -37,7 +47,7 @@ async function expandExample(el: LyraEvalRun, index = 0): Promise<HTMLElement> {
   row.dispatchEvent(new CustomEvent('lr-toggle', {
     bubbles: true,
     composed: true,
-    detail: { open: true },
+    detail: { open: true, expanded: true },
   }));
   await el.updateComplete;
   return el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
@@ -87,6 +97,29 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
   expect(progress.getAttribute('max')).to.equal('4');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
     '2 of 4 examples complete',
+  );
+});
+
+it('composes the batch progress bar through its canonical value and naming API only', async () => {
+  let el!: LyraEvalRun;
+  const warnings = await captureDeprecationWarnings(
+    [
+      { tag: 'lr-progress-bar', kind: 'property', name: 'showValue' },
+      { tag: 'lr-progress-bar', kind: 'attribute', name: 'accessible-label' },
+    ],
+    async () => {
+      el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`);
+    },
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([]);
+  const progress = el.shadowRoot!.querySelector('[part="progress"]') as LyraProgressBar;
+  await progress.updateComplete;
+  expect(progress.withValue).to.be.true;
+  expect(progress.hasAttribute('show-value')).to.be.false;
+  expect(progress.hasAttribute('accessible-label')).to.be.false;
+  expect(progress.getAttribute('aria-label')).to.equal('Evaluation batch progress');
+  expect(progress.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal(
+    'Evaluation batch progress',
   );
 });
 
@@ -475,7 +508,7 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
 
   expect(wrapperCancelable).to.be.true;
   expect(dialog.open).to.be.true;
-  expect(dialog.pending).to.equal('approve');
+  expect(dialog.pendingAction).to.equal('approve');
 });
 
 describe('status-change announcements', () => {
@@ -614,7 +647,7 @@ it('does not mount heavy example bodies until their disclosure opens', async () 
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(0);
   const first = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
   first.open = true;
-  first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { open: true } }));
+  first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { open: true, expanded: true } }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(2);
 });

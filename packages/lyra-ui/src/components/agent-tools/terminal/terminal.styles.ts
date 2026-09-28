@@ -36,11 +36,11 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid
       var(--lr-terminal-border-color, var(--lr-color-border-subtle));
   }
-  /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. Inline var()
+  /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's dense size tier. Inline var()
      fallbacks, not a :host declaration every instance would re-declare and so shadow an ancestor
      value, let a transcript retune every nested terminal at once. Each fallback is one step
      tighter than the regular value, so an unset terminal renders as before. */
-  :host([compact]) [part='toolbar'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='toolbar'] {
     gap: var(--lr-terminal-compact-toolbar-gap, var(--lr-space-2xs));
     padding: var(--lr-terminal-compact-toolbar-padding, var(--lr-space-2xs) var(--lr-space-xs));
   }
@@ -146,17 +146,17 @@ export const styles = css`
   }
   /* The log's half of the density escape above: the same one-hop ::part() selector as the base
      rule, plus the host attribute selector, so it outranks it on specificity and source order. */
-  :host([compact]) lr-virtual-list::part(line) {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) lr-virtual-list::part(line) {
     padding-inline: var(--lr-terminal-compact-line-padding-inline, var(--lr-space-xs));
   }
-  :host(:not([wrap])) lr-virtual-list::part(line) {
+  :host([without-wrap]) lr-virtual-list::part(line) {
     white-space: pre;
     overflow-wrap: normal;
     inline-size: max-content;
     min-inline-size: 100%;
     box-sizing: border-box;
   }
-  :host(:not([wrap])) lr-virtual-list::part(base) {
+  :host([without-wrap]) lr-virtual-list::part(base) {
     direction: ltr;
     overflow-x: auto;
   }

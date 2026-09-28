@@ -61,7 +61,7 @@ describe('token input composing keyboard ownership', () => {
         const field = await fixture<LyraTokenInput>(html`<lr-token-input .value=${['Existing']}></lr-token-input>`);
         const input = draft(field);
         const changes: string[] = [];
-        for (const name of ['lr-add', 'lr-remove', 'lr-input', 'lr-change', 'input', 'change']) {
+        for (const name of ['lr-token-add-request', 'lr-token-remove-request', 'lr-input', 'lr-change', 'input', 'change']) {
           field.addEventListener(name, () => changes.push(name));
         }
         input.focus();
@@ -90,7 +90,7 @@ describe('token input composing keyboard ownership', () => {
         type(input, 'にほん');
         let changes = 0;
         let bubbled = 0;
-        field.addEventListener('lr-token-edit', () => changes++);
+        field.addEventListener('lr-token-edit-request', () => changes++);
         field.addEventListener('keydown', () => bubbled++);
         const event = press(input, key, init);
         await field.updateComplete;

@@ -11,19 +11,19 @@ export const styles = css`
        this property). Not a component prop: a pure layout knob nothing branches on. */
     --_lr-thinking-panel-max-block-size: var(--lr-size-16rem);
   }
-  /* Card chrome behind inline var() fallbacks, same convention as the compact density below: each
+  /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below: each
      fallback is the pre-existing token, so an unset panel paints exactly as before while a
      transcript can retune the nested card without a ::part(base) override. */
   [part="base"] {
     border: var(--lr-border-width-thin) solid
       var(--lr-thinking-panel-border-color, var(--lr-color-border));
     border-radius: var(--lr-thinking-panel-radius, var(--lr-radius));
-    background: var(--lr-thinking-panel-background, var(--lr-color-surface));
+    background: var(--lr-thinking-panel-bg, var(--lr-thinking-panel-background, var(--lr-color-surface)));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune
      them without redeclaring the rules; an unset panel keeps the regular dimensions. */
-  :host([compact]) [part="header"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="header"] {
     padding: var(
       --lr-thinking-panel-compact-header-padding,
       var(--lr-space-2xs) var(--lr-space-s)
@@ -34,7 +34,7 @@ export const styles = css`
       var(--lr-font-size-sm)
     );
   }
-  :host([compact]) [part="body"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="body"] {
     padding: var(--lr-thinking-panel-compact-body-padding, var(--lr-space-s));
     font-size: var(
       --lr-thinking-panel-compact-body-font-size,

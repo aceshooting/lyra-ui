@@ -19,7 +19,7 @@ import {
   type HighlightHandle,
 } from '../../../internal/text-highlights.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { devWarnOnce, warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { Slugger } from '../../../internal/slugger.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { MarkdownCodeHeaderController, renderMarkdownCodeHeader, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
@@ -201,6 +201,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract tabSize: number;
   abstract htmlMode: MarkdownHtmlMode;
   abstract gfm: boolean;
+  abstract withoutGfm: boolean;
   abstract linkTarget: string | null;
   abstract internalLinkPrefix: string;
   abstract headingOffset: number;
@@ -209,6 +210,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract codeBlockChrome: boolean;
   abstract codeBlockHeader: boolean;
   abstract highlightCode: boolean;
+  abstract withoutSyntaxHighlighting: boolean;
   abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
   abstract math: boolean;
@@ -281,7 +283,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     super();
     new ThemeWatcher(this, () => this.refreshTheme());
     this.codeHeader = new MarkdownCodeHeaderController(this, {
-      isEnabled: () => this.codeBlockHeader || this.codeBlockChrome,
+      isEnabled: () => this.codeBlockHeader,
       contentVersion: () => this.progressiveSession ? this.renderedBlocks : this.renderedHtml,
       getContentRoot: () => this.contentRoot(),
       localize: this.boundLocalize,
@@ -344,9 +346,6 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
-      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
-    }
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     const selector = '[part~="code-block"], [part~="code-block-copy"], [part~="table-wrapper"]';
     if (active?.matches(selector)) {
@@ -509,7 +508,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.codeBlocks = [];
     const outcome = renderMarkdownDocument({
       tag: this.markdownVariant.tag, deps, htmlMode: normalizeMarkdownHtmlMode(this.htmlMode), math: this.math,
-      codeBlockHeader: this.codeBlockHeader || this.codeBlockChrome,
+      codeBlockHeader: this.codeBlockHeader,
       parse: (marked, pendingKeys, headingTreeOut) => this.parseMarkdown(marked, pendingKeys, headingTreeOut),
       onParsed: () => this.maybeLoadKatex(),
       isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
@@ -531,7 +530,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.renderedHtml = outcome.html;
     this.codeHeader.setBlocks(this.codeBlocks);
     if (outcome.mathFailed) this.reportMathFailure();
-    if (outcome.pendingKeys.length > 0 && this.highlightCode) void this.highlightPending(outcome.pendingKeys);
+    if (outcome.pendingKeys.length > 0 && !this.withoutSyntaxHighlighting) void this.highlightPending(outcome.pendingKeys);
   }
 
   private resetProgressiveMarkdown(): void {
@@ -547,21 +546,21 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     const mode = normalizeMarkdownHtmlMode(this.htmlMode);
     if (!deps?.marked || mode === 'sanitize' && !deps.DOMPurify) return undefined;
     const context = createMarkdownRenderContext(this.markdownParseOptions(deps.marked, '', [], [], undefined, []));
-    if (!markdownProgressiveEligible(context.instance, this.gfm)) {
+    if (!markdownProgressiveEligible(context.instance, !this.withoutGfm)) {
       devWarnOnce('lyra-markdown-progressive-unavailable', '<lr-markdown>: this parser configuration uses plain streaming.');
       return undefined;
     }
-    const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader || this.codeBlockChrome });
+    const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader });
     const activeHighlightKeys = new Set<string>();
     const session = new MarkdownProgressiveSession({
-      parser: context.instance, gfm: this.gfm, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
+      parser: context.instance, gfm: !this.withoutGfm, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
       render: (source, rawSource, links, state, slugger, prefix) => {
         const pendingKeys: PendingHighlight[] = [], headings: MarkdownHeadingItem[] = [];
         const records: MarkdownCodeBlockRecord[] = [];
         const options = this.markdownParseOptions(deps.marked!, source, pendingKeys, headings, slugger, records, rawSource);
         options.codeBlockIndexOffset = prefix.length;
         options.activeHighlightKeys = activeHighlightKeys;
-        options.highlightCodeOption = this.highlightCode;
+        options.highlightCodeOption = !this.withoutSyntaxHighlighting;
         const result = createMarkdownRenderContext(options).render(source, { links, state });
         this.maybeLoadKatex();
         return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html), headings, codeBlocks: records, pendingKeys };
@@ -592,7 +591,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.renderedHtml = '';
     this.syncProgressiveMarkdown();
     const pending = session.nextHighlight();
-    if (pending && this.highlightCode) void this.highlightPending([pending]);
+    if (pending && !this.withoutSyntaxHighlighting) void this.highlightPending([pending]);
     if (session.pending) this.scheduleStreamingRender();
   }
 
@@ -708,12 +707,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return {
       marked, slugger, content, pendingKeys, headingTreeOut, codeBlocksOut, rawContent,
       markedConfigurations: [variant.sharedParser.get(marked)?.defaults, this.marked?.defaults],
-      gfm: this.gfm, linkTarget: this.linkTarget, headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
+      gfm: !this.withoutGfm, linkTarget: this.linkTarget, headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
-      codeBlockHeaderOption: this.codeBlockHeader || this.codeBlockChrome,
-      codeFrameNonce: this.codeBlockHeader || this.codeBlockChrome ? this.codeHeader.nonce : undefined, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
-      highlightCodeOption: this.highlightCode && !this.streaming,
+      codeBlockHeaderOption: this.codeBlockHeader,
+      codeFrameNonce: this.codeBlockHeader ? this.codeHeader.nonce : undefined, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
+      highlightCodeOption: !this.withoutSyntaxHighlighting && !this.streaming,
       getCachedHighlight: (key) => this.getCachedHighlight(key), failedHighlightKeys: this.failedHighlightKeys,
       headingAnchorsOption: this.headingAnchors, mathOption: this.math,
       cachedKatex: this.math ? variant.katexState.getIfLoaded() : null,

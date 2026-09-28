@@ -4,6 +4,7 @@ import './progress-ring.js';
 import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
 import { formatProgressPercent } from './progress-shared.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 class ProgressBarLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -191,15 +192,15 @@ it('renders determinate progress with a bounded value', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('shows the computed percent, not the raw value, in the show-value label when max is not 100', async () => {
+it('shows the computed percent, not the raw value, in the with-value label when max is not 100', async () => {
   const el = (await fixture(
-    html`<lr-progress-bar value="25" max="50" show-value></lr-progress-bar>`,
+    html`<lr-progress-bar value="25" max="50" with-value></lr-progress-bar>`,
   )) as LyraProgressBar;
   const label = el.shadowRoot!.querySelector('[part="label"] span');
   expect(label?.textContent).to.equal('50%');
 });
 
-it('keeps a default-slot label visible and accessible independently of show-value', async () => {
+it('keeps a default-slot label visible and accessible independently of with-value', async () => {
   const el = (await fixture(html`
     <lr-progress-bar value="25">Uploading files</lr-progress-bar>
   `)) as LyraProgressBar;
@@ -229,65 +230,65 @@ function ringRenderedLabelText(el: LyraProgressRing): string {
     .trim();
 }
 
-describe('lr-progress-ring show-value', () => {
-  it('defaults show-value to false, rendering no percentage text for a determinate ring with no slotted content', async () => {
+describe('lr-progress-ring with-value', () => {
+  it('defaults with-value to false, rendering no percentage text for a determinate ring with no slotted content', async () => {
     const el = (await fixture(html`<lr-progress-ring value="40"></lr-progress-ring>`)) as LyraProgressRing;
-    expect(el.showValue).to.be.false;
-    expect(el.hasAttribute('show-value')).to.be.false;
+    expect(el.withValue).to.be.false;
+    expect(el.hasAttribute('with-value')).to.be.false;
     expect(ringRenderedLabelText(el)).to.equal('');
   });
 
-  it('renders the formatted percentage when show-value is set on a determinate ring', async () => {
+  it('renders the formatted percentage when with-value is set on a determinate ring', async () => {
     const el = (await fixture(
-      html`<lr-progress-ring lang="en" value="40" show-value></lr-progress-ring>`,
+      html`<lr-progress-ring lang="en" value="40" with-value></lr-progress-ring>`,
     )) as LyraProgressRing;
-    expect(el.showValue).to.be.true;
+    expect(el.withValue).to.be.true;
     expect(ringRenderedLabelText(el)).to.equal(formatProgressPercent('en', 40));
   });
 
-  it('lets slotted content win over the percentage fallback regardless of show-value', async () => {
+  it('lets slotted content win over the percentage fallback regardless of with-value', async () => {
     const withoutShowValue = (await fixture(
       html`<lr-progress-ring value="40">Uploading</lr-progress-ring>`,
     )) as LyraProgressRing;
     expect(ringRenderedLabelText(withoutShowValue)).to.equal('Uploading');
 
     const withShowValue = (await fixture(
-      html`<lr-progress-ring value="40" show-value>Uploading</lr-progress-ring>`,
+      html`<lr-progress-ring value="40" with-value>Uploading</lr-progress-ring>`,
     )) as LyraProgressRing;
     expect(ringRenderedLabelText(withShowValue)).to.equal('Uploading');
   });
 
-  it('leaves the indeterminate ring unaffected by show-value', async () => {
+  it('leaves the indeterminate ring unaffected by with-value', async () => {
     const withoutShowValue = (await fixture(
       html`<lr-progress-ring indeterminate></lr-progress-ring>`,
     )) as LyraProgressRing;
     expect(ringRenderedLabelText(withoutShowValue)).to.equal('');
 
     const withShowValue = (await fixture(
-      html`<lr-progress-ring indeterminate show-value></lr-progress-ring>`,
+      html`<lr-progress-ring indeterminate with-value></lr-progress-ring>`,
     )) as LyraProgressRing;
     expect(ringRenderedLabelText(withShowValue)).to.equal('');
   });
 
-  it('defaults to show-value=false, leaving every other determinate-ring behavior unchanged', async () => {
+  it('defaults to with-value=false, leaving every other determinate-ring behavior unchanged', async () => {
     const el = (await fixture(
       html`<lr-progress-ring lang="en" value="40"></lr-progress-ring>`,
     )) as LyraProgressRing;
     const base = el.shadowRoot!.querySelector('[role="progressbar"]') as HTMLElement;
     const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as SVGCircleElement;
-    expect(el.showValue).to.be.false;
+    expect(el.withValue).to.be.false;
     expect(base.getAttribute('aria-valuenow')).to.equal('40');
     expect(base.getAttribute('aria-valuemin')).to.equal('0');
     expect(base.getAttribute('aria-valuemax')).to.equal('100');
-    // aria-valuetext still carries the percentage for assistive tech, independent of show-value
+    // aria-valuetext still carries the percentage for assistive tech, independent of with-value
     // -- only the visible slot fallback is gated, matching `<lr-progress-bar>`'s own
-    // aria-valuetext/show-value independence.
+    // aria-valuetext/with-value independence.
     expect(base.getAttribute('aria-valuetext')).to.equal(formatProgressPercent('en', 40));
     expect(indicator.getAttribute('stroke-dashoffset')).to.equal(String(el.indicatorOffset));
   });
 });
 
-it('supports label plus accessible-label as equivalent progress naming surfaces', async () => {
+it('supports label plus a host aria-label as progress naming surfaces', async () => {
   const bar = (await fixture(html`
     <lr-progress-bar value="25" label="Upload progress"></lr-progress-bar>
   `)) as LyraProgressBar;
@@ -296,7 +297,7 @@ it('supports label plus accessible-label as equivalent progress naming surfaces'
   );
 
   const ring = await fixture(html`
-    <lr-progress-ring value="25" accessible-label="Sync progress"></lr-progress-ring>
+    <lr-progress-ring value="25" aria-label="Sync progress"></lr-progress-ring>
   `);
   expect(ring.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.equal(
     'Sync progress',
@@ -427,7 +428,7 @@ it('accepts every LyraProgressVariant literal via the JS property on both lr-pro
 
 it('locale-formats visible percentage output and forwards live host naming to both progress roles', async () => {
   const bar = (await fixture(
-    html`<lr-progress-bar lang="ar" value="25" max="50" show-value aria-label="Upload"></lr-progress-bar>`,
+    html`<lr-progress-bar lang="ar" value="25" max="50" with-value aria-label="Upload"></lr-progress-bar>`,
   )) as LyraProgressBar;
   const barBase = bar.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(bar.shadowRoot!.querySelector('[part="label"] span')?.textContent).to.equal(
@@ -438,7 +439,7 @@ it('locale-formats visible percentage output and forwards live host naming to bo
   await bar.updateComplete;
   expect(barBase.getAttribute('aria-label')).to.equal('Download');
 
-  const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" show-value aria-label="Sync"></lr-progress-ring>`);
+  const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" with-value aria-label="Sync"></lr-progress-ring>`);
   const ringBase = ring.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(ring.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal(
     new Intl.NumberFormat('de', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),
@@ -448,7 +449,7 @@ it('locale-formats visible percentage output and forwards live host naming to bo
 
 it('uses visible consumer labels in the accessible names of both progress roles', async () => {
   const bar = (await fixture(html`
-    <lr-progress-bar value="25" show-value><span slot="label">Upload files</span></lr-progress-bar>
+    <lr-progress-bar value="25" with-value><span slot="label">Upload files</span></lr-progress-bar>
   `)) as LyraProgressBar;
   const barBase = bar.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(barBase.getAttribute('aria-label')).to.equal('Upload files');
@@ -905,10 +906,10 @@ it('normalizes value/max and resolves the accessible name identically for the ba
     ]);
   }
 
-  // Naming precedence: host aria-label (presence-based) > label > accessible-label > localized.
+  // Naming precedence: host aria-label (presence-based) > label > accessibleLabel > localized.
   const named = await fixture(html`<div>
-    <lr-progress-bar label="Mapped" accessible-label="Explicit"></lr-progress-bar>
-    <lr-progress-ring label="Mapped" accessible-label="Explicit"></lr-progress-ring>
+    <lr-progress-bar label="Mapped" .accessibleLabel=${'Explicit'}></lr-progress-bar>
+    <lr-progress-ring label="Mapped" .accessibleLabel=${'Explicit'}></lr-progress-ring>
   </div>`);
   const namedRoles = [...named.querySelectorAll('lr-progress-bar, lr-progress-ring')];
   await Promise.all(
@@ -1134,3 +1135,127 @@ it('still lets a --lr-theme-progress-ring-track-width ancestor override retune t
     expect(getComputedStyle(indicator).strokeWidth).to.equal('11px');
   });
 });
+
+for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
+  describe(`${tag} deprecated show-value alias`, () => {
+    const SHOW_VALUE: readonly DeprecatedUsage[] = [{ tag, kind: 'property', name: 'showValue' }];
+    const mount = async (markup: string): Promise<LyraProgressBar | LyraProgressRing> => {
+      const host = await fixture<HTMLDivElement>(html`<div></div>`);
+      host.innerHTML = markup;
+      const el = host.firstElementChild as LyraProgressBar | LyraProgressRing;
+      await el.updateComplete;
+      return el;
+    };
+    const percentText = (el: Element): string =>
+      tag === 'lr-progress-bar'
+        ? (el.shadowRoot!.querySelector('[part="label"] span')?.textContent ?? '')
+        : ringRenderedLabelText(el as LyraProgressRing);
+
+    it('renders exactly like with-value and warns once, naming with-value', async () => {
+      const canonical = await mount(`<${tag} lang="en" value="40" with-value></${tag}>`);
+      let aliased!: LyraProgressBar | LyraProgressRing;
+      const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
+        aliased = await mount(`<${tag} lang="en" value="40" show-value></${tag}>`);
+        await mount(`<${tag} lang="en" value="40" show-value></${tag}>`);
+      });
+      expect(percentText(canonical)).to.equal(formatProgressPercent('en', 40));
+      expect(percentText(aliased)).to.equal(percentText(canonical));
+      expect(aliased.withValue).to.be.true;
+      expect(aliased.showValue).to.be.true;
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:property:showValue`]);
+      expect(warnings[0]!.message).to.contain('with-value');
+    });
+
+    it('does not warn for the canonical spelling or the default', async () => {
+      const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
+        const el = await mount(`<${tag} value="40" with-value></${tag}>`);
+        expect(el.showValue).to.be.true;
+        const bare = await mount(`<${tag} value="40"></${tag}>`);
+        expect(bare.withValue).to.be.false;
+      });
+      expect(warnings).to.have.length(0);
+    });
+
+    it('lets the last write win in both directions and syncs show-value back from with-value', async () => {
+      await captureDeprecationWarnings(SHOW_VALUE, async () => {
+        const both = await mount(`<${tag} value="40" show-value="" with-value></${tag}>`);
+        expect(both.withValue).to.be.true;
+        both.withValue = false;
+        await both.updateComplete;
+        expect(both.showValue).to.be.false;
+        both.withValue = true;
+        await both.updateComplete;
+        expect(both.showValue).to.be.true;
+        both.showValue = false;
+        await both.updateComplete;
+        expect(both.withValue).to.be.false;
+        const el = await mount(`<${tag} value="40"></${tag}>`);
+        el.showValue = true;
+        await el.updateComplete;
+        expect(el.withValue).to.be.true;
+        el.setAttribute('show-value', '');
+        el.removeAttribute('show-value');
+        await el.updateComplete;
+        expect(el.withValue).to.be.false;
+      });
+    });
+  });
+
+  describe(`${tag} deprecated accessible-label attribute`, () => {
+    const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [{ tag, kind: 'attribute', name: 'accessible-label' }];
+    const mount = async (markup: string): Promise<LyraProgressBar | LyraProgressRing> => {
+      const host = await fixture<HTMLDivElement>(html`<div></div>`);
+      host.innerHTML = markup;
+      const el = host.firstElementChild as LyraProgressBar | LyraProgressRing;
+      await el.updateComplete;
+      return el;
+    };
+    const name = (el: Element): string | null =>
+      el.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label');
+
+    it('names the progressbar through the host aria-label', async () => {
+      const el = await mount(`<${tag} value="25" aria-label="Sync progress"></${tag}>`);
+      expect(name(el)).to.equal('Sync progress');
+      el.setAttribute('aria-label', 'Upload progress');
+      await el.updateComplete;
+      expect(name(el)).to.equal('Upload progress');
+      await expect(el).to.be.accessible();
+    });
+
+    it('still names the progressbar through accessible-label, warning once', async () => {
+      let el!: LyraProgressBar | LyraProgressRing;
+      const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+        el = await mount(`<${tag} value="25" accessible-label="Sync progress"></${tag}>`);
+        await mount(`<${tag} value="25" accessible-label="Other"></${tag}>`);
+      });
+      expect(name(el)).to.equal('Sync progress');
+      expect(el.accessibleLabel).to.equal('Sync progress');
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:attribute:accessible-label`]);
+      expect(warnings[0]!.message).to.contain('aria-label');
+    });
+
+    it('lets the host aria-label win over accessible-label, and a removed alias clears the name', async () => {
+      await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+        const el = await mount(`<${tag} value="25" accessible-label="Alias" aria-label="Host"></${tag}>`);
+        expect(name(el)).to.equal('Host');
+        el.removeAttribute('aria-label');
+        await el.updateComplete;
+        expect(name(el)).to.equal('Alias');
+        el.removeAttribute('accessible-label');
+        await el.updateComplete;
+        expect(name(el)).to.equal('Progress');
+      });
+    });
+
+    it('does not warn for the accessibleLabel property or the host aria-label', async () => {
+      const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+        const el = await mount(`<${tag} value="25" aria-label="Host"></${tag}>`);
+        el.accessibleLabel = 'Property';
+        el.removeAttribute('aria-label');
+        await el.updateComplete;
+        expect(name(el)).to.equal('Property');
+      });
+      expect(warnings).to.have.length(0);
+    });
+  });
+}

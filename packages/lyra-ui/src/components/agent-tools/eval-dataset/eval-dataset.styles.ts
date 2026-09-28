@@ -56,6 +56,11 @@ export const styles = css`
     flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: var(--lr-size-14rem);
+    /* The tight dropzone density, through the file input's documented dropzone hooks. Each still
+       honours the file input's own density hooks when a consumer retunes them from outside. */
+    --lr-file-input-dropzone-padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
+    --lr-file-input-dropzone-font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
+    --lr-file-input-gap: var(--lr-file-input-compact-gap, var(--lr-space-2xs));
   }
   [part='search'] {
     display: block;

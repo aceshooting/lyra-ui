@@ -7,7 +7,8 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `renamable` / `renamable` since `21.1.0`; use property `without-rename`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 13 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,19 +40,21 @@ after composition.
   relative string — bucketed relative grouping is a list-level concern, not this row's job.
 - `active: boolean = false` (reflected) — whether this is the currently-selected/open session; drives
   the brand-quiet background treatment.
-- `renamable: boolean = true` (reflected) — whether inline-rename is available at all. When `false`, the
-  rename button never renders and the row can never enter its editing state; flipping it to `false`
+- `withoutRename: boolean = false` (attribute `without-rename`, reflected) — turns off inline
+  rename: the rename button never renders and the row can never enter its editing state; setting it
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
-  than leaving it stranded and still committable.
-- `compact: boolean = false` (reflected) — tighter row padding and gaps, for the dense history
-  sidebars these rows usually render in (same convention as `lr-empty`'s `compact`). Tightens
+  than leaving it stranded and still committable. Deprecated alias: `renamable` (use
+  `without-rename`; removed in 23.0.0) — inverted, so `renamable="false"` equals `without-rename`.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) gives the tighter row padding and gaps of the dense history sidebars these rows
+  usually render in; `m` and larger keep the full row padding. The dense tier tightens
   `[part='base']`'s padding to `var(--lr-space-xs) var(--lr-space-s)` and its gap to
   `var(--lr-space-2xs)`, and collapses `[part='content']`'s inter-line gap to `0`. Deliberately
   changes nothing else: it does **not** shrink `[part='rename-button']` below the shared
   `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
   sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
-  size plus the compact padding, while a row with `renamable=false` and no actions collapses much
-  further.
+  size plus the dense padding, while a row with `without-rename` and no actions collapses much
+  further. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
@@ -129,13 +132,14 @@ inline-end. The indicator is `aria-hidden`, occupies the full row block-size, an
 the row is inactive.
 
 `--lr-conversation-item-compact-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) —
-`[part='base']`'s padding while `compact`. `--lr-conversation-item-compact-gap` (default
-`var(--lr-space-2xs)`) — `[part='base']`'s gap while `compact`. Like the active-state pair, both are
-inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
-retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
-`compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
-[part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
-is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+`[part='base']`'s padding while `size` is `s` or smaller. `--lr-conversation-item-compact-gap`
+(default `var(--lr-space-2xs)`) — `[part='base']`'s gap at that size. Like the active-state pair,
+both are inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding
+list can retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0`
+at the dense size with no hatch of its own — there is no smaller step left to retune to. The dense
+`[part='base']` rule is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a
+row that is both dense and active keeps the active background and the promoted excerpt/timestamp
+contrast.
 
 `--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
 `[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
@@ -191,12 +195,12 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
   single-click `lr-select`.
 - While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
-- Setting `renamable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
-  fires) — a consumer toggling `renamable` off (e.g. in response to some other row entering rename
+- Setting `withoutRename = true` mid-rename silently discards the in-progress draft (no `lr-rename`
+  fires) — a consumer turning rename off (e.g. in response to some other row entering rename
   mode) should not expect the previous edit to be committed first.
-- `compact` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
-  floor. A compact row that still shows a rename button (or slotted `actions` at the same floor)
-  therefore bottoms out at roughly that icon size plus the compact padding, not at the text height.
+- The dense `size` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
+  floor. A dense row that still shows a rename button (or slotted `actions` at the same floor)
+  therefore bottoms out at roughly that icon size plus the dense padding, not at the text height.
   Lowering `--lr-icon-button-size` at an ancestor is the explicit, informed opt-out of the
   target-size floor; a density flag deliberately won't do it silently on your behalf.
 

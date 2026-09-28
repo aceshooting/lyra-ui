@@ -1,7 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
@@ -61,6 +62,12 @@ const GIT_STATUS_KEY: Record<GitStatus, string> = {
   ignored: 'gitStatusIgnored',
 };
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ filePath: string }>;
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
@@ -71,10 +78,10 @@ export interface LyraCommitCardEventMap {
 
 /**
  * `<lr-commit-card>` — compact commit summary (subject, author/time, diffstat, per-file changes)
- * that links file rows out to a diff view. Set `compact` (tighter padding) and/or
+ * that links file rows out to a diff view. Set `size="s"` (tighter padding) and/or
  * `frame="plain"` (no border/padding at all) when embedding one as a row in a commit list or
  * PR timeline, so the built-in card chrome doesn't double up against the list's own — same
- * convention as `<lr-agent-run>`'s own `compact`/`frame`.
+ * convention as `<lr-agent-run>`'s own `size`/`frame`.
  * Duplicate file paths normalize before totals, counts, rendering, and selection events; the
  * first occurrence wins. File addition/deletion counts are normalized to finite non-negative integers before totals,
  * localized display, and accessible summaries are derived.
@@ -107,13 +114,14 @@ export interface LyraCommitCardEventMap {
  *   accessible name, so the bare letter never reaches assistive tech on its own.
  * @csspart file-additions - A file row's additions count.
  * @csspart file-deletions - A file row's deletions count.
- * @csspart copy-button - The hash copy button.
+ * @csspart copy-button - The hash copy button, not rendered while `without-copy-button`.
  * @csspart actions - The `actions` slot wrapper.
  * @cssprop [--lr-commit-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
- *   `compact`.
- * @cssprop [--lr-commit-card-background=transparent] - Fill of the outer card (`[part="base"]`)
+ *   `size` is `s` or smaller.
+ * @cssprop [--lr-commit-card-bg=transparent] - Fill of the outer card (`[part="base"]`)
  *   while `frame="card"`, unset by default so the card takes the surface it sits on.
  *   `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-commit-card-background=transparent] - Deprecated alias of `--lr-commit-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-commit-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-commit-card-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -159,6 +167,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   @property() hash = '';
   /** Commit subject and optional body. Removing the attribute clears both displayed sections. */
   @property() message = '';
@@ -170,19 +183,33 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   /** Whether the per-file list is shown. Defaults to `false` (collapsed), matching the
    *  positive-polarity `expanded` convention every sibling component uses. */
   @property({ type: Boolean, attribute: 'files-expanded', reflect: true }) filesExpanded = false;
+  /** Hides the hash copy button. */
+  @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
+
+  /** Whether the hash copy button renders.
+   *  @deprecated Use `without-copy-button`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
+
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
+   * for dense contexts (a commit rendered as a row in a list or PR timeline) -- same convention as
+   * `<lr-agent-run>`'s own `size`. `m` (the default) and larger keep the full card padding. Purely
+   * a density knob: the border stays, so use `frame="plain"` instead to drop the chrome entirely.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Tighter root padding for dense contexts (a commit rendered as a row in a list or PR
    *  timeline) -- same convention as `<lr-agent-run>`'s own `compact`. Defaults to `false`, i.e.
    *  the full card padding. Purely a density knob: the border stays, so use `frame="plain"`
-   *  instead to drop the chrome entirely. */
+   *  instead to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
    *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, padded box. `'plain'`
    *  removes the border, padding and corner radius, so a commit nested inside a host list that
-   *  already draws its own row chrome doesn't double it. `plain` wins over `compact` when both are
-   *  set (nothing left to tighten). */
+   *  already draws its own row chrome doesn't double it. `plain` wins over the dense `size` tier when
+   *  both are set (nothing left to tighten). */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
@@ -346,7 +373,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 <span part="additions">+${this.formatCount(additions)}</span> <span part="deletions">-${this.formatCount(deletions)}</span>
               </span>`
             : nothing}
-          ${this.copyable && this.hash
+          ${!this.withoutCopyButton && this.hash
             ? html`<button
                 part="copy-button"
                 type="button"

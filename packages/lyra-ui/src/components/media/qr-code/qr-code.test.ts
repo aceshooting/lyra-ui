@@ -380,7 +380,7 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`
       <lr-qr-code
         size="90"
-        style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"
+        style="--lr-qr-code-fill: #000; --lr-qr-code-bg: #fff;"
       ></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
@@ -836,7 +836,7 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`
       <lr-qr-code
         size="90"
-        style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"
+        style="--lr-qr-code-fill: #000; --lr-qr-code-bg: #fff;"
       ></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
@@ -853,6 +853,22 @@ describe('lr-qr-code', () => {
     const bgCenter = Math.round(canvas.width * 0.25);
     const bgPixel = ctx.getImageData(bgCenter, bgCenter, 1, 1).data;
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('still paints the deprecated --lr-qr-code-background alias, below the canonical --lr-qr-code-bg', async () => {
+    const paintedBackground = async (style: string): Promise<number[]> => {
+      const el = (await fixture(html`<lr-qr-code size="90" style=${style}></lr-qr-code>`)) as LyraQrCode;
+      installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
+      el.value = 'hello';
+      await waitForPart(el, 'canvas');
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const lightCenter = Math.round(canvas.width * 0.25);
+      return [...canvas.getContext('2d')!.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)];
+    };
+    expect(await paintedBackground('--lr-qr-code-fill: #000; --lr-qr-code-background: rgb(0, 0, 255)')).to.deep.equal([0, 0, 255]);
+    expect(
+      await paintedBackground('--lr-qr-code-fill: #000; --lr-qr-code-background: rgb(0, 0, 255); --lr-qr-code-bg: rgb(0, 255, 0)'),
+    ).to.deep.equal([0, 255, 0]);
   });
 
   it('uses standard host color/background-color for canvas paint', async () => {
@@ -897,7 +913,7 @@ describe('lr-qr-code', () => {
         image-coverage="0.5"
         image-padding="5"
         error-correction="L"
-        style="--lr-qr-code-fill:#000; --lr-qr-code-background:#fff"
+        style="--lr-qr-code-fill:#000; --lr-qr-code-bg:#fff"
       ></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
@@ -1445,7 +1461,7 @@ describe('lr-qr-code', () => {
 
   it('draws rounded modules via roundRect and skips light modules when radius > 0 on a mixed symbol', async () => {
     const el = (await fixture(html`
-      <lr-qr-code size="40" radius="0.5" style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"></lr-qr-code>
+      <lr-qr-code size="40" radius="0.5" style="--lr-qr-code-fill: #000; --lr-qr-code-bg: #fff;"></lr-qr-code>
     `)) as LyraQrCode;
     installFakeLoader(
       el,

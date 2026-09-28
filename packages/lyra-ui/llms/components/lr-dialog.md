@@ -7,9 +7,11 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `closable` / `closable` since `21.1.0`; use property `without-close-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,8 +28,9 @@ nested and `slot=""` headings remain outside automatic discovery.
 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
 backdrop click, and scroll-locks the document for as long as it's open. Mapped chrome is present by
-default: `label` renders as a visible title and `closable` renders a localized close button.
-`closable="false"` plus either header-suppression spelling support custom chrome: `no-header` is
+default: `label` renders as a visible title and a localized close button renders unless
+`without-close-button` is set. `without-close-button` plus either header-suppression spelling
+support custom chrome: `no-header` is
 Shoelace's name and `without-header` is Web Awesome's. Both are current upstream spellings, both are
 read, and neither is deprecated.
 
@@ -43,13 +46,16 @@ read, and neither is deprecated.
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
   semantics. A direct light-DOM heading retains its own native/ARIA level.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — explicit accessible-only name;
-  unlike `label`, it never renders visible text
+- `accessibleLabel: string = ''` (property only) — explicit accessible-only name; unlike `label`,
+  it never renders visible text. In markup, use the host `aria-label`. Deprecated alias:
+  `accessible-label` (use `aria-label`; removed in 23.0.0) — it still sets `accessibleLabel`, so a
+  host `aria-label` wins over it
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
   it has no effect when a direct light-DOM heading already supplies custom chrome
-- `closable: boolean = true` (attribute `closable`, reflected) — renders the localized close (X)
-  button. This true-default boolean parses `closable="false"`; removing the attribute also restores
-  the default.
+- `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected) — removes the
+  localized close (X) button, which renders by default. Deprecated alias: `closable` (use
+  `without-close-button`, which `closable="false"` equals; removing `closable` restores the default;
+  removed in 23.0.0).
 - `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace's spelling
   (`sl-dialog`'s `no-header`), which suppresses the entire header row
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
@@ -89,7 +95,8 @@ chrome remains visible. The fallback order appears below.
   focus, focus is left where it is. `lr-drawer` inherits the same behavior.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
-  `'close-button'` by the built-in header close button (rendered when `closable` is set); `'api'`
+  `'close-button'` by the built-in header close button (rendered unless `without-close-button` is
+  set); `'api'`
   covers `close()` with no argument, `hide()`, and `open = false`; `'unmount'` is emitted
   automatically if the dialog is removed from the DOM while still `open` by anything other than its
   own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other string
@@ -175,10 +182,11 @@ the built-in close button), `footer` (action buttons, rendered in a bottom row, 
 empty). The `label` and `header-actions` slots are new in 8.0.0.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `close-button__control`; `body`; `footer`.
+`header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
 Names grouped together are additive aliases on the same functional node, so a mapped
-`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`.
-`close-button__control` is the composed `<lr-icon-button>`'s own native `<button>`: as of 16.0.0 the
+`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`. Deprecated alias:
+`close-button__control` (use `close-button-control`; removed in 23.0.0).
+`close-button-control` is the composed `<lr-icon-button>`'s own native `<button>`: as of 16.0.0 the
 close button IS an `<lr-icon-button>`, so `close-button`/`close-button__base` name that host and the
 painted surface sits one boundary deeper. `<lr-drawer>` inherits this control and now registers
 `<lr-icon-button>` itself.
@@ -205,7 +213,7 @@ scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
@@ -277,7 +285,7 @@ from).
 **Optional peer deps:** none.
 
 ```html
-<lr-dialog id="dlg" heading-level="2" closable>
+<lr-dialog id="dlg" heading-level="2">
   <span slot="label">Delete item?</span>
   <button slot="header-actions" type="button">Help</button>
   <p>This cannot be undone.</p>
@@ -315,7 +323,7 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 ```html
 <lr-dialog
   without-header
-  accessible-label="Preview"
+  aria-label="Preview"
   light-dismiss
   style="--lr-dialog-backdrop-filter: blur(4px); --lr-dialog-panel-duration: 120ms;
          --lr-dialog-backdrop-duration: 80ms; --lr-dialog-spacing: 0"
@@ -325,13 +333,13 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 ```
 
 Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, by
-attribute presence including an explicitly empty value, (2) `accessible-label`, (3) the copied text
+attribute presence including an explicitly empty value, (2) `accessibleLabel`, (3) the copied text
 of an unslotted direct light-DOM heading, then (4) the shadow-owned visible title wrapper.
 Visible-title precedence is the rich `label` slot, then the mapped `label` property, then legacy
 `heading`. The direct-heading case copies text because an IDREF cannot cross from the panel's shadow
 tree to a light-DOM heading; the mapped title wrapper can use `aria-labelledby` because it lives in
 the same shadow root. `no-header`/`without-header` removes the mapped title, so custom-chrome dialogs
-should provide a direct heading, `accessible-label`, or host `aria-label`.
+should provide a direct heading or a host `aria-label`.
 
 **Known gotchas:**
 

@@ -7,9 +7,11 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-export-button-active-background` since `21.1.0`; use css-property `--lr-export-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-export-button-background` since `21.1.0`; use css-property `--lr-export-button-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-export-button-hover-background` since `21.1.0`; use css-property `--lr-export-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,9 +101,9 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 `format-label`, `format-description`
 
 **Themeable custom properties:** the trigger's paint is settable per state. At rest,
-`--lr-export-button-background`, `--lr-export-button-color` and `--lr-export-button-border`; on
-hover, `--lr-export-button-hover-background`, `--lr-export-button-hover-color` and
-`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-background`,
+`--lr-export-button-bg`, `--lr-export-button-color` and `--lr-export-button-border`; on
+hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
+`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-bg`,
 `--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
@@ -113,6 +115,8 @@ corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
+Deprecated aliases: `--lr-export-button-background`, `--lr-export-button-hover-background` and
+`--lr-export-button-active-background` (use the `-bg` names; removed in 23.0.0).
 
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default

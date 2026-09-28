@@ -13,6 +13,12 @@ import { topLayerReset } from './top-layer.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import {
+  deprecatedAliasForAttribute,
+  syncDeprecatedAlias,
+  warnAuthoredAliasAttribute,
+  type LyraDeprecatedAliases,
+} from './deprecated-aliases.js';
+import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
@@ -1231,6 +1237,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   // the UA `[popover]` rules on an anchored surface the top-layer escape promoted.
   static override styles: CSSResultGroup = [palette, tokens, topLayerReset];
 
+  /** Alias-to-canonical property pairs this element keeps in step while an old name remains
+   *  supported; see {@link LyraDeprecatedAliases}. Subclass tables add to their ancestors'. */
+  protected static deprecatedAliases?: LyraDeprecatedAliases;
+
   /**
    * Reactive public properties whose array/tuple assignments cross the shared immutable ownership
    * boundary. Subclasses list only their own collection properties; the descriptor consults the
@@ -1508,6 +1518,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   ): void {
     invalidateLyraLocaleCache(this);
     super.requestUpdate(name, oldValue, options);
+    syncDeprecatedAlias(this as unknown as Parameters<typeof syncDeprecatedAlias>[0], name, oldValue);
   }
 
   protected override performUpdate(): void {
@@ -1542,7 +1553,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       );
     if (directionHostAttribute)
       queueInheritedDirectionChange(this, name === 'slot');
+    const alias = oldValue !== value ? deprecatedAliasForAttribute(this, name) : undefined;
+    const aliasBefore = alias ? (this as unknown as Record<string, unknown>)[alias] : undefined;
     super.attributeChangedCallback(name, oldValue, value);
+    if (alias) warnAuthoredAliasAttribute(this, alias, aliasBefore);
     if (
       oldValue !== value &&
       REACTIVE_HOST_ATTRIBUTES.includes(

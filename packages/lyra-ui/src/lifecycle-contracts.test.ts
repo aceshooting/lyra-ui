@@ -109,7 +109,7 @@ function prepareDefaultElement(tag: string, el: Element): void {
     (el as unknown as { loadGroups: () => Promise<null> }).loadGroups = () => Promise.resolve(null);
   }
   if (tag === 'lr-locale-picker') {
-    (el as unknown as { showFlags: boolean }).showFlags = false;
+    (el as unknown as { withoutFlags: boolean }).withoutFlags = true;
   }
 }
 

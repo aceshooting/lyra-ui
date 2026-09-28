@@ -404,6 +404,50 @@ describe('lr-popover trigger modes', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('keeps focus inside the popup retaining a hover surface nested in open shadow roots', async () => {
+    const host = await fixture<HTMLDivElement>('<div></div>');
+    const outerRoot = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    outerRoot.append(inner);
+    const innerRoot = inner.attachShadow({ mode: 'open' });
+    innerRoot.innerHTML = `<lr-popover trigger="hover" style="--lr-duration-base: 0ms">
+      <button slot="trigger">Trigger</button>
+      <a href="#details">Details</a>
+    </lr-popover>`;
+    const el = innerRoot.querySelector<LyraPopover>('lr-popover')!;
+    await el.updateComplete;
+    const link = el.querySelector<HTMLAnchorElement>('a')!;
+    enter(triggerOf(el));
+    await waitUntil(() => el.open, 'hovering opens it');
+    await waitUntil(() => {
+      link.focus();
+      return innerRoot.activeElement === link;
+    }, 'focus moves into the popup content');
+    leave(triggerOf(el));
+    await settlePointer();
+    await aTimeout(30);
+    expect(el.open).to.equal(true, 'focus inside the popup retains it after the pointer leaves');
+    link.blur();
+    await el.hide();
+  });
+
+  it('keeps focus inside the popup retaining a document-level hover surface', async () => {
+    const el = await build('trigger="hover"', '<a href="#details">Details</a>');
+    const link = el.querySelector<HTMLAnchorElement>('a')!;
+    enter(triggerOf(el));
+    await waitUntil(() => el.open, 'hovering opens it');
+    await waitUntil(() => {
+      link.focus();
+      return document.activeElement === link;
+    }, 'focus moves into the popup content');
+    leave(triggerOf(el));
+    await settlePointer();
+    await aTimeout(30);
+    expect(el.open).to.equal(true, 'focus inside the popup retains it after the pointer leaves');
+    link.blur();
+    await el.hide();
+  });
 });
 
 // The render tree carries two independent slots (the named `trigger` slot and the default

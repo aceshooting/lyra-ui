@@ -1812,7 +1812,7 @@ describe('trigger paint custom properties', () => {
       <lr-export-button
         .rows=${rows}
         .columns=${columns}
-        style="--lr-transition-fast: 0s; --lr-export-button-background: rgb(1, 2, 3); --lr-export-button-color: rgb(4, 5, 6); --lr-export-button-border: rgb(7, 8, 9);"
+        style="--lr-transition-fast: 0s; --lr-export-button-bg: rgb(1, 2, 3); --lr-export-button-color: rgb(4, 5, 6); --lr-export-button-border: rgb(7, 8, 9);"
       ></lr-export-button>
     `)) as LyraExportButton;
     await el.updateComplete;
@@ -1872,4 +1872,30 @@ describe('trigger paint custom properties', () => {
     expect(styles.gap).to.equal('10px');
     expect(styles.borderRadius).to.equal('3px');
   });
+});
+
+describe('trigger -bg custom properties and their deprecated -background aliases', () => {
+  const trigger = (el: LyraExportButton) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
+
+  for (const [label, style] of [
+    ['canonical --lr-export-button-bg', '--lr-export-button-bg: rgb(1, 2, 3);'],
+    ['deprecated --lr-export-button-background', '--lr-export-button-background: rgb(1, 2, 3);'],
+    [
+      'canonical property over the deprecated one',
+      '--lr-export-button-background: rgb(9, 9, 9); --lr-export-button-bg: rgb(1, 2, 3);',
+    ],
+  ] as const) {
+    it(`paints the resting trigger fill from the ${label}`, async () => {
+      const el = (await fixture(html`
+        <lr-export-button
+          .rows=${rows}
+          .columns=${columns}
+          style=${`--lr-transition-fast: 0s; ${style}`}
+        ></lr-export-button>
+      `)) as LyraExportButton;
+      await el.updateComplete;
+      expect(getComputedStyle(trigger(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    });
+  }
 });

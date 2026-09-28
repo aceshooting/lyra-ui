@@ -111,7 +111,43 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   // lr-split-panel's `split-panel` part yields to `base`, lr-stat's unnamed icon slot to `start`,
   // and lr-menu gained the first `slot-content` record: non-item default-slot content belongs in
   // `header`/`footer`. Package-level types and entry points live in `exportDeprecations` instead.
-  assert.equal(state.metadata.deprecations.length, 33);
+  //
+  // 408 once the 21.2.0 naming harmonization recorded 375 more, all removable no earlier than
+  // 23.0.0: cancelable state-change proposals renamed to `-request`, true-defaulting booleans
+  // inverted to `without-*`, `-click` events renamed to `-activate`, `compact` folded into `size`,
+  // hyphenated forwarded parts, and component-namespaced `-bg`/`-color` custom properties. A
+  // subclass tag carries its own record for each alias it inherits (the nine Chart.js charts from
+  // lr-chart, lr-drawer from lr-dialog).
+  assert.equal(state.metadata.deprecations.length, 408);
+});
+
+test('a subclass records an inherited alias against its full public surface', () => {
+  const state = fixture();
+  const inherited = state.metadata.deprecations.find((entry) =>
+    entry.tag === 'lr-line-chart' && entry.kind === 'property' && entry.name === 'zoom');
+  assert.ok(inherited, 'lr-line-chart records the zoom alias it inherits from lr-chart');
+  const lineChart = state.manifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find((entry) => entry.tagName === 'lr-line-chart');
+  assert.equal(
+    (lineChart.members ?? []).some((member) => member.name === 'zoom'),
+    false,
+    'the compact manifest keeps the inherited member on lr-chart only',
+  );
+  assert.deepEqual(validateEdited(state, state.metadata), []);
+  assert.deepEqual(
+    validateManifestMetadataProjection(state.metadata, state.manifest, {
+      packageVersion: state.packageJson.version,
+    }),
+    [],
+  );
+
+  const metadata = structuredClone(state.metadata);
+  putDeprecation(metadata, { ...inherited, name: 'missingZoom', attribute: 'missing-zoom' });
+  assert.throws(
+    () => validateEdited(state, metadata),
+    /lr-line-chart:property:missingZoom: deprecated public member does not exist/,
+  );
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
@@ -775,7 +811,10 @@ test('Storybook presentation exposes central maturity and structured deprecation
     presentation.graduationCriteria,
     /demonstrate sustained reliability/
   );
-  assert.deepEqual(presentation.deprecations, []);
+  assert.deepEqual(
+    presentation.deprecations.map((entry) => entry.subject),
+    ['css-property --lr-date-input-text-color']
+  );
 
   const knownDatePresentation = componentMetadataPresentation(
     index.get('lr-known-date')
@@ -859,9 +898,9 @@ test('the final analyzer plugin projects central metadata into generated CEM', (
         declarations: [
           {
             kind: 'class',
-            name: 'LyraGraph',
+            name: 'LyraCard',
             customElement: true,
-            tagName: 'lr-graph',
+            tagName: 'lr-card',
           },
         ],
       },

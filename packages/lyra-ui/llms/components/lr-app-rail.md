@@ -7,9 +7,14 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-app-rail-background` since `21.1.0`; use css-property `--lr-app-rail-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-app-rail-panel-background` since `21.1.0`; use css-property `--lr-app-rail-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `hideToggle` / `hide-toggle` since `21.1.0`; use property `without-toggle`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `maxRailWidthPx` / `max-rail-width-px` since `21.1.0`; use property `max-rail-width`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecated property** `minRailWidthPx` / `min-rail-width-px` since `21.1.0`; use property `min-rail-width`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecated property** `railWidthPx` / `rail-width-px` since `21.1.0`; use property `rail-width`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
-- **Themeable via** 11 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -39,7 +44,7 @@ because geometric parking otherwise follows that ancestor's edge instead of the 
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
-`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
+`[minRailWidth, maxRailWidth]`. Set `storageKey` (attribute `storage-key`) to persist the fields
 selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
 next mount (mirrors `lr-multi-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
 persisted). The backward-compatible allowlist is `open width`; use
@@ -105,17 +110,18 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   a reload only when `storage-key` is set AND `persist` includes `preferred-mode` — the default
   `persist` is `open width`, which does not. Pair them: `persist="width preferred-mode"`. Either
   route announces itself through the existing `lr-mode-change` event; there is no new event.
-- `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
+- `withoutToggle: boolean = false` (reflected, attribute `without-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/OPEN button, for a consumer that already owns an external mobile-menu
   trigger wired to this rail's own `open` property (pair it with `trigger`/`for` below so focus
   still returns to that external trigger on close). `false` (the default) reproduces the exact
   existing output. This does not remove the button once the overlay is open: at that point it has
   been reparented inside the trapped `[part="panel"]` (see the CSS parts entry below) as the
   panel's only in-panel dismiss control, and hiding it there too would leave the open panel with no
-  in-panel way to close it at all besides Escape/backdrop.
+  in-panel way to close it at all besides Escape/backdrop. Deprecated alias: `hide-toggle`
+  (`hideToggle`; use `without-toggle`; removed in 23.0.0).
 - `trigger: HTMLElement | null = null` (attribute: false) — direct reference to an external element
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
-  with `hideToggle`). When set (or resolved through `for`), closing the overlay by any path —
+  with `withoutToggle`). When set (or resolved through `for`), closing the overlay by any path —
   Escape, backdrop click, a nav-item click, or the built-in toggle itself — returns focus to it, the
   same guarantee the built-in toggle's own click already gets. The return is attempted as the
   overlay closes and, if that attempt could not land (a host commonly keeps its own menu button
@@ -125,7 +131,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   or has fallen to `<body>` — focus moved elsewhere in the meantime is never taken back — and
   focuses the first candidate that can actually hold focus: the trigger, then the element that held
   focus when the overlay opened (none when focus was on `<body>`), then the built-in
-  `[part='toggle']` (unavailable under `hideToggle`), then the rail host, and finally
+  `[part='toggle']` (unavailable under `withoutToggle`), then the rail host, and finally
   `focusFallback` when set; when none of them can take focus (the host hidden, or inert — under an
   inert ancestor or behind a stacked modal), focus is left where it is. The host
   temporarily receives `tabindex="-1"` only when it has no authored tabindex; the temporary
@@ -174,30 +180,36 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
 
   ```html
   <main id="content" tabindex="-1">…</main>
-  <lr-app-rail hide-toggle for="menu-button" focus-fallback="content">…</lr-app-rail>
+  <lr-app-rail without-toggle for="menu-button" focus-fallback="content">…</lr-app-rail>
   ```
 - `resizable: boolean = false` (reflected) — opts a continuously draggable width in for the `'full'`
-  state, exposing a `[part='resizer']` handle clamped to `[minRailWidthPx, maxRailWidthPx]`. `false`
+  state, exposing a `[part='resizer']` handle clamped to `[minRailWidth, maxRailWidth]`. `false`
   (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
   exactly as before this property existed.
-- `railWidthPx?: number` (attribute `rail-width-px`) — the rail's current width in px while
-  `resizable`; settable/gettable directly. Unset defers to `--lr-app-rail-width`'s own resolved
-  width.
+- `railWidth?: number | string` (attribute `rail-width`) — the rail's current width while
+  `resizable`; settable/gettable directly. A CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved
+  live — `rem` against the document root, `em` against the rail — or a number of pixels; a plain
+  numeric attribute value parses to a number, and a drag or keyboard resize writes a number. Unset
+  defers to `--lr-app-rail-width`'s own resolved width. Deprecated alias: `rail-width-px`
+  (`railWidthPx`, which reads the width back in pixels; use `rail-width`; removed in 23.0.0).
 - `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
   mount. Each field is restored only when the consumer has not assigned it on that same mount: an
-  `open`/`rail-width-px`/`preferred-mode` attribute, or a `.open=${false}`-style binding, wins over
+  `open`/`rail-width`/`preferred-mode` attribute, or a `.open=${false}`-style binding, wins over
   stored state, and a restored `open` fires no `lr-toggle`. Effective `mode` is breakpoint-derived
   and never persisted. Unset means no persistence.
 - `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
-  Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
+  Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidth`, stored in pixels), and
+  `preferred-mode`
   (`preferredMode`). The default preserves the existing open+width behavior. Use
   `persist="width preferred-mode"` when overlay-open state is controlled or should stay
   session-only.
-- `minRailWidthPx: number = 190` (attribute `min-rail-width-px`) — minimum `railWidthPx` a
-  drag/keyboard resize can reach.
-- `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a
-  drag/keyboard resize can reach.
+- `minRailWidth: number | string = 190` (attribute `min-rail-width`) — minimum `railWidth` a
+  drag/keyboard resize can reach: a CSS length or a number of pixels, resolved like `railWidth`.
+  Deprecated alias: `min-rail-width-px` (`minRailWidthPx`; use `min-rail-width`; removed in 23.0.0).
+- `maxRailWidth: number | string = 440` (attribute `max-rail-width`) — maximum `railWidth` a
+  drag/keyboard resize can reach, resolved the same way. Deprecated alias: `max-rail-width-px`
+  (`maxRailWidthPx`; use `max-rail-width`; removed in 23.0.0).
 - `dragging: boolean = false` (reflected, read-only as of 9.0.0) — `true` for the duration of an
   active pointer-driven resize drag (not a keyboard step); reflected so a consumer (or this
   component's own styles) can suppress `[part='base']`'s `transition: inline-size` during the drag,
@@ -224,7 +236,9 @@ restored-on-mount case fires once, from the first `updated()` after that mount's
 attribute reflection have both landed, rather than synchronously during the mount itself; it is
 not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
 was persisted), `lr-toggle`
-(`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
+(`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`, where `expanded` is the
+proposed overlay state and the deprecated `open` key, removed in 23.0.0, carries the same value; the
+mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
 directly. Cancelable for every trigger except the forced mode-change close, which always applies —
@@ -232,10 +246,10 @@ vetoing that one would leave `open` stuck `true` in a mode where it's meaningles
 `preventDefault()` to keep the overlay as it is for the other triggers),
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
-`railWidthPx` — call `preventDefault()` to keep the current width. A synchronous request listener
+`railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
 that disables resizing, leaves full mode, or disconnects the rail also cancels the proposal,
 preserving any width the listener assigned and publishing no accepted resize. Assigning only
-`railWidthPx` does not veto the proposal. It is not fired when a consumer sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
+`railWidth` does not veto the proposal. It is not fired when a consumer sets `railWidth` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).
@@ -246,7 +260,7 @@ open), `header` (logo/brand content, shown above the nav items in every mode), `
 user/settings trigger, shown below the nav items).
 
 **CSS parts:** `base`, `header`, `nav`, `footer`, `toggle` (hidden via CSS outside `'mobile'` mode, or
--- while it is not also serving as the panel's only in-panel dismiss control -- via `hideToggle`;
+-- while it is not also serving as the panel's only in-panel dismiss control -- via `withoutToggle`;
 reparented to be the first child of `[part="panel"]` for exactly as long as the mobile overlay is
 open, so the shared focus trap, scoped to the panel alone, can reach it and Tab cycles through it
 like `<lr-dialog>`'s in-panel close button, then moved back to its resting position, a sibling
@@ -271,7 +285,7 @@ presentations is on screen, for magnifier and braille users, rather than announc
 `var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
-while an explicit `--lr-app-rail-background` still wins. Forced colors restores the plain frame's
+while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
 boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects only the open mobile
 panel; no value can paint elevation while closed. Prefer that token over an unqualified
 `::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
@@ -302,12 +316,14 @@ either non-`visible` value clips a `position: fixed` popup opened by a slotted/n
 regardless of that popup's own containing block. Per the CSS overflow spec, a lone `visible` axis
 paired with a non-`visible` other axis computes as `auto` instead (still clipping) — set **both**
 tokens to `visible` together to actually stop the clipping, accepting that wide header/footer
-content can then scroll/bleed both ways. `--lr-app-rail-background` (default
+content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `var(--lr-color-surface)` — `[part="base"]`'s background, the docked non-overlay presentation) and
-`--lr-app-rail-panel-background` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
-background, the mobile overlay presentation; kept separate from `--lr-app-rail-background`/
+`--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
+background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
-docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
+docked rail chrome). Deprecated aliases: `--lr-app-rail-background` and
+`--lr-app-rail-panel-background` (use `--lr-app-rail-bg` and `--lr-app-rail-panel-bg`; removed in
+23.0.0). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
 `--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
 reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
@@ -323,7 +339,7 @@ open only), `--lr-shadow-s` (the `frame="card"` default elevation), `--lr-icon-b
 use the decorative `--lr-color-border-subtle`, except while the resizer renders (`resizable` in
 `'full'` mode): its track is transparent at rest, so the edge is then the separator's only visible
 mark and stays on `--lr-color-border`. `resizable`'s width is driven entirely by
-`railWidthPx`'s inline `inline-size` style rather than a new custom property.
+`railWidth`'s inline `inline-size` style rather than a new custom property.
 The mobile toggle's hover/pressed background and foreground are independently inheritable through
 `--lr-app-rail-toggle-hover-bg`, `--lr-app-rail-toggle-hover-color`,
 `--lr-app-rail-toggle-active-bg`, and `--lr-app-rail-toggle-active-color`. `[part="collapse-toggle"]`
@@ -358,7 +374,7 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
     if (e.detail.widthPx > 360) e.preventDefault();
   });
   rail.addEventListener("lr-rail-resize", (e) =>
-    localStorage.setItem("railWidthPx", String(e.detail.widthPx))
+    localStorage.setItem("railWidth", String(e.detail.widthPx))
   );
 </script>
 ```
@@ -413,7 +429,7 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
 - `resizable`'s drag handle is pointer-only (`pointerdown`/`pointermove`/`pointerup`/
   `pointercancel`/`lostpointercapture`) plus discrete Left/Right-arrow keyboard stepping (8px per
   press, RTL-aware) — there's no dedicated touch gesture beyond what Pointer Events already unify.
-- reassigning `railWidthPx` while `resizable` is unset has no visible effect on the rendered width —
+- reassigning `railWidth` while `resizable` is unset has no visible effect on the rendered width —
   the fixed-width `--lr-app-rail-width` token still governs `'full'`-mode width until `resizable`
   is also set.
 - reassigning `icon-only-breakpoint`/`mobile-breakpoint`/`preferredMode` does not itself un-force a
@@ -452,7 +468,7 @@ visible parent item.
 
 ```html
 <div class="shell">
-  <lr-app-rail id="sidebar" label="Workspace" frame="card" hide-toggle trigger-collapses
+  <lr-app-rail id="sidebar" label="Workspace" frame="card" without-toggle trigger-collapses
     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
     <lr-app-rail-group heading="Platform">
       <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
@@ -478,7 +494,7 @@ Import the rail, group, item and divider from their granular `components/lr-*.js
 rail owns mobile offcanvas at its viewport breakpoint (600px default). For an inset composition,
 use `frame="plain"` and style the sibling main region as a card with surface, radius, border and
 shadow tokens. A raised sidebar tint is opt-in with
-`--lr-app-rail-background: var(--lr-color-surface-raised)`.
+`--lr-app-rail-bg: var(--lr-color-surface-raised)`.
 
 **Page recipe: allocation offcanvas, two view-scoped controls.**
 
@@ -546,7 +562,8 @@ out of default-width compact rails, or use a rail that never collapses.
   output.
 - `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
   reproduces exactly what an item without this property rendered before this feature existed.
-  Driven through the same request/commit pair as `<lr-app-rail-group>`'s `open`, see Events below.
+  Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
+  below.
 
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
@@ -554,12 +571,13 @@ same precedence supplies the tooltip text when that opt-in flyout is visible, an
 interpolated `{label}` (see Events below).
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
-disclosure (`detail: { open }` — the field is named `open`, matching `<lr-app-rail-group>`'s
-identical event name and detail shape exactly). Call `preventDefault()` to keep the current state,
-or assign `expanded` from the listener to resolve it yourself; a write during the dispatch
-suppresses the default commit even when it assigns the value the property already held. Not
-emitted for a direct `expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is
-written, never for a vetoed or listener-resolved request (`detail: { open }`).
+disclosure (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated
+`open` key, removed in 23.0.0, carries the same value, matching `<lr-app-rail-group>`'s identical
+event name and detail shape exactly). Call `preventDefault()` to keep the current state, or assign
+`expanded` from the listener to resolve it yourself; a write during the dispatch suppresses the
+default commit even when it assigns the value the property already held. Not emitted for a direct
+`expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is written, never for a
+vetoed or listener-resolved request (`detail: { expanded, open }`).
 
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
@@ -716,17 +734,18 @@ never disagree with what is rendered inside it.
 - `collapsible: boolean = false` (reflected) — opts in the built-in collapse control. The heading's
   own text becomes the button carrying `aria-expanded` and `aria-controls`, which is the accordion
   pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
-- `open: boolean = true` (reflected) — whether the content is shown. Carries a true-default
-  converter, so `open="false"` parses from markup (a plain presence-based boolean cannot). `open`
-  governs visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely
-  from its own chrome.
+- `collapsed: boolean = false` (reflected) — whether the content is hidden. `collapsed` governs
+  visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely from its
+  own chrome. Deprecated alias: `open` (its inverse, so `open="false"` equals `collapsed`; use
+  `collapsed`; removed in 23.0.0). Both reflect and stay in step; the last write wins.
 
-**Events:** `lr-toggle-request` — cancelable, emitted before `open` changes from the built-in
-control (`detail: { open }`). Call `preventDefault()` to keep the current state, or assign `open`
-from the listener to resolve it yourself; a write during the dispatch suppresses the default commit
-even when it assigns the value the property already held. Not emitted for a direct `open` write.
-`lr-toggle` — non-cancelable, emitted after `open` is written, never for a vetoed or
-listener-resolved request (`detail: { open }`).
+**Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
+control (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated `open`
+key, removed in 23.0.0, carries the same value). Call `preventDefault()` to keep the current state,
+or assign `collapsed` from the listener to resolve it yourself; a write during the dispatch
+suppresses the default commit even when it assigns the value the property already held. Not
+emitted for a direct `collapsed` write. `lr-toggle` — non-cancelable, emitted after `collapsed` is
+written, never for a vetoed or listener-resolved request (`detail: { expanded, open }`).
 
 **Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
 heading content; `header-actions` — controls beside the heading, rendered as a sibling of the

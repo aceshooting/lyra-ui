@@ -15,14 +15,14 @@ for (const focused of [false, true]) {
     search.focus();
     await sendKeys({ type: 'Alpha' });
     await el.updateComplete;
-    el.searchable = false;
+    el.withoutSearch = true;
     await el.updateComplete;
     const beta = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')].find(row => row.textContent!.includes('Beta'))!;
     beta.click();
     beta.focus();
     await el.updateComplete;
     if (!focused) wrapper.querySelector('button')!.focus();
-    el.searchable = true;
+    el.withoutSearch = false;
     await el.updateComplete;
     const rows = el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]');
     expect(rows.length).to.equal(1);

@@ -24,9 +24,9 @@ and never was an alias, so do **not** rename those listeners.
 `query` rather than carried beside it, so the event finally has the `LyraSearchChangeDetail` shape
 the rest of the library's search emitters use — read `e.detail.query`. The detail deliberately has no
 `activeIndex` (this is a live node filter, not a cursor-based search) and `matchCountExact` is always
-`true`, since that filter has no truncating ceiling. The `searchQuery` **property** is a different
-member and is unaffected: the component still applies the query to it before emitting, so reassigning
-it from the handler stays a no-op.
+`true`, since that filter has no truncating ceiling. The `query` property (formerly `searchQuery`)
+is a different member and is unaffected: the component still applies the query to it before
+emitting, so reassigning it from the handler stays a no-op.
 
 Also corrected in 10.0.0 — not breaking, but visible. A chip with no `entity-id` renders its button
 disabled, and now looks it: `lr-entity-chip` used to paint that state pixel-identical to a working
@@ -72,11 +72,11 @@ out of heading semantics entirely (renders plain text, no `role`/level).
 
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
-A zero-width canvas link paints neither a stroke nor an arrowhead; its relationship remains in the
+A zero-width canvas edge paints neither a stroke nor an arrowhead; its relationship remains in the
 nonvisual topology summary.
 
-In both renderers, roving navigation transfers real focus through nodes, operable links, then
-community hulls; zero-width, fully transparent, and dangling links remain outside that focus order.
+In both renderers, roving navigation transfers real focus through nodes, operable edges, then
+community hulls; zero-width, fully transparent, and dangling edges remain outside that focus order.
 
 **Properties:**
 
@@ -95,30 +95,32 @@ color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraG
   Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
   `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
   `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
-  `--lr-node-fill` default; both data-driven color sources are sanitized the same way as
+  `--lr-graph-node-fill` default; both data-driven color sources are sanitized the same way as
   `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
 - `hiddenTypes: string[] = []` (attribute: false) — hides nodes whose raw `type` is listed and every
-  incident link from rendering, layout, keyboard navigation, the data-list alternative, and the
+  incident edge from rendering, layout, keyboard navigation, the data-list alternative, and the
   accessible counts. Hidden positions are retained by id, so showing a type restores its prior
   layout even when no matching `nodeTypes` entry exists
-- `links: LyraGraphLink[] = []` (attribute: false) — readonly `LyraGraphLink { id?: string; source: string; target:
+- `edges: LyraGraphEdge[] = []` (attribute: false) — readonly `LyraGraphEdge { id?: string; source: string; target:
 string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
 boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
-  value uses `1.5`. A zero-width or fully transparent link remains in the nonvisual topology
+  value uses `1.5`. A zero-width or fully transparent edge remains in the nonvisual topology
   summary but is excluded from pointer picking and keyboard navigation, so invisible geometry never
-  becomes an operable control. A link whose `source` id doesn't resolve to a real node is still dropped entirely
-  (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
+  becomes an operable control. An edge whose `source` id doesn't resolve to a real node is still dropped entirely
+  (there's no position to draw a stub from). An edge whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
-  `d3-force`'s own simulation input and from click/keyboard interaction.
+  `d3-force`'s own simulation input and from click/keyboard interaction. Deprecated alias: `links`
+  (use `edges`; removed in 23.0.0). The exported `LyraGraphLink` interface is likewise deprecated
+  in favor of the structurally identical `LyraGraphEdge`
 - `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
-  `'none'` uses the numeric `width`/`height` below, unchanged. `'container'` measures the host's own
+  `'none'` uses the requested `width`/`height` below, unchanged. `'container'` measures the host's own
   content box and feeds that to the SVG `viewBox`, the layout's centring force,
   `focusNode()`/`fit()`'s camera math and the loading skeleton, so the drawing always matches the box
   it is rendered into and no host-side `ResizeObserver` is needed. The first measurement is taken
@@ -132,44 +134,48 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   **not** change how the host itself is sized — an outer `block-size`,
   `--lr-canvas-reserved-height` and `height` still do that, and `'container'` simply follows
   whichever of them won
-- `width: number = 800` — ignored while `fitTo` is `'container'`
-- `height: number = 600` — also sizes the rendered host itself (see
+- `width: number | string = 800` — a number of CSS pixels, or a CSS length in `px`, `rem`, `em`,
+  `vw` or `vh` resolved to pixels when the drawing space is laid out (`rem` against the root font
+  size, `em` against the element's own); any other value uses the default. Ignored while `fitTo` is
+  `'container'`
+- `height: number | string = 600` — the same forms as `width`; also sizes the rendered host itself (see
   `--lr-canvas-reserved-height`'s entry below) whenever neither that nor an explicit outer
   `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
   host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
-- `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
+- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas). Deprecated
+  alias: `link-distance`/`linkDistance` (use `edge-distance`; removed in 23.0.0)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
   inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
-  its localized node/link-count fallback
+  its localized node/edge-count fallback
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
-- `showEdgeLabels: boolean = false` (attribute `show-edge-labels`) — draws each resolved
-  (non-dangling) link's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
-  Off by default: `LyraGraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
-  this is set
+- `withEdgeLabels: boolean = false` (attribute `with-edge-labels`) — draws each resolved
+  (non-dangling) edge's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
+  Off by default: `LyraGraphEdge.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
+  this is set. Deprecated alias: `show-edge-labels`/`showEdgeLabels` (use `with-edge-labels`; removed in 23.0.0)
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
-  not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `showEdgeLabels` is
+  not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `withEdgeLabels` is
   `false`
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — node-label visibility.
   `'always'` draws every node's label unconditionally; `'zoom'` hides them below the same
   canvas-declutter zoom threshold used before this property existed (toggled via a
   `data-node-labels-hidden` attribute on the zoomed `<g>` for `renderer="svg"`, mirroring
-  `showEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
+  `withEdgeLabels`/`edgeLabelMinZoom`'s own mechanism — not a Lit re-render); `'none'` never renders
   them. Left unset (the default), each renderer keeps its own exact pre-existing behavior —
   `'always'` for `renderer="svg"`, `'zoom'` for `renderer="canvas"` — so this is purely additive
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
   reversed only for layering, never mutating caller data): positions are computed synchronously
-  with no settle animation, sized from each node's own radius and spaced by `linkDistance` (the
+  with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
   layer gap) and a fixed 12px in-layer gap. Node drag is disabled in this mode (dragging would fight
   a computed layout) and `chargeStrength` becomes a documented no-op; pan/zoom, keyboard roving,
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
@@ -195,20 +201,23 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 
 **Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
-linkId? }`; the optional `linkId` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
+linkId? }`; the optional `linkId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
-`lr-link-enter`/`lr-link-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
+`lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
-Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
-(`detail: { communityId }`, a hull was activated), `lr-selection-change`
+Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
+(`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
+right after its canonical event with an equal detail: `lr-link-enter`/`lr-link-leave` (use
+`lr-edge-enter`/`lr-edge-leave`; removed in 23.0.0) and `lr-community-click` (use
+`lr-community-activate`; removed in 23.0.0)
 
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
 `label` (`renderer="svg"` only; not rendered at all when `nodeLabels` is `'none'`), `link-label` (a
-drawn edge label, only rendered when `showEdgeLabels` is set),
+drawn edge label, only rendered when `withEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
 `live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
@@ -224,9 +233,11 @@ the offscreen keyboard-roving items)
 reservation stylesheet. Below it in the fallback chain, the normalized `height` property sizes the
 host too (through a private, not-directly-settable custom property) — setting
 `--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
-wins over both. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
-falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
-`LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
+wins over both. `--lr-graph-node-fill` (set inline per-node from `LyraGraphNode.color`,
+falls back to `--lr-color-brand`) and `--lr-graph-edge-color` (set inline per-edge from
+`LyraGraphEdge.color`, falling back to `--lr-color-border`). Deprecated aliases, read as their
+fallbacks: `--lr-node-fill` (use `--lr-graph-node-fill`; removed in 23.0.0) and `--lr-link-color`
+(use `--lr-graph-edge-color`; removed in 23.0.0). Also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
 The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
@@ -244,7 +255,7 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` and canvas keyboard-focus cue stroke.
 `--lr-graph-selected-color` (default `var(--lr-color-success)`) — selected node/link stroke.
 `--lr-graph-dimmed-opacity` (default `0.35`) — opacity of a node/link listed in
-`dimmedNodeIds`/`dimmedLinkIds`.
+`dimmedNodeIds`/`dimmedEdgeIds`.
 `--lr-graph-hull-fill` (default `var(--lr-color-brand)`) — community hull fill/stroke color
 (overridden inline per hull from `LyraGraphCommunity.color`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
@@ -275,7 +286,7 @@ localized `part="error"` alert. Install with
     },
     { id: "b", label: "B", description: "The cited document" },
   ];
-  g.links = [
+  g.edges = [
     {
       id: "citation-a-b",
       source: "a",
@@ -301,12 +312,12 @@ localized `part="error"` alert. Install with
   continuously while dragging via `alphaTarget(0.3)`) writes node/link positions straight onto the
   already-rendered DOM via `setAttribute()` rather than reassigning `simNodes`/`simLinks` (that
   reassignment — and the Lit re-render/`applyInteractions()` re-scan it used to force on every tick —
-  now only happens once per structural `nodes`/`links` change). Still a noticeable cost building up
+  now only happens once per structural `nodes`/`edges` change). Still a noticeable cost building up
   the initial layout or while a node is actively being dragged, just no longer once per tick on an
   otherwise-settled graph.
-- `chargeStrength`/`linkDistance` **are** live-reactive post-mount now (retuned on the existing
+- `chargeStrength`/`edgeDistance` **are** live-reactive post-mount now (retuned on the existing
   force objects and the simulation nudged via `alpha(0.3).restart()`) — no need to also touch
-  `nodes`/`links` to see the effect.
+  `nodes`/`edges` to see the effect.
 - `width`/`height` are also live-reactive post-mount: changing either re-centers the `forceCenter`
   force on the new midpoint and nudges the simulation via `alpha(0.1).restart()`, in addition to
   resizing the rendered `viewBox` — both branches apply independently, so setting `width` and
@@ -320,16 +331,16 @@ localized `part="error"` alert. Install with
   load (for example, because they are not installed), the graph fails closed with a localized
   neutral `part="error"` message and announces the transition through a shared assertive light-DOM
   region instead of leaving an empty SVG.
-- `LyraGraphNode.color`, node-type colors, `LyraGraphLink.color`, and community colors are accepted only
+- `LyraGraphNode.color`, node-type colors, `LyraGraphEdge.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
-  ignored in favor of the normal token/palette fallback. `LyraGraphLink.dash` is used only when every
+  ignored in favor of the normal token/palette fallback. `LyraGraphEdge.dash` is used only when every
   entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
   than partially applying malformed SVG stroke data.
-- a structural `nodes`/`links` change now carries over each already-settled node's position (and any
+- a structural `nodes`/`edges` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
   fresh start. Handy for a streaming/incrementally-updated graph, whose existing layout no longer
-  jumps every time a node/link is appended.
+  jumps every time a node/edge is appended.
 - under `prefers-reduced-motion: reduce`, or whenever `seed` is set, the simulation converges
   synchronously (ticked in a loop down to `alphaMin` before first paint) instead of animating over
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
@@ -339,11 +350,11 @@ localized `part="error"` alert. Install with
   node/link-count name (e.g. "Node-link diagram with 5 nodes and 4 links"). An authored host label
   moves that one graph role/name to the host instead of duplicating it. Node `<text part="label">`s
   stay `aria-hidden="true"` because each node control already owns its label.
-- `nodeTypes` and `showEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
-  cached per-node and per-link DOM element arrays, alongside the existing `simNodes`/`simLinks`
-  structural-change trigger — no need to also touch `nodes`/`links` to see a type/shape/color or
+- `nodeTypes` and `withEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
+  cached per-node and per-edge DOM element arrays, alongside the existing `simNodes`/`simLinks`
+  structural-change trigger — no need to also touch `nodes`/`edges` to see a type/shape/color or
   edge-label change take effect.
-- when `showEdgeLabels` is `false` (the default), a resolved link renders as a bare `<line
+- when `withEdgeLabels` is `false` (the default), a resolved edge renders as a bare `<line
 part="link">` with no extra wrapping element, so existing consumers who never set it see
   byte-for-byte identical link DOM; setting it wraps each link's `<line>` and its
   `[part="link-label"]` `<text>` together. `edgeLabelMinZoom`'s hide/show gate is applied once at
@@ -352,23 +363,25 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 
 **Selection & focus:** `selectionMode: 'none' | 'single' | 'multiple' = 'none'` (attribute
 `selection-mode`) gates click/keyboard selection; the component never mutates
-`selectedNodeIds: string[] = []` / `selectedLinkIds: string[] = []` (both attribute: false) itself,
+`selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
 only emits `lr-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
-mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedLinkIds:
+mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
 `[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
 of the box with no host styling required); a host typically computes the set from a
-`lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
+`lr-node-enter`/`lr-edge-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
-built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
-`nodes`, `links`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
-layout, rendering, selection, or events. A link uses its explicit `id`, or `source->target` when
+built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
+Deprecated aliases: `selectedLinkIds` (use `selectedEdgeIds`; removed in 23.0.0) and
+`dimmedLinkIds` (use `dimmedEdgeIds`; removed in 23.0.0).
+`nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
+layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow
-parallel links between the same endpoints. Retained identity spelling is not trimmed or rewritten.
+parallel edges between the same endpoints. Retained identity spelling is not trimmed or rewritten.
 Community `memberIds` and controlled id arrays follow the same nonblank first-wins rule.
 `communities: LyraGraphCommunity[] = []` (attribute: false) draws one translucent convex-hull blob per
-entry behind links/nodes. Each entry is `LyraGraphCommunity { id: string; label?: string; memberIds:
+entry behind edges/nodes. Each entry is `LyraGraphCommunity { id: string; label?: string; memberIds:
 string[]; color?: string }`; membership is the union of `memberIds` and nodes whose `communityId`
 matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node-id`) tracks a persistent
 focus ring (`[part="focus-halo"]`) around one node;
@@ -492,8 +505,10 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   label; values are rendered as finite nonnegative integers (invalid or negative values become zero)
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
-- `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
-  plain, non-interactive rows
+- `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
+  non-interactive rows instead of the default toggle `<button>` rows. Deprecated alias:
+  `interactive` (use `without-interaction`; `interactive="false"` equals `without-interaction`;
+  removed in 23.0.0)
 - `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
@@ -508,7 +523,7 @@ frozen detail; either event may veto. It is slated for removal in 21.0.0 — mig
 
 **Slots:** none.
 
-**CSS parts:** `base`, `item` (a `<button>` when `interactive`, a plain `<div>` otherwise), `swatch`,
+**CSS parts:** `base`, `item` (a `<button>`, or a plain `<div>` while `without-interaction` is set), `swatch`,
 `label`, `count`, `live-region` (the visually hidden filter-toggle announcement).
 
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
@@ -567,16 +582,20 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
-- `showFocusButton: boolean = true` (attribute `show-focus-button`)
-- `compact: boolean = false` (reflected) — tighter root padding and row gap for dense contexts (a
-  dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
-  as this component's sibling `lr-community-card`. Purely a density knob: the border and background
-  stay. `false` (the default) keeps the full card padding.
+- `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — hides the built-in
+  focus action, for pages with no graph. Deprecated alias: `show-focus-button`/`showFocusButton` (use
+  `without-focus-button`; `show-focus-button="false"` equals `without-focus-button`; removed in
+  23.0.0)
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and row gap for dense contexts (a dossier rendered in a
+  sidebar, a result list) — the same convention as this component's sibling `lr-community-card`.
+  Purely a density knob: the border and background stay. `m` (the default) and larger keep the full
+  card padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
-  container that already draws a border doesn't double it. `plain` wins over `compact` when both are
-  set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
+  container that already draws a border doesn't double it. `plain` wins over the dense `size` tier
+  when both are set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
   name for the same union.
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
@@ -589,11 +608,11 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
 `focus-button`, `empty` (shown when `entity` is `null`).
 
 **Themeable custom properties:** `--lr-entity-card-bg` (default `var(--lr-color-surface)`) —
-`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`[part='base']`'s RESTING background, the companion to the dense `size` tier's levers below;
 `frame='plain'` still drops the fill entirely. `--lr-entity-card-compact-padding` (default
-`var(--lr-space-s)`) — `[part='base']`'s padding while `compact`; `--lr-entity-card-compact-gap` (default
-`var(--lr-space-xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
-the `compact` state, so a dense card can be tuned without re-pointing shared spacing tokens for
+`var(--lr-space-s)`) — `[part='base']`'s padding while `size` is `s` or smaller;
+`--lr-entity-card-compact-gap` (default `var(--lr-space-xs)`) — the gap between `[part='base']`'s
+rows at that size. Both apply only in the dense tier, so a dense card can be tuned without re-pointing shared spacing tokens for
 everything else. Otherwise shared tokens; a data-driven `entity.type` color is applied as
 sanitized inline `--lr-badge-*` overrides on the type badge only (the one "type color is
 data-driven by design" exception this library already grants graph nodes) — every other color comes
@@ -685,7 +704,7 @@ ancestor to change every unset entity chip beneath it.
 <p>
   …first described by
   <lr-entity-chip entity-id="e1" text="Ada Lovelace" type="person">
-    <lr-entity-card show-focus-button="false"></lr-entity-card> </lr-entity-chip
+    <lr-entity-card without-focus-button></lr-entity-card> </lr-entity-chip
   >.
 </p>
 ```
@@ -835,8 +854,10 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 - `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
-- `compact: boolean = false` (reflected) — omits the summary excerpt and member chips, and tightens
-  `[part='base']`'s padding/gap — same convention as the sibling `lr-entity-card`'s `compact`
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) omits the summary excerpt and member chips, and tightens `[part='base']`'s
+  padding/gap — same convention as the sibling `lr-entity-card`'s `size`. Deprecated alias:
+  `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
   carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
@@ -851,7 +872,7 @@ activated).
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
 **CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` wrapping a `<button>`),
-`member-count`, `summary` (omitted in `compact`), `members` (omitted in `compact`), `member`,
+`member-count`, `summary` and `members` (both omitted while `size` is `s` or smaller), `member`,
 `overflow` (the "+N" chip button), `drill-button`, `actions`, `empty` (shown when `community` is
 `null`).
 
@@ -860,7 +881,7 @@ activated).
 siblings can retint this card with it; `frame='plain'` still drops the fill entirely.
 `--lr-community-card-compact-padding` (default `var(--lr-space-s)`) and
 `--lr-community-card-compact-gap` (default `var(--lr-space-xs)`) — `[part='base']` padding/gap
-while `compact`. Otherwise shared tokens.
+while `size` is `s` or smaller. Otherwise shared tokens.
 
 **Optional peer deps:** none.
 
@@ -906,18 +927,21 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   score-bar tier cutoffs
 - `sort: ChunkInspectorSort = 'score'` — `ChunkInspectorSort = 'score' | 'none'`, exported by this
   module. The sorted view is memoized on the `chunks`/`sort` pair, so an unrelated update (a new
-  `activeChunkId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
+  `activeChunkId`, a new `size`) hands the internal `lr-virtual-list` the same array reference it
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
-- `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
+- `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
+  and larger render the full rows. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `label: string = ''` — fallback name for the populated result group. A non-empty host
   `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
-`anchor` from the chunk's own), `lr-expand` (`detail: { chunkId, expanded }`, a chunk's text toggle was
-activated).
+`anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
+toggle was activated, expanding or collapsing it). Deprecated alias: `lr-expand` (use
+`lr-chunk-toggle`; fired right after it with an equal detail; removed in 23.0.0).
 
 **Slots:** none.
 
@@ -928,8 +952,9 @@ percent text), `score-current` (additional part on the current row's score line)
 (`aria-hidden` track), `score-fill` (tone-mapped fill), `score-fill-success` /
 `score-fill-warning` / `score-fill-danger` (additional part on the fill, one per scoring tier),
 `open-button`, `title` (the `<span>` inside `open-button` carrying the visible title text), `text`
-(omitted when `compact`), `text-clamped` (additional part on a `text` preview that is still
-collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted when `compact`),
+(omitted while `size` is `s` or smaller), `text-clamped` (additional part on a `text` preview that
+is still collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted while `size`
+is `s` or smaller),
 `empty` (shown when `chunks` is empty).
 
 Every row-level part is reachable through `::part()` in both rendering paths: above
@@ -1033,8 +1058,13 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 - `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
-- `showSelectAll: boolean = true` (attribute `show-select-all`)
-- `searchable: boolean = true`
+- `withoutSelectAll: boolean = false` (attribute `without-select-all`) — omits the header control
+  that otherwise selects or clears every visible leaf source. Deprecated alias: `show-select-all`/`showSelectAll`
+  (use `without-select-all`; `show-select-all="false"` equals `without-select-all`; removed in
+  23.0.0)
+- `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
+  Deprecated alias: `searchable` (use `without-search`; `searchable="false"` equals
+  `without-search`; removed in 23.0.0)
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
   while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
@@ -1056,8 +1086,8 @@ the component; `lr-sources-change` is the host-level report of that toggle.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
-`select-all` (only when `showSelectAll`), `select-all-control` (the shared `lr-checkbox` semantic
+**CSS parts:** `base`, `search` (the built-in filter `lr-input`, omitted while `without-search` is
+set), `select-all` (omitted while `without-select-all` is set), `select-all-control` (the shared `lr-checkbox` semantic
 owner), `summary` ("{selected} of {total} selected"), `tree`
 (`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
@@ -1151,8 +1181,9 @@ path-strip node — the only name either one emits, and the only one carrying `o
 `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`
-(`detail: { chunkId, expanded }`) from the chunk inspector.
+edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
+(`detail: { chunkId, expanded }`) from the chunk inspector. Deprecated alias: `lr-expand` (use
+`lr-chunk-toggle`; surfaced right after it with an equal detail; removed in 23.0.0).
 
 **Slots:** none.
 
@@ -1401,15 +1432,17 @@ direct light-DOM children of the list (plain composition — no `.items` array p
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
   to the localized `sourceListDefaultLabel` string (English default: `"Sources"`).
-- `compact: boolean = false` (reflected) — tighter header and list padding/gap, for a panel
-  rendered repeatedly down a message transcript — same convention as this list's own slotted
-  `lr-source-card` children's `compact`. Purely a density knob: the outer border and surface stay,
-  so pair it with `frame="plain"` to remove card chrome.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header and list padding/gap, for a panel rendered repeatedly down a
+  message transcript — same convention as this list's own slotted `lr-source-card` children's
+  `size`. Purely a density knob: the outer border and surface stay, so pair it with
+  `frame="plain"` to remove card chrome. Deprecated alias: `compact` (use `size="s"`; removed in
+  23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled outer
   container. `'plain'` removes that outer border, background, and corner radius so a list nested
   inside existing message chrome does not double it. Plain preserves the header/list divider and
-  whichever regular or compact padding applies.
+  whichever regular or dense padding applies.
 
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
@@ -1431,9 +1464,10 @@ while collapsed).
 
 **Themeable custom properties:** `--lr-source-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-source-list-compact-header-gap` (default
-`var(--lr-space-2xs)`) — `[part="header"]` padding/gap while `compact`; `--lr-source-list-compact-gap`
-(default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
-`var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
+`var(--lr-space-2xs)`) — `[part="header"]` padding/gap while `size` is `s` or smaller;
+`--lr-source-list-compact-gap` (default `var(--lr-space-2xs)`) and
+`--lr-source-list-compact-list-padding` (default `var(--lr-space-s)`) — `[part="list"]` gap/padding
+at that size. All four are inline `var()`
 fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
 tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
@@ -1447,19 +1481,22 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
-- `title: string = ''` — the source's display title, e.g. a filename. Falls back to `"Untitled
-source"` when empty.
+- `heading: string = ''` — the source's display title, e.g. a filename, rendered as the `title`
+  button's text. Falls back to `"Untitled source"` when empty. Deprecated alias: `title` (use
+  `heading`; removed in 23.0.0)
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
-- `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
-  lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
-  density knob: the border and background stay. `false` (the default) keeps the full card padding.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and row gap, for the dense citation lists these cards
+  usually render in. Purely a density knob: the border and background stay. `m` (the default) and
+  larger keep the full card padding. Deprecated alias: `compact` (use `size="s"`; removed in
+  23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card inside a
   `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
-  `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
+  `plain` wins over the dense `size` tier when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
   chrome. Use the shared `LyraFrame` type when authoring this property.
 - `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
@@ -1503,12 +1540,12 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 button — only rendered when the `full` slot has content).
 
 **Themeable custom properties:** `--lr-source-card-bg` (default `var(--lr-color-surface)`) —
-`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`[part='base']`'s RESTING background, the companion to the dense `size` tier's levers below;
 `frame='plain'` still drops the fill entirely. `--lr-source-card-compact-padding` (default
 `var(--lr-space-xs)`) —
-`[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
-`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
-the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
+`[part='base']`'s padding while `size` is `s` or smaller; `--lr-source-card-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows at that size. Both apply only in
+the dense tier, so a dense citation list can be tuned without re-pointing shared spacing tokens
 elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
@@ -1517,13 +1554,13 @@ elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surfac
 
 ```html
 <lr-source-list label-plural="2 sources">
-  <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+  <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
     <span slot="excerpt">Revenue grew 12% year over year...</span>
     <span slot="full"
       >Revenue grew 12% year over year, driven primarily by...</span
     >
   </lr-source-card>
-  <lr-source-card source-id="doc-2" title="q3_notes.md">
+  <lr-source-card source-id="doc-2" heading="q3_notes.md">
     <span slot="excerpt">No matching full-text chunk for this source.</span>
   </lr-source-card>
 </lr-source-list>
@@ -1558,10 +1595,10 @@ time.
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
-- `lr-source-card` actively strips a bare host-level `title` attribute right after Lit syncs it into
-  the `title` property — otherwise the whole card would grow an unsolicited native tooltip repeating
-  the title text on hover. Set `title` only as a property/attribute meant to become the rendered
-  heading; don't rely on it surviving as a DOM attribute afterward.
+- `lr-source-card`'s deprecated `title` alias is also the browser's global tooltip attribute, so the
+  card strips a host-level `title` attribute right after reading it into `heading` — otherwise the
+  whole card would grow an unsolicited native tooltip repeating the title text on hover. Use
+  `heading` for the rendered title.
 
 ---
 
@@ -1598,7 +1635,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   forwarded to both `lr-chunk-inspector` and `lr-provenance-panel`
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — forwarded to `lr-neighbor-list`
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
-- `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
+- `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
+  `lr-entity-card`. Deprecated alias: `show-focus-button`/`showFocusButton` (use `without-focus-button`;
+  `show-focus-button="false"` equals `without-focus-button`; removed in 23.0.0)
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
@@ -1609,8 +1648,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
 from the embedded provenance panel's own community card or relationship path strip, the only
 source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
-`lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
+expanded }`, followed by its deprecated alias `lr-expand` with an equal detail — use
+`lr-chunk-toggle`; removed in 23.0.0), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
@@ -1665,8 +1705,10 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
 - `label?: string` — fallback name for the stable group, using localized
   `groundingSummaryLabel` when omitted. A non-empty host `aria-label` makes the host the sole overall
   owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
-- `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
-  `lr-claim-evidence`; set false to keep the aggregate scorecard only
+- `withoutClaims: boolean = false` (attribute `without-claims`, reflected) — omits the
+  `assessment.claims` detail that otherwise renders through `lr-claim-evidence`, keeping the
+  aggregate scorecard only. Deprecated alias: `show-claims`/`showClaims` (use `without-claims`;
+  `show-claims="false"` equals `without-claims`; removed in 23.0.0)
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — shared semantic heading
   level used by both warnings and evidence sections; `'none'` keeps the visual text without
   exposing a heading role, and invalid untyped values fall back to level 3
@@ -1826,10 +1868,12 @@ errorMessage?: string }` (all four types exported here), where
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
-- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
-  total/synced/syncing/needs-attention row
-- `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
-  affordance, e.g. for a read-only or permission-gated view
+- `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
+  total/synced/syncing/needs-attention row. Deprecated alias: `hide-summary`/`hideSummary` (use `without-summary`;
+  removed in 23.0.0)
+- `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
+  affordance, e.g. for a read-only or permission-gated view. Deprecated alias: `hide-create`/`hideCreate` (use
+  `without-create`; removed in 23.0.0)
 - `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
   `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
   while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
@@ -1859,8 +1903,8 @@ outer `error` property never drifts out of sync with the table's internal state.
 button, while `error` is set.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
-`create-button` (omitted while `hideCreate`), `summary` (omitted while `hideSummary` or `sources` is
-empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
+`create-button` (omitted while `without-create` is set), `summary` (omitted while `without-summary`
+is set or `sources` is empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
@@ -1886,7 +1930,7 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
   Authorization enforcement is the host's concern.
 - "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so
   re-running a failed sync is one click); "Pause sync" is enabled only while `'syncing'`.
-- The inner `lr-table`'s own `lr-row-click` is deliberately stopped from propagating — this component
+- The inner `lr-table`'s own `lr-row-activate` is deliberately stopped from propagating — this component
   exposes no row-click/selection semantics, only the per-row action menu.
 
 ---
@@ -1898,7 +1942,7 @@ neighborhood expansion, pinned nodes, path finding between pins, node selection,
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
 `lr-path-strip`, and `lr-popover.showAt()`.
 
-Removing `search-query` retains `null` property readback while clearing the search input, results
+Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
 Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
@@ -1907,24 +1951,25 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
-- `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
+- `nodes: LyraGraphNode[] = []`, `edges: LyraGraphEdge[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
   `communities: LyraGraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
   projected through `lr-graph`'s shared nonblank, first-wins identity policy before derived lookups
   and forwarding: `LyraGraphNode { id: string; label?: string; accessibleLabel?: string;
   description?: string; radius?: number; color?: string; type?: string; expandable?: boolean;
-  communityId?: string }`, `LyraGraphLink { id?: string; source: string; target: string; width?:
+  communityId?: string }`, `LyraGraphEdge { id?: string; source: string; target: string; width?:
   number; label?: string; accessibleLabel?: string; description?: string; directed?: boolean;
   color?: string; dash?: number[] }` (source/target are node ids), `LyraNodeTypeStyle { id: string;
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
-  field-by-field semantics (color/shape resolution precedence, dangling-link handling, hull
-  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list
+  field-by-field semantics (color/shape resolution precedence, dangling-edge handling, hull
+  membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list.
+  Deprecated alias: `links` (use `edges`; removed in 23.0.0)
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
   node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
-  `links`, `description`/`properties` are omitted
+  `edges`, `description`/`properties` are omitted
 - `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
 directed?: boolean; reverse?: boolean }`). Empty renders no strip
@@ -1939,7 +1984,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the filter applied to the visible node
+- `query: string = ''` — the filter applied to the visible node
   set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`. A node
   matches when the query appears in **any** name it can be known by — its `id`, its `label` or its
   `accessibleLabel` — each folded with the active locale, so a node named only through
@@ -1947,7 +1992,8 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
   either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
   box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
-  while the node's valid string id remains searchable
+  while the node's valid string id remains searchable. Deprecated alias: `search-query`
+  (`searchQuery`; use `query`; removed in 23.0.0)
 
 (presentation)
 
@@ -1956,16 +2002,18 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'container'` makes the composed graph draw at exactly the pane this component's own layout gave
   it — the reservation minus whatever the toolbar, search results, pinned row and path strip take,
   which is not derivable from `height` — and follow it live as the explorer is resized. `'none'`
-  keeps forwarding the numeric `width`/`height` below unchanged. See `fitTo`'s own entry in
+  keeps forwarding the requested `width`/`height` below unchanged. See `fitTo`'s own entry in
   `llms/components/lr-graph.md`
-- `width: number = 800`, `height: number = 600` — `height` also sizes the composed graph's own
-  rendered box (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback
-  chain `lr-graph.height` uses on its own host
+- `width: number | string = 800`, `height: number | string = 600` — a number of CSS pixels, or a
+  CSS length in `px`, `rem`, `em`, `vw` or `vh` that the composed graph resolves to pixels; any other
+  value uses the default. `height` also sizes the composed graph's own rendered box
+  (`[part="graph"]`) once the explorer's own layout gives it room, the same fallback chain
+  `lr-graph.height` uses on its own host
 - `nodeLabels?: 'always' | 'zoom' | 'none'` (attribute `node-labels`) — forwarded to
   `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to apply its own
   per-renderer default — see `nodeLabels`'s own entry in `llms/components/lr-graph.md`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
-  `lr-graph`'s `dimmedNodeIds`/`dimmedLinkIds`, on top of the always-active search-match dimming:
+  `lr-graph`'s `dimmedNodeIds`/`dimmedEdgeIds`, on top of the always-active search-match dimming:
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
@@ -1994,12 +2042,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
   this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
   There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
-  has already applied the query to its own `searchQuery` property before emitting, so reassigning
+  has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
-  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
+  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
+  Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
+  equal detail; removed in 23.0.0).
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -2011,7 +2061,7 @@ pin toggle; no effect while `details` is overridden.
 
 **CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
 `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `query` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
@@ -2021,8 +2071,8 @@ while `path` is non-empty), `detail-popover`, `detail-card`.
 reservation. The composed graph's own `[part="graph"]` box additionally falls back to the
 explorer's `height` property (through a private custom property) beneath this same reservation
 name, so setting `--lr-canvas-reserved-height` anywhere above the explorer overrides `height` for
-the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-node-fill`,
-`--lr-link-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
+the composed graph too. Retheme the composed graph through `lr-graph`'s own custom properties — `--lr-graph-node-fill`,
+`--lr-graph-edge-color`, `--lr-graph-cat-1` through `-8`, `--lr-graph-edge-label-halo`,
 `--lr-graph-focus-halo-color`, `--lr-graph-selected-color`, `--lr-graph-dimmed-opacity`, and
 `--lr-graph-hull-fill`/`-opacity` — documented in `llms/components/lr-graph.md`'s own
 **Themeable custom properties** list.
@@ -2096,8 +2146,10 @@ localized `limit` notice after that section's list rather than mounting an unbou
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
+- `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
+'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
+collapsing it. Deprecated alias: `lr-expand` (use `lr-memory-toggle`; fired right after it with an
+equal detail; removed in 23.0.0).
 
 **Slots:** none.
 
@@ -2161,9 +2213,13 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
   its own copy on toggle _then_ emits `lr-select`; reassign to control
-- `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
-- `dedupe: boolean = true` (reflected) — retained for compatibility; malformed, blank, and later
-  duplicate chunk ids are always omitted first-wins so identity never becomes ambiguous
+- `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
+  `lr-checkbox`. Deprecated alias: `selectable` (use `without-selection`; `selectable="false"`
+  equals `without-selection`; removed in 23.0.0)
+- `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
+  compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
+  first-wins so identity never becomes ambiguous. Deprecated alias: `dedupe` (use `without-dedupe`;
+  `dedupe="false"` equals `without-dedupe`; removed in 23.0.0)
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -2227,7 +2283,7 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch. It is the only
+  canonicalized nonblank/first-wins regardless of the legacy `without-dedupe` switch. It is the only
   host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
   `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
@@ -2243,8 +2299,8 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 empty and neither `errorText` nor `loading` is set), `row` (a plain element in this shadow root below the
 virtualization threshold; exported from the internal `lr-virtual-list`'s own `row` part while
 virtualized — `::part(row)` reaches it either way), `group-header` (exported from the virtual list's
-`group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted when
-`selectable` is false), `row-body` (carries `data-selected`), `row-body-selected` (additional part
+`group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted while
+`without-selection` is set), `row-body` (carries `data-selected`), `row-body-selected` (additional part
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
 `presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
@@ -2479,8 +2535,11 @@ the existing error again rather than replaying it, and later `errorText` changes
 either way. An answer with no error announces nothing. Remove any host
 `role="status"`/`role="alert"` hand-added before this property existed once it is set — otherwise
 the initial error is announced twice, through the native role and again through the shared sink;
-`showSources: boolean = true`; `showClaims: boolean = true`
-(attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
+`withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
+`withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details
+from reaching the grounding summary). Deprecated aliases: `show-sources`/`showSources` (use `without-sources`;
+`show-sources="false"` equals `without-sources`; removed in 23.0.0) and `show-claims`/`showClaims` (use
+`without-claims`; `show-claims="false"` equals `without-claims`; removed in 23.0.0); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
@@ -2559,7 +2618,9 @@ IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestio
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
 localized admin label, while an explicit empty string stays empty; authored host
 `aria-label` independently names the admin component and is not cloned onto either);
-`hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
+`withoutIngestion: boolean = false` (attribute `without-ingestion`; deprecated alias:
+`hide-ingestion`/`hideIngestion`, use `without-ingestion`; removed in 23.0.0). If ingestion is active when it
+becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.
@@ -2616,15 +2677,16 @@ the danger treatment instead of producing an empty or misleading badge.
 At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
 `limit` notice after the list rather than mounting an unbounded number of rows.
 
-- `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
-  evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
-  density knob: each claim's border and background stay. `false` (the default) keeps the full
-  claim-trigger padding.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the
+  same convention as `lr-source-card`'s/`lr-entity-card`'s `size`. Purely a density knob: each
+  claim's border and background stay. `m` (the default) and larger keep the full claim-trigger
+  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps each claim's bordered, filled box;
   `'plain'` removes the border, background, and corner radius from every `claim` row, so claims
-  nested inside an already-bordered container don't double the frame. `plain` wins over `compact`
-  when both are set — nothing left to tighten.
+  nested inside an already-bordered container don't double the frame. `plain` wins over the dense
+  `size` tier when both are set — nothing left to tighten.
 
 **Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`). A nested
 `lr-citation-badge` activation is contained and translated to `lr-citation-select`; the distinct
@@ -2636,9 +2698,9 @@ composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unch
 500-claim render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
-`var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;
+`var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `size` is `s` or smaller;
 `--lr-claim-evidence-compact-gap` (default `var(--lr-space-xs)`) — the gap between
-`[part='claim-trigger']`'s columns while `compact`. Both apply only in the `compact` state.
+`[part='claim-trigger']`'s columns at that size. Both apply only in the dense tier.
 Otherwise shared tokens only.
 
 Selection is controlled: activation emits the complete claim but does not assign
@@ -2695,8 +2757,9 @@ and run history. The host computes metrics and owns evaluation execution.
 display when unset/unmatched); `slice: string = ''`; `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
-`showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
-converter); `chartHeight: string = '220px'` (attribute `chart-height`).
+`withoutChart: boolean = false` (attribute `without-chart`, reflected — omits the trend chart);
+`chartHeight: string = '220px'` (attribute `chart-height`). Deprecated alias: `show-chart`/`showChart` (use
+`without-chart`; `show-chart="false"` equals `without-chart`; removed in 23.0.0).
 
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
@@ -2731,7 +2794,7 @@ import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-da
 ```
 
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose
-`showClaims: boolean = true`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
+`withoutClaims: boolean = false`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
 document-viewer-compatible `anchor` in `lr-chunk-open`.
 
 ## Consumer integration notes
@@ -2930,6 +2993,19 @@ These named interfaces and helper signatures are available to typed integrations
     readonly color?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
+  `LyraGraphEdge {
+    readonly id?: string;
+    readonly source: string;
+    readonly target: string;
+    readonly width?: number;
+    readonly label?: string;
+    readonly accessibleLabel?: string;
+    readonly description?: string;
+    readonly directed?: boolean;
+    readonly color?: string;
+    readonly dash?: readonly number[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphLink {
     readonly id?: string;
     readonly source: string;
@@ -2942,6 +3018,8 @@ These named interfaces and helper signatures are available to typed integrations
     readonly color?: string;
     readonly dash?: readonly number[];
   }`
+  Deprecated (use the structurally identical `LyraGraphEdge`; each is assignable to the other;
+  removed in 23.0.0).
   Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphNode {
     readonly id: string;

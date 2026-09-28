@@ -3,7 +3,7 @@ import './locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 
-// showFlags defaults to true, so opening the listbox below renders a `<lr-flag>` per locale row
+// withoutFlags defaults to false, so opening the listbox below renders a `<lr-flag>` per locale row
 // (and the trigger). This file only cares about positioning, but an unregistered resolver still
 // warns -- mirrors locale-picker.test.ts's own stub registration.
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';

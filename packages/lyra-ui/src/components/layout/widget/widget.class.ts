@@ -3,6 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   activateOverlay,
@@ -255,7 +257,7 @@ export interface LyraWidgetEventMap {
  *   so a row that fits is never dimmed.
  *
  * `fullscreen-inset` overrides the safe-area panel inset while the viewport-filling backdrop stays
- * at zero by default. `compact` tightens header/body padding — same convention as `lr-empty`.
+ * at zero by default. `size="s"` (or smaller) tightens header/body padding.
  * @status stable
  * @since 4.0.0
  */
@@ -274,6 +276,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    // `compact` reads true while `size` is `s` or smaller; writing it applies `s` or restores `m`.
+    compact: [
+      'size',
+      (value) => (value ? 's' : 'm'),
+      (value) => ['s', 'xs', '2xs'].includes(normalizeSize(value as LyraSize)),
+    ],
+  };
 
   // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
   // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
@@ -345,7 +355,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** Overrides the fullscreen backdrop's viewport-filling inset independently of
    * `fullscreenInset`. Invalid values retain the default `0`. */
   @property({ attribute: 'backdrop-inset' }) backdropInset = '';
-  /** Tighter header/body padding for constrained spaces. */
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens header/body
+   * padding for constrained spaces; `m` (the default) and larger keep the regular padding.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
+  /** Tighter header/body padding for constrained spaces.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
   private effectiveViews: readonly Readonly<LyraWidgetView>[] = Object.freeze([]);
 
@@ -700,11 +717,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  property, while retaining lr-collapse-change as the existing post-commit
    *  notification. */
   private requestCollapse(next: boolean): void {
-    const request = this.emit(
-      'lr-collapse-request',
-      { collapsed: next },
-      { cancelable: true }
-    );
+    const request = this.emit('lr-collapse-request', { collapsed: next }, { cancelable: true });
     if (request.defaultPrevented) return;
     this.collapsed = next;
     this.emit('lr-collapse-change', { collapsed: next });

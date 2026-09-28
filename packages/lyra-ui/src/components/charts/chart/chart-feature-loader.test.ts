@@ -365,7 +365,7 @@ describe('tagged feature-load results', () => {
 describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () => {
   it('serializes two concurrent callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
     // No `await` between these two calls — this is the exact race the fix
-    // closes: two callers (e.g. two `<lr-chart zoom>` elements connecting
+    // closes: two callers (e.g. two `<lr-chart zoomable>` elements connecting
     // close together) both hitting `loadChartJsWithZoom()` before either has
     // had a chance to observe a completed load.
     const p1 = loadChartJsWithZoom();

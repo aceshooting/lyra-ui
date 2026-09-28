@@ -8,6 +8,8 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -43,7 +45,7 @@ await preloadMarkdown();
 ```
 
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
-uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
+uses, on unless `without-syntax-highlighting` is set. This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
 peer sees byte-identical output to before this property existed. The very first render of any content
 is always plain text/code (identical to today's output); highlighting arrives as an asynchronous
@@ -79,7 +81,9 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
-- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
+- `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
+  (tables, strikethrough, autolinks, task lists), which is on by default. Deprecated alias: `gfm`
+  (use `without-gfm`; removed in 23.0.0) — inverted, so `gfm="false"` equals `without-gfm`.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
   text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
   `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
@@ -131,16 +135,19 @@ uses for its own `[part="body"]`.
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
   code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
   deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
-  development warning): either property enables the header, so use `code-block-header`. Plain
+  development warning): the two stay in step and the last write wins, so use `code-block-header`. Plain
   streaming defers headers until
   settle; progressive streaming adds them to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy
   deception. Trusted mode provides no such guarantee.
-- `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
-  blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
-  peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
-  mode, a block can be highlighted after it settles; the mutable tail remains unhighlighted.
+- `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) — turns off
+  fenced-code syntax highlighting. Unset (the default), every fenced block is upgraded via the
+  optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
+  installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
+  remains unhighlighted. Deprecated alias: `highlight-code`/`highlightCode` (use
+  `without-syntax-highlighting`; removed in 23.0.0) — inverted, so `highlight-code="false"` equals
+  `without-syntax-highlighting`.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
@@ -286,7 +293,7 @@ width inside a rendered fenced or indented `code-block`), plus shared tokens
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
 is loaded and caught independently — a consumer who installs only `marked` and explicitly sets
 `html-mode="trusted"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
-the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
+the same optional peer `<lr-code-block>` uses, for the fenced-block syntax
 highlighting — independent of the `marked`/`dompurify` pair, and its absence never blocks rendering
 (fenced blocks simply stay unhighlighted). The readonly `marked` property becomes available only
 after that lazy load resolves; each instance owns its configuration. Call `renderMarkdown()` after

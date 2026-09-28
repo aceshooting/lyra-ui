@@ -466,14 +466,14 @@ it('leaves compact and description unset when the caller omits them', async () =
   const element = await stub({ empty: true });
   const state = element.shadowRoot!.querySelector('lr-empty')!;
 
-  expect(state.hasAttribute('compact'), 'compact must stay opt-in').to.equal(false);
+  expect(state.getAttribute('size'), 'the compact density must stay opt-in').to.equal(null);
   expect(descriptionOf(element, 'empty')).to.equal('');
 
   element.config = { ...IDLE_STATE, empty: true, compact: true };
   await element.updateComplete;
   expect(
-    element.shadowRoot!.querySelector('lr-empty')!.hasAttribute('compact'),
-  ).to.equal(true);
+    element.shadowRoot!.querySelector('lr-empty')!.getAttribute('size'),
+  ).to.equal('s');
 });
 
 it('paints the shared retry control from the stylesheet partial', async () => {

@@ -245,8 +245,10 @@ synchronously inside its own handler instead of deferring past `updateComplete`.
 out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
 fires, landing on the first surviving pane that can take it, otherwise on one of the split's own
 dividers, preferring one that stays enabled; focus anywhere other than the collapsing pane is untouched),
-`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { open: boolean }`) — Escape/backdrop close
-proposals are cancelable and fire before `open` changes; preventing the event or making a synchronous
+`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { expanded: boolean, open: boolean }`, where
+`expanded` is the proposed or forced drawer state; the deprecated `open` key carries the same value
+and is removed in 23.0.0) — Escape/backdrop close proposals are cancelable and fire before `open`
+changes; preventing the event or making a synchronous
 reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
 `floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured

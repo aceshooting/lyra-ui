@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-browser-frame-controller-background` since `21.1.0`; use css-property `--lr-browser-frame-controller-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `controls` / `controls` since `21.1.0`; use property `without-controls`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,8 +35,11 @@ string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering. `controls:
-boolean = true` — render the built-in take-over/stop buttons.
+letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
+`withoutControls: boolean = false` (attribute `without-controls`, reflected) — hides the built-in
+take-over/stop buttons, for a read-only viewer; the `actions` slot still renders. Deprecated alias:
+`controls` (use `without-controls`; removed in 23.0.0) — inverted, so `controls="false"` equals
+`without-controls`.
 
 **Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing
 the `frame-src` image. `actions` — extra toolbar controls.
@@ -45,7 +49,8 @@ the `frame-src` image. `actions` — extra toolbar controls.
 session, no detail.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
-`controller-badge`, `actions`, `take-over-button`, `stop-button`, `viewport`, `frame` (the
+`controller-badge`, `actions`, `take-over-button` and `stop-button` (neither rendered while
+`without-controls`), `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 
@@ -68,7 +73,9 @@ viewport's aspect ratio.
 
 **Additional API surface:**
 
-- `--lr-browser-frame-controller-background` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-browser-frame-controller-bg` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+  Deprecated alias: `--lr-browser-frame-controller-background` (use
+  `--lr-browser-frame-controller-bg`; removed in 23.0.0).
 - `--lr-browser-frame-controller-color` — Controller badge text color. Default: `var(--lr-color-brand)`.
 - `--lr-browser-frame-ping-click-color` — Click-ping border color. Default: `var(--lr-color-brand)`.
 - `--lr-browser-frame-ping-type-color` — Type-ping border color. Default: `var(--lr-color-success)`.

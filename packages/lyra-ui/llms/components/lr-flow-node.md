@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -30,14 +30,25 @@ owns none of that.
   the canvas; use this stable hook or the canvas's normalized `node-type-*` part for type-specific
   presentation
 - `heading: string = ''`
+- `headingLevel: LyraHeadingLevel = 'none'` (attribute `heading-level`) — semantic level of the
+  visible `heading`. `'none'` (the default) keeps it plain text, as cards inside a canvas usually
+  are; `'1'`–`'6'` expose `[part="heading"]` as `role="heading"` at that `aria-level`, for a
+  standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
+  while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
-- `compact: boolean = false` (reflected) — tighter card padding, row gap, and header icon-to-heading
-  gap for dense canvases and palette previews; the border, background, shadow and the
-  `selected`/`status="running"` treatments all stay
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
+  and palette previews; the border, background, shadow and the `selected`/`status="running"`
+  treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
+  before. An unsupported value normalizes to unset and removes the attribute. Deprecated alias:
+  `compact` (use `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like
+  `size="s"`; the two stay in step, the last write wins, and `compact` reads `true` whenever
+  `size` is `s` or smaller
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
@@ -62,9 +73,9 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 
 **Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
 `--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
-(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact`;
-`--lr-flow-node-compact-header-gap` (default `var(--lr-space-2xs)`) — `[part="header"]`'s own
-icon-to-heading gap while `compact` — and
+(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap at the compact density
+(`size="s"` and below); `--lr-flow-node-compact-header-gap` (default `var(--lr-space-2xs)`) —
+`[part="header"]`'s own icon-to-heading gap at the compact density — and
 `--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
 while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
 fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any

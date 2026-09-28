@@ -40,7 +40,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -219,7 +219,9 @@ export interface LyraMessagePartsEventMap
  * @cssprop [--lr-message-parts-streaming-color=var(--lr-color-text-quiet)] - Text color of a streaming part wrapper.
  * @cssprop [--lr-message-parts-audio-transcript-color=var(--lr-color-text-quiet)] - Text color of an audio transcript.
  * @cssprop [--lr-message-parts-error-border-color=var(--lr-color-danger)] - Border color of an error part.
- * @cssprop [--lr-message-parts-error-background=var(--lr-color-danger-quiet)] - Background color of an error part.
+ * @cssprop [--lr-message-parts-error-bg=var(--lr-color-danger-quiet)] - Background color of an error part.
+ * @cssprop [--lr-message-parts-error-background=var(--lr-color-danger-quiet)] - Deprecated alias of `--lr-message-parts-error-bg`;
+ *   removal not before 23.0.0.
  * @cssprop [--lr-message-parts-error-color=var(--lr-color-danger)] - Text color of an error part.
  * @status stable
  * @since 7.0.0
@@ -241,6 +243,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showReasoning: ['withoutReasoning', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-part-retry',
@@ -293,7 +299,16 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     this.requestUpdate('toolDisplay', previous);
   }
 
-  /** Include reasoning parts. */
+  /** Omits reasoning parts. */
+  @property({ type: Boolean, attribute: 'without-reasoning', reflect: true }) withoutReasoning = false;
+
+  /**
+   * Deprecated inverted alias of `without-reasoning` (`withoutReasoning`): `show-reasoning="false"`
+   * equals `without-reasoning`, and removing it restores the default. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-reasoning`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     attribute: 'show-reasoning',
@@ -311,8 +326,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
   /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
   @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
-  /** Deprecated compatibility spelling of `code-block-header`: either property enables the built-in
-   * Markdown code headers. Setting it logs a one-time development warning.
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins. Setting it logs a one-time development warning.
    * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' }) codeBlockChrome = false;
 
@@ -390,9 +405,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
-      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
-    }
     if (!changed.has('parts') && this.hasUpdated) return;
     this.redactionByInvocation = this.projectRedactions();
     if (!changed.has('parts')) return;
@@ -507,7 +519,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       .args=${invocation.args}
       status=${resolveBlockStatus(invocation, paired)}
       .result=${result}
-      .error=${error}
+      .errorText=${error}
       .durationMs=${invocationDuration(invocation)}
       .redactedFields=${redactedFields}
       exportparts=${TOOL_BLOCK_EXPORTPARTS}
@@ -540,7 +552,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   private renderPartMarkdown(part: Extract<MessagePart, { type: 'text' | 'reasoning' }>): TemplateResult {
     return html`<lr-markdown .content=${part.text} .streaming=${part.state === 'streaming'}
       .streamingRender=${this.streamingRender}
-      .codeBlockHeader=${this.codeBlockHeader || this.codeBlockChrome}></lr-markdown>`;
+      .codeBlockHeader=${this.codeBlockHeader}></lr-markdown>`;
   }
 
   private renderBuiltin(part: MessagePart, citationRank: number, pairing?: ToolPairing): unknown {
@@ -612,10 +624,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .name=${part.document.name}
           .mimeType=${part.document.mimeType ?? ''}
           .previewSrc=${part.document.uri ?? ''}
-          .previewable=${Boolean(part.document.uri)}
-          .removable=${false}
+          .withoutPreview=${!part.document.uri}
+          without-remove-button
           status="success"
-          compact
+          size="s"
         ></lr-attachment-chip>`;
       case 'data':
         return part.widget && typeof part.widget === 'object'
@@ -650,7 +662,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     custom: ReadonlyMap<string, unknown>,
     pairing?: ToolPairing,
   ): TemplateResult | typeof nothing {
-    if (part.type === 'reasoning' && !this.showReasoning) return nothing;
+    if (part.type === 'reasoning' && this.withoutReasoning) return nothing;
     if (pairing?.folded.has(part.id)) return nothing;
     return html`<div part=${this.partNames(part)} data-type=${part.type} data-state=${part.state ?? 'complete'}
       >${custom.has(part.id) ? custom.get(part.id) : this.renderBuiltin(part, citationRank, pairing)}</div>`;
@@ -672,7 +684,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     const custom = new Map<string, unknown>();
     if (this.renderPart) {
       parts.forEach((part, index) => {
-        if (part.type === 'reasoning' && !this.showReasoning) return;
+        if (part.type === 'reasoning' && this.withoutReasoning) return;
         const rendered = this.renderPart?.(part, index);
         if (rendered !== undefined) custom.set(part.id, rendered);
       });

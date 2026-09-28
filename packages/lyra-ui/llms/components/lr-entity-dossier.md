@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -47,7 +48,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   forwarded to both `lr-chunk-inspector` and `lr-provenance-panel`
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — forwarded to `lr-neighbor-list`
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
-- `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
+- `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
+  `lr-entity-card`. Deprecated alias: `show-focus-button`/`showFocusButton` (use `without-focus-button`;
+  `show-focus-button="false"` equals `without-focus-button`; removed in 23.0.0)
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
@@ -58,8 +61,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
 from the embedded provenance panel's own community card or relationship path strip, the only
 source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
-`lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
+expanded }`, followed by its deprecated alias `lr-expand` with an equal detail — use
+`lr-chunk-toggle`; removed in 23.0.0), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip

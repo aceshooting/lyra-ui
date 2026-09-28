@@ -5,28 +5,28 @@ export const styles = css`
     display: block;
     --_lr-activity-feed-max-height: var(--lr-size-16rem);
   }
-  /* Card chrome behind inline var() fallbacks, the same convention the compact density already
+  /* Card chrome behind inline var() fallbacks, the same convention the dense size tier already
      uses here: each fallback is the pre-existing token, so an unset feed paints exactly as before,
      and a transcript can retune the whole nested card without a ::part(base) override. */
   [part="base"] {
     border: var(--lr-border-width-thin) solid
       var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-activity-feed-radius, var(--lr-radius));
-    background: var(--lr-activity-feed-background, var(--lr-color-surface));
+    background: var(--lr-activity-feed-bg, var(--lr-activity-feed-background, var(--lr-color-surface)));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune
      them without redeclaring the rules; an unset feed keeps the regular dimensions. Matches
-     lr-thinking-panel's identical compact treatment of its own header/body pair. */
-  :host([compact]) [part="header"] {
+     lr-thinking-panel's identical dense treatment of its own header/body pair. */
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="header"] {
     padding: var(
       --lr-activity-feed-compact-header-padding,
       var(--lr-space-2xs) var(--lr-space-s)
     );
     gap: var(--lr-activity-feed-compact-header-gap, var(--lr-space-2xs));
   }
-  :host([compact]) [part="entry"],
-  :host([compact]) lr-virtual-list::part(entry) {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="entry"],
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) lr-virtual-list::part(entry) {
     padding: var(
       --lr-activity-feed-compact-entry-padding,
       var(--lr-space-2xs) var(--lr-space-s)

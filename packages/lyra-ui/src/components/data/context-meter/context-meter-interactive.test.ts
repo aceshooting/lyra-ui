@@ -45,7 +45,7 @@ async function meter(
     total="10000"
     shape=${attrs.shape ?? 'bar'}
     ?interactive=${attrs.interactive ?? false}
-    ?show-legend=${attrs.legend ?? false}
+    ?with-legend=${attrs.legend ?? false}
     .segments=${SEGMENTS}
   ></lr-context-meter>`)) as LyraContextMeter;
   await el.updateComplete;
@@ -120,7 +120,7 @@ describe('lr-context-meter legendDisplay', () => {
   it('formats the share through the effective locale', async () => {
     const el = (await fixture(html`<lr-context-meter
       locale="de-DE"
-      show-legend
+      with-legend
       legend-display="label-percent"
       total="10000"
       .segments=${SEGMENTS}
@@ -138,7 +138,7 @@ describe('lr-context-meter legendDisplay', () => {
 
   it('normalizes a foreign legend-display attribute to labels only', async () => {
     const el = (await fixture(html`<lr-context-meter
-      show-legend
+      with-legend
       legend-display="everything"
       total="10000"
       .segments=${SEGMENTS}
@@ -431,7 +431,7 @@ describe('lr-context-meter interactive mode', () => {
   it('names each control through the overridable segment string', async () => {
     const el = (await fixture(html`<lr-context-meter
       interactive
-      show-legend
+      with-legend
       total="10000"
       .strings=${{ contextMeterSegmentLabel: '{label} — {count}' }}
       .segments=${SEGMENTS}
@@ -455,7 +455,7 @@ describe('lr-context-meter interactive mode', () => {
     const wrapper = await fixture(html`<div dir="rtl">
       <lr-context-meter
         interactive
-        show-legend
+        with-legend
         legend-display="label-value-percent"
         total="10000"
         .segments=${SEGMENTS}

@@ -29,10 +29,10 @@ interface FlowCanvasLike extends HTMLElement {
   zoomOut(): void;
   fit(options?: { padding?: number }): void;
   /** When `true`, this companion must not call `setViewport()`/`zoomIn()`/`zoomOut()`/`fit()` --
-   *  mirrors every gesture handler `LyraFlowCanvas` itself gates on its own `locked` property, so
-   *  a locked canvas stays locked even against a `FlowCanvasLike` implementation that (unlike
+   *  mirrors every gesture handler `LyraFlowCanvas` itself gates on its own `readonly` property, so
+   *  a readonly canvas stays locked even against a `FlowCanvasLike` implementation that (unlike
    *  `LyraFlowCanvas`) does not also guard those methods internally. */
-  readonly locked: boolean;
+  readonly readonly: boolean;
 }
 
 function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
@@ -43,7 +43,7 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
     typeof candidate.zoomIn === 'function' &&
     typeof candidate.zoomOut === 'function' &&
     typeof candidate.fit === 'function' &&
-    typeof candidate.locked === 'boolean'
+    typeof candidate.readonly === 'boolean'
   );
 }
 
@@ -379,7 +379,7 @@ export class LyraFlowMinimap extends LyraElement {
       this.justDraggedViewport = false;
       return;
     }
-    if (!this.canvasEl || !this.snapshot || this.canvasEl.locked) return;
+    if (!this.canvasEl || !this.snapshot || this.canvasEl.readonly) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
     const { zoom, width, height } = this.snapshot.viewport;
     this.announceNextSnapshot = true;
@@ -387,7 +387,7 @@ export class LyraFlowMinimap extends LyraElement {
   };
 
   private onMapWheel = (e: WheelEvent): void => {
-    if (!this.canvasEl || this.canvasEl.locked) return;
+    if (!this.canvasEl || this.canvasEl.readonly) return;
     e.preventDefault();
     this.announceNextSnapshot = true;
     if (e.deltaY < 0) this.canvasEl.zoomIn();
@@ -396,7 +396,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   private onViewportPointerDown = (e: PointerEvent): void => {
     const dragEventWindow = this.ownerDocument.defaultView;
-    if (!this.canvasEl || !this.snapshot || !dragEventWindow || this.canvasEl.locked) return;
+    if (!this.canvasEl || !this.snapshot || !dragEventWindow || this.canvasEl.readonly) return;
     e.stopPropagation();
     this.detachViewportDragListeners();
     this.justDraggedViewport = false;
@@ -421,7 +421,7 @@ export class LyraFlowMinimap extends LyraElement {
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    if (!this.canvasEl || this.canvasEl.locked) {
+    if (!this.canvasEl || this.canvasEl.readonly) {
       this.cancelViewportDrag();
       return;
     }
@@ -445,7 +445,7 @@ export class LyraFlowMinimap extends LyraElement {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId) return;
     this.justDraggedViewport = e.type === 'pointerup' && drag.moved;
-    if (this.justDraggedViewport && drag.latestViewport && !this.canvasEl?.locked) {
+    if (this.justDraggedViewport && drag.latestViewport && !this.canvasEl?.readonly) {
       this.announceViewport(drag.latestViewport);
     }
     this.dragState = undefined;
@@ -463,7 +463,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
-    if (!this.canvasEl || !this.snapshot || this.canvasEl.locked) return;
+    if (!this.canvasEl || !this.snapshot || this.canvasEl.readonly) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
       this.announceNextSnapshot = true;
@@ -525,7 +525,7 @@ export class LyraFlowMinimap extends LyraElement {
     const vbH = Math.max(1, bounds.maxY - bounds.minY + padding * 2);
     const viewportRect = this.viewportRectContent(vbW, vbH, 0);
     const viewportHitRect = this.viewportRectContent(vbW, vbH);
-    const locked = this.snapshot.locked || this.canvasEl.locked;
+    const locked = this.snapshot.locked || this.canvasEl.readonly;
     return html`<div
       part="base"
       role="region"

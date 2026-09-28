@@ -5226,12 +5226,14 @@ describe("'checkbox-menu' filter type", () => {
       escaped += 1;
     };
     el.addEventListener('lr-select', listener);
+    el.addEventListener('lr-menu-item-change-request', listener);
     el.addEventListener('lr-menu-item-change', listener);
     try {
       items(el)[0]!.select();
       await el.updateComplete;
     } finally {
       el.removeEventListener('lr-select', listener);
+      el.removeEventListener('lr-menu-item-change-request', listener);
       el.removeEventListener('lr-menu-item-change', listener);
     }
     expect(escaped).to.equal(0);

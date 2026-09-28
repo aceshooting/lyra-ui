@@ -676,7 +676,7 @@ function interactiveLegend(): LyraMapLegendEntry[] {
 }
 
 export const InteractiveLegend: Story = {
-  parameters: { docs: { description: { story: 'Opt-in with `legend-interactive`. Every legend row that carries its own `value` becomes a native toggle button: Tab reaches each one, Enter and Space activate it, and its `aria-pressed` renders the literal "true"/"false" rather than being dropped when unpressed. Hiding a category mutes its points, point strokes and point icons through `--lr-map-hidden-category-opacity` (default 0.15) instead of removing them, so the geography stays legible; the row itself dims only its decorative swatch and re-colours its label through the quiet text token, keeping AA contrast. Interactive rows carry the shared `--lr-icon-button-size` hit-area floor, so they are ~40px tall instead of ~18px; the panel scrolls within the map allocation. Each activation emits the cancelable `lr-map-legend-toggle` and announces through the shared polite live region.' } } },
+  parameters: { docs: { description: { story: 'Opt-in with `legend-interactive`. Every legend row that carries its own `value` becomes a native toggle button: Tab reaches each one, Enter and Space activate it, and its `aria-pressed` renders the literal "true"/"false" rather than being dropped when unpressed. Hiding a category mutes its points, point strokes and point icons through `--lr-map-hidden-category-opacity` (default 0.15) instead of removing them, so the geography stays legible; the row itself dims only its decorative swatch and re-colours its label through the quiet text token, keeping AA contrast. Interactive rows carry the shared `--lr-icon-button-size` hit-area floor, so they are ~40px tall instead of ~18px; the panel scrolls within the map allocation. Each activation emits the cancelable `lr-map-legend-toggle-request` and announces through the shared polite live region.' } } },
   render: () => html`<lr-map
     label="Interactive category legend"
     legend-interactive
@@ -701,7 +701,7 @@ export const InteractiveLegendCheckboxRole: Story = {
 };
 
 export const InteractiveLegendControlledHost: Story = {
-  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-toggle`, so the component writes nothing at all — no `hiddenCategories`, no `aria-pressed` change, no paint change and no announcement — and the host assigns its own set from the proposal in `event.detail.hiddenCategories`. Here it refuses to hide the last visible category, which is a policy the component deliberately does not encode. A programmatic `hiddenCategories` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
+  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-toggle-request`, so the component writes nothing at all — no `hiddenCategories`, no `aria-pressed` change, no paint change and no announcement — and the host assigns its own set from the proposal in `event.detail.hiddenCategories`. Here it refuses to hide the last visible category, which is a policy the component deliberately does not encode. A programmatic `hiddenCategories` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
   render: () => {
     const onToggle = (event: Event): void => {
       const toggle = event as CustomEvent<{ readonly hiddenCategories: readonly string[] }>;
@@ -713,7 +713,7 @@ export const InteractiveLegendControlledHost: Story = {
     return html`<lr-map
       label="Host-controlled category legend"
       legend-interactive
-      @lr-map-legend-toggle=${onToggle}
+      @lr-map-legend-toggle-request=${onToggle}
       .mapStyle=${OFFLINE_RASTER_STYLE}
       .zoom=${13}
       .dataLayers=${[interactiveLayer()]}
@@ -750,7 +750,7 @@ export const CollapsibleLegend: Story = {
 };
 
 export const CollapsibleLegendControlledHost: Story = {
-  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-panel-toggle`, so the component writes nothing at all — no `legendOpen`, no `aria-expanded` change and no re-render — and the host assigns its own value from the proposal in `event.detail.open`. Here it refuses to collapse the panel while a category is hidden, because the key is the only thing explaining the muted points; that is a policy the component deliberately does not encode. A programmatic `legendOpen` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
+  parameters: { docs: { description: { story: 'A controlled host: the listener calls `preventDefault()` on `lr-map-legend-panel-toggle-request`, so the component writes nothing at all — no `legendOpen`, no `aria-expanded` change and no re-render — and the host assigns its own value from the proposal in `event.detail.open`. Here it refuses to collapse the panel while a category is hidden, because the key is the only thing explaining the muted points; that is a policy the component deliberately does not encode. A programmatic `legendOpen` assignment reconciles without emitting the event, so this loop cannot recur.' } } },
   render: () => {
     const onPanelToggle = (event: Event): void => {
       const proposal = event as CustomEvent<{ readonly open: boolean }>;
@@ -766,7 +766,7 @@ export const CollapsibleLegendControlledHost: Story = {
       label="Host-controlled legend disclosure"
       legend-collapsible
       legend-interactive
-      @lr-map-legend-panel-toggle=${onPanelToggle}
+      @lr-map-legend-panel-toggle-request=${onPanelToggle}
       .mapStyle=${OFFLINE_RASTER_STYLE}
       .zoom=${13}
       .dataLayers=${[interactiveLayer()]}

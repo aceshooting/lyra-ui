@@ -224,7 +224,7 @@ export const ActivatableLines: Story = {
 export const NotCopyable: Story = {
   render: () => html`
     <lr-code-block-core
-      .copyable=${false}
+      without-copy-button
       language="typescript"
       .languages=${{ typescript: tsGrammar }}
       filename="readonly.ts"

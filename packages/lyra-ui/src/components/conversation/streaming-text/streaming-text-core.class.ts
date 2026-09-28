@@ -21,8 +21,8 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * `languages` map already covers every fenced-code language it will ever stream, or who never
  * renders fenced code at all. Every capability is identical to `<lr-streaming-text>` -- token
  * coalescing, `contentMode` auto-detection, the blinking cursor, the `lr-content-settled` event,
- * and the full forwarded Markdown configuration surface (`tabSize`, `htmlMode`, `gfm`,
- * `linkTarget`, `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`,
+ * and the full forwarded Markdown configuration surface (`tabSize`, `htmlMode`, `withoutGfm`,
+ * `linkTarget`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`,
  * `maxHeight`) -- only which Markdown element Markdown mode composes differs: this variant
  * renders `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so this
  * component's own module never textually contains a reference to `<lr-markdown>`'s ~200-language
@@ -86,7 +86,8 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
   /** Enables source-copy headers in the composed `<lr-markdown-core>`. */
   @property({ type: Boolean, attribute: 'code-block-header' }) override codeBlockHeader = false;
 
-  /** Deprecated compatibility spelling of `code-block-header`: either property enables the headers.
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins.
    * Setting it logs a one-time development warning.
    * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' }) override codeBlockChrome = false;
@@ -103,15 +104,15 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
-      .codeBlockHeader=${this.codeBlockHeader || this.codeBlockChrome}
+      .codeBlockHeader=${this.codeBlockHeader}
       .languages=${this.languages ?? {}}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}
-      .gfm=${this.gfm}
+      .withoutGfm=${this.withoutGfm}
       .linkTarget=${this.linkTarget}
       .internalLinkPrefix=${this.internalLinkPrefix}
       .headingOffset=${this.headingOffset}
-      .highlightCode=${this.highlightCode}
+      .withoutSyntaxHighlighting=${this.withoutSyntaxHighlighting}
       .headingAnchors=${this.headingAnchors}
       .math=${this.math}
       .maxHeight=${this.maxHeight}

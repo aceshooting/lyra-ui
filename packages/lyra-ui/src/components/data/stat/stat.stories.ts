@@ -270,7 +270,7 @@ export const ExactValueSubProseCompact: Story = {
         variant="success"
       ></lr-stat>
       <lr-stat label="Status" prose value="Waiting for the next sync…"></lr-stat>
-      <lr-stat label="Sessions" value="9,204" sub="+312 today" compact></lr-stat>
+      <lr-stat label="Sessions" value="9,204" sub="+312 today" size="s"></lr-stat>
     </div>
   `,
 };

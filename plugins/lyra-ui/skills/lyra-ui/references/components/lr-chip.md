@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-chip-select` since `21.1.0`; use event `addEventListener('lr-chip-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip-group` (same section below)
@@ -67,8 +67,8 @@ relied on `<lr-chip selected>` to create an action.
   separate native `[part='toggle-button']` owns focus, Enter/Space/click
   activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
   and the visible default-slot label is inert and aria-hidden. Activation proposes the opposite
-  value through the cancelable `lr-chip-select` event and mutates `selected` only when that event is
-  not prevented.
+  value through the cancelable `lr-chip-toggle-request` event and mutates `selected` only when that
+  event is not prevented.
   Has no toggle effect when combined with `removable`, where the remove button is the sole control.
 - `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
   independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
@@ -84,10 +84,12 @@ relied on `<lr-chip selected>` to create an action.
   opt-in.
 
 **Events:** `lr-remove` (`detail: { value }` — the remove (×) button was activated via click or
-Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-select`
+Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-toggle-request`
 (`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
 Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
-Calling `preventDefault()` keeps the current `selected` state unchanged)
+Calling `preventDefault()` keeps the current `selected` state unchanged). Deprecated alias:
+`lr-chip-select` (use `lr-chip-toggle-request`; removed in 23.0.0) — it still fires right after the
+request with an equal detail, and preventing either keeps the current state
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`

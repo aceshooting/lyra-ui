@@ -18,7 +18,10 @@ export const styles = css`
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
     --_lr-reorder-item-move-bg-active: color-mix(
       in oklab,
-      var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+      var(
+        --lr-icon-button-bg-hover,
+        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     --_lr-reorder-item-move-color: var(--lr-color-text-quiet);

@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './context-meter.js';
 import type { LyraContextMeter, ContextMeterSegment } from './context-meter.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SEGMENTS: ContextMeterSegment[] = [
   { label: 'System prompt', value: 2000, tone: 'neutral' },
@@ -465,7 +466,7 @@ it('bounds a long ring caption inside the ring in LTR and RTL while keeping the 
   }
 });
 
-describe('showLegend', () => {
+describe('withLegend', () => {
   const legend = (el: LyraContextMeter) =>
     el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement | null;
 
@@ -476,12 +477,12 @@ describe('showLegend', () => {
     el.segments = SEGMENTS;
     await el.updateComplete;
     expect(legend(el) === null).to.equal(true);
-    expect(el.showLegend).to.equal(false);
+    expect(el.withLegend).to.equal(false);
   });
 
-  it('renders one swatch/label pair per segment when show-legend is set', async () => {
+  it('renders one swatch/label pair per segment when with-legend is set', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
@@ -497,7 +498,7 @@ describe('showLegend', () => {
 
   it('paints each swatch with the same resolved tone or color the segment uses', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = [
       { label: 'Brand', value: 1000, tone: 'brand' },
@@ -514,7 +515,7 @@ describe('showLegend', () => {
 
   it('rejects an unsafe segment color in the legend swatch, exactly as the segment does', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = [{ label: 'Unsafe', value: 1000, color: 'url("data:image/svg+xml,<svg/>")' }];
     await el.updateComplete;
@@ -524,7 +525,7 @@ describe('showLegend', () => {
 
   it('keeps the legend out of the accessibility tree, since the sr-only list already names it', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend total="10000" label="Context"></lr-context-meter>`,
+      html`<lr-context-meter with-legend total="10000" label="Context"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
@@ -534,7 +535,7 @@ describe('showLegend', () => {
 
   it('renders the legend below the ring variant without clipping it', async () => {
     const el = (await fixture(
-      html`<lr-context-meter show-legend shape="ring" total="10000"></lr-context-meter>`,
+      html`<lr-context-meter with-legend shape="ring" total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
@@ -546,14 +547,14 @@ describe('showLegend', () => {
     expect(el.getBoundingClientRect().bottom).to.be.at.least(legendBox.bottom - 1);
   });
 
-  it('reflects show-legend both ways', async () => {
+  it('reflects with-legend both ways', async () => {
     const el = (await fixture(
       html`<lr-context-meter total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
-    el.showLegend = true;
+    el.withLegend = true;
     await el.updateComplete;
-    expect(el.hasAttribute('show-legend')).to.equal(true);
-    el.showLegend = false;
+    expect(el.hasAttribute('with-legend')).to.equal(true);
+    el.withLegend = false;
     await el.updateComplete;
     expect(legend(el) === null).to.equal(true);
   });
@@ -660,7 +661,7 @@ describe('tone-color cssprop indirection', () => {
 
   it('renders the default data-tone="danger" color byte-identically to the bare shared token, on both the bar segment and its legend swatch', async () => {
     const el = (await fixture(html`
-      <lr-context-meter total="100" show-legend .segments=${dangerSegments()}></lr-context-meter>
+      <lr-context-meter total="100" with-legend .segments=${dangerSegments()}></lr-context-meter>
     `)) as LyraContextMeter;
     const segment = el.shadowRoot!.querySelector('[part~="segment"]') as HTMLElement;
     const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
@@ -679,7 +680,7 @@ describe('tone-color cssprop indirection', () => {
   it('lets an ancestor retheme just the danger tone via --lr-context-meter-tone-danger-bg, on the bar segment and its legend swatch, without touching the shared --lr-color-danger token', async () => {
     const wrapper = (await fixture(html`
       <div style="--lr-context-meter-tone-danger-bg: rgb(10, 20, 30);">
-        <lr-context-meter total="100" show-legend .segments=${dangerSegments()}></lr-context-meter>
+        <lr-context-meter total="100" with-legend .segments=${dangerSegments()}></lr-context-meter>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-context-meter') as LyraContextMeter;
@@ -811,7 +812,7 @@ describe('non-actionable and empty segments', () => {
 
   it('marks a zero-value band empty and a disabled entry disabled, in the part name', async () => {
     const el = (await fixture(
-      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter interactive with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = MIXED;
     await el.updateComplete;
@@ -845,7 +846,7 @@ describe('non-actionable and empty segments', () => {
 
   it('renders a disabled band and legend row as real disabled controls', async () => {
     const el = (await fixture(
-      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter interactive with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = MIXED;
     await el.updateComplete;
@@ -869,7 +870,7 @@ describe('non-actionable and empty segments', () => {
 
   it('emits nothing when a disabled band or its legend row is activated', async () => {
     const el = (await fixture(
-      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter interactive with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = MIXED;
     await el.updateComplete;
@@ -925,7 +926,7 @@ describe('non-actionable and empty segments', () => {
 
   it('renders unchanged when no entry sets disabled and none is zero (unset regression)', async () => {
     const el = (await fixture(
-      html`<lr-context-meter interactive show-legend total="10000"></lr-context-meter>`,
+      html`<lr-context-meter interactive with-legend total="10000"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
@@ -938,5 +939,84 @@ describe('non-actionable and empty segments', () => {
       el.shadowRoot!.querySelectorAll('button[disabled], [aria-disabled="true"]').length,
       'no control is disabled when no entry asks for it',
     ).to.equal(0);
+  });
+});
+
+describe('deprecated show-legend alias', () => {
+  const SHOW_LEGEND: readonly DeprecatedUsage[] = [
+    { tag: 'lr-context-meter', kind: 'property', name: 'showLegend' },
+  ];
+  const legendLabels = (el: LyraContextMeter): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
+
+  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
+    const canonical = await fixture<LyraContextMeter>(
+      html`<lr-context-meter with-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`,
+    );
+    let aliased!: LyraContextMeter;
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      aliased = await fixture<LyraContextMeter>(
+        html`<lr-context-meter show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`,
+      );
+      const second = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend total="10"></lr-context-meter>`);
+      await second.updateComplete;
+    });
+    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
+    expect(legendLabels(aliased)).to.have.length(3);
+    expect(aliased.withLegend).to.equal(true);
+    expect(aliased.showLegend).to.equal(true);
+    expect(aliased.hasAttribute('with-legend')).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-context-meter:property:showLegend',
+    ]);
+    expect(warnings[0]!.message).to.contain('with-legend');
+  });
+
+  it('never warns for with-legend or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraContextMeter>(html`<lr-context-meter total="10"></lr-context-meter>`);
+      expect(el.showLegend).to.equal(false);
+      el.withLegend = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
+      expect(el.withLegend).to.equal(true);
+      el.removeAttribute('show-legend');
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(false);
+      expect(el.hasAttribute('with-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+      el.showLegend = true;
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(true);
+      expect(legendLabels(el).length).to.be.greaterThan(0);
+      el.withLegend = false;
+      await el.updateComplete;
+      expect(el.showLegend).to.equal(false);
+      expect(el.hasAttribute('show-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
+
+  it('lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const aliasLast = await fixture<LyraContextMeter>(html`<lr-context-meter with-legend show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
+      aliasLast.showLegend = false;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withLegend).to.equal(false);
+      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+
+      const canonicalLast = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend with-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
+      canonicalLast.removeAttribute('with-legend');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.showLegend).to.equal(false);
+      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
+      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
   });
 });

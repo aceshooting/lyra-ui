@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `respectReducedMotion` / `respect-reduced-motion` since `21.1.0`; use property `ignore-reduced-motion`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -28,12 +28,16 @@ automatically under `prefers-reduced-motion: reduce`.
   independent play/pause action still uses localized context when no nonempty `alt` is available.
 - `play: boolean = false` — the caller's _intent_ (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the _effective_
-  state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
+  state after reduced-motion arbitration: `play && (ignoreReducedMotion || !<OS prefers reduce>)`.
   It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
   `TypeError`; drive playback via `play`.
-- `respectReducedMotion: boolean = true` (reflected, attribute `respect-reduced-motion`) — while
-  `true` and the OS reports `prefers-reduced-motion: reduce`, playback stays frozen and
-  `[part="play-button"]` is `disabled` regardless of `play`.
+- `ignoreReducedMotion: boolean = false` (reflected, attribute `ignore-reduced-motion`) — a
+  deliberate page-author override that lets `play` take effect even when the OS reports
+  `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen and
+  `[part="play-button"]` `disabled` regardless of `play`. Deprecated alias: `respect-reduced-motion`
+  (`respectReducedMotion`; use `ignore-reduced-motion`, which `respect-reduced-motion="false"`
+  equals; removing it restores the default; removed in 23.0.0). The alias still reflects
+  (`respect-reduced-motion="false"`); the two stay in sync and the last write wins.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
   including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
   verbatim in _both_ states (it does not itself vary by state). Never

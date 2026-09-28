@@ -33,7 +33,7 @@ describe('box-plot forced-colors encodings', () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = forcedColorsMatchMedia(originalMatchMedia);
     try {
-      const el = await fixture<LyraBoxPlot>(html`<lr-box-plot legend></lr-box-plot>`);
+      const el = await fixture<LyraBoxPlot>(html`<lr-box-plot with-legend></lr-box-plot>`);
       el.labels = ['Q1', 'Q2'];
       el.datasets = boxes(8);
       await el.updateComplete;
@@ -60,7 +60,7 @@ describe('box-plot forced-colors encodings', () => {
   });
 
   it('leaves plain solid series colors and no legend encoding when forced colors are inactive', async () => {
-    const el = await fixture<LyraBoxPlot>(html`<lr-box-plot legend></lr-box-plot>`);
+    const el = await fixture<LyraBoxPlot>(html`<lr-box-plot with-legend></lr-box-plot>`);
     el.labels = ['Q1', 'Q2'];
     el.datasets = boxes(3);
     await el.updateComplete;

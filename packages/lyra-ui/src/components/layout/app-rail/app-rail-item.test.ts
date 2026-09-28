@@ -1379,10 +1379,17 @@ describe('nested children (treeitem-with-link)', () => {
     const order: string[] = [];
     el.addEventListener('lr-toggle-request', () => order.push('request'));
     el.addEventListener('lr-toggle', () => order.push('toggle'));
+    const details: string[] = [];
+    el.addEventListener('lr-toggle-request', (event) => details.push(JSON.stringify(event.detail)));
     const settled = oneEvent(el, 'lr-toggle');
     toggle.click();
     const event = await settled;
-    expect((event as CustomEvent<{ open: boolean }>).detail.open).to.equal(true);
+    expect((event as CustomEvent<{ expanded: boolean }>).detail.expanded).to.equal(true);
+    expect(
+      (event as CustomEvent<{ open: boolean }>).detail.open,
+      'the deprecated open key carries the same value'
+    ).to.equal(true);
+    expect(details).to.deep.equal([JSON.stringify({ open: true, expanded: true })]);
     expect(order.join()).to.equal('request,toggle');
     await el.updateComplete;
     expect(el.expanded).to.equal(true);

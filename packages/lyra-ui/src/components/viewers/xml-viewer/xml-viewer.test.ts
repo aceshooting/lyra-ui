@@ -5,6 +5,7 @@ import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/loca
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // Search locale changes use explicit UI messages rather than triggering fallback warnings.
 registerLyraLocale('fr', LYRA_DEFAULT_STRINGS);
@@ -478,21 +479,95 @@ describe('loading xml via src', () => {
   });
 });
 
-describe('collapsedDepth and toggling', () => {
-  it('collapses nodes at or beyond collapsed-depth, showing a child-count preview', async () => {
-    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
+describe('expandDepth and toggling', () => {
+  it('collapses nodes at or beyond expand-depth, showing a child-count preview', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
     const rootToggle = toggles[0];
     expect(rootToggle!.getAttribute('aria-expanded')).to.equal('true');
   });
 
-  it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently disabling auto-collapse', async () => {
+  it('normalizes a NaN expandDepth to 0 (fully collapsed) instead of silently disabling auto-collapse', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
-    el.collapsedDepth = NaN;
+    el.expandDepth = NaN;
     await el.updateComplete;
     const rootToggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
     expect(rootToggle.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('leaves every node expanded when expand-depth is unset (unset regression)', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    expect(el.expandDepth).to.equal(undefined);
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')];
+    expect(toggles.length).to.be.greaterThan(0);
+    expect(toggles.every((toggle) => toggle.getAttribute('aria-expanded') === 'true')).to.equal(true);
+  });
+
+  describe('deprecated collapsed-depth alias', () => {
+    const usage = { tag: 'lr-xml-viewer', kind: 'property', name: 'collapsedDepth' } as const;
+    const expandedStates = (el: LyraXmlViewer): (string | null)[] =>
+      [...el.shadowRoot!.querySelectorAll('[part="toggle"]')].map((toggle) => toggle.getAttribute('aria-expanded'));
+
+    it('collapsed-depth renders exactly as expand-depth with the same value, and warns once', async () => {
+      const canonical = (await fixture(
+        html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1"></lr-xml-viewer>`,
+      )) as LyraXmlViewer;
+      let alias!: LyraXmlViewer;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        alias = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="1"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+        // A markup value on an alias with no default initializer is indistinguishable from
+        // initialization, so the warning comes from the later property writes.
+        alias.collapsedDepth = 0;
+        alias.collapsedDepth = 1;
+        await alias.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        'lyra-deprecated:lr-xml-viewer:property:collapsedDepth',
+      ]);
+      expect(alias.expandDepth).to.equal(1);
+      expect(alias.collapsedDepth).to.equal(1);
+      expect(expandedStates(alias)).to.deep.equal(expandedStates(canonical));
+      expect(expandedStates(canonical)).to.deep.equal(['true', 'false', 'false']);
+    });
+
+    it('a property write forwards to expandDepth and re-renders', async () => {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        el.collapsedDepth = 0;
+        await el.updateComplete;
+      });
+      expect(el.expandDepth).to.equal(0);
+      expect(expandedStates(el)[0]).to.equal('false');
+    });
+
+    it('never warns for the canonical name, syncs the alias back, and follows the last write', async () => {
+      let synced: (number | undefined)[] = [];
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const el = (await fixture(html`<lr-xml-viewer expand-depth="2"></lr-xml-viewer>`)) as LyraXmlViewer;
+        synced.push(el.collapsedDepth);
+        el.expandDepth = 3;
+        synced.push(el.collapsedDepth);
+      });
+      expect(warnings).to.have.length(0);
+      expect(synced).to.deep.equal([2, 3]);
+
+      let aliasLast!: LyraXmlViewer;
+      let canonicalLast!: LyraXmlViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        aliasLast = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1" collapsed-depth="0"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+        canonicalLast = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0" expand-depth="1"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+      });
+      expect(aliasLast.expandDepth).to.equal(0);
+      expect(canonicalLast.expandDepth).to.equal(1);
+      expect(canonicalLast.collapsedDepth).to.equal(1);
+    });
   });
 
   it('toggling a node flips its expand state and survives an xml reassignment with the same shape', async () => {
@@ -663,8 +738,8 @@ describe('search', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
   });
 
-  it('search() auto-expands ancestors of a match and marks data-match, even under a collapsed-depth', async () => {
-    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
+  it('search() auto-expands ancestors of a match and marks data-match, even under an expand-depth', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.search('Second');
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="text"][data-match]')).to.exist;
@@ -983,7 +1058,7 @@ describe('toggle geometry', () => {
       <div dir="ltr">
         <lr-xml-viewer
           style="--lr-transition-fast: 0ms"
-          collapsed-depth="0"
+          expand-depth="0"
           .xml=${SIMPLE_XML}
         ></lr-xml-viewer>
       </div>
@@ -1294,12 +1369,12 @@ describe('comment, CDATA, and processing-instruction leaves', () => {
 describe('collapsed child-count preview pluralization', () => {
   it('uses the singular key for exactly one child, plural for more than one', async () => {
     const one = (await fixture(
-      html`<lr-xml-viewer .xml=${'<root><only/></root>'} collapsed-depth="0"></lr-xml-viewer>`,
+      html`<lr-xml-viewer .xml=${'<root><only/></root>'} expand-depth="0"></lr-xml-viewer>`,
     )) as LyraXmlViewer;
     await one.updateComplete;
     expect(one.shadowRoot!.querySelector('.preview')!.textContent).to.equal('1 child');
 
-    const two = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0"></lr-xml-viewer>`)) as LyraXmlViewer;
+    const two = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="0"></lr-xml-viewer>`)) as LyraXmlViewer;
     await two.updateComplete;
     expect(two.shadowRoot!.querySelector('.preview')!.textContent).to.equal('2 children');
   });
@@ -1308,7 +1383,7 @@ describe('collapsed child-count preview pluralization', () => {
     const el = await fixture<LyraXmlViewer>(
       html`<lr-xml-viewer
         .xml=${'<root>text<!--note--><![CDATA[data]]><?app value?></root>'}
-        collapsed-depth="0"
+        expand-depth="0"
       ></lr-xml-viewer>`,
     );
     expect(el.shadowRoot!.querySelector('.preview')!.textContent).to.equal('4 children');
@@ -1484,6 +1559,37 @@ describe('host-supplied highlights', () => {
     expect(highlighted[0]!.getAttribute('data-highlight')).to.equal('success');
     // Rendered result, not stylesheet text: the tint must actually reach the box.
     expect(getComputedStyle(highlighted[0]!).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  describe('-bg custom properties and their deprecated -background aliases', () => {
+    const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+    const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
+    const declarations = (suffix: 'bg' | 'background', offset: number): string =>
+      tones.map((tone, index) => `--lr-xml-viewer-highlight-${tone}-${suffix}: ${colorFor(index + offset)};`).join(' ');
+    const TONE_XML = '<root><a/><b/><c/><d/><e/></root>';
+
+    const paints = async (style: string): Promise<string[]> => {
+      const el = (await fixture(html`<lr-xml-viewer style=${style} .xml=${TONE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+      el.highlights = tones.map((tone, index) => ({ id: tone, tone, anchor: { kind: 'node-path', path: [index] } }));
+      await el.updateComplete;
+      return nodeRows(el)
+        .filter((row) => row.hasAttribute('data-highlight'))
+        .map((row) => getComputedStyle(row).backgroundColor);
+    };
+
+    const expected = (offset: number): string[] => tones.map((_, index) => colorFor(index + offset));
+
+    it('paints every tone from the canonical -bg properties', async () => {
+      expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+    });
+
+    it('still honors the deprecated -background spellings with the same result', async () => {
+      expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
+    });
+
+    it('lets the canonical -bg property win when both spellings are set', async () => {
+      expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
+    });
   });
 
   it('defaults an untoned highlight to accent and clears painting when highlights are removed', async () => {

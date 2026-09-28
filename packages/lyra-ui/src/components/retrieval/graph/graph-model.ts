@@ -1,9 +1,25 @@
+import type { ComplexAttributeConverter } from 'lit';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
   isNonBlankIdentity,
 } from '../retrieval-identity.js';
+
+/** A CSS `<number>` followed by one of the length units a graph viewport resolves live. */
+const GRAPH_LENGTH_WITH_UNIT = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|vw|vh)$/i;
+
+/** `width`/`height` attributes of the graph components: a value carrying a `px`, `rem`, `em`,
+ *  `vw` or `vh` unit stays the authored CSS length, resolved to pixels when it is used; any other
+ *  value parses with `Number()`, exactly as the pixel-only attributes always have (a plain number
+ *  is pixels, a removed attribute is `null`). */
+export const graphLengthConverter: ComplexAttributeConverter<number | string> = {
+  fromAttribute: (value) => {
+    if (value === null) return value as unknown as number;
+    const trimmed = value.trim();
+    return GRAPH_LENGTH_WITH_UNIT.test(trimmed) ? trimmed : Number(value);
+  },
+};
 
 export interface LyraGraphNode {
   readonly id: string;
@@ -42,10 +58,39 @@ export interface LyraGraphCommunity {
   readonly color?: string;
 }
 
-/** A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
- *  own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
- *  a not-yet-created page. A link whose `source` id has no matching node is still dropped
- *  entirely (there is no position to draw a stub from). */
+/** A connection between two node ids. An edge whose `target` id has no matching node renders as
+ *  a short dashed stub off `source`'s own position instead of being silently dropped -- e.g. for a
+ *  wiki-style `[[link]]` reference to a not-yet-created page. An edge whose `source` id has no
+ *  matching node is still dropped entirely (there is no position to draw a stub from). */
+export interface LyraGraphEdge {
+  /** Optional stable id returned by `lr-link-click`. */
+  readonly id?: string;
+  readonly source: string;
+  readonly target: string;
+  /** Stroke/picking width. Negative values clamp to 0; non-finite or unset values use 1.5. */
+  readonly width?: number;
+  /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text.
+   * It is not rendered as a visible edge label. */
+  readonly label?: string;
+  /** Spoken label for the keyboard-operable link. */
+  readonly accessibleLabel?: string;
+  /** Preferred bounded tooltip/summary text in both renderers. */
+  readonly description?: string;
+  /** Draw an arrowhead at the target end. */
+  readonly directed?: boolean;
+  /** Per-link CSS stroke color; invalid values and `url()` paint servers are ignored. */
+  readonly color?: string;
+  /** SVG stroke-dash sequence. Invalid/negative entries are rejected as a whole. */
+  readonly dash?: readonly number[];
+}
+
+/**
+ * A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
+ * own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
+ * a not-yet-created page. A link whose `source` id has no matching node is still dropped
+ * entirely (there is no position to draw a stub from).
+ * @deprecated Use the structurally identical `LyraGraphEdge`; removal not before 23.0.0.
+ */
 export interface LyraGraphLink {
   /** Optional stable id returned by `lr-link-click`. */
   readonly id?: string;
@@ -70,7 +115,7 @@ export interface LyraGraphLink {
 
 export interface NormalizedGraphModel {
   readonly nodes: readonly LyraGraphNode[];
-  readonly links: readonly LyraGraphLink[];
+  readonly links: readonly LyraGraphEdge[];
   readonly nodeTypes: readonly LyraNodeTypeStyle[];
   readonly communities: readonly LyraGraphCommunity[];
 }
@@ -109,8 +154,8 @@ export function copyGraphLinkIdentity<T extends object>(
 }
 
 function normalizeLinks(
-  values: readonly LyraGraphLink[]
-): readonly LyraGraphLink[] {
+  values: readonly LyraGraphEdge[]
+): readonly LyraGraphEdge[] {
   const source = Array.isArray(values) ? values : [];
   const valid = source.filter((value) => {
     if (value === null || typeof value !== 'object') return false;
@@ -125,7 +170,7 @@ function normalizeLinks(
   );
   const implicitIdentities = new Map<string, string>();
   const seen = new Set<string>();
-  const retained: LyraGraphLink[] = [];
+  const retained: LyraGraphEdge[] = [];
   for (const value of valid) {
     const baseIdentity =
       value.id ?? `${value.source}->${value.target}`;
@@ -169,7 +214,7 @@ function normalizeCommunities(
  * layout, selection, community, legend, or event path. Retained identity spelling is unchanged. */
 export function normalizeGraphModel(
   nodes: readonly LyraGraphNode[],
-  links: readonly LyraGraphLink[],
+  links: readonly LyraGraphEdge[],
   nodeTypes: readonly LyraNodeTypeStyle[],
   communities: readonly LyraGraphCommunity[]
 ): NormalizedGraphModel {

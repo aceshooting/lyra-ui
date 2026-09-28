@@ -12,7 +12,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" style="max-width: 28rem;">
+    <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12" style="max-width: 28rem;">
       <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
       <span slot="full"
         >Revenue grew 12% year over year, driven primarily by strong performance in the cloud
@@ -25,7 +25,7 @@ export const Default: Story = {
 
 export const ExcerptOnly: Story = {
   render: () => html`
-    <lr-source-card source-id="doc-2" title="meeting_notes.txt" style="max-width: 28rem;">
+    <lr-source-card source-id="doc-2" heading="meeting_notes.txt" style="max-width: 28rem;">
       <span slot="excerpt">Team agreed to revisit the roadmap next quarter. No full text available.</span>
     </lr-source-card>
   `,
@@ -35,7 +35,7 @@ export const WithHref: Story = {
   render: () => html`
     <lr-source-card
       source-id="doc-3"
-      title="spec.pdf"
+      heading="spec.pdf"
       page="4"
       href="https://example.com/spec.pdf"
       style="max-width: 28rem;"
@@ -47,7 +47,7 @@ export const WithHref: Story = {
 
 export const NonNumericPage: Story = {
   render: () => html`
-    <lr-source-card source-id="doc-4" title="foreword.txt" page="iv" style="max-width: 28rem;">
+    <lr-source-card source-id="doc-4" heading="foreword.txt" page="iv" style="max-width: 28rem;">
       <span slot="excerpt">Page labels are rendered as-is, not parsed as numbers.</span>
     </lr-source-card>
   `,
@@ -62,7 +62,7 @@ export const Interactive: Story = {
     <div>
       <lr-source-card
         source-id="doc-1"
-        title="annual_report.pdf"
+        heading="annual_report.pdf"
         page="12"
         href="https://example.com/a.pdf"
         style="max-width: 28rem;"
@@ -86,22 +86,22 @@ export const Interactive: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width: 28rem;">
-      <lr-source-card source-id="d1" title="annual_report.pdf" page="12">
+      <lr-source-card source-id="d1" heading="annual_report.pdf" page="12">
         <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
       </lr-source-card>
-      <lr-source-card compact source-id="d2" title="annual_report.pdf" page="13">
+      <lr-source-card size="s" source-id="d2" heading="annual_report.pdf" page="13">
         <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
       </lr-source-card>
       <div
         style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.5rem; display:grid; gap:0.5rem;"
       >
-        <lr-source-card frame="plain" compact source-id="d3" title="meeting_notes.txt">
+        <lr-source-card frame="plain" size="s" source-id="d3" heading="meeting_notes.txt">
           <span slot="excerpt">Team agreed to revisit the roadmap next quarter.</span>
         </lr-source-card>
-        <lr-source-card frame="plain" compact source-id="d4" title="spec.pdf" page="4">
+        <lr-source-card frame="plain" size="s" source-id="d4" heading="spec.pdf" page="4">
           <span slot="excerpt">The retrieval pipeline chunks at 512 tokens with 64 of overlap.</span>
         </lr-source-card>
       </div>
@@ -115,7 +115,7 @@ export const NarrowLongContent: Story = {
     <div style="inline-size:320px; max-inline-size:100%;">
       <lr-source-card
         source-id="long-source"
-        title="quarterly-report-with-an-unbroken-and-deliberately-very-long-filename-that-must-wrap.pdf"
+        heading="quarterly-report-with-an-unbroken-and-deliberately-very-long-filename-that-must-wrap.pdf"
         page="appendix-with-a-long-page-label"
       >
         <span slot="excerpt"
@@ -136,14 +136,14 @@ export const RestingBackgroundToken: Story = {
     docs: {
       description: {
         story:
-          '`--lr-source-card-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so a themed citation list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change.',
+          '`--lr-source-card-bg` is the resting companion to the dense `size` tier\'s existing padding/gap levers, so a themed citation list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change.',
       },
     },
   },
   render: () => html`
     <lr-source-card
       source-id="doc-1"
-      title="annual_report.pdf"
+      heading="annual_report.pdf"
       page="12"
       style="max-width: 28rem; --lr-source-card-bg: var(--lr-color-brand-quiet)"
     >
@@ -162,7 +162,7 @@ export const Disabled: Story = {
     },
   },
   render: () => html`
-    <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" disabled style="max-width: 28rem;">
+    <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12" disabled style="max-width: 28rem;">
       <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
       <span slot="full">Revenue grew 12% year over year, driven primarily by strong performance.</span>
     </lr-source-card>
@@ -181,10 +181,10 @@ export const SelectedCitation: Story = {
   },
   render: () => html`
     <div style="display:flex;flex-direction:column;gap:var(--lr-space-s);max-width:28rem;">
-      <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" aria-pressed="true">
+      <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12" aria-pressed="true">
         <span slot="excerpt">Revenue grew 12% year over year...</span>
       </lr-source-card>
-      <lr-source-card source-id="doc-2" title="risk_register.pdf" page="4" aria-pressed="false">
+      <lr-source-card source-id="doc-2" heading="risk_register.pdf" page="4" aria-pressed="false">
         <span slot="excerpt">Supply chain exposure remains concentrated...</span>
       </lr-source-card>
     </div>

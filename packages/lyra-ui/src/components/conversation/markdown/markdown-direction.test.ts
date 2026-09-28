@@ -78,7 +78,7 @@ async function mountRtl(name: string, content: string, props: Partial<LyraMarkdo
   await loadMarkdownDeps();
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 400px"></div>`);
   const el = document.createElement(name) as LyraMarkdown;
-  el.highlightCode = false;
+  el.withoutSyntaxHighlighting = true;
   Object.assign(el, props);
   el.content = content;
   host.append(el);
@@ -219,7 +219,7 @@ describe('Markdown code direction: rendered geometry', () => {
       await loadMarkdownDeps();
       const host = await fixture<HTMLElement>(html`<div style="inline-size: 400px"></div>`);
       const el = document.createElement(name) as LyraMarkdown;
-      el.highlightCode = false;
+      el.withoutSyntaxHighlighting = true;
       el.content = '```\nconst a = foo(1);\n```\n';
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('pre[part~="code-block"]')));
@@ -507,7 +507,7 @@ describe('Markdown code direction: highlighted and serialized output', () => {
       this.timeout(60_000);
       const tsLang = await import('shiki/langs/typescript.mjs');
       const { el } = await mountRtl(name, 'مقدمة\n\n```typescript\nconst a = foo(1);\n```\n', {
-        highlightCode: true,
+        withoutSyntaxHighlighting: false,
         ...(name === 'lr-markdown-core' ? { languages: { typescript: tsLang.default } } : {}),
       } as Partial<LyraMarkdown>);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('pre[part~="code-block"]')));

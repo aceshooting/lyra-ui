@@ -47,7 +47,7 @@ export const Default: Story = {
 };
 
 export const WithTokensAndCost: Story = {
-  render: () => html`<lr-trace-tree style="max-width: 46rem" .spans=${spans} show-tokens show-cost></lr-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 46rem" .spans=${spans} with-tokens with-cost></lr-trace-tree>`,
 };
 
 export const SyncedWithSelection: Story = {
@@ -112,7 +112,7 @@ export const Empty: Story = {
 
 /** 320px container — tokens/cost hide first, then the duration bar. */
 export const Narrow: Story = {
-  render: () => html`<lr-trace-tree style="max-width: 320px" .spans=${spans} show-tokens show-cost></lr-trace-tree>`,
+  render: () => html`<lr-trace-tree style="max-width: 320px" .spans=${spans} with-tokens with-cost></lr-trace-tree>`,
 };
 
 export const RetintedActiveRow: Story = {

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-source-card` (same section below)
@@ -33,15 +33,17 @@ direct light-DOM children of the list (plain composition — no `.items` array p
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
   to the localized `sourceListDefaultLabel` string (English default: `"Sources"`).
-- `compact: boolean = false` (reflected) — tighter header and list padding/gap, for a panel
-  rendered repeatedly down a message transcript — same convention as this list's own slotted
-  `lr-source-card` children's `compact`. Purely a density knob: the outer border and surface stay,
-  so pair it with `frame="plain"` to remove card chrome.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header and list padding/gap, for a panel rendered repeatedly down a
+  message transcript — same convention as this list's own slotted `lr-source-card` children's
+  `size`. Purely a density knob: the outer border and surface stay, so pair it with
+  `frame="plain"` to remove card chrome. Deprecated alias: `compact` (use `size="s"`; removed in
+  23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled outer
   container. `'plain'` removes that outer border, background, and corner radius so a list nested
   inside existing message chrome does not double it. Plain preserves the header/list divider and
-  whichever regular or compact padding applies.
+  whichever regular or dense padding applies.
 
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
@@ -63,9 +65,10 @@ while collapsed).
 
 **Themeable custom properties:** `--lr-source-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-source-list-compact-header-gap` (default
-`var(--lr-space-2xs)`) — `[part="header"]` padding/gap while `compact`; `--lr-source-list-compact-gap`
-(default `var(--lr-space-2xs)`) and `--lr-source-list-compact-list-padding` (default
-`var(--lr-space-s)`) — `[part="list"]` gap/padding while `compact`. All four are inline `var()`
+`var(--lr-space-2xs)`) — `[part="header"]` padding/gap while `size` is `s` or smaller;
+`--lr-source-list-compact-gap` (default `var(--lr-space-2xs)`) and
+`--lr-source-list-compact-list-padding` (default `var(--lr-space-s)`) — `[part="list"]` gap/padding
+at that size. All four are inline `var()`
 fallbacks at their point of use, so any can be set on the element or an ancestor. Otherwise shared
 tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text`, `--lr-color-brand` / `-brand-quiet`, `--lr-radius`, `--lr-space-xs`/`-s`/
@@ -79,19 +82,22 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
-- `title: string = ''` — the source's display title, e.g. a filename. Falls back to `"Untitled
-source"` when empty.
+- `heading: string = ''` — the source's display title, e.g. a filename, rendered as the `title`
+  button's text. Falls back to `"Untitled source"` when empty. Deprecated alias: `title` (use
+  `heading`; removed in 23.0.0)
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
-- `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
-  lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
-  density knob: the border and background stay. `false` (the default) keeps the full card padding.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and row gap, for the dense citation lists these cards
+  usually render in. Purely a density knob: the border and background stay. `m` (the default) and
+  larger keep the full card padding. Deprecated alias: `compact` (use `size="s"`; removed in
+  23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card inside a
   `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
-  `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
+  `plain` wins over the dense `size` tier when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
   chrome. Use the shared `LyraFrame` type when authoring this property.
 - `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
@@ -135,12 +141,12 @@ behind the "Show more"/"Show less" toggle — when left empty, no toggle renders
 button — only rendered when the `full` slot has content).
 
 **Themeable custom properties:** `--lr-source-card-bg` (default `var(--lr-color-surface)`) —
-`[part='base']`'s RESTING background, the companion to the `compact` tier's levers below;
+`[part='base']`'s RESTING background, the companion to the dense `size` tier's levers below;
 `frame='plain'` still drops the fill entirely. `--lr-source-card-compact-padding` (default
 `var(--lr-space-xs)`) —
-`[part='base']`'s padding while `compact`; `--lr-source-card-compact-gap` (default
-`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows while `compact`. Both apply only in
-the `compact` state, so a dense citation list can be tuned without re-pointing shared spacing tokens
+`[part='base']`'s padding while `size` is `s` or smaller; `--lr-source-card-compact-gap` (default
+`var(--lr-space-2xs)`) — the gap between `[part='base']`'s rows at that size. Both apply only in
+the dense tier, so a dense citation list can be tuned without re-pointing shared spacing tokens
 elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surface`,
 `--lr-color-text` / `-text-quiet`, `--lr-color-brand`, `--lr-radius`, `--lr-space-xs`/`-s`,
 `--lr-focus-ring-*`.
@@ -149,13 +155,13 @@ elsewhere. Plus shared tokens — `--lr-color-border-subtle`, `--lr-color-surfac
 
 ```html
 <lr-source-list label-plural="2 sources">
-  <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+  <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
     <span slot="excerpt">Revenue grew 12% year over year...</span>
     <span slot="full"
       >Revenue grew 12% year over year, driven primarily by...</span
     >
   </lr-source-card>
-  <lr-source-card source-id="doc-2" title="q3_notes.md">
+  <lr-source-card source-id="doc-2" heading="q3_notes.md">
     <span slot="excerpt">No matching full-text chunk for this source.</span>
   </lr-source-card>
 </lr-source-list>
@@ -190,9 +196,9 @@ time.
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
-- `lr-source-card` actively strips a bare host-level `title` attribute right after Lit syncs it into
-  the `title` property — otherwise the whole card would grow an unsolicited native tooltip repeating
-  the title text on hover. Set `title` only as a property/attribute meant to become the rendered
-  heading; don't rely on it surviving as a DOM attribute afterward.
+- `lr-source-card`'s deprecated `title` alias is also the browser's global tooltip attribute, so the
+  card strips a host-level `title` attribute right after reading it into `heading` — otherwise the
+  whole card would grow an unsolicited native tooltip repeating the title text on hover. Use
+  `heading` for the rendered title.
 
 ---

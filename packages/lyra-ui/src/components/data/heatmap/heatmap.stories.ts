@@ -150,7 +150,7 @@ export const CustomTheme: Story = {
 /**
  * Hover a cell for its tooltip, tab to the grid and use the arrow keys to
  * move the focus ring (the shared light-DOM polite sink announces each move),
- * and click or press Enter/Space on a cell to see its `lr-cell-click`
+ * and click or press Enter/Space on a cell to see its `lr-cell-activate`
  * detail logged below.
  */
 export const HoverFocusClick: Story = {
@@ -167,7 +167,7 @@ export const HoverFocusClick: Story = {
 
 
 
-        @lr-cell-click=${onCellClick}
+        @lr-cell-activate=${onCellClick}
        .data=${{ kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], colLabels: ['0h', '6h', '12h', '18h'], values: [
           [1, 4, 9, 2],
           [0, 2, 6, 3],
@@ -175,7 +175,7 @@ export const HoverFocusClick: Story = {
           [-1, 1, 4, 7],
           [2, 3, 5, 6],
         ] }}></lr-heatmap>
-      <p>Last <code>lr-cell-click</code> detail: <code id="cell-click-out">(none yet)</code></p>
+      <p>Last <code>lr-cell-activate</code> detail: <code id="cell-click-out">(none yet)</code></p>
     `;
   },
 };
@@ -632,7 +632,7 @@ export const MatrixPresentation: Story = {
 
 export const ContributionGraphRoundedSpacedCells: Story = {
   name: 'Contribution graph with rounded spaced cells',
-  parameters: { docs: { description: { story: 'A GitHub-style contribution graph that stays in calendar mode: explicit `cell-gap-x`, `cell-gap-y` and `cell-radius` space and round the calendar cells while week columns, weekday and month labels, date tooltips, selection and `lr-cell-click` keep working. With none of those attributes set, calendar spacing is unchanged. `calendarGeometry` reports the painted layout.' } } },
+  parameters: { docs: { description: { story: 'A GitHub-style contribution graph that stays in calendar mode: explicit `cell-gap-x`, `cell-gap-y` and `cell-radius` space and round the calendar cells while week columns, weekday and month labels, date tooltips, selection and `lr-cell-activate` keep working. With none of those attributes set, calendar spacing is unchanged. `calendarGeometry` reports the painted layout.' } } },
   render: () => {
     const days: CalendarDay[] = [];
     const start = Date.UTC(2026, 0, 4);

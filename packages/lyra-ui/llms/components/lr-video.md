@@ -7,9 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-video-poster-play-button-hover-background` since `21.1.0`; use css-property `--lr-video-poster-play-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -105,8 +105,10 @@ avoiding a disappearing/reappearing semantic target.
 `var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
-`--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
-`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+`--lr-video-poster-play-button-hover-bg` (default is the existing hover color mix) and
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`). Deprecated
+alias: `--lr-video-poster-play-button-hover-background` (use
+`--lr-video-poster-play-button-hover-bg`; removed in 23.0.0).
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and

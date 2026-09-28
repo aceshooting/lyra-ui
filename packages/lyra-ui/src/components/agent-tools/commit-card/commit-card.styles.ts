@@ -6,7 +6,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  /* Card chrome behind inline var() fallbacks, same convention as the compact density below. The
+  /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below. The
      background fallback is transparent, which is what this card has always painted -- it takes
      the surface it sits on -- so an unset card renders unchanged while a consumer can now give it
      its own fill without a ::part(base) override. */
@@ -17,23 +17,23 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-commit-card-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-commit-card-radius, var(--lr-radius));
-    background: var(--lr-commit-card-background, transparent);
+    background: var(--lr-commit-card-bg, var(--lr-commit-card-background, transparent));
     padding: var(--lr-space-m);
   }
-  /* Density escape -- same convention as lr-agent-run's compact. The tuned value sits behind an
+  /* Density escape -- same convention as lr-agent-run's dense size tier. The tuned value sits behind an
      inline var() fallback, not a :host declaration, which every instance would re-declare and so
      shadow any ancestor value; the fallback is the pre-existing value, so an unset card renders
      unchanged. */
-  :host([compact]) [part='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
     padding: var(--lr-commit-card-compact-padding, var(--lr-space-s));
   }
-  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'] at equal
-     specificity, so source order alone decides the padding when a card is both compact and
+  /* MUST stay after the dense size rule: both selectors are :host(x) [part='base'] at equal
+     specificity, so source order alone decides the padding when a card is both dense and
      frame="plain". plain is the stronger statement -- no chrome at all -- so it goes last.
 
      background: transparent is NOT redundant with the hook's transparent fallback above: it is
      what makes plain mean the same thing here as on every sibling card. Without it a consumer who
-     sets --lr-commit-card-background still gets a filled "plain" card, while lr-activity-feed,
+     sets --lr-commit-card-bg still gets a filled "plain" card, while lr-activity-feed,
      lr-agent-run, lr-result-card, lr-stack-trace, lr-task-list, lr-terminal, lr-thinking-panel and
      lr-chat-composer all drop the fill. */
   :host([frame='plain']) [part='base'] {

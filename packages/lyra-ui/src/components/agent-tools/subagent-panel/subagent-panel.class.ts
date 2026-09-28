@@ -12,7 +12,8 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
@@ -45,6 +46,12 @@ export interface LyraSubagentPanelEventMap {
 const ACTIVE = new Set<AgentStatusKind>(['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval']);
 const MAX_RENDERED_RUNS = 500;
 const MAX_VISUAL_INDENT_DEPTH = 12;
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 interface SubagentRow {
   run: SubagentRun;
@@ -90,20 +97,24 @@ interface OrderedRuns {
  * @cssprop [--lr-subagent-panel-progress-track=var(--lr-color-border)] - Progress track.
  * @cssprop [--lr-subagent-panel-progress-fill=var(--lr-color-brand)] - Progress fill.
  * @cssprop [--lr-subagent-panel-compact-trigger-padding=var(--lr-space-2xs) var(--lr-space-s)] -
- *   `[part="run-trigger"]` padding while `compact`.
+ *   `[part="run-trigger"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-subagent-panel-compact-trigger-gap=var(--lr-space-2xs)] - Gap between
- *   `[part="run-trigger"]`'s label/status/task/model/progress while `compact`.
+ *   `[part="run-trigger"]`'s label/status/task/model/progress while `size` is `s` or smaller.
  * @cssprop [--lr-subagent-panel-compact-font-size=var(--lr-font-size-2xs)] - `[part="task"]`/
- *   `[part="model"]` font size while `compact`.
+ *   `[part="model"]` font size while `size` is `s` or smaller.
  * @cssprop [--lr-subagent-panel-compact-action-padding=var(--lr-space-2xs)] - `[part="cancel"]`/
- *   `[part="retry"]` padding while `compact`.
- * @cssprop [--lr-subagent-panel-background=var(--lr-color-surface)] - Resting fill of each run
+ *   `[part="retry"]` padding while `size` is `s` or smaller.
+ * @cssprop [--lr-subagent-panel-bg=var(--lr-color-surface)] - Resting fill of each run
  *   row's trigger and action buttons. Hover and press follow
- *   `--lr-subagent-panel-hover-background`, so retune both together.
- * @cssprop [--lr-subagent-panel-hover-background=var(--lr-color-surface-raised)] - Hovered fill of
+ *   `--lr-subagent-panel-hover-bg`, so retune both together.
+ * @cssprop [--lr-subagent-panel-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-subagent-panel-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-subagent-panel-hover-bg=var(--lr-color-surface-raised)] - Hovered fill of
  *   each run row's trigger and action buttons. The pressed fill is this value mixed a further
  *   `--lr-color-mix-active` toward `--lr-color-mix-partner`, so retuning hover carries the press
  *   with it.
+ * @cssprop [--lr-subagent-panel-hover-background=var(--lr-color-surface-raised)] - Deprecated alias of
+ *   `--lr-subagent-panel-hover-bg`; removal not before 23.0.0.
  * @cssprop [--lr-subagent-panel-border-color=var(--lr-color-border)] - Colour of each run row's
  *   border and of its action divider. A selected row still uses
  *   `--lr-subagent-panel-selected-border`.
@@ -139,6 +150,10 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
     'lr-cancel',
@@ -151,10 +166,20 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
    *  default; any supplied string, including `''`, is rendered verbatim. */
   @property() label?: string;
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens run-row
+   * padding/gaps and shrinks the task/model text -- same convention as
+   * `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal`'s `size`. `m` (the default)
+   * and larger keep the full padding. Purely a density knob: each row's own border stays, so use
+   * `frame="plain"` instead to drop the chrome entirely.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
+
   /** Tighter run-row padding/gaps and smaller task/model text -- same convention as
    *  `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal`'s `compact`. Defaults to
    *  `false`, i.e. full padding. Purely a density knob: each row's own border stays, so use
-   *  `frame="plain"` instead to drop the chrome entirely. */
+   *  `frame="plain"` instead to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome for each run row, in the library's shared container-frame vocabulary. `'card'`

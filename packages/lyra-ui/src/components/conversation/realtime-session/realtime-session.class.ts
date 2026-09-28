@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
@@ -101,6 +102,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showCapture: ['withoutCapture', invertAlias, invertAlias],
+  };
 
   private _state: RealtimeConnectionState = 'disconnected';
   @property({ reflect: true, converter: CONNECTION_STATE })
@@ -134,8 +138,17 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   @property({ attribute: 'session-id' }) sessionId = '';
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true }) muted = false;
-  /** Shows native push-to-talk capture. Hiding a focused capture transfers focus to the current
+  /** Hides native push-to-talk capture. Hiding a focused capture transfers focus to the current
    *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
+  @property({ type: Boolean, attribute: 'without-capture', reflect: true }) withoutCapture = false;
+
+  /**
+   * Deprecated inverted alias of `without-capture` (`withoutCapture`): `show-capture="false"` equals
+   * `without-capture`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-capture`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     attribute: 'show-capture',
@@ -205,7 +218,8 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     const stateChanged = changed.has('state');
-    const captureHidden = changed.has('showCapture') && changed.get('showCapture') === true && !this.showCapture;
+    const captureHidden =
+      changed.has('withoutCapture') && changed.get('withoutCapture') === false && this.withoutCapture;
     const captureDisabled = changed.has('muted') && changed.get('muted') === false && this.muted;
     if (!stateChanged && !captureHidden && !captureDisabled) return;
     const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
@@ -241,7 +255,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
       }
     }
     const pending = this.transferActionFocus;
-    if ((stateChanged || changed.has('showCapture') || changed.has('muted')) && pending) {
+    if ((stateChanged || changed.has('withoutCapture') || changed.has('muted')) && pending) {
       this.transferActionFocus = undefined;
       const internalActive = activeElementIn(this.shadowRoot);
       const documentActive = activeElementIn(this.ownerDocument);
@@ -326,7 +340,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         ${this.state === 'error'
           ? html`<p part="error">${this.localize('realtimeSessionConnectionFailed')}</p>`
           : nothing}
-        ${this.showCapture
+        ${!this.withoutCapture
           ? html`<lr-push-to-talk part="capture" .disabled=${!active || this.muted} level-events></lr-push-to-talk>`
           : nothing}
         <lr-transcript-feed

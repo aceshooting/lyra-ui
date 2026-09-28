@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-reorder` since `21.1.0`; use event `addEventListener('lr-reorder-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-reorder-item` (same section below)
@@ -21,15 +21,15 @@ A generic flat-list reorder primitive: per-row move-up/move-down buttons (always
 Ctrl/Cmd+ArrowUp/ArrowDown from focus anywhere inside a row — the same modifier convention
 `<lr-tree>`'s `reorderable` and `<lr-dashboard-grid>`'s `cells-draggable` already establish. By
 default this list physically moves its own slotted `<lr-reorder-item>` light-DOM nodes itself
-(there is no `data` array prop to reconcile against), and emits `lr-reorder` with the full new
-order so the host can persist it without hand-rolling its own splice/resort logic. Setting
+(there is no `data` array prop to reconcile against), and emits `lr-reorder-request` with the full
+new order so the host can persist it without hand-rolling its own splice/resort logic. Setting
 `controlled` opts into `<lr-tree>`'s controlled `reorderable` contract instead: the list stops
 moving anything itself, and waits for the host to reorder its own backing data and re-render the
 slotted items to match — reconciled by each item's `value` rather than by element reference, so a
 non-keyed host re-render that recreates the moved row (or merely rewrites `value` on the elements
-already at each position) still completes the move once the resulting order matches. `lr-reorder`
-is cancelable — a listener calling `preventDefault()` holds the move open (mirroring
-`lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
+already at each position) still completes the move once the resulting order matches.
+`lr-reorder-request` is cancelable — a listener calling `preventDefault()` holds the move open
+(mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
 `finalizePendingMove()`/`revertPendingMove()`; `controlled` changes what "applying" the move
 means (host re-render instead of a physical DOM move) but not this cancelable contract.
 
@@ -56,7 +56,7 @@ explicit empty string remains supplied and later valid values recover.
   Toggling this off while a reconciliation is pending drops it rather than leaving the list stuck
   busy.
 
-**Events:** `lr-reorder`
+**Events:** `lr-reorder-request`
 (`detail: LyraReorderDetail { readonly order: readonly string[], readonly fromIndex: number,
 readonly toIndex: number }`, cancelable) — fired before a move is applied; `order` is an immutable
 snapshot of every valid item's stable `value` in the order the move WOULD produce. Uncanceled, the
@@ -65,7 +65,9 @@ availability remain valid after dispatch — or, while `controlled`, starts wait
 own re-render to reach that `order` instead. `preventDefault()` holds the move instead: the
 internal list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
 `:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
-Synchronous finalize/revert calls from the canceling listener are supported.
+Synchronous finalize/revert calls from the canceling listener are supported. Deprecated alias:
+`lr-reorder` (use `lr-reorder-request`; removed in 23.0.0) — it still fires right after the request
+with an equal detail, and either event may hold the move.
 
 **Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()` (or, while
 `controlled`, starts waiting for the host's own re-render instead of moving the DOM itself).
@@ -90,7 +92,7 @@ between rows.
 <script type="module">
   document
     .querySelector("lr-reorder-list")
-    .addEventListener("lr-reorder", (e) => console.log(e.detail.order));
+    .addEventListener("lr-reorder-request", (e) => console.log(e.detail.order));
 </script>
 ```
 
@@ -115,10 +117,13 @@ between rows.
 **Properties:**
 
 - `value: string = ''` — required unique, nonempty stable identifier included in the parent's
-  `lr-reorder` order array.
-- `accessibleLabel?: string` (attribute `accessible-label`) — explicit row identity appended to
-  each repeated move action's accessible name; otherwise the item derives a bounded accessible
-  text projection from its row content.
+  `lr-reorder-request` order array.
+- `aria-label` (host attribute) — names the row and is appended to each repeated move action's
+  accessible name in place of the row content. Deprecated alias: `accessible-label` (use
+  `aria-label`; removed in 23.0.0).
+- `accessibleLabel?: string` (attribute: false) — explicit row identity used while the host has no
+  `aria-label`; when neither is present the item derives a bounded accessible text projection from
+  its row content.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
 - `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —
@@ -139,11 +144,13 @@ call it the same way.
 **Slots:** default — arbitrary row content.
 
 **CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`,
-`move-up-button__control` / `move-down-button__control` (each move control's own native `<button>` —
+`move-up-button-control` / `move-down-button-control` (each move control's own native `<button>` —
 as of 16.0.0 the move controls are composed `<lr-icon-button>`s: the old part names keep placement,
 rotation and activation, while background, radius, hover/press mixes, focus ring and hit-area floor
 come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
-win over those defaults), `content` (default-slot wrapper).
+win over those defaults), `content` (default-slot wrapper). Deprecated aliases:
+`move-up-button__control` and `move-down-button__control` (use `move-up-button-control` and
+`move-down-button-control`; removed in 23.0.0).
 
 **Border reaches the composed move controls the same way background/color/radius do.** This
 component paints no resting border on either move control, so it relays no

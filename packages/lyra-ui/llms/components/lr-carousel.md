@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Optional peers** none
 - **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -60,10 +60,12 @@ slide itself; they do not change the active slide or move focus away from it.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
-- `accessibleLabel?: string` (attribute `accessible-label`) — fallback landmark name. Omitting it
-  reads back `undefined` and uses the localized `carouselLabel` default; an explicitly empty value
-  is used as-is. A host `aria-label` takes precedence by presence, including an explicitly empty
-  value
+- `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
+  including an explicitly empty value. Deprecated alias: `accessible-label` (use `aria-label`;
+  removed in 23.0.0).
+- `accessibleLabel?: string` (attribute: false) — fallback landmark name used while the host has no
+  `aria-label`. Omitting it reads back `undefined` and uses the localized `carouselLabel` default;
+  an explicitly empty value is used as-is.
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected

@@ -79,7 +79,7 @@ export const Reorderable: Story = {
       reorderable
       .messages=${messages}
       .variables=${[{ name: 'audience', value: 'developers' }]}
-      @lr-message-reorder=${(event: CustomEvent<PromptStudioMessageReorderDetail>) => {
+      @lr-message-reorder-request=${(event: CustomEvent<PromptStudioMessageReorderDetail>) => {
         event.preventDefault();
         (event.currentTarget as LyraPromptStudio).messages = event.detail.messages;
       }}

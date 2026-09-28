@@ -420,7 +420,7 @@ it('orders checkbox proposal before the single menu selection', async () => {
   `);
   const item = byId<LyraMenuItem>(menu, 'wrap');
   const order: string[] = [];
-  item.addEventListener('lr-menu-item-change', (event) => {
+  item.addEventListener('lr-menu-item-change-request', (event) => {
     order.push('change');
     event.preventDefault();
   });

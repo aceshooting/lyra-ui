@@ -5,6 +5,7 @@ import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.j
 import type { LyraTooltip } from './tooltip.class.js';
 import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
+import '../dialog/dialog.js';
 import '../drawer/drawer.js';
 import './tooltip.js';
 
@@ -483,6 +484,75 @@ describe('keyboard-only focus activation', () => {
     await waitUntil(() => !el.open && document.activeElement === trigger, 'Escape closes and restores');
     await settle(el);
     expect(el.open, 'the restore does not reopen').to.equal(false);
+  });
+
+  it('T8b restores focus through nested open shadow roots when Escape leaves actionable content', async () => {
+    const dialog = await fixture<HTMLElement & { open: boolean }>(html`
+      <lr-dialog label="Settings" open><div id="outer"></div></lr-dialog>
+    `);
+    const outer = dialog.querySelector<HTMLDivElement>('#outer')!;
+    const outerRoot = outer.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    outerRoot.append(inner);
+    const innerRoot = inner.attachShadow({ mode: 'open' });
+    innerRoot.innerHTML = `
+      <lr-tooltip trigger="hover focus click" aria-label="Billing help" show-delay="0" hide-delay="0">
+        <button type="button" slot="trigger">Help</button>
+        <a href="#billing">Billing docs</a>
+      </lr-tooltip>
+    `;
+    const el = innerRoot.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector<HTMLButtonElement>('[slot="trigger"]')!;
+    const link = el.querySelector<HTMLAnchorElement>('a')!;
+    await el.updateComplete;
+    await waitUntil(() => popup(el).getAttribute('role') === 'dialog', 'the link makes the popup actionable');
+
+    await focusByKeyboard(trigger, dialog);
+    await waitUntil(() => el.open, 'keyboard focus opens');
+    await sendKeys({ press: 'Tab' });
+    await waitUntil(() => innerRoot.activeElement === link, 'Tab reaches the popup link');
+    expect(el.open, 'focus inside interactive content retains it').to.equal(true);
+    expect(trigger.closest('[inert]') === null, 'the trigger is not inert').to.equal(true);
+
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(
+      () => !el.open && innerRoot.activeElement === trigger,
+      'Escape closes and restores focus to the shadow-root trigger',
+    );
+    await settle(el);
+    expect(el.open, 'the restore does not reopen').to.equal(false);
+    expect(dialog.open, 'the enclosing dialog stays open').to.equal(true);
+    expect(document.activeElement === document.body, 'focus did not fall to the body').to.equal(false);
+  });
+
+  it('T8c restores focus to a document-level trigger when Escape leaves actionable content in a dialog', async () => {
+    const dialog = await fixture<HTMLElement & { open: boolean }>(html`
+      <lr-dialog label="Settings" open>
+        <lr-tooltip trigger="hover focus click" aria-label="Billing help" show-delay="0" hide-delay="0">
+          <button type="button" slot="trigger">Help</button>
+          <a href="#billing">Billing docs</a>
+        </lr-tooltip>
+      </lr-dialog>
+    `);
+    const el = dialog.querySelector<LyraTooltip>('lr-tooltip')!;
+    const trigger = el.querySelector<HTMLButtonElement>('[slot="trigger"]')!;
+    const link = el.querySelector<HTMLAnchorElement>('a')!;
+    await el.updateComplete;
+    await waitUntil(() => popup(el).getAttribute('role') === 'dialog', 'the link makes the popup actionable');
+
+    await focusByKeyboard(trigger);
+    await waitUntil(() => el.open, 'keyboard focus opens');
+    await sendKeys({ press: 'Tab' });
+    await waitUntil(() => document.activeElement === link, 'Tab reaches the popup link');
+
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(
+      () => !el.open && document.activeElement === trigger,
+      'Escape closes and restores focus to the trigger',
+    );
+    await settle(el);
+    expect(el.open, 'the restore does not reopen').to.equal(false);
+    expect(dialog.open, 'the enclosing dialog stays open').to.equal(true);
   });
 
   it('T9 keeps the hover focus default', async () => {

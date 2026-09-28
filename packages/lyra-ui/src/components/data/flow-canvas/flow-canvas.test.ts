@@ -6,6 +6,7 @@ import '../flow-minimap/flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { sendKeys } from '@web/test-runner-commands';
 import {
   hoverUntilMatched,
@@ -45,7 +46,7 @@ it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid
   expect(el.nodesDraggable).to.be.false;
   expect(el.connectable).to.be.false;
   expect(el.droppable).to.be.false;
-  expect(el.locked).to.be.false;
+  expect(el.readonly).to.be.false;
   expect(el.minZoom).to.equal(0.25);
   expect(el.maxZoom).to.equal(2);
   expect(el.grid).to.equal(8);
@@ -1536,8 +1537,8 @@ describe('pan & zoom', () => {
     expect(el.viewport.y).to.equal(y0);
   });
 
-  it('locked disables wheel zoom, background pan, and the keyboard shortcuts', async () => {
-    const el = (await fixture(html`<lr-flow-canvas locked style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+  it('readonly disables wheel zoom, background pan, and the keyboard shortcuts', async () => {
+    const el = (await fixture(html`<lr-flow-canvas readonly style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
     const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
@@ -1545,7 +1546,7 @@ describe('pan & zoom', () => {
     expect(el.viewport.zoom).to.equal(1);
   });
 
-  it('a live locked transition rolls back and retires an active background pan', async () => {
+  it('a live readonly transition rolls back and retires an active background pan', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
@@ -1556,7 +1557,7 @@ describe('pan & zoom', () => {
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 51, clientX: 140, clientY: 90 }));
     expect(el.viewport.x).to.equal(40);
 
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
     expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
     expect(viewportEl.hasAttribute('data-panning')).to.equal(false);
@@ -1566,7 +1567,7 @@ describe('pan & zoom', () => {
     expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
   });
 
-  it('immediately retires an active background pan when locked before the next pointer event', async () => {
+  it('immediately retires an active background pan when made readonly before the next pointer event', async () => {
     const el = (await fixture(html`
       <lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>
     `)) as LyraFlowCanvas;
@@ -1579,7 +1580,7 @@ describe('pan & zoom', () => {
       pointerId: 56, clientX: 100, clientY: 100, bubbles: true,
     }));
 
-    el.locked = true;
+    el.readonly = true;
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 56, clientX: 140, clientY: 90 }));
 
     expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
@@ -1889,12 +1890,12 @@ describe('selection & roving focus', () => {
     expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
 
-  it('focusNode() cannot mutate viewport or roving focus while locked', async () => {
+  it('focusNode() cannot mutate viewport or roving focus while readonly', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
     el.setViewport({ x: 12, y: 18, zoom: 1.25 });
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
     const before = el.viewport;
 
@@ -2195,8 +2196,8 @@ describe('node drag', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40, clientY: 0 }));
   });
 
-  it('does not drag when locked, even with nodes-draggable set', async () => {
-    const el = (await fixture(html`<lr-flow-canvas nodes-draggable locked></lr-flow-canvas>`)) as LyraFlowCanvas;
+  it('does not drag when readonly, even with nodes-draggable set', async () => {
+    const el = (await fixture(html`<lr-flow-canvas nodes-draggable readonly></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
@@ -2206,7 +2207,7 @@ describe('node drag', () => {
     expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
   });
 
-  it('a live locked transition rolls back and retires an active node drag', async () => {
+  it('a live readonly transition rolls back and retires an active node drag', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
@@ -2218,7 +2219,7 @@ describe('node drag', () => {
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 52, clientX: 40, clientY: 0 }));
     expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([40, 0]);
 
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
     expect(transformCoordinates(wrapper.style.transform)).to.deep.equal([0, 0]);
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 52, clientX: 80, clientY: 0 }));
@@ -2227,7 +2228,7 @@ describe('node drag', () => {
     expect(moves).to.equal(0);
   });
 
-  it('immediately retires an active node drag when locked before the next pointer event', async () => {
+  it('immediately retires an active node drag when made readonly before the next pointer event', async () => {
     const el = (await fixture(html`
       <lr-flow-canvas nodes-draggable></lr-flow-canvas>
     `)) as LyraFlowCanvas;
@@ -2241,7 +2242,7 @@ describe('node drag', () => {
       pointerId: 57, clientX: 0, clientY: 0, bubbles: true,
     }));
 
-    el.locked = true;
+    el.readonly = true;
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 57, clientX: 40, clientY: 0 }));
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 57, clientX: 40, clientY: 0 }));
 
@@ -2451,7 +2452,7 @@ describe('connect gesture', () => {
     expect(fired).to.be.false;
   });
 
-  it('does not start a connect gesture when connectable is unset or locked', async () => {
+  it('does not start a connect gesture when connectable is unset or the canvas is readonly', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
@@ -2462,7 +2463,7 @@ describe('connect gesture', () => {
     expect((el.shadowRoot!.querySelector('[part="connection-line"]')) == null).to.be.true;
   });
 
-  it('a live locked transition retires an active pointer connect without committing', async () => {
+  it('a live readonly transition retires an active pointer connect without committing', async () => {
     const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [
       { id: 'a', position: { x: 0, y: 0 } },
@@ -2483,7 +2484,7 @@ describe('connect gesture', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
 
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
     inputHandle.dispatchEvent(new PointerEvent('pointerup', {
@@ -2492,7 +2493,7 @@ describe('connect gesture', () => {
     expect(connects).to.equal(0);
   });
 
-  it('immediately retires an active pointer connect when locked before the next pointer event', async () => {
+  it('immediately retires an active pointer connect when made readonly before the next pointer event', async () => {
     const el = (await fixture(html`
       <lr-flow-canvas connectable></lr-flow-canvas>
     `)) as LyraFlowCanvas;
@@ -2512,7 +2513,7 @@ describe('connect gesture', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
 
-    el.locked = true;
+    el.readonly = true;
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 58, clientX: 100, clientY: 0 }));
     await el.updateComplete;
 
@@ -2521,7 +2522,7 @@ describe('connect gesture', () => {
     expect(connects).to.equal(0);
   });
 
-  it('cancels rather than commits when locked flips true in the same tick as the release pointerup, before willUpdate can retire the gesture', async () => {
+  it('cancels rather than commits when readonly flips true in the same tick as the release pointerup, before willUpdate can retire the gesture', async () => {
     const el = (await fixture(html`
       <lr-flow-canvas connectable></lr-flow-canvas>
     `)) as LyraFlowCanvas;
@@ -2543,7 +2544,7 @@ describe('connect gesture', () => {
 
     // Property setters schedule an async Lit update; willUpdate (which would otherwise retire the
     // gesture) has not run yet, so connectState is still populated when this pointerup arrives.
-    el.locked = true;
+    el.readonly = true;
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 61, clientX: 200, clientY: 0 }));
     expect(connects).to.equal(0);
     await el.updateComplete;
@@ -2985,7 +2986,7 @@ describe('droppable', () => {
     expect(detail!.position.y % el.grid).to.equal(0);
   });
 
-  it('ignores a drop when droppable is unset or the canvas is locked', async () => {
+  it('ignores a drop when droppable is unset or the canvas is readonly', async () => {
     const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'seed', position: { x: 0, y: 0 } }];
     await el.updateComplete;
@@ -3285,10 +3286,10 @@ describe('registerCompanion & decorations', () => {
   });
 });
 
-describe('locked (consolidated)', () => {
+describe('readonly (consolidated)', () => {
   it('leaves pan, zoom, drag, connect, and drop all inert while focus/click/keyboard-activation still work', async () => {
     const el = (await fixture(
-      html`<lr-flow-canvas locked nodes-draggable connectable droppable style="width:400px;height:300px"></lr-flow-canvas>`,
+      html`<lr-flow-canvas readonly nodes-draggable connectable droppable style="width:400px;height:300px"></lr-flow-canvas>`,
     )) as LyraFlowCanvas;
     el.nodes = [
       { id: 'a', position: { x: 0, y: 0 } },
@@ -4554,5 +4555,91 @@ describe('node overlays escape the canvas', () => {
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 40, clientY: 30 }));
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 8, clientX: 40, clientY: 30 }));
     expect(captured, 'the node body still starts a drag').to.equal(true);
+  });
+});
+
+describe('deprecated locked alias', () => {
+  const LOCKED: readonly DeprecatedUsage[] = [{ tag: 'lr-flow-canvas', kind: 'property', name: 'locked' }];
+  const lockedNodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }];
+  const wheelZoom = async (el: LyraFlowCanvas): Promise<number> => {
+    el.nodes = lockedNodes;
+    await el.updateComplete;
+    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    viewportEl.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -100, clientX: 50, clientY: 50, bubbles: true, cancelable: true }),
+    );
+    return el.viewport.zoom;
+  };
+
+  it('freezes the viewport exactly like readonly and warns once, naming readonly', async () => {
+    const canonical = await fixture<LyraFlowCanvas>(
+      html`<lr-flow-canvas readonly style="width:400px;height:300px"></lr-flow-canvas>`,
+    );
+    let aliased!: LyraFlowCanvas;
+    const warnings = await captureDeprecationWarnings(LOCKED, async () => {
+      aliased = await fixture<LyraFlowCanvas>(
+        html`<lr-flow-canvas locked style="width:400px;height:300px"></lr-flow-canvas>`,
+      );
+      const second = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked></lr-flow-canvas>`);
+      await second.updateComplete;
+    });
+    expect(await wheelZoom(aliased)).to.equal(1);
+    expect(await wheelZoom(canonical)).to.equal(1);
+    expect(aliased.readonly).to.be.true;
+    expect(aliased.locked).to.be.true;
+    expect(aliased.hasAttribute('readonly')).to.be.true;
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-flow-canvas:property:locked']);
+    expect(warnings[0]!.message).to.contain('readonly');
+  });
+
+  it('never warns for readonly or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(LOCKED, async () => {
+      const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas></lr-flow-canvas>`);
+      expect(el.locked).to.be.false;
+      el.readonly = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('forwards alias writes, clears the state when removed, and lets the last write win', async () => {
+    await captureDeprecationWarnings(LOCKED, async () => {
+      const el = await fixture<LyraFlowCanvas>(
+        html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`,
+      );
+      el.locked = true;
+      await el.updateComplete;
+      expect(el.readonly).to.be.true;
+      el.locked = false;
+      await el.updateComplete;
+      expect(el.readonly).to.be.false;
+      expect(await wheelZoom(el)).to.be.greaterThan(1);
+
+      const attr = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked></lr-flow-canvas>`);
+      attr.removeAttribute('locked');
+      await attr.updateComplete;
+      expect(attr.readonly).to.be.false;
+      expect(attr.hasAttribute('readonly')).to.be.false;
+
+      const aliasLast = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas readonly locked></lr-flow-canvas>`);
+      aliasLast.removeAttribute('locked');
+      await aliasLast.updateComplete;
+      expect(aliasLast.readonly).to.be.false;
+      expect(aliasLast.hasAttribute('readonly')).to.be.false;
+    });
+  });
+
+  it('syncs the alias back from readonly, reflecting both', async () => {
+    await captureDeprecationWarnings(LOCKED, async () => {
+      const canonicalLast = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked readonly></lr-flow-canvas>`);
+      canonicalLast.removeAttribute('readonly');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.locked).to.be.false;
+      expect(canonicalLast.hasAttribute('locked')).to.be.false;
+      canonicalLast.readonly = true;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.locked).to.be.true;
+      expect(canonicalLast.hasAttribute('locked')).to.be.true;
+    });
   });
 });

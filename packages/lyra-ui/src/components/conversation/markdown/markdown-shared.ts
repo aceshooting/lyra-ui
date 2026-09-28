@@ -391,7 +391,7 @@ export interface ParseMarkdownOptions {
    *  parser applies, `link()`/`image()`'s scheme allowlist included. `sanitize` and `escape` both
    *  validate; only `trusted` bypasses, matching `renderMarkdownDocument()`'s own DOMPurify skip. */
   trustedHtmlOption: boolean;
-  /** Already combines `highlightCode && !streaming` -- computed by the caller since that
+  /** Already combines `!withoutSyntaxHighlighting && !streaming` -- computed by the caller since that
    *  combination differs by call site only in name, never in meaning. */
   highlightCodeOption: boolean;
   /** Bound LRU accessor (not the raw map): reads must go through it so a hit refreshes its
@@ -1051,22 +1051,22 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('content') ||
     changed.has('tabSize') ||
     changed.has('htmlMode') ||
-    changed.has('gfm') ||
+    changed.has('withoutGfm') ||
     changed.has('linkTarget') ||
     changed.has('headingOffset') ||
     changed.has('streaming') ||
     changed.has('headingAnchors') ||
     changed.has('math') ||
-    changed.has('highlightCode') ||
+    changed.has('withoutSyntaxHighlighting') ||
     changed.has('languages') ||
-    changed.has('codeBlockChrome') || changed.has('codeBlockHeader') || changed.has('streamingRender')
+    changed.has('codeBlockHeader') || changed.has('streamingRender')
   );
 }
 
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('highlightCode') || changed.has('languages') || changed.has('codeBlockChrome') || changed.has('codeBlockHeader');
+  return changed.has('withoutSyntaxHighlighting') || changed.has('languages') || changed.has('codeBlockHeader');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */

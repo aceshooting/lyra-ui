@@ -4,10 +4,11 @@ import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 import type { LyraLiteChart } from '../../charts/chart/lite-chart.class.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
-  it('suppresses the chart when show-chart is set false, including the literal-string attribute form', async () => {
+  it('suppresses the chart when without-chart is set', async () => {
     const props = {
       metrics: [{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }],
       runs: [{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }],
@@ -15,16 +16,17 @@ describe('lr-agent-eval-dashboard', () => {
     const el = await fixture<LyraAgentEvalDashboard>(html`
       <lr-agent-eval-dashboard .metrics=${props.metrics} .runs=${props.runs}></lr-agent-eval-dashboard>
     `);
-    expect(el.showChart).to.equal(true);
+    expect(el.withoutChart).to.equal(false);
     expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
 
-    el.setAttribute('show-chart', 'false');
+    el.setAttribute('without-chart', '');
     await el.updateComplete;
-    expect(el.showChart).to.equal(false);
+    expect(el.withoutChart).to.equal(true);
     expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.be.true;
 
-    el.showChart = true;
+    el.withoutChart = false;
     await el.updateComplete;
+    expect(el.hasAttribute('without-chart')).to.equal(false);
     expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
   });
 
@@ -363,11 +365,11 @@ it('keeps a hover tint on the selected metric, not only on the unselected ones',
 
 // Pressing the already-selected metric used to fall to the plain press rule mixed from the
 // unselected surface, so the metric looked deselected mid-click. It now mixes from its own fill.
-it('mixes the pressed selected metric from --lr-agent-eval-dashboard-active-background', async () => {
+it('mixes the pressed selected metric from --lr-agent-eval-dashboard-active-bg', async () => {
   const el = (await fixture(html`
     <lr-agent-eval-dashboard
       metric-id="first"
-      style="--lr-transition-fast: 0s; --lr-agent-eval-dashboard-active-background: rgb(200, 0, 0)"
+      style="--lr-transition-fast: 0s; --lr-agent-eval-dashboard-active-bg: rgb(200, 0, 0)"
       .metrics=${[
         { id: 'first', label: 'First', value: 1 },
         { id: 'second', label: 'Second', value: 2 },
@@ -394,4 +396,85 @@ it('mixes the pressed selected metric from --lr-agent-eval-dashboard-active-back
     await sendMouse({ type: 'up' });
     await resetMouse();
   }
+});
+
+describe('lr-agent-eval-dashboard deprecated aliases', () => {
+  const SHOW_CHART: readonly DeprecatedUsage[] = [{ tag: 'lr-agent-eval-dashboard', kind: 'property', name: 'showChart' }];
+  const metrics = [{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' as const }];
+  const runs = [{ id: 'r1', label: 'Run 1', status: 'done' as const, metrics: { pass: 0.9 } }];
+  const hasChart = (el: LyraAgentEvalDashboard): boolean => el.shadowRoot!.querySelector('lr-lite-chart') !== null;
+
+  it('treats show-chart="false" exactly like without-chart, including the literal-string form, warning once', async () => {
+    let canonical = true;
+    let alias = true;
+    let reads: boolean[] = [];
+    let restored = false;
+    const warnings = await captureDeprecationWarnings(SHOW_CHART, async () => {
+      canonical = hasChart(
+        await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs} without-chart></lr-agent-eval-dashboard>`),
+      );
+      const el = await fixture<LyraAgentEvalDashboard>(
+        html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-agent-eval-dashboard>`,
+      );
+      el.setAttribute('show-chart', 'false');
+      await el.updateComplete;
+      alias = hasChart(el);
+      reads = [el.showChart, el.withoutChart];
+      el.showChart = true;
+      await el.updateComplete;
+      restored = hasChart(el);
+    });
+    expect(canonical).to.equal(false);
+    expect(alias).to.equal(canonical);
+    expect(reads).to.deep.equal([false, true]);
+    expect(restored).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-agent-eval-dashboard:property:showChart']);
+  });
+
+  it('keeps a bare show-chart meaning the default and applies the last write when both spellings are authored', async () => {
+    let bare = false;
+    let canonicalLast = true;
+    let aliasLast = false;
+    await captureDeprecationWarnings(SHOW_CHART, async () => {
+      bare = hasChart(await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs} show-chart></lr-agent-eval-dashboard>`));
+      canonicalLast = hasChart(
+        await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs} show-chart without-chart></lr-agent-eval-dashboard>`),
+      );
+      aliasLast = hasChart(
+        await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs} without-chart show-chart></lr-agent-eval-dashboard>`),
+      );
+    });
+    expect(bare).to.equal(true);
+    expect(canonicalLast).to.equal(false);
+    expect(aliasLast).to.equal(true);
+  });
+
+  it('syncs and reflects show-chart back from the canonical without-chart without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(SHOW_CHART, async () => {
+      const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-agent-eval-dashboard>`);
+      el.withoutChart = true;
+      await el.updateComplete;
+      reads.push(el.showChart, el.getAttribute('show-chart'));
+      el.withoutChart = false;
+      await el.updateComplete;
+      reads.push(el.showChart, el.getAttribute('show-chart'));
+    });
+    expect(reads).to.deep.equal([false, 'false', true, null]);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('paints the selected metric from --lr-agent-eval-dashboard-active-bg, still honouring the deprecated -active-background', async () => {
+    const fill = async (style: string): Promise<string> => {
+      const el = await fixture<LyraAgentEvalDashboard>(html`
+        <lr-agent-eval-dashboard metric-id="pass" style=${style} .metrics=${metrics}></lr-agent-eval-dashboard>
+      `);
+      return getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="metric"][aria-pressed="true"]')!).backgroundColor;
+    };
+    expect(await fill('--lr-agent-eval-dashboard-active-bg: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
+    expect(await fill('--lr-agent-eval-dashboard-active-background: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
+    expect(
+      await fill('--lr-agent-eval-dashboard-active-bg: rgb(4, 5, 6); --lr-agent-eval-dashboard-active-background: rgb(1, 2, 3)'),
+    ).to.equal('rgb(4, 5, 6)');
+  });
 });

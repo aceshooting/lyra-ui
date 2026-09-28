@@ -1,6 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -28,7 +30,7 @@ export type LyraProgressVariant = LyraVariant;
  * `danger`), defaulting to `brand`.
  *
  * @customElement lr-progress-bar
- * @slot - Label content, visible independently of `show-value`; live visible accessible text stays
+ * @slot - Label content, visible independently of `with-value`; live visible accessible text stays
  * synchronized through forwarding slots.
  * @slot label - Compatibility alias for the default label slot, with the same live-text behavior.
  * @csspart base - Compatibility name for the progress wrapper; use `progress-bar`.
@@ -69,6 +71,14 @@ export class LyraProgressBar extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { showValue: 'withValue' };
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
@@ -77,6 +87,9 @@ export class LyraProgressBar extends LyraElement {
   /** Semantic palette, read from the library's shared semantic-tone vocabulary. Recolors the
    *  indicator via the variant's loud fill from the shared semantic grid. */
   @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
+  /** Appends the locale-formatted percentage to the label row while determinate. */
+  @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
+  /** @deprecated Use `with-value`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Visual thickness of the track/indicator, on the library's shared six-step size ladder. `'m'`
    *  (the default) is this component's pre-existing behaviour, unchanged: an unset bar still
@@ -85,13 +98,18 @@ export class LyraProgressBar extends LyraElement {
    *  `--lr-progress-track-height` (or the upstream `--track-height`/`--height` aliases) still wins
    *  over any tier. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Mapped accessible-label property. */
+  /** Mapped accessible-name property. */
   @property() label = '';
-  /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention
-   *  shared by every Lyra component that names a shadow-owned role. Not an alias kept for one
-   *  upstream: `label` is the mapped upstream name and this is Lyra's own spelling; both are read,
-   *  with `label` first and a host `aria-label` above both. */
+  /** Explicit accessible name, on the library-wide `accessibleLabel` convention shared by every
+   *  Lyra component that names a shadow-owned role. Not an alias kept for one upstream: `label` is
+   *  the mapped upstream name and this is Lyra's own spelling; both are read, with `label` first
+   *  and a host `aria-label` above both. In markup, name the bar with the host `aria-label`; the
+   *  `accessible-label` attribute spelling is deprecated (removal not before 23.0.0) and logs a
+   *  one-time development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an
+   *  explicitly empty value stays empty. */
+  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
   private pendingLabelRefresh?: {
@@ -253,17 +271,18 @@ export class LyraProgressBar extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = resolveProgressLabel(this, {
+    const label = resolveProgressLabel({
+      hostAriaLabel: this.hostAriaLabel,
       label: this.label,
       accessibleLabel: this.accessibleLabel,
       visibleText: this.cachedVisibleLabelText,
       localizedFallback: this.localize('progress'),
     });
-    const hasVisibleLabel = Boolean(this.cachedVisibleLabelText) || this.showValue;
+    const hasVisibleLabel = Boolean(this.cachedVisibleLabelText) || this.withValue;
     return html`<div part="base progress-bar" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
-      <div part="label" ?hidden=${!hasVisibleLabel}><slot @slotchange=${this.onLabelSlotChange}></slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
+      <div part="label" ?hidden=${!hasVisibleLabel}><slot @slotchange=${this.onLabelSlotChange}></slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.withValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
       <div part="track"><div part="indicator" style="inline-size:${this.indeterminate ? '40%' : `${this.percent}%`}"></div></div>
     </div>`;
   }

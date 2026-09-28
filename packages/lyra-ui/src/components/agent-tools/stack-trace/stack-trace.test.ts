@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function settleClipboard(el: LyraStackTrace): Promise<void> {
   await Promise.resolve();
@@ -50,35 +51,31 @@ describe('lr-stack-trace', () => {
       'Copy',
     );
   });
-  it('defaults to collapseInternal=true and copyable=true', async () => {
+  it('defaults to expandInternal=false and withoutCopyButton=false', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
-    expect(el.collapseInternal).to.be.true;
-    expect(el.copyable).to.be.true;
+    expect(el.expandInternal).to.be.false;
+    expect(el.withoutCopyButton).to.be.false;
   });
 
-  it('clears collapseInternal/copyable from a plain HTML attribute="false" (not just a property binding)', async () => {
+  it('sets expandInternal/withoutCopyButton from plain HTML attributes (not just a property binding)', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace collapse-internal="false" copyable="false"></lr-stack-trace>`,
+      html`<lr-stack-trace expand-internal without-copy-button></lr-stack-trace>`,
     )) as LyraStackTrace;
-    expect(el.collapseInternal).to.be.false;
-    expect(el.copyable).to.be.false;
+    expect(el.expandInternal).to.be.true;
+    expect(el.withoutCopyButton).to.be.true;
   });
 
-  it('renders the message and one frame button per parsed frame when internal collapsing is off', async () => {
-    // NOTE: `.collapseInternal=${false}` uses a *property* binding, not `?collapse-internal=${false}`
-    // -- Lit's `?attr=` boolean directive only ever toggles attribute *presence*, so it can never
-    // remove an already-present-by-default `true` back to `false` even with the trueDefaultBooleanConverter
-    // in place (the literal `collapse-internal="false"` attribute form above is the other way to do it).
+  it('renders the message and one frame button per parsed frame when internal frames are expanded', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace .trace=${trace} .collapseInternal=${false}></lr-stack-trace>`,
+      html`<lr-stack-trace .trace=${trace} expand-internal></lr-stack-trace>`,
     )) as LyraStackTrace;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="message"]')!.textContent).to.include('TypeError');
     expect(el.shadowRoot!.querySelectorAll('[part="frame"]').length).to.equal(3);
   });
 
-  it('collapses internal frames behind a toggle showing the count when collapseInternal', async () => {
-    const el = (await fixture(html`<lr-stack-trace .trace=${trace} collapse-internal></lr-stack-trace>`)) as LyraStackTrace;
+  it('collapses internal frames behind a toggle showing the count by default', async () => {
+    const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
     expect((toggle) != null).to.equal(true);
@@ -106,7 +103,7 @@ describe('lr-stack-trace', () => {
 
   it('formats collapsed internal-frame counts with the effective locale', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace lang="ar-EG" .trace=${trace} collapse-internal></lr-stack-trace>`,
+      html`<lr-stack-trace lang="ar-EG" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
     expect(toggle.textContent).to.include(new Intl.NumberFormat('ar-EG').format(2));
@@ -127,7 +124,7 @@ describe('lr-stack-trace', () => {
     const malformed = '    at malformed (/app/malformed.js:line:column)';
     const el = (await fixture(html`
       <lr-stack-trace
-        .collapseInternal=${false}
+        expand-internal
         .trace=${['Error: untrusted stack', '    at safe (/app/safe.js:1:1)', overflow, malformed].join('\n')}
       ></lr-stack-trace>
     `)) as LyraStackTrace;
@@ -243,7 +240,7 @@ describe('lr-stack-trace', () => {
       value: { writeText: () => Promise.resolve() },
     });
     try {
-      const el = (await fixture(html`<lr-stack-trace .trace=${trace} copyable></lr-stack-trace>`)) as LyraStackTrace;
+      const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
       const listener = oneEvent(el, 'lr-copy');
@@ -563,19 +560,19 @@ describe('lr-stack-trace chrome', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('defaults compact to false and reflects it as an attribute when set', async () => {
+  it('defaults size to "m" and reflects size="s" as an attribute when set', async () => {
     const plain = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
-    expect(plain.compact).to.equal(false);
-    expect(plain.hasAttribute('compact')).to.equal(false);
+    expect(plain.size).to.equal('m');
+    expect(plain.getAttribute('size')).to.equal('m');
 
-    plain.compact = true;
+    plain.size = 's';
     await plain.updateComplete;
-    expect(plain.hasAttribute('compact')).to.equal(true);
+    expect(plain.getAttribute('size')).to.equal('s');
   });
 
-  it('compact tightens padding and group spacing while keeping the card chrome', async () => {
+  it('size="s" tightens padding and group spacing while keeping the card chrome', async () => {
     const regular = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
-    const el = (await fixture(html`<lr-stack-trace compact .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    const el = (await fixture(html`<lr-stack-trace size="s" .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
 
     const dense = baseChrome(el);
     const full = baseChrome(regular);
@@ -591,11 +588,11 @@ describe('lr-stack-trace chrome', () => {
     expect(messageMargin(el)).to.be.lessThan(messageMargin(regular));
   });
 
-  it('keeps compact group spacing tighter than the default, and still zero on the last group', async () => {
+  it('keeps dense group spacing tighter than the default, and still zero on the last group', async () => {
     const chained = ['Error: outer', '    at a (/app/a.js:1:1)', 'Caused by: Error: inner', '    at b (/app/b.js:2:2)']
       .join('\n');
     const regular = (await fixture(html`<lr-stack-trace .trace=${chained}></lr-stack-trace>`)) as LyraStackTrace;
-    const el = (await fixture(html`<lr-stack-trace compact .trace=${chained}></lr-stack-trace>`)) as LyraStackTrace;
+    const el = (await fixture(html`<lr-stack-trace size="s" .trace=${chained}></lr-stack-trace>`)) as LyraStackTrace;
 
     const groups = (host: LyraStackTrace) =>
       [...host.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')].map((g) =>
@@ -608,9 +605,9 @@ describe('lr-stack-trace chrome', () => {
     expect(dense[dense.length - 1]!).to.equal(0);
   });
 
-  it('lets frame="plain" win over compact padding, as on every sibling that pairs them', async () => {
+  it('lets frame="plain" win over dense padding, as on every sibling that pairs them', async () => {
     const el = (await fixture(
-      html`<lr-stack-trace compact frame="plain" .trace=${trace}></lr-stack-trace>`,
+      html`<lr-stack-trace size="s" frame="plain" .trace=${trace}></lr-stack-trace>`,
     )) as LyraStackTrace;
     const chrome = baseChrome(el);
     expect(chrome.paddingTop).to.equal('0px');
@@ -618,8 +615,8 @@ describe('lr-stack-trace chrome', () => {
     expect(chrome.borderTopWidth).to.equal('0px');
   });
 
-  it('is accessible in the compact presentation', async () => {
-    const el = (await fixture(html`<lr-stack-trace compact .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+  it('is accessible in the dense presentation', async () => {
+    const el = (await fixture(html`<lr-stack-trace size="s" .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -628,7 +625,7 @@ describe('lr-stack-trace chrome', () => {
 it('exposes component-scoped internal-frame and interactive colors', async () => {
   const el = (await fixture(html`
     <lr-stack-trace
-      collapse-internal="false"
+      expand-internal
       style="
         --lr-stack-trace-internal-frame-color: rgb(1, 2, 3);
         --lr-stack-trace-interactive-color: rgb(4, 5, 6);
@@ -666,11 +663,11 @@ it('rejects a max-height that tries to escape the custom property into extra dec
 describe('card chrome theming hooks', () => {
   const base = (el: LyraStackTrace) => el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-  it('repaints the card through --lr-stack-trace-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-stack-trace-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-stack-trace
         .trace=${trace}
-        style="--lr-stack-trace-background: rgb(1, 2, 3); --lr-stack-trace-border-color: rgb(4, 5, 6); --lr-stack-trace-radius: 11px"
+        style="--lr-stack-trace-bg: rgb(1, 2, 3); --lr-stack-trace-border-color: rgb(4, 5, 6); --lr-stack-trace-radius: 11px"
       ></lr-stack-trace>
     `)) as LyraStackTrace;
     const chrome = getComputedStyle(base(el));
@@ -686,7 +683,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-stack-trace
         .trace=${trace}
-        style="--lr-stack-trace-background: var(--lr-color-surface); --lr-stack-trace-border-color: var(--lr-color-border-subtle); --lr-stack-trace-radius: var(--lr-radius)"
+        style="--lr-stack-trace-bg: var(--lr-color-surface); --lr-stack-trace-border-color: var(--lr-color-border-subtle); --lr-stack-trace-radius: var(--lr-radius)"
       ></lr-stack-trace>
     `)) as LyraStackTrace;
     const unset = getComputedStyle(base(control));
@@ -725,7 +722,7 @@ function glyphRect(root: Node, needle: string): DOMRect {
 
 it('reads function names and locations left-to-right under RTL while the frame button follows the page', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px">
-    <lr-stack-trace .collapseInternal=${false} .trace=${'Error: boom\n    at Object.<anonymous> (/app/src/index.js:3:7)'}></lr-stack-trace>
+    <lr-stack-trace expand-internal .trace=${'Error: boom\n    at Object.<anonymous> (/app/src/index.js:3:7)'}></lr-stack-trace>
   </div>`);
   const el = host.querySelector('lr-stack-trace') as LyraStackTrace;
   await el.updateComplete;
@@ -738,4 +735,170 @@ it('reads function names and locations left-to-right under RTL while the frame b
   const frame = fn.closest('[part~="frame"]') as HTMLElement | null;
   expect(frame ? getComputedStyle(frame).direction : 'rtl').to.equal('rtl');
   await expect(el).to.be.accessible();
+});
+
+describe('lr-stack-trace size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-stack-trace', kind: 'property', name: 'compact' }];
+  const density = (el: LyraStackTrace): string => JSON.stringify({ padding: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`));
+      dense = density(await fixture<LyraStackTrace>(html`<lr-stack-trace size="s" .trace=${trace}></lr-stack-trace>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraStackTrace>(html`<lr-stack-trace size="s" .trace=${trace}></lr-stack-trace>`));
+      const aliased = await fixture<LyraStackTrace>(html`<lr-stack-trace compact .trace=${trace}></lr-stack-trace>`);
+      alias = density(aliased);
+      const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-stack-trace:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraStackTrace>(html`<lr-stack-trace compact size="l" .trace=${trace}></lr-stack-trace>`);
+      const compactLast = await fixture<LyraStackTrace>(html`<lr-stack-trace size="l" compact .trace=${trace}></lr-stack-trace>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-stack-trace deprecated --lr-stack-trace-background alias', () => {
+  const fill = (el: LyraStackTrace): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+
+  it('paints from --lr-stack-trace-bg, keeps honouring --lr-stack-trace-background as its fallback, and lets --lr-stack-trace-bg win', async () => {
+    const canonical = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} style="--lr-stack-trace-bg: rgb(1, 2, 3)"></lr-stack-trace>`);
+    const alias = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} style="--lr-stack-trace-background: rgb(1, 2, 3)"></lr-stack-trace>`);
+    const both = await fixture<LyraStackTrace>(
+      html`<lr-stack-trace .trace=${trace} style="--lr-stack-trace-bg: rgb(4, 5, 6); --lr-stack-trace-background: rgb(1, 2, 3)"></lr-stack-trace>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-stack-trace deprecated collapse-internal and copyable aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-stack-trace', kind: 'property', name: 'collapseInternal' },
+    { tag: 'lr-stack-trace', kind: 'property', name: 'copyable' },
+  ];
+  const view = (el: LyraStackTrace): string => JSON.stringify({
+    frames: el.shadowRoot!.querySelectorAll('[part="frame"]').length,
+    toggles: el.shadowRoot!.querySelectorAll('[part="internal-toggle"]').length,
+    copy: el.shadowRoot!.querySelector('[part="copy-button"]') !== null,
+  });
+
+  it('treats collapse-internal="false"/copyable="false" exactly like expand-internal/without-copy-button, warning once each', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = view(await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} expand-internal without-copy-button></lr-stack-trace>`));
+      const aliased = await fixture<LyraStackTrace>(
+        html`<lr-stack-trace .trace=${trace} collapse-internal="false" copyable="false"></lr-stack-trace>`,
+      );
+      alias = view(aliased);
+      reads = [aliased.collapseInternal, aliased.copyable, aliased.expandInternal, aliased.withoutCopyButton];
+      const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+      el.collapseInternal = false;
+      el.copyable = false;
+      await el.updateComplete;
+      property = view(el);
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal([false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-stack-trace:property:collapseInternal',
+      'lyra-deprecated:lr-stack-trace:property:copyable',
+    ]);
+  });
+
+  it('keeps bare collapse-internal/copyable meaning the defaults and applies the last write when both spellings are authored', async () => {
+    let bare = '';
+    let plain = '';
+    let both = '';
+    let aliasLast = '';
+    let canonical = '';
+    await captureDeprecationWarnings(ALIASES, async () => {
+      plain = view(await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`));
+      bare = view(await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} collapse-internal copyable></lr-stack-trace>`));
+      canonical = view(await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} expand-internal without-copy-button></lr-stack-trace>`));
+      both = view(
+        await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} collapse-internal copyable expand-internal without-copy-button></lr-stack-trace>`),
+      );
+      aliasLast = view(
+        await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} expand-internal without-copy-button collapse-internal copyable></lr-stack-trace>`),
+      );
+    });
+    expect(bare).to.equal(plain);
+    expect(both).to.equal(canonical);
+    expect(aliasLast).to.equal(plain);
+  });
+
+  it('syncs and reflects collapse-internal/copyable back from the canonical properties without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`);
+      el.expandInternal = true;
+      el.withoutCopyButton = true;
+      await el.updateComplete;
+      reads.push(el.collapseInternal, el.getAttribute('collapse-internal'), el.copyable, el.getAttribute('copyable'));
+      el.expandInternal = false;
+      el.withoutCopyButton = false;
+      await el.updateComplete;
+      reads.push(el.collapseInternal, el.getAttribute('collapse-internal'), el.copyable, el.getAttribute('copyable'));
+    });
+    expect(reads).to.deep.equal([false, 'false', false, 'false', true, null, true, null]);
+    expect(warnings).to.have.length(0);
+  });
 });

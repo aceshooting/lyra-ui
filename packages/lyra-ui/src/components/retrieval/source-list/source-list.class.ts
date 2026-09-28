@@ -1,10 +1,11 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -17,6 +18,12 @@ export interface SourceListToggleDetail {
 
 export interface LyraSourceListEventMap {
   'lr-toggle': CustomEvent<SourceListToggleDetail>;
+}
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 /**
@@ -55,13 +62,13 @@ export interface LyraSourceListEventMap {
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart list - The wrapper around the default slot, `hidden` while collapsed.
  * @cssprop [--lr-source-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
- *   `[part="header"]` padding while `compact`.
+ *   `[part="header"]` padding while `size` is `s` or smaller.
  * @cssprop [--lr-source-list-compact-header-gap=var(--lr-space-2xs)] - Gap between the header
- *   toggle and label while `compact`.
+ *   toggle and label while `size` is `s` or smaller.
  * @cssprop [--lr-source-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="list"]`'s
- *   rows while `compact`.
+ *   rows while `size` is `s` or smaller.
  * @cssprop [--lr-source-list-compact-list-padding=var(--lr-space-s)] - `[part="list"]` padding
- *   while `compact`.
+ *   while `size` is `s` or smaller.
  * @status stable
  * @since 4.0.0
  */
@@ -75,6 +82,9 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** Whether the card list is currently shown. Starts collapsed by default
    *  so a message's sources don't eat vertical space until asked for. */
@@ -90,17 +100,26 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
    *  (see the class doc). Takes precedence over `label` when both are set. */
   @property({ attribute: 'label-plural' }) labelPlural = '';
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the header and list
+   * padding/gap, for a panel rendered repeatedly down a message transcript — same convention as
+   * this component's slotted `<lr-source-card>` children's own `size`. `m` (the default) and larger
+   * keep the regular density. This changes density only; the outer border and surface remain, so
+   * use `frame="plain"` to remove card chrome.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Tighter header and list padding/gap, for a panel rendered repeatedly down a message
    *  transcript — same convention as this component's slotted `<lr-source-card>` children's own
    *  `compact`. Defaults to `false`, preserving the regular-density treatment. This changes
    *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
-   *  chrome. */
+   *  chrome.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
    *  and corner radius so a list nested inside existing message chrome does not double it. Plain
-   *  preserves the header/list divider and whichever regular or compact padding applies. */
+   *  preserves the header/list divider and whichever regular or dense padding applies. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // Tracks the default slot's assigned-element count purely for the

@@ -185,8 +185,10 @@ export interface LyraZoomableFrameEventMap {
  * @csspart controls - The labelled zoom-control group.
  * @csspart zoom-in-button - The zoom-in button.
  * @csspart zoom-out-button - The zoom-out button.
- * @cssprop [--lr-zoomable-frame-control-hover-background=var(--lr-color-brand-quiet)] - Zoom
- *   control hover background; its active background derives from the same value.
+ * @cssprop [--lr-zoomable-frame-control-hover-bg=var(--lr-color-brand-quiet)] - Zoom control
+ *   hover background; its active background derives from the same value.
+ * @cssprop [--lr-zoomable-frame-control-hover-background=var(--lr-color-brand-quiet)] - Deprecated alias of
+ *   `--lr-zoomable-frame-control-hover-bg`; removal not before 23.0.0.
  * @cssprop [--lr-zoomable-frame-zoom=1] - Read-only resolved iframe scale written from `zoom`.
  * @status stable
  * @since 4.0.0

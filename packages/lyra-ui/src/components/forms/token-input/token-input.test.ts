@@ -10,6 +10,10 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 const RULE = "Bash(git status:*)";
 
@@ -309,7 +313,7 @@ it("skips a draft token that duplicates an existing one unless allowDuplicates i
   )) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
   let added = 0;
-  el.addEventListener("lr-add", () => added++);
+  el.addEventListener("lr-token-add-request", () => added++);
   typeInto(input, "alpha");
   press(input, "Enter");
   await el.updateComplete;
@@ -317,7 +321,7 @@ it("skips a draft token that duplicates an existing one unless allowDuplicates i
     el.value,
     "the duplicate draft must be skipped, not appended"
   ).to.deep.equal(["alpha"]);
-  expect(added, "no lr-add for a skipped duplicate").to.equal(0);
+  expect(added, "no lr-token-add-request for a skipped duplicate").to.equal(0);
 
   el.allowDuplicates = true;
   await el.updateComplete;
@@ -417,7 +421,7 @@ it("commits a delimiter batch as one value transaction and one batched add event
   el.addEventListener("change", () => {
     changes += 1;
   });
-  el.addEventListener("lr-add", (event) => {
+  el.addEventListener("lr-token-add-request", (event) => {
     additions.push(event.detail);
   });
 
@@ -694,11 +698,11 @@ it("localizes the remove button accessible name via .strings", async () => {
   expect(removeBtn.getAttribute("aria-label")).to.equal("Retirer alpha");
 });
 
-it("fires lr-remove as cancelable and removes the token when not prevented", async () => {
+it("fires lr-token-remove-request as cancelable and removes the token when not prevented", async () => {
   const el = (await fixture(
     html`<lr-token-input .value=${["alpha", "beta"]}></lr-token-input>`
   )) as LyraTokenInput;
-  const listener = oneEvent(el, "lr-remove");
+  const listener = oneEvent(el, "lr-token-remove-request");
   (
     el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement
   ).click();
@@ -708,12 +712,12 @@ it("fires lr-remove as cancelable and removes the token when not prevented", asy
   expect(el.value).to.deep.equal(["beta"]);
 });
 
-it("fires lr-add as cancelable and adds the token when not prevented", async () => {
+it("fires lr-token-add-request as cancelable and adds the token when not prevented", async () => {
   const el = (await fixture(
     html`<lr-token-input></lr-token-input>`
   )) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
-  const listener = oneEvent(el, "lr-add");
+  const listener = oneEvent(el, "lr-token-add-request");
   typeInto(input, "alpha");
   press(input, "Enter");
   const event = await listener;
@@ -722,12 +726,12 @@ it("fires lr-add as cancelable and adds the token when not prevented", async () 
   expect(el.value).to.deep.equal(["alpha"]);
 });
 
-it("keeps the typed draft and does not add the token when a host calls preventDefault() on lr-add", async () => {
+it("keeps the typed draft and does not add the token when a host calls preventDefault() on lr-token-add-request", async () => {
   const el = (await fixture(
     html`<lr-token-input></lr-token-input>`
   )) as LyraTokenInput;
   const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
-  el.addEventListener("lr-add", (e) => e.preventDefault());
+  el.addEventListener("lr-token-add-request", (e) => e.preventDefault());
   typeInto(input, "alpha");
   press(input, "Enter");
   await el.updateComplete;
@@ -744,7 +748,7 @@ it('ignores a stale remove-button click whose bound index no longer exists after
   )) as LyraTokenInput;
   const removeBtn = removeButtons(el)[0]!;
   let removeEvents = 0;
-  el.addEventListener('lr-remove', () => removeEvents++);
+  el.addEventListener('lr-token-remove-request', () => removeEvents++);
 
   removeBtn.click(); // removes 'alpha' synchronously; Lit has not yet re-rendered the button out
   removeBtn.click(); // same stale button, still bound to index 0, now out of range
@@ -752,15 +756,15 @@ it('ignores a stale remove-button click whose bound index no longer exists after
   expect(el.value).to.deep.equal([]);
   expect(
     removeEvents,
-    'a stale out-of-range index must not fire a second lr-remove for a token that is not there'
+    'a stale out-of-range index must not fire a second lr-token-remove-request for a token that is not there'
   ).to.equal(1);
 });
 
-it("keeps the token in place when a host calls preventDefault() on lr-remove", async () => {
+it("keeps the token in place when a host calls preventDefault() on lr-token-remove-request", async () => {
   const el = (await fixture(
     html`<lr-token-input .value=${["alpha", "beta"]}></lr-token-input>`
   )) as LyraTokenInput;
-  el.addEventListener("lr-remove", (e) => e.preventDefault());
+  el.addEventListener("lr-token-remove-request", (e) => e.preventDefault());
   (
     el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement
   ).click();
@@ -1705,7 +1709,7 @@ describe("editable tokens", () => {
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, "Bash(git diff:*)");
-    const edited = oneEvent(el, "lr-token-edit");
+    const edited = oneEvent(el, "lr-token-edit-request");
     press(field, "Enter");
     const event = await edited;
     expect(event.cancelable).to.be.true;
@@ -1723,7 +1727,7 @@ describe("editable tokens", () => {
     ).to.equal("token-label");
   });
 
-  it("keeps the editor open with the edited text intact when a host calls preventDefault() on lr-token-edit", async () => {
+  it("keeps the editor open with the edited text intact when a host calls preventDefault() on lr-token-edit-request", async () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${[RULE, "other"]}></lr-token-input>`
     )) as LyraTokenInput;
@@ -1731,7 +1735,7 @@ describe("editable tokens", () => {
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, "Bash(git diff:*)");
-    el.addEventListener("lr-token-edit", (e) => e.preventDefault());
+    el.addEventListener("lr-token-edit-request", (e) => e.preventDefault());
     press(field, "Enter");
     await el.updateComplete;
     expect(el.value, "a vetoed edit must not reach value").to.deep.equal([
@@ -1820,7 +1824,7 @@ describe("editable tokens", () => {
     const main = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
     typeInto(main, "pending-new-token");
     let emitted = 0;
-    for (const name of ["input", "change", "lr-token-edit"])
+    for (const name of ["input", "change", "lr-token-edit-request"])
       el.addEventListener(name, () => emitted++);
 
     el.disabled = true;
@@ -1844,7 +1848,7 @@ describe("editable tokens", () => {
     await el.updateComplete;
     typeInto(editor(el)!, "beta");
     let emitted = 0;
-    for (const name of ["input", "change", "lr-token-edit"])
+    for (const name of ["input", "change", "lr-token-edit-request"])
       el.addEventListener(name, () => emitted++);
 
     el.editable = false;
@@ -1866,7 +1870,7 @@ describe("editable tokens", () => {
     const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
     const el = form.querySelector("lr-token-input") as LyraTokenInput;
     let emitted = 0;
-    for (const name of ["input", "change", "lr-token-edit"])
+    for (const name of ["input", "change", "lr-token-edit-request"])
       el.addEventListener(name, () => emitted++);
 
     tokenLabel(el, 0).click();
@@ -1926,7 +1930,7 @@ describe("editable tokens", () => {
     await el.updateComplete;
     const field = editor(el)!;
     let emitted = 0;
-    for (const name of ["input", "change", "lr-token-edit"])
+    for (const name of ["input", "change", "lr-token-edit-request"])
       el.addEventListener(name, () => emitted++);
     typeInto(field, "beta");
     const event = press(field, "Escape");
@@ -1967,7 +1971,7 @@ describe("editable tokens", () => {
     tokenLabel(el, 1).click();
     await el.updateComplete;
     let emitted = 0;
-    for (const name of ["input", "change", "lr-token-edit"])
+    for (const name of ["input", "change", "lr-token-edit-request"])
       el.addEventListener(name, () => emitted++);
     typeInto(editor(el)!, "alpha");
     press(editor(el)!, "Enter");
@@ -2474,7 +2478,7 @@ describe("editable tokens", () => {
     const field = editor(el)!;
     typeInto(field, 'beta');
     let emitted = 0;
-    for (const name of ['input', 'change', 'lr-token-edit'])
+    for (const name of ['input', 'change', 'lr-token-edit-request'])
       el.addEventListener(name, () => emitted++);
 
     // Synchronous disablement; the stale editor is still rendered until the next Lit update.
@@ -3208,4 +3212,122 @@ describe("readonly", () => {
     expect(el.validity.valueMissing, "re-enabled").to.be.true;
     expect(el.matches(":state(invalid)")).to.be.true;
   });
+});
+
+describe("deprecated lr-add / lr-remove / lr-token-edit aliases", () => {
+  const cases = [
+    {
+      alias: "lr-add",
+      canonical: "lr-token-add-request",
+      mount: () => html`<lr-token-input .value=${["alpha"]}></lr-token-input>`,
+      act: async (el: LyraTokenInput) => {
+        const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
+        typeInto(input, "beta");
+        press(input, "Enter");
+        await el.updateComplete;
+      },
+      detail: { value: "beta", values: ["beta"] },
+      unchanged: ["alpha"],
+      changed: ["alpha", "beta"],
+    },
+    {
+      alias: "lr-remove",
+      canonical: "lr-token-remove-request",
+      mount: () => html`<lr-token-input .value=${["alpha", "beta"]}></lr-token-input>`,
+      act: async (el: LyraTokenInput) => {
+        removeButtons(el)[0]!.click();
+        await el.updateComplete;
+      },
+      detail: { value: "alpha", index: 0 },
+      unchanged: ["alpha", "beta"],
+      changed: ["beta"],
+    },
+    {
+      alias: "lr-token-edit",
+      canonical: "lr-token-edit-request",
+      mount: () => html`<lr-token-input editable .value=${["alpha", "beta"]}></lr-token-input>`,
+      act: async (el: LyraTokenInput) => {
+        tokenLabel(el, 0).click();
+        await el.updateComplete;
+        const field = editor(el)!;
+        typeInto(field, "gamma");
+        press(field, "Enter");
+        await el.updateComplete;
+      },
+      detail: { value: "gamma", previousValue: "alpha", index: 0 },
+      unchanged: ["alpha", "beta"],
+      changed: ["gamma", "beta"],
+    },
+  ] as const;
+
+  for (const { alias, canonical, mount, act, detail, unchanged, changed } of cases) {
+    const usage: readonly DeprecatedUsage[] = [
+      { tag: "lr-token-input", kind: "event", name: alias },
+    ];
+
+    it(`fires ${canonical} first, then ${alias}, with separate equal cancelable details`, async () => {
+      const el = (await fixture(mount())) as LyraTokenInput;
+      const seen: CustomEvent[] = [];
+      const record = (event: Event) => seen.push(event as CustomEvent);
+      el.addEventListener(canonical, record);
+      el.addEventListener(alias, record);
+      await act(el);
+      expect(seen.map((event) => event.type)).to.deep.equal([canonical, alias]);
+      expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
+        JSON.stringify(detail),
+        JSON.stringify(detail),
+      ]);
+      expect(
+        seen[0]!.detail === seen[1]!.detail,
+        "each event carries its own detail object"
+      ).to.equal(false);
+      expect(
+        seen.map((event) => [event.cancelable, event.bubbles, event.composed])
+      ).to.deep.equal([
+        [true, true, true],
+        [true, true, true],
+      ]);
+      expect(el.value).to.deep.equal(changed);
+    });
+
+    it(`vetoes through ${canonical} without a deprecation warning`, async () => {
+      const el = (await fixture(mount())) as LyraTokenInput;
+      let aliasPrevented: boolean | undefined;
+      el.addEventListener(canonical, (event) => event.preventDefault());
+      el.addEventListener(alias, (event) => {
+        aliasPrevented = event.defaultPrevented;
+      });
+      const warnings = await captureDeprecationWarnings(usage, () => act(el));
+      expect(el.value).to.deep.equal(unchanged);
+      expect(aliasPrevented, "the alias still fires, undecided").to.equal(false);
+      expect(warnings).to.have.length(0);
+    });
+
+    it(`still lets a listener bound only to ${alias} veto, and warns once`, async () => {
+      const values: string[][] = [];
+      const warnings = await captureDeprecationWarnings(usage, async () => {
+        for (let round = 0; round < 2; round += 1) {
+          const el = (await fixture(mount())) as LyraTokenInput;
+          el.addEventListener(alias, (event) => event.preventDefault());
+          await act(el);
+          values.push([...el.value]);
+        }
+      });
+      expect(values).to.deep.equal([[...unchanged], [...unchanged]]);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        `lyra-deprecated:lr-token-input:event:${alias}`,
+      ]);
+      expect(warnings[0]!.message).to.contain(canonical);
+    });
+
+    it(`does not warn when a ${alias} listener only observes`, async () => {
+      const el = (await fixture(mount())) as LyraTokenInput;
+      let observed = 0;
+      el.addEventListener(alias, () => (observed += 1));
+      const warnings = await captureDeprecationWarnings(usage, () => act(el));
+      expect(observed).to.equal(1);
+      expect(warnings).to.have.length(0);
+      expect(el.value).to.deep.equal(changed);
+    });
+  }
 });

@@ -14,7 +14,7 @@ type MarkdownHost = HTMLElement & {
   streamingRender: 'plain' | 'progressive';
   headingAnchors: boolean;
   codeBlockHeader: boolean;
-  highlightCode: boolean;
+  withoutSyntaxHighlighting: boolean;
   languages: Record<string, unknown>;
   marked?: unknown;
   updateComplete: Promise<boolean>;
@@ -141,7 +141,7 @@ it('keeps an open fence literal and LTR without highlight or chrome until its cl
   for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
     const el = mountMarkdown(tag, '# Code\n\n```javascript\nconst answer = 42;\n');
     el.codeBlockHeader = true;
-    el.highlightCode = true;
+    el.withoutSyntaxHighlighting = false;
     await el.updateComplete;
     const root = await contentRoot(el);
     const open = root.querySelector<HTMLElement>('pre[part="code-block"]');
@@ -242,7 +242,7 @@ it('keeps settled nodes, selection, and repeated heading ids stable through asyn
     el.headingAnchors = true;
     await contentRoot(el);
     el.content = source;
-    el.highlightCode = true;
+    el.withoutSyntaxHighlighting = false;
     el.languages = { json: jsonGrammar };
     await contentRoot(el);
 
@@ -365,7 +365,7 @@ it('forwards progressive mode through both streaming-text variants and message t
 
   const parts = document.createElement('lr-message-parts') as HTMLElement & {
     parts: readonly MessagePart[];
-    showReasoning: boolean;
+    withoutReasoning: boolean;
     updateComplete: Promise<boolean>;
   };
   parts.setAttribute('content-mode', 'markdown');
@@ -374,7 +374,7 @@ it('forwards progressive mode through both streaming-text variants and message t
     { id: 'stream-text', type: 'text', state: 'streaming', text: '# Text part\n\ncurrent text' },
     { id: 'stream-reasoning', type: 'reasoning', state: 'streaming', text: '# Reasoning part\n\ncurrent reasoning' },
   ];
-  parts.showReasoning = true;
+  parts.withoutReasoning = false;
   mounted.push(parts);
   document.body.append(parts);
   await parts.updateComplete;
@@ -395,7 +395,7 @@ it('restores focus from an open-fence preview to the committed code block, but n
   await preloadMarkdown();
   for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
     const el = mountMarkdown(tag, '# Code\n\n```text\nline one\n');
-    el.highlightCode = false;
+    el.withoutSyntaxHighlighting = true;
     const root = await contentRoot(el);
     await waitUntil(() => Boolean(root.querySelector('pre[part="code-block"]')), 'open fence preview never rendered');
     root.querySelector<HTMLElement>('pre[part="code-block"]')!.focus();
@@ -413,7 +413,7 @@ it('restores focus from an open-fence preview to the committed code block, but n
     mounted.push(outside);
     document.body.append(outside);
     const second = mountMarkdown(tag, '# Code\n\n```text\nline two\n');
-    second.highlightCode = false;
+    second.withoutSyntaxHighlighting = true;
     const secondRoot = await contentRoot(second);
     await waitUntil(() => Boolean(secondRoot.querySelector('pre[part="code-block"]')));
     secondRoot.querySelector<HTMLElement>('pre[part="code-block"]')!.focus();

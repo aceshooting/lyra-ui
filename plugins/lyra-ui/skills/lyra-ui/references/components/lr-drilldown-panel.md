@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button (the inverse: show-focus-button="false" becomes without-focus-button)`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,8 +36,10 @@ source-card, document-preview, and entity-card primitives.
   sole category region. `null` leaves a tab strip unnamed and falls back to the sole category
   label; an explicit empty string is preserved.
 - `communityLabel: string = ''` (attribute `community-label`) and
-  `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to active entity
-  cards.
+  `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to active
+  entity cards; `without-focus-button` hides each card's built-in focus action. Deprecated alias:
+  `show-focus-button`/`showFocusButton` (its inverse, so `show-focus-button="false"` equals `without-focus-button`;
+  use `without-focus-button`; removed in 23.0.0).
 
 Structured inputs cross a realm-neutral schema boundary. The component clones and freezes all
 accepted records, nested arrays, and entity property maps; ignores accessors, malformed records,

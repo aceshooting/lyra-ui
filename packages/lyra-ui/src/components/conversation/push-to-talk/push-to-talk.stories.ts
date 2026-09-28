@@ -23,7 +23,7 @@ export const WithLevelEventsAndMaxDuration: Story = {
     docs: {
       description: {
         story:
-          '`level-events`, `max-duration-ms`, and `show-timer` remain live during a recording. Changing them starts or stops their owned runtime work immediately; a revised maximum duration remains measured from the original recording start.',
+          '`level-events`, `max-duration-ms`, and `without-timer` remain live during a recording. Changing them starts or stops their owned runtime work immediately; a revised maximum duration remains measured from the original recording start.',
       },
     },
   },

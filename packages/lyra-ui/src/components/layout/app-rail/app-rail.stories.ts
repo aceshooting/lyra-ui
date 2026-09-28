@@ -129,12 +129,12 @@ function wireExternalTrigger(event: Event): void {
 }
 
 export const ExternalMobileControl: Story = {
-  name: "External mobile control (hide-toggle)",
+  name: "External mobile control (without-toggle)",
   parameters: {
     docs: {
       description: {
         story:
-          'Set `hide-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. If the trigger, opener, and built-in toggle are unavailable, focus returns to the rail host with a temporary tabindex that is removed on blur. When the host is hidden or inert too, `focus-fallback` names a last-resort target. The built-in `[part="toggle"]` stays hidden while closed, but survives `hide-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
+          'Set `without-toggle` when application-owned mobile navigation already has its own trigger, and assign that trigger to the rail\'s `trigger` property (or reference its id via `for`) so closing the overlay -- by any path, not just this button -- returns focus to it. If the trigger, opener, and built-in toggle are unavailable, focus returns to the rail host with a temporary tabindex that is removed on blur. When the host is hidden or inert too, `focus-fallback` names a last-resort target. The built-in `[part="toggle"]` stays hidden while closed, but survives `without-toggle` once the overlay opens: reparented inside the trapped panel, it becomes the only in-panel dismiss control.',
       },
     },
   },
@@ -145,7 +145,7 @@ export const ExternalMobileControl: Story = {
       </button>
       ${page(html`
         <lr-app-rail
-          hide-toggle
+          without-toggle
           label="Primary"
           mobile-breakpoint="9999px"
           style="block-size:100%;"
@@ -171,7 +171,7 @@ function launchFocusFallbackRail(event: Event): void {
 /** A navigation item that opens a full-screen view: the app bar and the rail leave the layout
  *  as the overlay closes, taking every built-in focus return target with them. */
 function enterViewOnClose(event: Event): void {
-  if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) return;
+  if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.expanded) return;
   const rail = event.currentTarget as LyraAppRail;
   rail.closest('[data-demo]')!.querySelector<HTMLElement>('[data-app-bar]')!.hidden = true;
   rail.hidden = true;
@@ -203,7 +203,7 @@ export const FocusFallback: Story = {
         </button>
       </header>
       <lr-app-rail
-        hide-toggle
+        without-toggle
         for="ff-launch"
         focus-fallback="ff-view"
         label="Primary"
@@ -440,7 +440,7 @@ export const CancelableResize: Story = {
         label="Primary"
         force-mode="full"
         resizable
-        rail-width-px="280"
+        rail-width="280"
         @lr-rail-resize-request=${capRailResizeRequest}
         style="block-size:100%;"
       >
@@ -460,12 +460,12 @@ export const StopResizingOnRequest: Story = {
     },
   },
   render: () => page(html`
-    <lr-app-rail label="Primary" force-mode="full" resizable rail-width-px="240"
+    <lr-app-rail label="Primary" force-mode="full" resizable rail-width="240"
       style="block-size: 100%;"
       @lr-rail-resize-request=${(event: Event) => {
         const rail = event.currentTarget as LyraAppRail;
         rail.resizable = false;
-        rail.railWidthPx = 300;
+        rail.railWidth = 300;
       }}>
       ${navItems}
     </lr-app-rail>
@@ -571,7 +571,7 @@ export const SidebarInset: Story = {
 
 export const SidebarTriggerAndShortcut: Story = {
   parameters: { docs: { description: { story: 'One external trigger calls toggle() in every mode. The rail manages its disclosure state and shortcut; Mod+B toggles unless focus is editing text. Offcanvas follows viewport breakpoints.' } } },
-  render: () => html`<div style="display:flex;block-size:28rem"><lr-app-rail id="sidebar-nav" label="Workspace" frame="card" hide-toggle trigger-collapses for="sidebar-trigger" hotkey="mod+b" storage-key="sidebar-story" persist="preferred-mode">${sidebarItems()}</lr-app-rail><main style="flex:1;padding:var(--lr-space-l)"><button id="sidebar-trigger" type="button" @click=${(event: Event) => {
+  render: () => html`<div style="display:flex;block-size:28rem"><lr-app-rail id="sidebar-nav" label="Workspace" frame="card" without-toggle trigger-collapses for="sidebar-trigger" hotkey="mod+b" storage-key="sidebar-story" persist="preferred-mode">${sidebarItems()}</lr-app-rail><main style="flex:1;padding:var(--lr-space-l)"><button id="sidebar-trigger" type="button" @click=${(event: Event) => {
     (event.currentTarget as HTMLElement).closest('main')?.parentElement?.querySelector<LyraAppRail>('lr-app-rail')?.toggle();
   }}>Toggle sidebar</button><h2>Workspace</h2><p>Try Mod+B, or the same trigger at a mobile viewport width.</p></main></div>`,
 };

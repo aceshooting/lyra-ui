@@ -882,6 +882,7 @@ describe("unified show/hide lifecycle", () => {
     summary.click();
     expect((await userToggle).detail).to.deep.equal({
       open: true,
+      expanded: true,
       source: "user",
     });
 
@@ -891,6 +892,7 @@ describe("unified show/hide lifecycle", () => {
     await el.hide();
     expect((await apiToggle).detail).to.deep.equal({
       open: false,
+      expanded: false,
       source: "programmatic",
     });
 
@@ -910,6 +912,7 @@ describe("unified show/hide lifecycle", () => {
     await second.show();
     expect((await peerToggle).detail).to.deep.equal({
       open: false,
+      expanded: false,
       source: "peer",
     });
   });
@@ -1186,6 +1189,7 @@ describe('findable closed-content gate', () => {
     expect(order).to.deep.equal(['lr-show', 'lr-toggle', 'lr-after-show']);
     expect(toggleDetail).to.deep.equal({
       open: true,
+      expanded: true,
       source: 'programmatic',
     });
   });
@@ -1528,6 +1532,7 @@ describe("Web Awesome disclosure surface", () => {
     expect(winner.name).to.equal("faq");
     expect((await peerToggle).detail).to.deep.equal({
       open: false,
+      expanded: false,
       source: "peer",
     });
   });

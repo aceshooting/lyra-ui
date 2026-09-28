@@ -1128,7 +1128,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
         expect(getComputedStyle(mark).backgroundColor).to.not.equal(getComputedStyle(row).backgroundColor);
 
         // Still fully retunable through the documented cssprop.
-        el.style.setProperty('--lr-archive-viewer-highlight-neutral-background', 'rgb(9, 8, 7)');
+        el.style.setProperty('--lr-archive-viewer-highlight-neutral-bg', 'rgb(9, 8, 7)');
         expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(9, 8, 7)');
       } finally {
         restore();
@@ -1146,5 +1146,52 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     } finally {
       restore();
     }
+  });
+});
+
+describe('lr-archive-viewer -bg custom properties and their deprecated -background aliases', () => {
+  const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+  const names = ['alpha.txt', 'beta.txt', 'gamma.txt', 'delta.txt', 'omega.txt'];
+  const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
+  const declarations = (suffix: 'bg' | 'background', offset: number): string =>
+    tones.map((tone, index) => `--lr-archive-viewer-highlight-${tone}-${suffix}: ${colorFor(index + offset)};`).join(' ');
+
+  const paints = async (style: string): Promise<string[]> => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    try {
+      const { el, list, restore } = await listingWithEntries(names);
+      try {
+        el.setAttribute('style', style);
+        el.highlights = tones.map((tone, index) => ({
+          id: tone,
+          tone,
+          anchor: { kind: 'text-quote', quote: names[index]!.slice(0, -'.txt'.length) },
+        }));
+        await el.updateComplete;
+        const root = list.shadowRoot!;
+        const markFor = (tone: string) => root.querySelector<HTMLElement>(`mark[data-lr-highlight-tone="${tone}"]`);
+        await waitUntil(() => tones.every((tone) => markFor(tone) !== null), 'every tone painted a fallback mark');
+        return tones.map((tone) => getComputedStyle(markFor(tone)!).backgroundColor);
+      } finally {
+        restore();
+      }
+    } finally {
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  };
+
+  const expected = (offset: number): string[] => tones.map((_, index) => colorFor(index + offset));
+
+  it('paints every tone from the canonical -bg properties', async () => {
+    expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+  });
+
+  it('still honors the deprecated -background spellings with the same result', async () => {
+    expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
+  });
+
+  it('lets the canonical -bg property win when both spellings are set', async () => {
+    expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
   });
 });

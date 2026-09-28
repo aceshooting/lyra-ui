@@ -16,6 +16,7 @@ import {
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { closeIcon } from '../../../internal/icons.js';
 import {
   autocorrectConverter,
@@ -59,8 +60,24 @@ export interface LyraTokenInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  /** Cancelable proposal to add one or more tokens in a single commit. */
+  'lr-token-add-request': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
+  /** Cancelable proposal to remove one token. */
+  'lr-token-remove-request': CustomEvent<{ value: string; index: number }>;
+  /** Cancelable proposal to edit one token in place. */
+  'lr-token-edit-request': CustomEvent<{
+    value: string;
+    previousValue: string;
+    index: number;
+  }>;
+  /** @deprecated Use `lr-token-add-request`; removal not before 23.0.0. Fired right after it from
+   *  the same commit with an equal detail; either event's `preventDefault()` vetoes the add. */
   'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
+  /** @deprecated Use `lr-token-remove-request`; removal not before 23.0.0. Fired right after it
+   *  from the same removal with an equal detail; either event's `preventDefault()` vetoes it. */
   'lr-remove': CustomEvent<{ value: string; index: number }>;
+  /** @deprecated Use `lr-token-edit-request`; removal not before 23.0.0. Fired right after it from
+   *  the same commit with an equal detail; either event's `preventDefault()` vetoes the edit. */
   'lr-token-edit': CustomEvent<{
     value: string;
     previousValue: string;
@@ -147,20 +164,32 @@ const stringArrayConverter = {
  * @event lr-change - Lyra commit alias; detail is `{ value }` with the current token list.
  * @event focus - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
- * @event lr-add - One or more tokens are about to be added in a single commit. Detail is
- *   `{ value, values }`, where `value` is the final added token for compatibility and `values` is
- *   the complete ordered batch. Cancelable -- call `preventDefault()` to veto the add (e.g. a
- *   server-side validation check) and the tokens stay out of `value`; the typed draft text is left
- *   in the input unchanged so the user can correct it, rather than being silently cleared.
- * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
- *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
- *   protected-token check) and the token stays in `value` unchanged.
- * @event lr-token-edit - An existing token is about to be edited in place; detail is
+ * @event lr-token-add-request - One or more tokens are about to be added in a single commit.
+ *   Detail is `{ value, values }`, where `value` is the final added token for compatibility and
+ *   `values` is the complete ordered batch. Cancelable -- call `preventDefault()` to veto the add
+ *   (e.g. a server-side validation check) and the tokens stay out of `value`; the typed draft text
+ *   is left in the input unchanged so the user can correct it, rather than being silently cleared.
+ *   Fires before `lr-add`, from the same commit; either event may veto.
+ * @event lr-token-remove-request - A token is about to be removed; detail is `{ value, index }`.
+ *   Cancelable -- call `preventDefault()` to veto the removal (e.g. pending an async confirmation
+ *   or a protected-token check) and the token stays in `value` unchanged. Fires before
+ *   `lr-remove`, from the same removal; either event may veto.
+ * @event lr-token-edit-request - An existing token is about to be edited in place; detail is
  *   `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or
  *   duplicate-colliding edit -- those close the editor with no event. Cancelable -- call
  *   `preventDefault()` to veto the edit and the token stays in `value` unchanged; the inline
  *   editor stays open with the user's edited text intact so they can correct it, rather than
- *   closing and discarding it.
+ *   closing and discarding it. Fires before `lr-token-edit`, from the same commit; either event
+ *   may veto.
+ * @event lr-add - Deprecated cancelable alias of `lr-token-add-request`, kept firing right after
+ *   it with an equal `detail: { value, values }`; either event may veto, and a veto through this
+ *   alias logs a one-time development warning. Removal not before 23.0.0.
+ * @event lr-remove - Deprecated cancelable alias of `lr-token-remove-request`, kept firing right
+ *   after it with an equal `detail: { value, index }`; either event may veto, and a veto through
+ *   this alias logs a one-time development warning. Removal not before 23.0.0.
+ * @event lr-token-edit - Deprecated cancelable alias of `lr-token-edit-request`, kept firing right
+ *   after it with an equal `detail: { value, previousValue, index }`; either event may veto, and a
+ *   veto through this alias logs a one-time development warning. Removal not before 23.0.0.
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -808,15 +837,19 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // veto a removal has no equivalent way to veto an add otherwise. A vetoed add leaves the draft
     // text in place rather than clearing it -- the user typed something real and gets to correct
     // it, the same way a rejected form submission doesn't blank the field.
-    const event = this.emit(
-      'lr-add',
+    const addDetail = () =>
       Object.freeze({
         value: added[added.length - 1]!,
         values: Object.freeze([...added]),
-      }),
-      { cancelable: true }
-    );
-    if (event.defaultPrevented) return;
+      });
+    const request = this.emit('lr-token-add-request', addDetail(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-add', addDetail(), { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-add', 'lr-token-add-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.updateValue(next);
     this.draft = '';
   }
@@ -876,15 +909,20 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private removeToken(index: number): void {
     if (this.liveDisabled || this.readonly) return;
     const removed = this.value[index];
-    // The roving/edit index can outlive the token it pointed at, and `lr-remove` promises a
-    // `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
+    // The roving/edit index can outlive the token it pointed at, and `lr-token-remove-request`
+    // promises a `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
     if (removed === undefined) return;
-    const event = this.emit(
-      'lr-remove',
+    const request = this.emit(
+      'lr-token-remove-request',
       { value: removed, index },
       { cancelable: true }
     );
-    if (event.defaultPrevented) return;
+    // Deprecated alias, dispatched unconditionally with its own equal detail (see `addDraft()`).
+    const deprecatedAlias = this.emit('lr-remove', { value: removed, index }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-remove', 'lr-token-remove-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     // Removing a token reindexes every later one, so an editor left open over the old indices would
     // commit against the wrong token.
     if (this.editingIndex >= 0) {
@@ -926,12 +964,12 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * cancels rather than removing the token -- removal stays the explicit job of the remove button
    * -- and an edit colliding with an existing token under `allowDuplicates = false` is discarded,
    * mirroring how `addDraft()` skips a duplicate candidate instead of rejecting the whole entry.
-   * None of those "no usable change" cases fire `lr-token-edit`, so the editor closes for them
-   * unconditionally.
+   * None of those "no usable change" cases fire `lr-token-edit-request`, so the editor closes for
+   * them unconditionally.
    *
-   * A genuine change emits `lr-token-edit` as cancelable and checks `defaultPrevented` *before*
-   * closing the editor or mutating `value` -- the same emit-then-check-then-mutate shape
-   * `removeToken()` uses for `lr-remove`. A vetoed edit leaves the editor open with the user's
+   * A genuine change emits `lr-token-edit-request` as cancelable and checks `defaultPrevented`
+   * *before* closing the editor or mutating `value` -- the same emit-then-check-then-mutate shape
+   * `removeToken()` uses for `lr-token-remove-request`. A vetoed edit leaves the editor open with the user's
    * edited (uncommitted) text intact, so they can correct it, rather than closing and discarding
    * it. Only past that veto check does the editor close first, so the teardown blur it triggers
    * re-enters this method as a no-op rather than committing (and emitting `change`) a second time.
@@ -947,7 +985,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const next = this.editDraft.trim();
     const noUsableChange =
       // Editor state is cleared below even for a stale index; there is simply no previous token to
-      // report, and `lr-token-edit` promises a `string` `previousValue`.
+      // report, and `lr-token-edit-request` promises a `string` `previousValue`.
       previousValue === undefined ||
       !next ||
       next === previousValue ||
@@ -962,12 +1000,21 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       this.editDraft = '';
       return;
     }
-    const event = this.emit(
+    const request = this.emit(
+      'lr-token-edit-request',
+      { value: next, previousValue, index },
+      { cancelable: true }
+    );
+    // Deprecated alias, dispatched unconditionally with its own equal detail (see `addDraft()`).
+    const deprecatedAlias = this.emit(
       'lr-token-edit',
       { value: next, previousValue, index },
       { cancelable: true }
     );
-    if (event.defaultPrevented) return;
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-token-edit', 'lr-token-edit-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     if (restoreFocus) this.focusTokenPending = index;
     this.editingIndex = -1;
     this.editDraft = '';

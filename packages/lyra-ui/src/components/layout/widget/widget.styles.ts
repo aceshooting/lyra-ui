@@ -378,11 +378,11 @@ export const styles = css`
   :host([fullscreen]) [part="body"] {
     block-size: 100%;
   }
-  :host([compact]) [part="header"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="header"] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     gap: var(--lr-space-xs);
   }
-  :host([compact]) [part="body"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="body"] {
     padding: var(--lr-space-s);
   }
   @media (prefers-reduced-motion: reduce) {

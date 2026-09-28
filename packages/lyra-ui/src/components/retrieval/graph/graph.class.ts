@@ -9,6 +9,7 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -60,15 +61,19 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   copyGraphLinkIdentity,
+  graphLengthConverter,
   graphLinkIdentity,
   normalizeGraphModel,
   type LyraGraphCommunity,
+  type LyraGraphEdge,
   type LyraGraphLink,
   type LyraGraphNode,
   type NormalizedGraphModel,
 } from './graph-model.js';
 export type {
   LyraGraphCommunity,
+  LyraGraphEdge,
+  /** @deprecated Use `LyraGraphEdge`; removal not before 23.0.0. */
   LyraGraphLink,
   LyraGraphNode,
 } from './graph-model.js';
@@ -114,7 +119,7 @@ export interface LyraScoreThresholds {
 // .d.ts entirely), this indirection doesn't reintroduce the barrel leak the inline
 // `import()` idiom elsewhere in this file exists to avoid.
 interface SimNode extends LyraGraphNode, D3SimulationNodeDatum {}
-type SimLink = Omit<LyraGraphLink, 'source' | 'target'> &
+type SimLink = Omit<LyraGraphEdge, 'source' | 'target'> &
   D3SimulationLinkDatum<SimNode> & {
     /** `true` when `target` couldn't be resolved to a real node -- `target` is then a synthetic,
      *  non-simulated position (kept in sync with `source` every tick), rendered as a short dead-end
@@ -244,7 +249,7 @@ function diamondPath(r: number): string {
   return `M 0 ${-d} L ${d} 0 L 0 ${d} L ${-d} 0 Z`;
 }
 
-/** Value equality for a controlled id-array prop (`selectedNodeIds`/`selectedLinkIds`). A host
+/** Value equality for a controlled id-array prop (`selectedNodeIds`/`selectedEdgeIds`). A host
  *  that recomputes `.selectedNodeIds=${...}` inline on every render -- the ordinary, correct Lit
  *  pattern for a controlled prop, e.g. `<lr-knowledge-graph-explorer>`'s own
  *  `.selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}` -- hands down a fresh
@@ -269,11 +274,27 @@ export interface LyraGraphEventMap {
   }>;
   'lr-node-enter': CustomEvent<{ nodeId: string }>;
   'lr-node-leave': CustomEvent<{ nodeId: string }>;
+  /** An edge was hovered. */
+  'lr-edge-enter': CustomEvent<{
+    sourceNodeId: string;
+    targetNodeId: string;
+    linkId?: string;
+  }>;
+  /** The hover from `lr-edge-enter` ended. */
+  'lr-edge-leave': CustomEvent<{
+    sourceNodeId: string;
+    targetNodeId: string;
+    linkId?: string;
+  }>;
+  /** @deprecated Use `lr-edge-enter`; removal not before 23.0.0. Fired right after it from the
+   *  same hover, with an equal detail. */
   'lr-link-enter': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
     linkId?: string;
   }>;
+  /** @deprecated Use `lr-edge-leave`; removal not before 23.0.0. Fired right after it from the
+   *  same hover end, with an equal detail. */
   'lr-link-leave': CustomEvent<{
     sourceNodeId: string;
     targetNodeId: string;
@@ -283,6 +304,10 @@ export interface LyraGraphEventMap {
   'lr-selection-change': CustomEvent<
     LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>
   >;
+  /** A hull was activated by pointer or keyboard. */
+  'lr-community-activate': CustomEvent<{ communityId: string }>;
+  /** @deprecated Use `lr-community-activate`; removal not before 23.0.0. Fired right after it from
+   *  the same activation, with an equal detail. */
   'lr-community-click': CustomEvent<{ communityId: string }>;
   /** Frame-coalesced pan/zoom/layout signal — see the class doc's `lr-viewport-change` event entry. */
   'lr-viewport-change': CustomEvent<{ k: number; x: number; y: number }>;
@@ -295,7 +320,7 @@ export interface LyraGraphEventMap {
  * Set `seed` for a deterministic layout: node initial positions become
  * reproducible (keyed by node id) and the settle happens synchronously
  * instead of animating, like `prefers-reduced-motion`. `seed` only takes
- * effect on the update that first populates `nodes`/`links` (or a later
+ * effect on the update that first populates `nodes`/`edges` (or a later
  * update that adds genuinely new node ids) — willUpdate() only reads it from
  * inside rebuildSimulation(), which itself only ever assigns x/y to nodes
  * that don't already have a settled position, so changing `seed` on an
@@ -342,18 +367,25 @@ export interface LyraGraphEventMap {
  *   pure-CSS theming (not a substitute for this event — a consumer computing its own
  *   adjacency-based highlight needs the id, which only the event carries).
  * @event lr-node-leave - The hover from `lr-node-enter` ended. `detail: { nodeId }`.
- * @event lr-link-enter - A link was hovered. `detail: { sourceNodeId, targetNodeId, linkId? }`. Same
- *   suppression/`data-hovered` behavior as `lr-node-enter`.
- * @event lr-link-leave - The hover from `lr-link-enter` ended. `detail: { sourceNodeId,
- *   targetNodeId, linkId? }`.
+ * @event lr-edge-enter - An edge was hovered. `detail: { sourceNodeId, targetNodeId, linkId? }`.
+ *   Same suppression/`data-hovered` behavior as `lr-node-enter`. Fires before `lr-link-enter`.
+ * @event lr-edge-leave - The hover from `lr-edge-enter` ended. `detail: { sourceNodeId,
+ *   targetNodeId, linkId? }`. Fires before `lr-link-leave`.
+ * @event lr-link-enter - Deprecated alias of `lr-edge-enter`, kept firing unchanged right after it
+ *   with an equal detail. Removal not before 23.0.0.
+ * @event lr-link-leave - Deprecated alias of `lr-edge-leave`, kept firing unchanged right after it
+ *   with an equal detail. Removal not before 23.0.0.
  * @event lr-node-expand - A node was double-activated (native `dblclick`, or two Enter/Space
  *   activations of the same focused node within 500ms). `detail: { nodeId }`. Fires for any node
  *   regardless of `LyraGraphNode.expandable` -- that flag only controls the visual "+" affordance and
  *   spoken "expandable" suffix.
  * @event lr-selection-change - `detail: { nodeIds, linkIds }`. Fires when `selectionMode` is not
- *   `'none'` and the user activates/clears a node or link. The component never assigns
- *   `selectedNodeIds`/`selectedLinkIds` itself -- controlled, mirroring `lr-heatmap.selectedCell`.
- * @event lr-community-click - A hull was activated. `detail: { communityId }`.
+ *   `'none'` and the user activates/clears a node or edge. The component never assigns
+ *   `selectedNodeIds`/`selectedEdgeIds` itself -- controlled, mirroring `lr-heatmap.selectedCell`.
+ * @event lr-community-activate - A hull was activated by pointer or keyboard.
+ *   `detail: { communityId }`. Fires before `lr-community-click`.
+ * @event lr-community-click - Deprecated alias of `lr-community-activate`, kept firing unchanged
+ *   right after it with an equal `detail: { communityId }`. Removal not before 23.0.0.
  * @event lr-viewport-change - `detail: { k, x, y }`, the live d3-zoom camera transform. Fires at
  *   most once per animation frame regardless of how many pan/zoom/simulation-tick updates land
  *   within it, coalescing every source that can move a rendered node's screen position -- a user
@@ -368,7 +400,7 @@ export interface LyraGraphEventMap {
  * @csspart arrowhead - The marker used by directed graph links.
  * @csspart label - A node label (`renderer="svg"` only; not rendered at all when `nodeLabels` is
  *   `'none'`).
- * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
+ * @csspart link-label - A drawn edge label (only rendered when `withEdgeLabels` is set).
  * @csspart expand-indicator - The "+" badge rendered on a node with `expandable: true`.
  * @csspart focus-halo - The persistent ring tracking `focusNodeId`'s node.
  * @csspart hull - A community hull (behind links/nodes; role="button").
@@ -388,8 +420,12 @@ export interface LyraGraphEventMap {
  *   `height` property sizes the host too (a private custom property, not itself settable) --
  *   setting this always overrides `height`, and an explicit outer `block-size` still wins over
  *   both.
- * @cssprop [--lr-node-fill=var(--lr-color-brand)] - Default node fill, overridden per-node by `LyraGraphNode.color`.
- * @cssprop [--lr-link-color=var(--lr-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
+ * @cssprop [--lr-graph-node-fill=var(--lr-color-brand)] - Default node fill, overridden per-node by
+ *   `LyraGraphNode.color`.
+ * @cssprop [--lr-graph-edge-color=var(--lr-color-border)] - Default edge stroke, overridden per-edge
+ *   by an edge's own `color`.
+ * @cssprop [--lr-node-fill=var(--lr-color-brand)] - Deprecated alias of `--lr-graph-node-fill`; removal not before 23.0.0.
+ * @cssprop [--lr-link-color=var(--lr-color-border)] - Deprecated alias of `--lr-graph-edge-color`; removal not before 23.0.0.
  * @cssprop [--lr-graph-cat-1=var(--lr-theme-graph-cat-1,#8250df)] - First categorical fallback color for typed nodes.
  * @cssprop [--lr-graph-cat-2=var(--lr-theme-graph-cat-2,#bf3989)] - Second categorical fallback color for typed nodes.
  * @cssprop [--lr-graph-cat-3=var(--lr-theme-graph-cat-3,#0a7d91)] - Third categorical fallback color for typed nodes.
@@ -404,8 +440,8 @@ export interface LyraGraphEventMap {
  * @cssprop [--lr-graph-focus-halo-color=var(--lr-color-brand)] - `focus-halo` stroke color.
  * @cssprop [--lr-graph-selected-color=var(--lr-color-success)] - Selected node/link stroke.
  * @cssprop [--lr-graph-dimmed-opacity=0.35] - Opacity applied to a node/link when
- *   `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). Visible by
- *   default -- a consumer controlling `dimmedNodeIds`/`dimmedLinkIds` (e.g.
+ *   `dimmedNodeIds`/`dimmedEdgeIds` includes its id (both SVG and canvas renderers). Visible by
+ *   default -- a consumer controlling `dimmedNodeIds`/`dimmedEdgeIds` (e.g.
  *   `lr-knowledge-graph-explorer`) sees the dimming take effect with no extra host styling.
  * @cssprop [--lr-graph-hull-fill=var(--lr-color-brand)] - Hull fill/stroke color.
  * @cssprop [--lr-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
@@ -438,13 +474,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
+    'edges',
     'links',
     'nodeTypes',
     'hiddenTypes',
     'communities',
     'selectedNodeIds',
+    'selectedEdgeIds',
     'selectedLinkIds',
     'dimmedNodeIds',
+    'dimmedEdgeIds',
     'dimmedLinkIds',
   ]);
 
@@ -458,14 +497,27 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     styles,
     srOnly,
   ];
+  // Each array alias (`links`, and on lr-graph the id lists) is declared before its canonical
+  // property: initialized second, it would find the canonical default already synced in and warn
+  // as though authored.
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    links: 'edges',
+    linkDistance: 'edgeDistance',
+    showEdgeLabels: 'withEdgeLabels',
+    selectedLinkIds: 'selectedEdgeIds',
+    dimmedLinkIds: 'dimmedEdgeIds',
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
   ]);
 
   /** Readonly nodes in the controlled graph model. Node ids provide stable render and interaction identity. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
-  /** Directed or undirected connections between node ids in `nodes`. */
+  /** Directed or undirected connections between node ids in `nodes`.
+   *  @deprecated Use `edges`; removal not before 23.0.0. */
   @property({ attribute: false }) links: readonly LyraGraphLink[] = [];
+  /** Directed or undirected connections between node ids in `nodes`. */
+  @property({ attribute: false }) edges: readonly LyraGraphEdge[] = [];
   /** Declares each `LyraGraphNode.type` value's legend label, fill color, and shape. A typed node with
    *  no matching entry here renders as untyped (default circle, token fill) but still participates
    *  in `hiddenTypes` filtering by its raw `type` string. */
@@ -483,7 +535,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private normalizedGraphModel?: NormalizedGraphModel;
   private normalizedGraphSources?: readonly [
     readonly LyraGraphNode[],
-    readonly LyraGraphLink[],
+    readonly LyraGraphEdge[],
     readonly LyraNodeTypeStyle[],
     readonly LyraGraphCommunity[]
   ];
@@ -495,19 +547,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (
       !sources ||
       sources[0] !== this.nodes ||
-      sources[1] !== this.links ||
+      sources[1] !== this.edges ||
       sources[2] !== this.nodeTypes ||
       sources[3] !== this.communities
     ) {
       this.normalizedGraphSources = [
         this.nodes,
-        this.links,
+        this.edges,
         this.nodeTypes,
         this.communities,
       ];
       this.normalizedGraphModel = normalizeGraphModel(
         this.nodes,
-        this.links,
+        this.edges,
         this.nodeTypes,
         this.communities
       );
@@ -520,7 +572,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  deterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,
    *  dependency-free util suitable for any future layered-diagram consumer) instead -- no settle
    *  animation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a
-   *  documented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions
+   *  documented no-op, `edgeDistance` retunes the layer gap. Switching at runtime repositions
    *  without a tween. */
   @property({ converter: GRAPH_LAYOUT })
   get layout(): LyraGraphLayout {
@@ -554,17 +606,24 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  and `'container'` simply follows whichever of them won. Falls back to `width`/`height` when
    *  the box is unmeasurable (detached, `display: none`, or a realm with no `ResizeObserver`). */
   @property({ attribute: 'fit-to' }) fitTo: LyraGraphFit = 'none';
-  /** Requested graph viewport width in CSS pixels. Ignored while `fitTo === 'container'`. */
-  @property({ type: Number }) width = 800;
-  /** Requested graph viewport height in CSS pixels. Also sizes the rendered host itself (see
-   *  `--lr-canvas-reserved-height`'s doc) whenever neither that nor an explicit outer `block-size`
-   *  overrides it. Only the drawing space is ignored while `fitTo === 'container'`; the host
-   *  sizing above still applies. */
-  @property({ type: Number }) height = 600;
+  /** Requested graph viewport width: a number of CSS pixels, or a CSS length in `px`, `rem`, `em`,
+   *  `vw` or `vh` resolved to pixels when the drawing space is laid out (`rem` against the root
+   *  font size, `em` against this element's own). Any other value uses the 800px default. Ignored
+   *  while `fitTo === 'container'`. */
+  @property({ converter: graphLengthConverter }) width: number | string = 800;
+  /** Requested graph viewport height, in the same forms as `width` (any other value uses the 600px
+   *  default). Also sizes the rendered host itself (see `--lr-canvas-reserved-height`'s doc)
+   *  whenever neither that nor an explicit outer `block-size` overrides it. Only the drawing space
+   *  is ignored while `fitTo === 'container'`; the host sizing above still applies. */
+  @property({ converter: graphLengthConverter }) height: number | string = 600;
   /** Many-body force strength used by the force layout. Negative values repel nodes. */
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength =
     -300;
-  /** Preferred link length for force layout and layer separation for layered layout. */
+  /** Preferred edge length for force layout and layer separation for layered layout. */
+  @property({ type: Number, attribute: 'edge-distance' }) edgeDistance = 100;
+  /** Preferred link length for force layout and layer separation for layered layout.
+   *  @deprecated Use `edge-distance`; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias of edgeDistance, which safeLinkDistance normalizes
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
   /** Minimum camera scale accepted by zoom interactions; updates live in both renderers. */
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
@@ -577,24 +636,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  node id, not array index) instead of forceSimulation()'s own random
    *  start, and settles the simulation synchronously — see rebuildSimulation().
    *  Only takes effect on the update that first assigns a given node id an
-   *  x/y (i.e. supplied at/before `nodes`/`links` first populate, or when a
+   *  x/y (i.e. supplied at/before `nodes`/`edges` first populate, or when a
    *  later update introduces new node ids) — changing `seed` afterwards does
    *  not retroactively reposition already-settled nodes; there is currently
    *  no way to make an already-rendered graph reproducible after the fact. */
   @property({ type: Number }) seed?: number;
+  /** Draws each resolved (non-dangling) edge's `label` as visible SVG text at the segment
+   *  midpoint. Off by default — `LyraGraphEdge.label` stays spoken/tooltip-only, matching today's
+   *  behavior, unless this is set. */
+  @property({ type: Boolean, attribute: 'with-edge-labels' }) withEdgeLabels =
+    false;
   /** Draws each resolved (non-dangling) link's `label` as visible SVG text at the segment
    *  midpoint. Off by default — `LyraGraphLink.label` stays spoken/tooltip-only, matching today's
-   *  behavior, unless this is set. */
+   *  behavior, unless this is set.
+   *  @deprecated Use `with-edge-labels`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-edge-labels' }) showEdgeLabels =
     false;
   /** Below this zoom scale, every drawn edge label is hidden (a `data-edge-labels-hidden`
-   *  attribute toggled on the zoomed `<g>`, no Lit re-render). Ignored when `showEdgeLabels` is
+   *  attribute toggled on the zoomed `<g>`, no Lit re-render). Ignored when `withEdgeLabels` is
    *  false. */
   @property({ type: Number, attribute: 'edge-label-min-zoom' })
   edgeLabelMinZoom = 0.6;
   /** Node-label visibility. `'always'` draws every node's label unconditionally; `'zoom'` hides
    *  them below `NODE_LABEL_MIN_ZOOM` (a `data-node-labels-hidden` attribute toggled on the zoomed
-   *  `<g>`, mirroring `showEdgeLabels`/`edgeLabelMinZoom`'s own zoom-gate mechanism, no Lit
+   *  `<g>`, mirroring `withEdgeLabels`/`edgeLabelMinZoom`'s own zoom-gate mechanism, no Lit
    *  re-render); `'none'` never renders them. Unset (the default) preserves each renderer's
    *  pre-existing behavior exactly -- `'always'` for `renderer="svg"`, `'zoom'` for
    *  `renderer="canvas"` -- so this stays a purely additive opt-in. */
@@ -606,24 +671,31 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ attribute: 'focus-node-id' }) focusNodeId: string | null = null;
   /** `'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,
    *  no `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component
-   *  never mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns
+   *  never mutates `selectedNodeIds`/`selectedEdgeIds` itself, only emits intent; the host assigns
    *  them back. */
   @property({ attribute: 'selection-mode' })
   selectionMode: LyraGraphSelectionMode = 'none';
   /** Controlled ids of selected nodes. Selection gestures emit intent without mutating this array. */
   @property({ attribute: false }) selectedNodeIds: readonly string[] = [];
-  /** Controlled ids of selected links, using each link's stable effective key. */
+  /** Controlled ids of selected links, using each link's stable effective key.
+   *  @deprecated Use `selectedEdgeIds`; removal not before 23.0.0. */
   @property({ attribute: false }) selectedLinkIds: readonly string[] = [];
+  /** Controlled ids of selected edges, using each edge's stable effective key. */
+  @property({ attribute: false }) selectedEdgeIds: readonly string[] = [];
   /** Node ids to render dimmed (`data-dimmed` on the matching `[part="node"]`, themeable via
-   *  `--lr-graph-dimmed-opacity`). Controlled, mirroring `selectedNodeIds`/`selectedLinkIds`: the
+   *  `--lr-graph-dimmed-opacity`). Controlled, mirroring `selectedNodeIds`/`selectedEdgeIds`: the
    *  component never assigns this itself, only renders it -- a host typically computes it from a
-   *  `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set,
-   *  computed from the host's own `links` array) and assigns the result back. Empty (the default)
+   *  `lr-node-enter`/`lr-edge-enter` hover (the complement of the hovered id's neighbor set,
+   *  computed from the host's own `edges` array) and assigns the result back. Empty (the default)
    *  renders every node at full opacity, unchanged from today. */
   @property({ attribute: false }) dimmedNodeIds: readonly string[] = [];
   /** Same contract as `dimmedNodeIds`, for links. A link's dimming key is the same `linkKey()`
-   *  value (`LyraGraphLink.id`, else `` `${source}->${target}` ``) `selectedLinkIds` already uses. */
+   *  value (`LyraGraphLink.id`, else `` `${source}->${target}` ``) `selectedLinkIds` already uses.
+   *  @deprecated Use `dimmedEdgeIds`; removal not before 23.0.0. */
   @property({ attribute: false }) dimmedLinkIds: readonly string[] = [];
+  /** Same contract as `dimmedNodeIds`, for edges. An edge's dimming key is the same `linkKey()`
+   *  value (`LyraGraphEdge.id`, else `` `${source}->${target}` ``) `selectedEdgeIds` already uses. */
+  @property({ attribute: false }) dimmedEdgeIds: readonly string[] = [];
 
   private readonly arrowMarkerId = nextId('graph-arrow');
 
@@ -686,7 +758,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private syncingGraphHostRole = false;
 
   private simulation?: D3Simulation<SimNode, SimLink>;
-  /** The live charge/link force objects, kept so chargeStrength/linkDistance
+  /** The live charge/link force objects, kept so chargeStrength/edgeDistance
    *  changes can retune them in place (see updated()) instead of requiring a
    *  full rebuildSimulation(). */
   private chargeForce?: D3ForceManyBody<SimNode>;
@@ -787,7 +859,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     | {
         kind: 'link';
         id: string;
-        detail: LyraGraphEventMap['lr-link-enter']['detail'];
+        detail: LyraGraphEventMap['lr-edge-enter']['detail'];
       };
   private hoverRafId?: number;
   private hoverRafOwner?: BrowserWindow;
@@ -1093,7 +1165,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Link stroke width reaches SVG paint, canvas stroke/arrowhead math, and the picking surface.
    *  Keep those three representations synchronized on one finite, non-negative value. */
-  private safeLinkWidth(link: Pick<LyraGraphLink, 'width'>): number {
+  private safeLinkWidth(link: Pick<LyraGraphEdge, 'width'>): number {
     return finiteRange(link.width ?? 1.5, 1.5, 0);
   }
 
@@ -1108,7 +1180,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const safe = sanitizeNodeColor(link.color);
     const effectivePaint =
       safe ??
-      (computed.getPropertyValue('--lr-link-color').trim() ||
+      (computed.getPropertyValue('--lr-graph-edge-color').trim() ||
+        computed.getPropertyValue('--lr-link-color').trim() ||
         computed.getPropertyValue('--lr-color-border').trim());
     const color = effectivePaint
       ? resolveColor(effectivePaint).trim().toLowerCase()
@@ -1152,9 +1225,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Cleared twice, from two different points in `willUpdate()` -- neither alone is enough:
    *  (1) unconditionally at the top, because `isInteractiveLink()` (what this filters on) reads
-   *  live computed style (`--lr-link-color`, `--lr-color-border`) and `link.color`/`link.width`,
+   *  live computed style (`--lr-graph-edge-color`, `--lr-color-border`) and `link.color`/`link.width`,
    *  none of which are reactive properties `changed` would ever report, so a style-only update
-   *  (a CSS custom-property edit plus `requestUpdate()`, `nodes`/`links` untouched) must still see
+   *  (a CSS custom-property edit plus `requestUpdate()`, `nodes`/`edges` untouched) must still see
    *  a fresh result; (2) again right after `rebuildSimulation()` reassigns `simLinks`, because
    *  `willUpdate()`'s own `previousIndex` computation (right after clear (1), before
    *  `rebuildSimulation()` runs) can itself call `navigableLinks()` and repopulate the cache from
@@ -1180,6 +1253,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return this.navigableLinksCache;
   }
 
+  /** A `width`/`height` input in pixels: a number as given, a CSS length resolved against this
+   *  element, `NaN` (the caller's fallback) for anything unresolvable. */
+  private lengthInPixels(value: number | string): number {
+    return typeof value === 'string'
+      ? (resolveCssTokenLength(value, { host: this }) ?? Number.NaN)
+      : value;
+  }
+  private get requestedWidth(): number {
+    return finiteRange(this.lengthInPixels(this.width), 800, 1);
+  }
+  private get requestedHeight(): number {
+    return finiteRange(this.lengthInPixels(this.height), 600, 1);
+  }
+
   /** `width`/`height` normalized to a finite, positive viewport size — an invalid attribute value
    *  would otherwise flow straight into `forceCenter`, the SVG `viewBox`, and the canvas backing
    *  store's `width`/`height`, producing `NaN` geometry/transforms that silently render nothing
@@ -1187,12 +1274,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  them, with the normalized numeric value still the fallback for every frame before a usable
    *  measurement exists (see `measureHostBox()`). */
   private get safeWidth(): number {
-    const requested = finiteRange(this.width, 800, 1);
+    const requested = this.requestedWidth;
     const measured = this.fitTo === 'container' && this.containerSize;
     return measured ? finiteRange(measured.width, requested, 1) : requested;
   }
   private get safeHeight(): number {
-    const requested = finiteRange(this.height, 600, 1);
+    const requested = this.requestedHeight;
     const measured = this.fitTo === 'container' && this.containerSize;
     return measured ? finiteRange(measured.height, requested, 1) : requested;
   }
@@ -1239,7 +1326,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /** Writes the private `--_lr-graph-requested-height` fallback that `:host`'s block-size resolves
-   *  through (see graph.styles.ts), from the normalized numeric `height`. Kept private and beneath
+   *  through (see graph.styles.ts), from `height` normalized to pixels. Kept private and beneath
    *  the author-facing `--lr-canvas-reserved-height` so an ancestor's reservation always still
    *  wins. Always finite (the fallback is 600), so there is no unset branch to handle.
    *  Deliberately normalizes `height` directly rather than reading `safeHeight`: under
@@ -1248,7 +1335,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private syncRequestedHeightVar(): void {
     this.style.setProperty(
       '--_lr-graph-requested-height',
-      `${finiteRange(this.height, 600, 1)}px`
+      `${this.requestedHeight}px`
     );
   }
 
@@ -1310,11 +1397,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return finiteNumber(this.chargeStrength, -300);
   }
 
-  /** `linkDistance` normalized to a finite, non-negative pixel distance — feeds `forceLink()`'s
+  /** `edgeDistance` normalized to a finite, non-negative pixel distance — feeds `forceLink()`'s
    *  `distance()`, the layered layout's `gapY`, and the neighbor-jitter spawn radius, none of
    *  which have a sane meaning for a negative/non-finite value. */
   private get safeLinkDistance(): number {
-    return finiteRange(this.linkDistance, 100, 0);
+    return finiteRange(this.edgeDistance, 100, 0);
   }
 
   private resolveNodeType(node: LyraGraphNode): LyraNodeTypeStyle | undefined {
@@ -1341,7 +1428,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** Resolution precedence: `node.color` (existing, most specific) > matched `LyraNodeTypeStyle.color`
    *  > the ordered categorical fallback palette by the type's index among label-bearing `nodeTypes`
    *  entries, matching `lr-graph-legend`'s own row order > (returns `undefined`, letting the
-   *  untyped `--lr-node-fill` token default apply). Both data-driven color sources pass the
+   *  untyped `--lr-graph-node-fill` token default apply). Both data-driven color sources pass the
    *  existing `sanitizeNodeColor()`. A blank-label type itself (never shown as its own legend row)
    *  falls back to its raw `nodeTypes` position, since there is no legend row to stay in sync with. */
   private nodeFill(node: LyraGraphNode): string | undefined {
@@ -1368,7 +1455,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     );
   }
 
-  /** Resolves `this.links` against an already-built `byId` node map: a link whose source isn't in
+  /** Resolves `this.edges` against an already-built `byId` node map: a link whose source isn't in
    *  `byId` is dropped (hidden source, or a genuinely missing one); a link whose target isn't in
    *  `byId` either stubs as a dangling link (target id doesn't exist in `this.nodes` at all) or is
    *  dropped (target exists but is hidden by `hiddenTypes`). Shared by both the force and layered
@@ -1442,6 +1529,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onCommunityClick(community: LyraGraphCommunity): void {
+    this.emit('lr-community-activate', { communityId: community.id });
+    // Deprecated alias, dispatched with its own equal detail right after the canonical event.
     this.emit('lr-community-click', { communityId: community.id });
   }
 
@@ -1865,6 +1954,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         ),
       }));
       const linkColorDefault =
+        cs.getPropertyValue('--lr-graph-edge-color').trim() ||
         cs.getPropertyValue('--lr-link-color').trim() ||
         cs.getPropertyValue('--lr-color-border').trim();
       const links = this.simLinks.map((l) => {
@@ -1884,7 +1974,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         };
       });
       const edgeLabels =
-        this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
+        this.withEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
           ? this.simLinks.flatMap((l) => {
               const label = ownGraphText(l, 'label');
               if (!label) return [];
@@ -1901,6 +1991,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             })
           : [];
       const nodeFillDefault =
+        cs.getPropertyValue('--lr-graph-node-fill').trim() ||
         cs.getPropertyValue('--lr-node-fill').trim() ||
         cs.getPropertyValue('--lr-color-brand').trim();
       const nodes = this.simNodes.map((n) => {
@@ -2061,7 +2152,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // (markCanvasDirty()) or when the camera crossed one of the two label-visibility zoom gates
     // the scene bakes in (see canvasSceneHasEdgeLabels' doc).
     const edgeLabelsVisible =
-      this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom;
+      this.withEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom;
     const nodeLabelsVisible = this.canvasNodeLabelsVisible();
     if (
       !this.canvasScene ||
@@ -2410,7 +2501,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.canvasHover = next;
     if (previous?.kind === 'node')
       this.emit('lr-node-leave', { nodeId: previous.id });
-    else if (previous?.kind === 'link') this.emit('lr-link-leave', previous.detail);
+    else if (previous?.kind === 'link') this.emitEdgeHover('leave', previous.detail);
     if (
       !this.isConnected ||
       this.renderer !== 'canvas' ||
@@ -2418,7 +2509,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     )
       return;
     if (next?.kind === 'node') this.emit('lr-node-enter', { nodeId: next.id });
-    else if (next?.kind === 'link') this.emit('lr-link-enter', next.detail);
+    else if (next?.kind === 'link') this.emitEdgeHover('enter', next.detail);
   }
 
   private onCanvasDblClick = (e: MouseEvent): void => {
@@ -2507,13 +2598,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private isSelected(kind: LyraGraphPickKind, id: string): boolean {
     return kind === 'node'
       ? canonicalIdentityList(this.selectedNodeIds).includes(id)
-      : canonicalIdentityList(this.selectedLinkIds).includes(id);
+      : canonicalIdentityList(this.selectedEdgeIds).includes(id);
   }
 
   private isDimmed(kind: LyraGraphPickKind, id: string): boolean {
     return kind === 'node'
       ? canonicalIdentityList(this.dimmedNodeIds).includes(id)
-      : canonicalIdentityList(this.dimmedLinkIds).includes(id);
+      : canonicalIdentityList(this.dimmedEdgeIds).includes(id);
   }
 
   private linkKey(link: SimLink): string {
@@ -2521,7 +2612,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /** Computes and emits the selection intent for activating `id`; never assigns
-   *  `selectedNodeIds`/`selectedLinkIds` itself -- see the class doc's controlled-selection note. */
+   *  `selectedNodeIds`/`selectedEdgeIds` itself -- see the class doc's controlled-selection note. */
   private emitSelectionIntent(
     kind: LyraGraphPickKind,
     id: string,
@@ -2543,7 +2634,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return;
     }
     const selectedNodeIds = canonicalIdentityList(this.selectedNodeIds);
-    const selectedLinkIds = canonicalIdentityList(this.selectedLinkIds);
+    const selectedLinkIds = canonicalIdentityList(this.selectedEdgeIds);
     const nodeIds =
       kind === 'node'
         ? selected
@@ -2563,7 +2654,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (this.selectionMode === 'none') return;
     if (
       !canonicalIdentityList(this.selectedNodeIds).length &&
-      !canonicalIdentityList(this.selectedLinkIds).length
+      !canonicalIdentityList(this.selectedEdgeIds).length
     )
       return;
     this.emit('lr-selection-change', { nodeIds: [], linkIds: [] });
@@ -2592,7 +2683,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // caches below).
     this.navigableLinksCache = undefined;
     this.syncGraphHostRole();
-    // Gates the mount-time selection announcement below -- selectedNodeIds/selectedLinkIds both
+    // Gates the mount-time selection announcement below -- selectedNodeIds/selectedEdgeIds both
     // default to `[]`, a non-undefined default, so Lit marks them "changed" on the very first
     // update too. `wasMounting` is captured before flipping the flag so only that first pass is
     // excluded -- mirrors `<lr-branch-picker>`'s identical `isMounting` gate for its own
@@ -2608,10 +2699,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const structureChanged =
       this.d3 &&
       (changed.has('nodes') ||
-        changed.has('links') ||
+        changed.has('edges') ||
         changed.has('hiddenTypes') ||
         changed.has('layout') ||
-        (this.layout === 'layered' && changed.has('linkDistance')));
+        (this.layout === 'layered' && changed.has('edgeDistance')));
     const graphItemsChanged = Boolean(
       structureChanged || changed.has('simNodes') || changed.has('communities')
     );
@@ -2656,7 +2747,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // about to perform.
     //
     // Compares values (via sameIds()), not just changed.has(): a host that recomputes
-    // `.selectedNodeIds=${...}`/`.selectedLinkIds=${...}` inline on every render (the ordinary,
+    // `.selectedNodeIds=${...}`/`.selectedEdgeIds=${...}` inline on every render (the ordinary,
     // correct Lit pattern for a controlled prop) hands down a fresh array reference on every
     // unrelated re-render even when the actual selection never changed. Trusting changed.has()
     // alone re-announced "N selected" on every such re-render -- e.g. a live-region assertion
@@ -2669,16 +2760,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.selectedNodeIds
       );
     const selectedLinkIdsChanged =
-      changed.has('selectedLinkIds') &&
+      changed.has('selectedEdgeIds') &&
       !sameIds(
-        changed.get('selectedLinkIds') as string[] | undefined,
-        this.selectedLinkIds
+        changed.get('selectedEdgeIds') as string[] | undefined,
+        this.selectedEdgeIds
       );
     if ((selectedNodeIdsChanged || selectedLinkIdsChanged) && !wasMounting) {
       this.graphLiveText = this.localize('graphSelectionCount', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(
           canonicalIdentityList(this.selectedNodeIds).length +
-            canonicalIdentityList(this.selectedLinkIds).length
+            canonicalIdentityList(this.selectedEdgeIds).length
         ),
       });
     }
@@ -2714,11 +2805,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.d3) return;
     if (
       !changed.has('nodes') &&
-      !changed.has('links') &&
+      !changed.has('edges') &&
       !changed.has('hiddenTypes')
     ) {
       // These two branches are independent (not else-if): a consumer can set
-      // width/height and chargeStrength/linkDistance in the same reactive
+      // width/height and chargeStrength/edgeDistance in the same reactive
       // update batch, and both retunes must apply — not just whichever branch
       // happens to come first.
       // `containerSize` joins width/height here as the third input to the same drawing space:
@@ -2737,14 +2828,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         );
         this.simulation?.alpha(0.1).restart();
       }
-      if (changed.has('chargeStrength') || changed.has('linkDistance')) {
-        // Without this branch, chargeStrength/linkDistance only took effect
+      if (changed.has('chargeStrength') || changed.has('edgeDistance')) {
+        // Without this branch, chargeStrength/edgeDistance only took effect
         // the next time nodes/links also changed (rebuildSimulation() reads
         // them fresh) — retune the already-created force objects in place
         // instead of rebuilding the whole simulation.
         if (changed.has('chargeStrength'))
           this.chargeForce?.strength(this.safeChargeStrength);
-        if (changed.has('linkDistance'))
+        if (changed.has('edgeDistance'))
           this.linkForce?.distance(this.safeLinkDistance);
         this.simulation?.alpha(0.3).restart();
       }
@@ -2885,7 +2976,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         changed.has('simNodes') ||
         changed.has('simLinks') ||
         changed.has('nodeTypes') ||
-        changed.has('showEdgeLabels') ||
+        changed.has('withEdgeLabels') ||
         changed.has('nodeLabels') ||
         changed.has('communities')
       )
@@ -3067,7 +3158,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         target.setAttribute('y2', String(coordinates.y2));
       }
     });
-    if (this.showEdgeLabels) {
+    if (this.withEdgeLabels) {
       this.simLinks.forEach((l, i) => {
         const labelEl = this.linkLabelEls[i];
         if (!labelEl) return;
@@ -3339,7 +3430,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /** The `layout="layered"` path: computes final positions synchronously via the shared
-   *  `layeredLayout()` util (2r x 2r boxes, `gapY = linkDistance`, `gapX = 12`), centers the
+   *  `layeredLayout()` util (2r x 2r boxes, `gapY = edgeDistance`, `gapX = 12`), centers the
    *  drawing in `width` x `height`, and skips forceSimulation() entirely -- no `this.simulation`,
    *  no ticking, no `prevById` carry-over (deterministic input -> output makes it unnecessary; a
    *  structural change simply recomputes wholesale). `lr-graph` never passes `fixedPositions`. */
@@ -3455,12 +3546,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private onLinkEnter(link: SimLink, e: MouseEvent): void {
     if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
-    this.emit('lr-link-enter', this.linkHoverDetail(link));
+    this.emitEdgeHover('enter', this.linkHoverDetail(link));
   }
 
   private linkHoverDetail(
     link: SimLink
-  ): LyraGraphEventMap['lr-link-enter']['detail'] {
+  ): LyraGraphEventMap['lr-edge-enter']['detail'] {
     const source =
       typeof link.source === 'object'
         ? (link.source as SimNode).id
@@ -3479,7 +3570,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private onLinkLeave(link: SimLink, e: MouseEvent): void {
     if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).removeAttribute('data-hovered');
-    this.emit('lr-link-leave', this.linkHoverDetail(link));
+    this.emitEdgeHover('leave', this.linkHoverDetail(link));
+  }
+
+  /** Fires `lr-edge-enter`/`lr-edge-leave`, then the deprecated `lr-link-*` alias, each with its own
+   *  copy of the detail. */
+  private emitEdgeHover(
+    phase: 'enter' | 'leave',
+    detail: LyraGraphEventMap['lr-edge-enter']['detail']
+  ): void {
+    if (phase === 'enter') {
+      this.emit('lr-edge-enter', { ...detail });
+      this.emit('lr-link-enter', { ...detail });
+    } else {
+      this.emit('lr-edge-leave', { ...detail });
+      this.emit('lr-link-leave', { ...detail });
+    }
   }
 
   private nodeAccessibleText(node: LyraGraphNode): string {
@@ -4091,7 +4197,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const dash = normalizeLinkDash(l.dash);
               const visibleLabel = ownGraphText(l, 'label');
               const labelPos =
-                this.showEdgeLabels && visibleLabel
+                this.withEdgeLabels && visibleLabel
                   ? this.edgeLabelPosition(l)
                   : undefined;
               const hitLineEl = svg`<line
@@ -4135,7 +4241,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   marker-end=${
                     l.directed ? `url(#${this.arrowMarkerId})` : nothing
                   }
-                  style=${styleMap(color ? { '--lr-link-color': color } : {})}
+                  style=${styleMap(color ? { '--lr-graph-edge-color': color } : {})}
                   x1=${coordinates.x1}
                   y1=${coordinates.y1}
                   x2=${coordinates.x2}
@@ -4196,7 +4302,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const tabindex =
                 this.normalizedGraphItem() === itemIndex ? '0' : '-1';
               const label = this.nodeAccessibleText(n);
-              // 'none' renders no <text part="label"> at all, same as showEdgeLabels === false for
+              // 'none' renders no <text part="label"> at all, same as withEdgeLabels === false for
               // edge labels; 'zoom' still renders it here and lets the data-node-labels-hidden
               // zoom gate (see updateNodeLabelZoomGate()) hide it via CSS below NODE_LABEL_MIN_ZOOM.
               const visibleLabel =
@@ -4208,7 +4314,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               // attribute at all -- not just an empty one -- so hasAttribute('style') distinguishes
               // "no fill override" from "fill override present" for consumers/tests probing the DOM.
               const style = fill
-                ? styleMap({ '--lr-node-fill': fill })
+                ? styleMap({ '--lr-graph-node-fill': fill })
                 : nothing;
               const title = svg`<title>${this.nodeTooltipText(n)}</title>`;
               const hitEl = svg`<line

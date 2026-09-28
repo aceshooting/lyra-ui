@@ -43,7 +43,7 @@ export const Default: Story = {
 };
 
 export const HiddenAxis: Story = {
-  render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans} hide-axis></lr-span-waterfall>`,
+  render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans} without-axis></lr-span-waterfall>`,
 };
 
 export const BrushedWithTimeRange: Story = {

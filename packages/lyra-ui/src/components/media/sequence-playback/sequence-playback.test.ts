@@ -4,6 +4,14 @@ import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+
+const LOOP: readonly DeprecatedUsage[] = [
+  { tag: 'lr-sequence-playback', kind: 'property', name: 'loop' },
+];
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sequence-playback', 'index');
@@ -79,10 +87,12 @@ it('does not schedule a tick when an lr-play listener pauses reentrantly', async
   expect(el.currentIndex).to.equal(0);
 });
 
-it('advances the index on each tick and wraps when loop is true', async () => {
+it('advances the index on each tick and wraps by default', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="3" interval-ms="20"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
+  expect(el.withoutLoop).to.be.false;
+  expect(el.loop).to.be.true;
   const playEvent = oneEvent(el, 'lr-play');
   el.play();
   await playEvent;
@@ -91,24 +101,22 @@ it('advances the index on each tick and wraps when loop is true', async () => {
   expect(el.currentIndex).to.be.greaterThan(0);
 });
 
-it('stops at the last index when loop is false and not-looping is reached', async () => {
+it('stops at the last index when withoutLoop is set and the end is reached', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
-  el.loop = false;
+  el.withoutLoop = true;
   el.play();
   await aTimeout(30);
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(1);
 });
 
-it('stops at the last index when loop="false" is set as a plain HTML attribute', async () => {
-  // Regression test: `loop` defaults `true`, and Lit's default presence-based `type: Boolean`
-  // converter cannot distinguish an absent attribute from the literal string "false" -- only a
-  // `true`-aware converter parses the literal attribute form correctly.
+it('stops at the last index when the without-loop attribute is set', async () => {
   const el = (await fixture(
-    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop="false"></lr-sequence-playback>`,
+    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" without-loop></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
+  expect(el.withoutLoop).to.be.true;
   expect(el.loop).to.be.false;
   el.play();
   await aTimeout(30);
@@ -116,19 +124,75 @@ it('stops at the last index when loop="false" is set as a plain HTML attribute',
   expect(el.currentIndex).to.equal(1);
 });
 
-it('removing loop="false" restores the true-defaulting loop behavior', async () => {
-  const el = (await fixture(
-    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop="false"></lr-sequence-playback>`,
-  )) as LyraSequencePlayback;
-  expect(el.loop).to.be.false;
+describe('the deprecated loop alias', () => {
+  // Runs the two-item sequence from its last item and reports whether it wrapped (still playing).
+  async function wrapsAtEnd(el: LyraSequencePlayback): Promise<boolean> {
+    el.play();
+    await aTimeout(30);
+    const wrapped = el.playing;
+    el.pause();
+    return wrapped;
+  }
 
-  el.removeAttribute('loop');
-  expect(el.loop).to.be.true;
+  it('loop="false" equals without-loop and warns once', async () => {
+    const results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(LOOP, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        // `loop` defaults `true`, and Lit's presence-based `type: Boolean` converter cannot tell
+        // an absent attribute from the literal string "false"; the alias parses it correctly.
+        const el = (await fixture(
+          html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop="false"></lr-sequence-playback>`,
+        )) as LyraSequencePlayback;
+        expect(el.loop).to.be.false;
+        expect(el.withoutLoop).to.be.true;
+        results.push(await wrapsAtEnd(el));
+        expect(el.currentIndex).to.equal(1);
+      }
+    });
+    expect(results).to.deep.equal([false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-sequence-playback:property:loop',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-loop');
+  });
 
-  el.play();
-  await aTimeout(30);
-  expect(el.playing).to.be.true;
-  el.pause();
+  it('removing loop="false" restores the looping default', async () => {
+    await captureDeprecationWarnings(LOOP, async () => {
+      const el = (await fixture(
+        html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop="false"></lr-sequence-playback>`,
+      )) as LyraSequencePlayback;
+      expect(el.loop).to.be.false;
+
+      el.removeAttribute('loop');
+      expect(el.loop).to.be.true;
+      expect(el.withoutLoop).to.be.false;
+      expect(await wrapsAtEnd(el)).to.be.true;
+    });
+  });
+
+  it('forwards a property write and never reflects either spelling', async () => {
+    const el = (await fixture(
+      html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1"></lr-sequence-playback>`,
+    )) as LyraSequencePlayback;
+    await captureDeprecationWarnings(LOOP, async () => {
+      el.loop = false;
+      await el.updateComplete;
+    });
+    expect(el.withoutLoop).to.be.true;
+    expect(el.hasAttribute('loop')).to.be.false;
+    expect(el.hasAttribute('without-loop')).to.be.false;
+    expect(await wrapsAtEnd(el)).to.be.false;
+  });
+
+  it('lets the later-written without-loop win over loop', async () => {
+    await captureDeprecationWarnings(LOOP, async () => {
+      const el = (await fixture(
+        html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop without-loop></lr-sequence-playback>`,
+      )) as LyraSequencePlayback;
+      expect(el.withoutLoop).to.be.true;
+      expect(await wrapsAtEnd(el)).to.be.false;
+    });
+  });
 });
 
 it('no-ops play() when length <= 1', async () => {

@@ -18,13 +18,13 @@ export const styles = css`
     background: var(--lr-community-card-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
   }
-  /* Density escape -- same convention as sibling lr-entity-card's identical compact rule. Values
+  /* Density escape -- same convention as sibling lr-entity-card's identical dense-size rule. Values
      sit behind inline var() fallbacks, not a :host declaration that every instance re-declares and
      so shadows any ancestor value; the fallbacks are the pre-existing values, so an unset card
      renders unchanged. MUST stay before frame='plain' below: both are :host([x]) [part='base'],
      equal specificity, so source order alone decides, and plain (no chrome at all) must win on a
      card that is both. */
-  :host([compact]) [part='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
     padding: var(--lr-community-card-compact-padding, var(--lr-space-s));
     gap: var(--lr-community-card-compact-gap, var(--lr-space-xs));
   }
@@ -77,7 +77,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  :host([compact]) [part='title'] button {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='title'] button {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

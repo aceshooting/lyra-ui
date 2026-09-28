@@ -68,7 +68,7 @@ ancestor to change every unset entity chip beneath it.
 <p>
   …first described by
   <lr-entity-chip entity-id="e1" text="Ada Lovelace" type="person">
-    <lr-entity-card show-focus-button="false"></lr-entity-card> </lr-entity-chip
+    <lr-entity-card without-focus-button></lr-entity-card> </lr-entity-chip
   >.
 </p>
 ```

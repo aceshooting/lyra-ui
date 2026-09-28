@@ -1,9 +1,17 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { tag } from '../../../internal/prefix.js';
 import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import {
@@ -58,6 +66,17 @@ interface WidgetRendererEl extends HTMLElement {
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
   'button, a[href], area[href], input, select, textarea, summary, label, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], [role="spinbutton"], [role="textbox"], [role="combobox"], [role="option"], [role="menuitem"], [tabindex]:not([part="cell"])';
+/** `row-height`/`gap`: any value `Number()` reads as a number parses exactly as the former
+ *  number-only attributes did; any other value stays the authored CSS length string. */
+const DASHBOARD_LENGTH_CONVERTER: ComplexAttributeConverter<number | string> = {
+  fromAttribute: (value) => {
+    // A removed attribute writes `null` back, exactly as the number-only conversion did; `null` is
+    // outside the declared type but every read treats it as unset.
+    if (value === null) return value as unknown as number;
+    const number = Number(value);
+    return Number.isNaN(number) ? value : number;
+  },
+};
 const UNMATCHED_AUTHORED_CELL_WARNING_KEY = 'lyra-dashboard-grid-unmatched-authored-cell';
 const UNMATCHED_AUTHORED_CELL_WARNING =
   '<lr-dashboard-grid>: an authored child has a cell-id that matches no layout entry and will not render.';
@@ -158,7 +177,7 @@ export interface LyraDashboardGridEventMap {
  * ever touches `localStorage`/network; the host applies (or ignores) every emitted event and owns
  * persistence entirely, mirroring `lr-flow-canvas`/`lr-table`'s own controlled-component
  * convention. Readonly (viewer) by default; opt into editor gestures individually via
- * `cells-draggable`/`cells-resizable`, or lock the whole grid via `locked`.
+ * `cells-draggable`/`cells-resizable`, or lock the whole grid via `readonly`.
  *
  * Cell content: a `layout` entry with no matching light-DOM child (matched by `cell-id`) gets a
  * default `<lr-widget label="...">` wrapping a version-two `<lr-widget-renderer>` document
@@ -252,6 +271,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { locked: 'readonly' };
 
   private authoredLayout: readonly DashboardAuthoredCellSnapshot[] =
     Object.freeze([]);
@@ -277,10 +297,15 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
   /** Column count of the underlying CSS Grid. */
   @property({ type: Number }) columns = 12;
-  /** Row track height, in px (also the pointer-resize/drag row snap pitch, together with `gap`). */
-  @property({ type: Number, attribute: 'row-height' }) rowHeight = 80;
-  /** Gap between cells, in px, on both axes. */
-  @property({ type: Number }) gap = 8;
+  /** Row track height (also the pointer-resize/drag row snap pitch, together with `gap`): a number
+   *  of pixels, or a CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved to pixels when the grid
+   *  renders -- `rem` against the document root, `em` against this element. A numeric attribute
+   *  value parses to a number. */
+  @property({ attribute: 'row-height', converter: DASHBOARD_LENGTH_CONVERTER })
+  rowHeight: number | string = 80;
+  /** Gap between cells on both axes: a number of pixels, or a CSS length resolved like
+   *  `rowHeight`. A numeric attribute value parses to a number. */
+  @property({ converter: DASHBOARD_LENGTH_CONVERTER }) gap: number | string = 8;
   private collisionValue: LyraDashboardCollisionPolicy = 'reject';
   /** How a move/resize that would overlap another cell is resolved. Foreign runtime values
    * normalize to the safe `reject` policy. */
@@ -301,6 +326,11 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     false;
   /** Disables every drag/resize gesture grid-wide, regardless of `cells-draggable`/
    *  `cells-resizable` or a cell's own `locked`. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+
+  /** Disables every drag/resize gesture grid-wide, regardless of `cells-draggable`/
+   *  `cells-resizable` or a cell's own `locked`.
+   *  @deprecated Use `readonly`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) locked = false;
   /** Overrides the grid region's accessible name; falls back to a generic localized label. Fed
    *  only by a host `aria-label`, matching `lr-flow-canvas`'s own host-override pattern. */
@@ -310,10 +340,17 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     return finiteInteger(this.columns, 12, 1, 48);
   }
   private get safeRowHeight(): number {
-    return finiteRange(this.rowHeight, 80, 1);
+    return finiteRange(this.lengthInPixels(this.rowHeight), 80, 1);
   }
   private get safeGap(): number {
-    return finiteRange(this.gap, 8, 0);
+    return finiteRange(this.lengthInPixels(this.gap), 8, 0);
+  }
+  /** A `rowHeight`/`gap` value in pixels: a number as given, a CSS length resolved against this
+   *  element, `NaN` for anything unresolvable (which the callers replace with their default). */
+  private lengthInPixels(value: number | string | null | undefined): number {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string') return Number.NaN;
+    return resolveCssLength(value, { host: this }) ?? Number.NaN;
   }
 
   private get sortedLayout(): readonly LyraDashboardCell[] {
@@ -478,7 +515,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
         changed.has('columns') ||
         changed.has('rowHeight') ||
         changed.has('gap') ||
-        ((changed.has('cellsDraggable') || changed.has('locked')) &&
+        ((changed.has('cellsDraggable') || changed.has('readonly')) &&
           !this.canDragCell(this.cellDrag.cellId)))
     ) {
       this.cancelCellDrag();
@@ -489,7 +526,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
         changed.has('columns') ||
         changed.has('rowHeight') ||
         changed.has('gap') ||
-        ((changed.has('cellsResizable') || changed.has('locked')) &&
+        ((changed.has('cellsResizable') || changed.has('readonly')) &&
           !this.canResizeCell(this.cellResize.cellId)))
     ) {
       this.cancelCellResize();
@@ -724,7 +761,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
 
   private keyboardMove(cell: LyraDashboardCell, key: string): boolean {
-    if (!this.cellsDraggable || this.locked || cell.locked) return false;
+    if (!this.cellsDraggable || this.readonly || cell.locked) return false;
     const rtlFlip = isRtl(this) ? -1 : 1;
     let dx = 0;
     let dy = 0;
@@ -741,7 +778,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
 
   private keyboardResize(cell: LyraDashboardCell, key: string): boolean {
-    if (!this.cellsResizable || this.locked || cell.locked) return false;
+    if (!this.cellsResizable || this.readonly || cell.locked) return false;
     let dw = 0;
     let dh = 0;
     if (key === 'ArrowRight') dw = 1;
@@ -940,14 +977,14 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private canDragCell(cellId: string): boolean {
     const cell = this.layout.find((candidate) => candidate.cellId === cellId);
     return (
-      this.cellsDraggable && !this.locked && cell !== undefined && !cell.locked
+      this.cellsDraggable && !this.readonly && cell !== undefined && !cell.locked
     );
   }
 
   private canResizeCell(cellId: string): boolean {
     const cell = this.layout.find((candidate) => candidate.cellId === cellId);
     return (
-      this.cellsResizable && !this.locked && cell !== undefined && !cell.locked
+      this.cellsResizable && !this.readonly && cell !== undefined && !cell.locked
     );
   }
 
@@ -1032,7 +1069,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onCellPointerDown(e: PointerEvent, cell: LyraDashboardCell): void {
     if (
       !this.cellsDraggable ||
-      this.locked ||
+      this.readonly ||
       cell.locked ||
       this.cellDrag ||
       !e.isPrimary ||
@@ -1183,7 +1220,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   ): void {
     if (
       !this.cellsResizable ||
-      this.locked ||
+      this.readonly ||
       cell.locked ||
       this.cellResize ||
       !e.isPrimary ||
@@ -1375,7 +1412,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
 
   private renderCell(cell: LyraDashboardCell, active: boolean): TemplateResult {
-    const resizableHere = this.cellsResizable && !this.locked && !cell.locked;
+    const resizableHere = this.cellsResizable && !this.readonly && !cell.locked;
     return html`<div
       part="cell"
       role="group"

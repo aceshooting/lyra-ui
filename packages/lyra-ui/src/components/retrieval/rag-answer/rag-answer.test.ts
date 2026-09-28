@@ -4,6 +4,10 @@ import type { LyraRagAnswer } from './rag-answer.class.js';
 import type { LyraSourceCard } from '../source-card/source-card.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 function assertiveSink(): HTMLElement {
   return document.querySelector<HTMLElement>(
@@ -97,49 +101,49 @@ describe('lr-rag-answer', () => {
     expect(leaked).to.deep.equal([]);
   });
 
-  it('hides the sources section entirely when showSources is false, even with real sources data', async () => {
+  it('hides the sources section entirely when withoutSources is set, even with real sources data', async () => {
     const el = (await fixture(html`<lr-rag-answer
       answer="Answer"
       .citations=${[{ id: 'c1', sourceId: 'd1' }]}
       .sources=${[{ id: 'd1', name: 'guide.md' }]}
-      .showSources=${false}
+      .withoutSources=${true}
     ></lr-rag-answer>`)) as LyraRagAnswer;
     await el.updateComplete;
     expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.be
       .false;
   });
 
-  it('parses the true-defaulting show-sources="false" attribute as false', async () => {
+  it('parses the without-sources attribute', async () => {
     const el = await fixture<LyraRagAnswer>(html`
       <lr-rag-answer
         answer="Answer"
-        show-sources="false"
+        without-sources
         .sources=${[{ id: 'd1', name: 'guide.md' }]}
       ></lr-rag-answer>
     `);
-    expect(el.showSources).to.equal(false);
+    expect(el.withoutSources).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="sources"]') === null).to.equal(
       true
     );
   });
 
-  it('restores the true default for showSources/showClaims once their attribute is removed', async () => {
+  it('restores the default for withoutSources/withoutClaims once their attribute is removed', async () => {
     const el = await fixture<LyraRagAnswer>(html`
       <lr-rag-answer
         answer="Answer"
-        show-sources="false"
-        show-claims="false"
+        without-sources
+        without-claims
       ></lr-rag-answer>
     `);
-    expect(el.showSources).to.equal(false);
-    expect(el.showClaims).to.equal(false);
+    expect(el.withoutSources).to.equal(true);
+    expect(el.withoutClaims).to.equal(true);
 
-    el.removeAttribute('show-sources');
-    el.removeAttribute('show-claims');
+    el.removeAttribute('without-sources');
+    el.removeAttribute('without-claims');
     await el.updateComplete;
 
-    expect(el.showSources).to.equal(true);
-    expect(el.showClaims).to.equal(true);
+    expect(el.withoutSources).to.equal(false);
+    expect(el.withoutClaims).to.equal(false);
   });
 
   it('renders per-instance strings overrides on every localized answer surface', async () => {
@@ -559,13 +563,13 @@ describe('lr-rag-answer', () => {
     const el = (await fixture(
       html`<lr-rag-answer
         .assessment=${assessment}
-        .showClaims=${false}
+        .withoutClaims=${true}
       ></lr-rag-answer>`
     )) as LyraRagAnswer;
     const summary = el.shadowRoot!.querySelector(
       'lr-grounding-summary'
-    ) as HTMLElement & { showClaims: boolean };
-    expect(summary.showClaims).to.be.false;
+    ) as HTMLElement & { withoutClaims: boolean };
+    expect(summary.withoutClaims).to.be.true;
   });
   it('emits lr-retry from the underlying button click contract', async () => {
     const el = (await fixture(
@@ -835,5 +839,168 @@ describe('lr-rag-answer', () => {
       citation: firstCitation,
       section: 'answer',
     });
+  });
+});
+
+describe('lr-rag-answer deprecated show-sources alias', () => {
+  const ALIAS_SOURCES = [{ id: 'd1', name: 'guide.md' }];
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-answer', kind: 'property', name: 'showSources' }];
+  const observe = (el: LyraRagAnswer): string => String(el.shadowRoot!.querySelector('[part="sources"]') !== null);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagAnswer>(markup);
+
+  it('applies without-sources without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources></lr-rag-answer>`));
+      plain = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES}></lr-rag-answer>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-sources="false" equal to without-sources, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources></lr-rag-answer>`));
+      alias = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} show-sources="false"></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES}></lr-rag-answer>`);
+      el.showSources = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutSources, el.showSources, el.getAttribute('show-sources')];
+      // The canonical property syncs back into the alias.
+      el.withoutSources = false;
+      await el.updateComplete;
+      readback.push(el.showSources, el.hasAttribute('show-sources'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, 'false', true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-rag-answer:property:showSources',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-sources');
+  });
+
+  it('restores the default when show-sources is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES}></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} show-sources="false"></lr-rag-answer>`);
+      el.showSources = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showSources = false;
+      await el.updateComplete;
+      el.removeAttribute('show-sources');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} show-sources without-sources></lr-rag-answer>`);
+      expect(el.withoutSources).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-rag-answer answer="Answer" .sources=${ALIAS_SOURCES} without-sources show-sources></lr-rag-answer>`);
+      expect(reversed.withoutSources, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
+  });
+});
+
+describe('lr-rag-answer deprecated show-claims alias', () => {
+  const ALIAS_ASSESSMENT = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    claims: [{ id: 'claim-1', text: 'Claim', status: 'supported' as const, citationIds: [] }],
+  };
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-answer', kind: 'property', name: 'showClaims' }];
+  const observe = (el: LyraRagAnswer): string => String((el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { withoutClaims: boolean }).withoutClaims);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagAnswer>(markup);
+
+  it('applies without-claims without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims></lr-rag-answer>`));
+      plain = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT}></lr-rag-answer>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-claims="false" equal to without-claims, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims></lr-rag-answer>`));
+      alias = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} show-claims="false"></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT}></lr-rag-answer>`);
+      el.showClaims = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutClaims, el.showClaims, el.getAttribute('show-claims')];
+      // The canonical property syncs back into the alias.
+      el.withoutClaims = false;
+      await el.updateComplete;
+      readback.push(el.showClaims, el.hasAttribute('show-claims'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, 'false', true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-rag-answer:property:showClaims',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-claims');
+  });
+
+  it('restores the default when show-claims is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT}></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} show-claims="false"></lr-rag-answer>`);
+      el.showClaims = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showClaims = false;
+      await el.updateComplete;
+      el.removeAttribute('show-claims');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims></lr-rag-answer>`));
+      const el = await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} show-claims without-claims></lr-rag-answer>`);
+      expect(el.withoutClaims).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-rag-answer .assessment=${ALIAS_ASSESSMENT} without-claims show-claims></lr-rag-answer>`);
+      expect(reversed.withoutClaims, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
   });
 });

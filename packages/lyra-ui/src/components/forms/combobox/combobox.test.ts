@@ -5261,7 +5261,7 @@ describe("--lr-combobox-option-active-bg", () => {
 describe("--lr-combobox-option-badge-bg", () => {
   it('retints the "not in catalog" badge via the cssprop, not just the bare shared token', async () => {
     const el = (await fixture(html`
-      <lr-combobox show-unknown-option style="--lr-combobox-option-badge-bg: rgb(1, 2, 3);">
+      <lr-combobox with-unknown-option style="--lr-combobox-option-badge-bg: rgb(1, 2, 3);">
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
@@ -5278,7 +5278,7 @@ describe("--lr-combobox-option-badge-bg", () => {
 
   it("still falls back to the shared --lr-color-brand-quiet token when unset", async () => {
     const el = (await fixture(html`
-      <lr-combobox show-unknown-option style="--lr-color-brand-quiet: rgb(40, 50, 60);">
+      <lr-combobox with-unknown-option style="--lr-color-brand-quiet: rgb(40, 50, 60);">
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
@@ -8773,4 +8773,21 @@ describe("lr-combobox popup adornment truncation", () => {
       "async-icon"
     );
   });
+});
+
+describe("--lr-combobox-color and its deprecated --lr-combobox-text-color alias", () => {
+  for (const [name, style] of [
+    ["canonical", "--lr-combobox-color: rgb(1, 2, 3)"],
+    ["deprecated", "--lr-combobox-text-color: rgb(1, 2, 3)"],
+    ["canonical over deprecated", "--lr-combobox-color: rgb(1, 2, 3); --lr-combobox-text-color: rgb(9, 9, 9)"],
+  ] as const) {
+    it(`paints the trigger text from the ${name} property`, async () => {
+      const el = (await fixture(html`
+        <lr-combobox style=${style}><lr-option value="a">Apple</lr-option></lr-combobox>
+      `)) as LyraCombobox;
+      await el.updateComplete;
+      const box = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+      expect(getComputedStyle(box).color).to.equal("rgb(1, 2, 3)");
+    });
+  }
 });

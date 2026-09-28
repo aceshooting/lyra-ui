@@ -4,6 +4,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
@@ -178,6 +179,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showDetails: ['withoutDetails', invertAlias, invertAlias],
+    showComposer: ['withoutComposer', invertAlias, invertAlias],
+  };
 
   /** Forwarded to each message's `<lr-message-parts>`; see `lr-markdown`'s `streamingRender`. */
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
@@ -236,11 +241,29 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** First unread message index, forwarded to the transcript viewport. */
   @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
 
-  /** Whether the built-in details pane is available when data is present. */
+  /** Turns off the built-in details pane, even when data is present. */
+  @property({ type: Boolean, attribute: 'without-details', reflect: true }) withoutDetails = false;
+
+  /**
+   * Deprecated inverted alias of `without-details` (`withoutDetails`): `show-details="false"` equals
+   * `without-details`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-details`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-details', reflect: true, converter: trueDefaultBooleanConverter })
   showDetails = true;
 
-  /** Whether the built-in plain-frame composer is available when no `composer` slot is supplied. */
+  /** Turns off the built-in plain-frame composer shown when no `composer` slot is supplied. */
+  @property({ type: Boolean, attribute: 'without-composer', reflect: true }) withoutComposer = false;
+
+  /**
+   * Deprecated inverted alias of `without-composer` (`withoutComposer`): `show-composer="false"`
+   * equals `without-composer`, and removing it restores the default. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-composer`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-composer', reflect: true, converter: trueDefaultBooleanConverter })
   showComposer = true;
 
@@ -462,7 +485,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     const label = this.accessibleLabel ?? (this.label == null ? this.localize('agentWorkspaceLabel') : this.label);
     const heading = this.label == null ? this.localize('agentWorkspaceLabel') : this.label;
     const hasSlottedDetails = this.hasSlotted('details');
-    const hasDetails = hasSlottedDetails || (this.showDetails && this.hasBuiltInDetails);
+    const hasDetails = hasSlottedDetails || (!this.withoutDetails && this.hasBuiltInDetails);
     const hasSlottedComposer = this.hasSlotted('composer');
     return html`
       <div part="base" role="region" aria-label=${label}>
@@ -489,13 +512,13 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
             ?hidden=${!hasDetails}
           >
             <slot name="details" @slotchange=${this.onNamedSlotChange}
-              >${this.showDetails ? this.renderDetails() : nothing}</slot
+              >${!this.withoutDetails ? this.renderDetails() : nothing}</slot
             >
           </aside>
         </div>
-        <div part="composer" ?hidden=${!this.showComposer && !hasSlottedComposer}>
+        <div part="composer" ?hidden=${this.withoutComposer && !hasSlottedComposer}>
           <slot name="composer" @slotchange=${this.onNamedSlotChange}>
-            ${this.showComposer
+            ${!this.withoutComposer
               ? html`<lr-chat-composer
                   part="composer-input"
                   frame="plain"

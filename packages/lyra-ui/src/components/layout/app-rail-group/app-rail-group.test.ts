@@ -5,6 +5,10 @@ import '../app-rail/app-rail-item.js';
 import '../app-rail/app-rail.js';
 import type { LyraAppRail } from '../app-rail/app-rail.js';
 import type { LyraAppRailGroup } from './app-rail-group.class.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 function populated(): ReturnType<typeof html> {
   return html`
@@ -116,7 +120,7 @@ describe('<lr-app-rail-group>', () => {
     const el = (await fixture<LyraAppRailGroup>(populated())) as LyraAppRailGroup;
     await el.updateComplete;
     expect(el.collapsible).to.equal(false);
-    expect(el.open).to.equal(true);
+    expect(el.collapsed).to.equal(false);
     expect(el.shadowRoot!.querySelector('[part="toggle"]') === null).to.equal(true);
     const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
     expect(content.hasAttribute('hidden')).to.equal(false);
@@ -141,10 +145,11 @@ describe('<lr-app-rail-group>', () => {
     const settled = oneEvent(el, 'lr-toggle');
     toggle.click();
     const event = await settled;
-    expect((event as CustomEvent<{ open: boolean }>).detail.open).to.equal(false);
+    expect((event as CustomEvent<{ expanded: boolean }>).detail.expanded).to.equal(false);
     expect(order.join()).to.equal('request,toggle');
     await el.updateComplete;
-    expect(el.open).to.equal(false);
+    expect(el.collapsed).to.equal(true);
+    expect(el.hasAttribute('collapsed'), 'collapsed reflects').to.equal(true);
     expect(
       (el.shadowRoot!.querySelector('[part="content"]') as HTMLElement).hasAttribute('hidden')
     ).to.equal(true);
@@ -169,7 +174,7 @@ describe('<lr-app-rail-group>', () => {
     });
     (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(el.open).to.equal(true);
+    expect(el.collapsed).to.equal(false);
     expect(settled).to.equal(0);
   });
 
@@ -183,7 +188,7 @@ describe('<lr-app-rail-group>', () => {
     // Writes back the value the property already holds: a before/after value compare cannot see
     // this, which is exactly why the pair tracks writes instead.
     el.addEventListener('lr-toggle-request', () => {
-      el.open = true;
+      el.collapsed = false;
     });
     let settled = 0;
     el.addEventListener('lr-toggle', () => {
@@ -191,18 +196,18 @@ describe('<lr-app-rail-group>', () => {
     });
     (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(el.open).to.equal(true);
+    expect(el.collapsed).to.equal(false);
     expect(settled).to.equal(0);
   });
 
-  it('accepts open="false" from markup, which a presence-based boolean cannot parse', async () => {
+  it('accepts collapsed from markup', async () => {
     const el = (await fixture<LyraAppRailGroup>(html`
-      <lr-app-rail-group collapsible heading="Workspaces" open="false">
+      <lr-app-rail-group collapsible heading="Workspaces" collapsed>
         <lr-app-rail-item href="/one">One</lr-app-rail-item>
       </lr-app-rail-group>
     `)) as LyraAppRailGroup;
     await el.updateComplete;
-    expect(el.open).to.equal(false);
+    expect(el.collapsed).to.equal(true);
     expect(
       (el.shadowRoot!.querySelector('[part="content"]') as HTMLElement).hasAttribute('hidden')
     ).to.equal(true);
@@ -221,7 +226,7 @@ describe('<lr-app-rail-group>', () => {
     // A real key press, and no programmatic .click(): a synthetic KeyboardEvent never produces a
     // native click, so a dispatch-then-click pair asserts nothing about the keyboard.
     await sendKeys({ press: 'Enter' });
-    await waitUntil(() => el.open === false, 'Enter on the focused toggle collapses the group');
+    await waitUntil(() => el.collapsed === true, 'Enter on the focused toggle collapses the group');
   });
 
   it('renders header actions as a sibling of the heading control', async () => {
@@ -243,7 +248,7 @@ describe('<lr-app-rail-group>', () => {
     (el.querySelector('#group-action') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(toggles).to.equal(0);
-    expect(el.open).to.equal(true);
+    expect(el.collapsed).to.equal(false);
   });
 
   it('hides the header-actions wrapper when nothing is slotted into it', async () => {
@@ -259,10 +264,10 @@ describe('<lr-app-rail-group>', () => {
       getComputedStyle(el.shadowRoot!.querySelector('[part="toggle-icon"]') as HTMLElement)
         .transform;
     const ltr = (await fixture<LyraAppRailGroup>(
-      html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
+      html`<lr-app-rail-group collapsible heading="A" collapsed></lr-app-rail-group>`
     )) as LyraAppRailGroup;
     const rtl = (await fixture<LyraAppRailGroup>(
-      html`<lr-app-rail-group dir="rtl" collapsible heading="A" open="false"></lr-app-rail-group>`
+      html`<lr-app-rail-group dir="rtl" collapsible heading="A" collapsed></lr-app-rail-group>`
     )) as LyraAppRailGroup;
     await ltr.updateComplete;
     await rtl.updateComplete;
@@ -436,7 +441,7 @@ describe('<lr-app-rail-group>', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
 
-    el.open = false;
+    el.collapsed = true;
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -451,7 +456,7 @@ describe('<lr-app-rail-group>', () => {
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-label')).to.equal('Replier');
-    el.open = false;
+    el.collapsed = true;
     await el.updateComplete;
     expect(
       (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-label')
@@ -538,5 +543,158 @@ describe('collecting already-slotted heading/header-actions content without rely
     } finally {
       el.remove();
     }
+  });
+});
+
+describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-app-rail-group', kind: 'property', name: 'open' },
+  ];
+  const contentHidden = (el: LyraAppRailGroup): boolean =>
+    (el.shadowRoot!.querySelector('[part="content"]') as HTMLElement).hasAttribute('hidden');
+  const toggleExpanded = (el: LyraAppRailGroup): string | null =>
+    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-expanded');
+
+  it('renders open="false" exactly like collapsed, and warns once naming collapsed', async () => {
+    const canonical = await fixture<LyraAppRailGroup>(
+      html`<lr-app-rail-group collapsible heading="A" collapsed></lr-app-rail-group>`
+    );
+    await canonical.updateComplete;
+    const aliased: LyraAppRailGroup[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await fixture<LyraAppRailGroup>(
+          html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
+        );
+        await el.updateComplete;
+        aliased.push(el);
+      }
+    });
+    for (const el of aliased) {
+      expect(el.collapsed).to.equal(true);
+      expect(el.open).to.equal(false);
+      expect(contentHidden(el)).to.equal(contentHidden(canonical));
+      expect(toggleExpanded(el)).to.equal(toggleExpanded(canonical));
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-app-rail-group:property:open',
+    ]);
+    expect(warnings[0]!.message).to.contain('collapsed');
+  });
+
+  it('keeps the open property working as the inverse of collapsed', async () => {
+    const el = await fixture<LyraAppRailGroup>(
+      html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
+    );
+    let warnings = await captureDeprecationWarnings(aliasUsage, () => undefined);
+    expect(el.open, 'reading the alias never warns').to.equal(true);
+    expect(warnings).to.have.length(0);
+    warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.open = false;
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(1);
+    expect(el.collapsed).to.equal(true);
+    expect(contentHidden(el)).to.equal(true);
+    expect(el.getAttribute('open'), 'the alias keeps reflecting').to.equal('false');
+    el.collapsed = false;
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(contentHidden(el)).to.equal(false);
+  });
+
+  it('lets the last authored attribute win between collapsed and the open alias', async () => {
+    const results: boolean[] = [];
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      for (const markup of [
+        html`<lr-app-rail-group heading="A" open collapsed></lr-app-rail-group>`,
+        html`<lr-app-rail-group heading="A" collapsed open></lr-app-rail-group>`,
+      ]) {
+        const el = await fixture<LyraAppRailGroup>(markup);
+        await el.updateComplete;
+        results.push(el.collapsed);
+      }
+    });
+    expect(results).to.deep.equal([true, false]);
+  });
+
+  it('lets the last write win in both directions after the first render', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraAppRailGroup>(
+        html`<lr-app-rail-group collapsible heading="A" collapsed></lr-app-rail-group>`
+      );
+      await el.updateComplete;
+      el.setAttribute('open', '');
+      await el.updateComplete;
+      expect(el.collapsed).to.equal(false);
+      expect(el.hasAttribute('collapsed')).to.equal(false);
+      expect(contentHidden(el)).to.equal(false);
+      el.collapsed = true;
+      await el.updateComplete;
+      expect(el.open).to.equal(false);
+      expect(el.getAttribute('open')).to.equal('false');
+      expect(contentHidden(el)).to.equal(true);
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-app-rail-group:property:open',
+    ]);
+  });
+
+  it('keeps a lone open attribute driving collapsed after the first render', async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraAppRailGroup>(
+        html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
+      );
+      await el.updateComplete;
+      expect(el.hasAttribute('collapsed'), 'reflected from the alias').to.equal(true);
+      el.setAttribute('open', 'true');
+      await el.updateComplete;
+      expect(el.collapsed).to.equal(false);
+      expect(el.hasAttribute('collapsed')).to.equal(false);
+      expect(contentHidden(el)).to.equal(false);
+      el.setAttribute('open', 'false');
+      await el.updateComplete;
+      expect(el.collapsed).to.equal(true);
+    });
+  });
+
+  it('lets a request listener resolve the toggle through the open alias', async () => {
+    const el = await fixture<LyraAppRailGroup>(
+      html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
+    );
+    await el.updateComplete;
+    let settled = 0;
+    el.addEventListener('lr-toggle', () => (settled += 1));
+    el.addEventListener('lr-toggle-request', () => {
+      el.open = true;
+    });
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+    });
+    expect(el.collapsed).to.equal(false);
+    expect(settled).to.equal(0);
+  });
+
+  it('reports the proposed and settled state as expanded beside the deprecated open key', async () => {
+    const el = await fixture<LyraAppRailGroup>(
+      html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
+    );
+    await el.updateComplete;
+    const details: string[] = [];
+    el.addEventListener('lr-toggle-request', (event) => details.push(JSON.stringify(event.detail)));
+    el.addEventListener('lr-toggle', (event) => details.push(JSON.stringify(event.detail)));
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    toggle.click();
+    await el.updateComplete;
+    toggle.click();
+    await el.updateComplete;
+    expect(details).to.deep.equal([
+      JSON.stringify({ open: false, expanded: false }),
+      JSON.stringify({ open: false, expanded: false }),
+      JSON.stringify({ open: true, expanded: true }),
+      JSON.stringify({ open: true, expanded: true }),
+    ]);
   });
 });

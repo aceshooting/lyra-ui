@@ -3,7 +3,7 @@ import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 // Deliberately its own sheet rather than a wholesale re-export of
 // `chart.styles.ts`: unlike `lr-histogram`, `LyraBoxPlot` doesn't extend
-// `LyraChart`, has no `zoom` property, and its `render()` never emits a
+// `LyraChart`, has no `zoomable` property, and its `render()` never emits a
 // `part="reset-zoom-button"` element — so that rule (and any other
 // `lr-chart`-only chrome) has no home here.
 export const styles = css`
@@ -29,7 +29,7 @@ export const styles = css`
     --_lr-chart-tick-font-size: var(--lr-font-size-xs);
     --_lr-chart-legend-color: var(--lr-color-text);
     --_lr-chart-tooltip-bg: var(--lr-color-surface);
-    --_lr-chart-tooltip-text: var(--lr-color-text);
+    --_lr-chart-tooltip-color: var(--lr-color-text);
   }
   [part='base'] {
     position: relative;

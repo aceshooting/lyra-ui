@@ -302,8 +302,10 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
   // A ceiling on the PROJECTION, not a byte budget: the checked-in inventory is ~6 MB, so this
   // proves the CLI still ships a narrow slice of it rather than the whole public surface. Raise it
   // only while that ratio stays overwhelming -- a jump toward the full inventory is the regression.
+  // The lyra-v21 profile's ~500 rename entries (about 95 KB) and the aliases they name moved the
+  // projection to about 530 KB, still under a sixth of the inventory.
   assert.ok(
-    JSON.stringify(runtimeInventory).length < 420_000,
+    JSON.stringify(runtimeInventory).length < 560_000,
     'the CLI must not republish the multi-megabyte public-surface inventory',
   );
 

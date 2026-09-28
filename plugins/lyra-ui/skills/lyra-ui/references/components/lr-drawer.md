@@ -7,9 +7,11 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `closable` / `closable` since `21.1.0`; use property `without-close-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,15 +36,17 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
-- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (attribute
-  `accessible-label`), `closable: boolean = true`, `noHeader: boolean = false` (attribute
-  `no-header`, Shoelace's spelling, reflected), `withoutHeader: boolean = false` (attribute
-  `without-header`, Web Awesome's spelling, reflected; neither is deprecated),
-  `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR hint), and
-  `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
-  dismissal options. A plain `aria-label` attribute on the host is honored too, inherited unchanged
-  from `lr-dialog`: it is the strongest naming override, by attribute presence including an
-  explicitly empty value, ahead of `accessible-label` and any slotted heading.
+- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (property only),
+  `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
+  `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
+  `withoutHeader: boolean = false` (attribute `without-header`, Web Awesome's spelling, reflected;
+  neither is deprecated), `withFooter: boolean = false` (attribute `with-footer`, reflected; SSR
+  hint), and `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming,
+  chrome and dismissal options. A plain `aria-label` attribute on the host names the panel, inherited
+  unchanged from `lr-dialog`: it is the strongest naming override, by attribute presence including
+  an explicitly empty value, ahead of `accessibleLabel` and any slotted heading. Deprecated aliases,
+  as on `lr-dialog`: `closable` (use `without-close-button`, which `closable="false"` equals; removed
+  in 23.0.0) and `accessible-label` (use `aria-label`; removed in 23.0.0).
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
@@ -80,15 +84,16 @@ lifecycle.
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `close-button__control`; `body`; `footer`.
-Names grouped together are aliases on the same functional node; `close-button__control` is the
+`header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
+Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
+Deprecated alias: `close-button__control` (use `close-button-control`; removed in 23.0.0).
 
 **Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
@@ -130,7 +135,7 @@ for its panel, and only the animation _name_ is overridden, so `--lr-dialog-pane
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
 
 ```html
-<lr-drawer open placement="end" heading="Filters" closable>
+<lr-drawer open placement="end" heading="Filters">
   <button slot="header-actions" type="button">Reset</button>
   <lr-checkbox label="Only active"></lr-checkbox>
   <div slot="footer"><button type="button">Apply</button></div>

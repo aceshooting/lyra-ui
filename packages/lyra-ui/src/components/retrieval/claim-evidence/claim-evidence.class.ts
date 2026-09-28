@@ -14,8 +14,9 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -277,6 +278,12 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
   }
 }
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /**
  * `<lr-claim-evidence>` — a controlled claim-by-claim grounding audit. It relates generated
  * claims to complete citation records, exposes assessment status/confidence, and tolerates
@@ -312,9 +319,9 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  * @csspart limit - Localized notice shown when `claims` exceeds the 500-claim render ceiling.
  * @csspart empty - The empty state.
  * @cssprop [--lr-claim-evidence-compact-padding=var(--lr-space-xs)] - `[part="claim-trigger"]`
- * padding while `compact`.
+ * padding while `size` is `s` or smaller.
  * @cssprop [--lr-claim-evidence-compact-gap=var(--lr-space-xs)] - Gap between `[part="claim-trigger"]`'s
- * columns while `compact`.
+ * columns while `size` is `s` or smaller.
  * @status stable
  * @since 7.0.0
  */
@@ -354,6 +361,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-claim-select',
     'lr-citation-select',
@@ -373,16 +383,26 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   /** Fallback name for the claim-and-evidence region. A non-empty host `aria-label` makes the host
    *  the sole overall owner; an explicitly empty host label stays empty on the region. */
   @property() label = '';
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the claim-trigger
+   * padding and column gap for dense evidence lists -- same convention as `lr-source-card`'s and
+   * `lr-entity-card`'s `size`. `m` (the default) and larger keep the full claim-trigger padding.
+   * Purely a density knob: each claim's border and background stay, so use `frame="plain"` to drop
+   * the chrome entirely.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Tighter claim-trigger padding and column gap, for dense evidence lists -- same convention as
    *  `lr-source-card`'s/`lr-entity-card`'s `compact`. Defaults to `false`, i.e. the full
    *  claim-trigger padding. Purely a density knob: each claim's border and background stay, so use
-   *  `frame="plain"` to drop the chrome entirely. */
+   *  `frame="plain"` to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
+
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each
    *  claim's bordered, filled box. `'plain'` removes the border, background, and corner radius from
    *  every `[part~="claim"]` row, so claims nested inside an already-bordered container (e.g. a
-   *  wider audit panel) don't double the frame. `plain` wins over `compact` when both are set
-   *  (nothing left to tighten). */
+   *  wider audit panel) don't double the frame. `plain` wins over the dense `size` tier when both
+   *  are set (nothing left to tighten). */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private readonly canonicalClaimsBySource = new WeakMap<

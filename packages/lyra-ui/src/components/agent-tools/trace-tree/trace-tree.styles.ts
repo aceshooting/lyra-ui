@@ -11,16 +11,16 @@ export const styles = css`
     --_lr-trace-tree-cost-column: 0;
   }
 
-  :host([hide-bars]) {
+  :host([without-bars]) {
     --_lr-trace-tree-bar-column: 0;
   }
 
-  :host([show-tokens]) {
+  :host([with-tokens]) {
     --_lr-trace-tree-tokens-in-column: var(--lr-size-3-5rem);
     --_lr-trace-tree-tokens-out-column: var(--lr-size-3-5rem);
   }
 
-  :host([show-cost]) {
+  :host([with-cost]) {
     --_lr-trace-tree-cost-column: var(--lr-size-3-5rem);
   }
 

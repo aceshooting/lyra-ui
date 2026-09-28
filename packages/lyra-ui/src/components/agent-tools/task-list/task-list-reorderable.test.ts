@@ -298,7 +298,7 @@ describe('reorderable', () => {
     });
 
     modifiedArrow(row, 'ArrowDown');
-    el.label = 'Updated while persistence is pending';
+    el.heading = 'Updated while persistence is pending';
     await el.updateComplete;
     expect((await liveRegionText(el)).trim()).to.equal('');
 

@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import "./drawer.js";
 import type { LyraDrawer } from "./drawer.js";
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
 
 // Importing this file's other modules is enough to trip it: with them present, WebKit never
@@ -83,7 +84,7 @@ it("inherits guarded reentrant preflight so an opposite close supersedes show", 
 
 it("closes through the inherited cancelable close contract", async () => {
   const el = (await fixture(html`
-    <lr-drawer open heading="Details" closable></lr-drawer>
+    <lr-drawer open heading="Details"></lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
 
@@ -289,7 +290,6 @@ it("keeps a long header-actions projection and the close target inside a 319px d
   const el = (await fixture(html`
     <lr-drawer
       open
-      closable
       heading="Settings"
       style="inline-size:319px;block-size:16rem;inset-inline-end:auto;inset-block-end:auto"
     >
@@ -884,4 +884,143 @@ it('returns focus to an opener the host hides while open and re-shows after lr-h
     el.removeEventListener('lr-hide', onHide);
     opener.remove();
   }
+});
+
+describe('lr-drawer renamed members', () => {
+  const CLOSABLE: readonly DeprecatedUsage[] = [{ tag: 'lr-drawer', kind: 'property', name: 'closable' }];
+  const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
+    { tag: 'lr-drawer', kind: 'attribute', name: 'accessible-label' },
+  ];
+  const mount = async (markup: string): Promise<LyraDrawer> => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    host.innerHTML = markup;
+    const el = host.firstElementChild as LyraDrawer;
+    await el.updateComplete;
+    return el;
+  };
+  const closeButtons = (el: LyraDrawer): number =>
+    el.shadowRoot!.querySelectorAll('[part~="close-button"]').length;
+  const panelName = (el: LyraDrawer): string | null =>
+    el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label');
+
+  it('removes the close button with without-close-button and keeps it by default, without warning', async () => {
+    const warnings = await captureDeprecationWarnings(CLOSABLE, async () => {
+      const bare = await mount('<lr-drawer open label="Title">Body</lr-drawer>');
+      expect(bare.withoutCloseButton).to.be.false;
+      expect(closeButtons(bare)).to.equal(1);
+      expect(bare.hasAttribute('without-close-button')).to.be.false;
+      await bare.close('api');
+      const without = await mount('<lr-drawer open label="Title" without-close-button>Body</lr-drawer>');
+      expect(closeButtons(without)).to.equal(0);
+      expect(without.closable).to.be.false;
+      await expect(without).to.be.accessible();
+      await without.close('api');
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('treats closable="false" exactly like without-close-button and warns once, naming without-close-button', async () => {
+    let aliased!: LyraDrawer;
+    const warnings = await captureDeprecationWarnings(CLOSABLE, async () => {
+      aliased = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
+      const second = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
+      second.close('api');
+    });
+    expect(aliased.withoutCloseButton).to.be.true;
+    expect(aliased.closable).to.be.false;
+    expect(closeButtons(aliased)).to.equal(0);
+    expect(aliased.shadowRoot!.querySelector('[part="header"]')).to.exist;
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-drawer:property:closable']);
+    expect(warnings[0]!.message).to.contain('without-close-button');
+    aliased.close('api');
+  });
+
+  it('restores the default when the alias is removed or set true, syncs back, and lets the last write win', async () => {
+    await captureDeprecationWarnings(CLOSABLE, async () => {
+      const el = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
+      el.removeAttribute('closable');
+      await el.updateComplete;
+      expect(el.withoutCloseButton).to.be.false;
+      expect(closeButtons(el)).to.equal(1);
+      el.closable = false;
+      await el.updateComplete;
+      expect(closeButtons(el)).to.equal(0);
+      el.closable = true;
+      await el.updateComplete;
+      expect(closeButtons(el)).to.equal(1);
+      el.close('api');
+      el.withoutCloseButton = true;
+      await el.updateComplete;
+      expect(el.closable).to.be.false;
+      expect(el.getAttribute('closable')).to.equal('false');
+      el.withoutCloseButton = false;
+      await el.updateComplete;
+      expect(el.closable).to.be.true;
+      expect(el.hasAttribute('closable')).to.be.false;
+      el.close('api');
+      const canonicalLast = await mount('<lr-drawer open label="Title" closable without-close-button>Body</lr-drawer>');
+      expect(canonicalLast.withoutCloseButton).to.be.true;
+      expect(canonicalLast.closable).to.be.false;
+      expect(closeButtons(canonicalLast)).to.equal(0);
+      canonicalLast.close('api');
+      const aliasLast = await mount('<lr-drawer open label="Title" without-close-button closable>Body</lr-drawer>');
+      expect(aliasLast.withoutCloseButton).to.be.false;
+      expect(closeButtons(aliasLast)).to.equal(1);
+      aliasLast.close('api');
+    });
+  });
+
+  it('names the panel through the host aria-label, and the deprecated accessible-label still names it', async () => {
+    const canonical = await mount('<lr-drawer open aria-label="Announced">Body</lr-drawer>');
+    expect(panelName(canonical)).to.equal('Announced');
+    await expect(canonical).to.be.accessible();
+    canonical.close('api');
+    let aliased!: LyraDrawer;
+    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      aliased = await mount('<lr-drawer open accessible-label="Announced">Body</lr-drawer>');
+      const second = await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
+      expect(second.accessibleLabel).to.equal('Other');
+    });
+    expect(panelName(aliased)).to.equal('Announced');
+    expect(aliased.accessibleLabel).to.equal('Announced');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-drawer:attribute:accessible-label']);
+    expect(warnings[0]!.message).to.contain('aria-label');
+    aliased.close('api');
+  });
+
+  it('lets the host aria-label win over the deprecated accessible-label', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const el = await mount('<lr-drawer open accessible-label="Alias" aria-label="Host">Body</lr-drawer>');
+      expect(panelName(el)).to.equal('Host');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(panelName(el)).to.equal('Alias');
+      el.close('api');
+    });
+  });
+
+  it('forwards the close control under close-button-control and its deprecated close-button__control alias', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-drawer.canonical::part(close-button-control) { background-color: rgb(1, 2, 3); }
+          lr-drawer.alias::part(close-button__control) { background-color: rgb(4, 5, 6); }
+        </style>
+        <lr-drawer class="canonical" open label="Canonical">Body</lr-drawer>
+        <lr-drawer class="alias" label="Alias">Body</lr-drawer>
+      </div>
+    `);
+    const [canonical, alias] = Array.from(wrapper.querySelectorAll('lr-drawer')) as LyraDrawer[];
+    await Promise.all([canonical!.updateComplete, alias!.updateComplete]);
+    const control = (el: LyraDrawer): HTMLElement =>
+      el.shadowRoot!.querySelector('[part~="close-button"]')!.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="button"]',
+      )!;
+    expect(getComputedStyle(control(canonical!)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    await canonical!.close('api');
+    alias!.open = true;
+    await alias!.updateComplete;
+    expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+    await alias!.close('api');
+  });
 });

@@ -131,7 +131,7 @@ describe('box-plot family-contract regressions', () => {
       },
     ] as unknown as LyraBoxPlot['datasets'];
     const el = (await fixture(html`<lr-box-plot
-      show-data-table
+      with-data-table
       .labels=${['North']}
       .datasets=${datasets}
     ></lr-box-plot>`)) as LyraBoxPlot;
@@ -176,14 +176,14 @@ describe('box-plot family-contract regressions', () => {
       order.push('datum');
       detail = (event as CustomEvent).detail;
     });
-    el.addEventListener('lr-point-click', () => order.push('legacy'));
+    el.addEventListener('lr-point-activate', () => order.push('point'));
     (el as unknown as { activateBox(value: unknown): void }).activateBox({
       datasetIndex: 0,
       index: 0,
       label: 'A',
       value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
     });
-    expect(order).to.deep.equal(['datum', 'legacy']);
+    expect(order).to.deep.equal(['datum', 'point']);
     expect(detail).to.deep.include({ kind: 'box', datasetIndex: 0, index: 0 });
   });
 
@@ -275,7 +275,7 @@ describe('box-plot family-contract regressions', () => {
   it('passes all five statistics through structured table, spoken, and export metadata', async () => {
     const contexts: Array<Record<string, unknown>> = [];
     const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
-    const el = (await fixture(html`<lr-box-plot show-data-table></lr-box-plot>`)) as LyraBoxPlot;
+    const el = (await fixture(html`<lr-box-plot with-data-table></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['Cohort A'];
     el.datasets = [{ label: 'Latency', data: [point] }];
     el.formatter = (context) => {
@@ -547,7 +547,7 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   const chart = (el as any).chart;
   // The DOM legend is the public state transition: it materializes a controlled snapshot instead
   // of relying on private Chart.js metadata.
-  el.legend = true;
+  el.withLegend = true;
   await el.updateComplete;
   (el.shadowRoot!.querySelectorAll('[part~="legend-item"]')[1] as HTMLElement).click();
   await el.updateComplete;
@@ -564,7 +564,7 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
 });
 
 it('falls back to a localized series label when a legend toggle would otherwise be unnamed', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: '', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -575,7 +575,7 @@ it('falls back to a localized series label when a legend toggle would otherwise 
 });
 
 it('uses the shared cancellable legend visibility contract instead of private Chart.js state', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [
     { label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
@@ -606,7 +606,7 @@ it('uses the shared cancellable legend visibility contract instead of private Ch
 
 it('keeps a controlled hidden box series hidden when its show proposal is canceled', async () => {
   const el = (await fixture(html`<lr-box-plot
-    legend
+    with-legend
     .hiddenDatasets=${[0]}
     .labels=${['A']}
     .datasets=${[
@@ -640,7 +640,7 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
 });
 
 it('fires the canonical lr-legend-visibility-change-request alongside the deprecated before- alias with identical detail, and either can veto', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -670,7 +670,7 @@ it('fires the canonical lr-legend-visibility-change-request alongside the deprec
 });
 
 it('vetoes the box-plot legend toggle when only the canonical -request name is canceled', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -688,7 +688,7 @@ it('vetoes the box-plot legend toggle when only the canonical -request name is c
 });
 
 it('vetoes the box-plot legend toggle when only the deprecated lr-before-legend-visibility-change alias is canceled', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
@@ -706,7 +706,7 @@ it('vetoes the box-plot legend toggle when only the deprecated lr-before-legend-
 });
 
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [
     { label: 'Existing', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
@@ -807,9 +807,9 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
   expect(canvas.getAttribute('aria-label')).to.equal('');
 });
 
-it('parses begin-at-zero="false" as false from plain HTML', async () => {
-  const el = (await fixture(html`<lr-box-plot begin-at-zero="false"></lr-box-plot>`)) as LyraBoxPlot;
-  expect(el.beginAtZero).to.be.false;
+it('parses without-zero-baseline from plain HTML', async () => {
+  const el = (await fixture(html`<lr-box-plot without-zero-baseline></lr-box-plot>`)) as LyraBoxPlot;
+  expect(el.withoutZeroBaseline).to.be.true;
 });
 
 it('formats generated median-summary values with the effective locale', async () => {
@@ -866,7 +866,7 @@ it('exposes a customizable accessible description and box-plot data table', asyn
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.label = 'Loss distributions';
   el.description = 'Loss medians are stable across the two groups.';
-  el.showDataTable = true;
+  el.withDataTable = true;
   el.labels = ['K=2', 'K=3'];
   el.datasets = [
     {
@@ -1114,13 +1114,13 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
 
 it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the host', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.legend = true;
+  el.withLegend = true;
   el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   el.style.setProperty('--lr-chart-grid-color', 'rgb(1, 2, 3)');
   el.style.setProperty('--lr-chart-tick-color', 'rgb(4, 5, 6)');
   el.style.setProperty('--lr-chart-legend-color', 'rgb(7, 8, 9)');
   el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(10, 11, 12)');
-  el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
+  el.style.setProperty('--lr-chart-tooltip-color', 'rgb(13, 14, 15)');
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -1185,7 +1185,7 @@ it('replaces invalid canvas theme expressions with concrete fallbacks for every 
     '--lr-chart-tick-color',
     '--lr-chart-legend-color',
     '--lr-chart-tooltip-bg',
-    '--lr-chart-tooltip-text',
+    '--lr-chart-tooltip-color',
   ]) {
     el.style.setProperty(name, 'url(#missing-paint)');
   }
@@ -1236,7 +1236,7 @@ it('defaults the box-outline width and item radius, then honors --lr-box-plot-* 
 });
 
 it('honors independent --lr-box-plot-border-color-N/--lr-box-plot-fill-color-N overrides', async () => {
-  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
   el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   el.style.setProperty('--lr-box-plot-border-color-1', 'rgb(9, 9, 9)');
   el.style.setProperty('--lr-box-plot-fill-color-1', 'rgb(8, 8, 8)');
@@ -1566,7 +1566,7 @@ describe('box-plot context and flow', () => {
   it('keeps its visible table and a long wrapping legend in normal document flow', async () => {
     const wrapper = await fixture(html`
       <div style="inline-size: 256px">
-        <lr-box-plot show-data-table legend></lr-box-plot>
+        <lr-box-plot with-data-table with-legend></lr-box-plot>
         <div id="after">After box plot</div>
       </div>
     `);
@@ -1607,7 +1607,7 @@ describe('box-plot context and flow', () => {
 
   it('re-resolves a public box color for the DOM legend on theme refresh', async () => {
     const el = (await fixture(html`
-      <lr-box-plot legend style="--box-color: rgb(10, 20, 30)"></lr-box-plot>
+      <lr-box-plot with-legend style="--box-color: rgb(10, 20, 30)"></lr-box-plot>
     `)) as LyraBoxPlot;
     el.datasets = [{
       label: 'Latency',
@@ -1683,12 +1683,12 @@ it('connectedCallback() routes the resolved boxplot-plugin module into the loade
 // -- Theme-token overrides, empty series, and shrinking dataset counts -------
 
 it('uses explicitly themed chart colors instead of its built-in fallbacks', async () => {
-  const el = (await fixture(html`<lr-box-plot legend style="
+  const el = (await fixture(html`<lr-box-plot with-legend style="
     --lr-chart-grid-color: rgb(10, 20, 30);
     --lr-chart-tick-color: rgb(40, 50, 60);
     --lr-chart-legend-color: rgb(70, 80, 90);
     --lr-chart-tooltip-bg: rgb(100, 110, 120);
-    --lr-chart-tooltip-text: rgb(130, 140, 150);
+    --lr-chart-tooltip-color: rgb(130, 140, 150);
   "></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
   el.datasets = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
@@ -1822,7 +1822,7 @@ describe('per-box interactivity', () => {
     expect(politeTexts().at(-1)).to.equal(first);
   });
 
-  it('emits lr-point-click carrying the five-number summary on keyboard activation', async () => {
+  it('emits lr-point-activate carrying the five-number summary on keyboard activation', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
     el.datasets = twoSeries();
@@ -1834,7 +1834,7 @@ describe('per-box interactivity', () => {
     await el.updateComplete;
 
     const details: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(details).to.deep.equal([
       {
@@ -1850,7 +1850,7 @@ describe('per-box interactivity', () => {
     expect((details[1] as { index: number }).index).to.equal(1);
   });
 
-  it('emits lr-point-click from the wired pointer handler and stays silent on a miss', async () => {
+  it('emits lr-point-activate from the wired pointer handler and stays silent on a miss', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
     el.datasets = twoSeries();
@@ -1874,7 +1874,7 @@ describe('per-box interactivity', () => {
     try {
       const onClick = (el as any).buildConfig().options.onClick;
       const details: unknown[] = [];
-      el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+      el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
       onClick({}, [], chart);
       expect(details).to.deep.equal([
         {
@@ -1910,7 +1910,7 @@ describe('per-box interactivity', () => {
     await el.updateComplete;
 
     const details: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(details).to.deep.equal([
       { datasetIndex: 0, index: 0, label: 'A', value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } },
@@ -2033,7 +2033,7 @@ describe('per-box interactivity', () => {
     expect(politeTexts().at(-1) ?? '', 'only the 2 valid points are addressable').to.contain('of 2');
 
     const details: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -2083,7 +2083,7 @@ describe('bounded box-plot fallback paths', () => {
     expect(spoken).to.contain('Series');
 
     const events: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => events.push((event as CustomEvent).detail));
+    el.addEventListener('lr-point-activate', (event) => events.push((event as CustomEvent).detail));
     const hit = (indexes: unknown[]) => ({
       getElementsAtEventForMode: () => indexes,
     });
@@ -2112,7 +2112,7 @@ describe('bounded box-plot fallback paths', () => {
       { label: 'Broken', data: [{ min: 5, q1: 4, median: 3, q3: 2, max: 1 }] },
     ];
     const invalidEvents: unknown[] = [];
-    invalid.addEventListener('lr-point-click', (event) => {
+    invalid.addEventListener('lr-point-activate', (event) => {
       invalidEvents.push((event as CustomEvent).detail);
     });
     (invalid as unknown as {
@@ -2197,7 +2197,7 @@ describe('data-table disclosure', () => {
     expect(toggleButton(collapsed) === null, 'opt-in only').to.be.true;
     expect(tableWrapper(collapsed).hasAttribute('data-visually-hidden')).to.be.true;
 
-    const shown = await boxPlotWith(html`<lr-box-plot show-data-table></lr-box-plot>`);
+    const shown = await boxPlotWith(html`<lr-box-plot with-data-table></lr-box-plot>`);
     expect(
       toggleButton(shown) === null,
       'still opt-in when the table is already visible',
@@ -2273,8 +2273,8 @@ describe('data-table disclosure', () => {
     expect(wrapper.getBoundingClientRect().height).to.be.greaterThan(1);
   });
 
-  it('starts expanded when show-data-table is set alongside the toggle', async () => {
-    const el = await boxPlotWith(html`<lr-box-plot show-data-table data-table-toggle></lr-box-plot>`);
+  it('starts expanded when with-data-table is set alongside the toggle', async () => {
+    const el = await boxPlotWith(html`<lr-box-plot with-data-table data-table-toggle></lr-box-plot>`);
 
     expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
     expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
@@ -2384,7 +2384,7 @@ describe('bidi isolation of formatted labels', () => {
   it('embeds number-first ticks on an RTL canvas and isolates table cells, leaving CSV and names clean', async () => {
     const el = (await fixture(html`<lr-box-plot
       dir="rtl"
-      show-data-table
+      with-data-table
       style="inline-size: 480px"
       .labels=${['9:00 AM', '10:00 AM']}
       .datasets=${[{ label: 'Latency', data: [summary(10), summary(20)] }]}

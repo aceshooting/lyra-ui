@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -18,10 +19,12 @@ import type {
   LyraGraphNodeLabelsMode,
   LyraGraphRenderer,
   LyraGraph,
+  LyraGraphEdge,
   LyraGraphLink,
   LyraGraphNode,
 } from '../graph/graph.class.js';
 import {
+  graphLengthConverter,
   graphLinkIdentity,
   normalizeGraphModel,
   type NormalizedGraphModel,
@@ -65,14 +68,14 @@ function isElementNode(value: EventTarget): value is Element {
 
 /** Extra `LyraEntity` fields a plain `LyraGraphNode` doesn't carry -- merged in by node id to build
  *  the entity shown in the details popover and neighbor rows. A node with no entry here still
- *  renders fine: `degree` falls back to a live count derived from `links`, `description`/
+ *  renders fine: `degree` falls back to a live count derived from `edges`, `description`/
  *  `properties` are simply omitted. */
 export type LyraKnowledgeGraphEntityDetails = Pick<
   LyraEntity,
   'description' | 'properties' | 'degree'
 >;
 
-/** What drives `<lr-knowledge-graph-explorer>`'s own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on
+/** What drives `<lr-knowledge-graph-explorer>`'s own `dimmedNodeIds`/`dimmedEdgeIds` forwarding, on
  *  top of the always-active search-match dimming -- see `highlight`'s own doc comment. */
 export type KnowledgeGraphHighlight = 'selection' | 'hover' | 'none';
 
@@ -106,7 +109,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  component's node filter has no ceiling, so it can never truncate. This is a live node
    *  FILTER, not a cursor-based text search -- it deliberately never carries the canonical
    *  `activeIndex` field, since it has no `searchNext`/`searchPrevious` active-match cursor to
-   *  report. The component has already applied the query to its own `searchQuery` before
+   *  report. The component has already applied the query to its own `query` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it
    *  back is optional and a direct host assignment stays silent. */
   'lr-search-change': CustomEvent<{
@@ -128,6 +131,10 @@ export interface LyraKnowledgeGraphExplorerEventMap {
     linkId?: string;
   }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
+  /** Bubbles unchanged from the composed `lr-graph`. */
+  'lr-community-activate': CustomEvent<{ communityId: string }>;
+  /** @deprecated Use `lr-community-activate`; removal not before 23.0.0. Bubbles unchanged from the
+   *  composed `lr-graph` right after it. */
   'lr-community-click': CustomEvent<{ communityId: string }>;
   'lr-relation-activate': CustomEvent<{
     relation: string;
@@ -167,11 +174,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * then anchors the popover at the graph element's own `getBoundingClientRect()` center once that
  * settles; no continuous tracking applies to that path.
  *
- * **Controlled vs. self-managed state.** `nodes`/`links`/`nodeTypes`/`communities`/`entityDetails`/
+ * **Controlled vs. self-managed state.** `nodes`/`edges`/`nodeTypes`/`communities`/`entityDetails`/
  * `path` are purely host-supplied data, rendered as given. `hiddenTypes`/`selectedNodeId`/
- * `searchQuery`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them
+ * `query`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them
  * into `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`,
- * `dimmedLinkIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit
+ * `dimmedEdgeIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit
  * contract `lr-graph-legend` already uses) so every feature works with zero host wiring, while
  * still being presettable/observable properties and emitting events (`lr-selection-change`,
  * `lr-pin-change`, `lr-path-request`, plus every composed primitive's own event bubbling straight through
@@ -183,7 +190,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * dimming: `'selection'` (the default) dims by the selected node's immediate neighborhood;
  * `'hover'` also dims by whichever node is currently pointer-hovered (falling back to the selected
  * node's neighborhood while nothing is hovered); `'none'` turns this component's own dimming off
- * entirely, forwarding empty `dimmedNodeIds`/`dimmedLinkIds` regardless of search/selection state
+ * entirely, forwarding empty `dimmedNodeIds`/`dimmedEdgeIds` regardless of search/selection state
  * -- for a host that wants to drive `lr-graph`'s dimming through a different composition instead.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
@@ -214,17 +221,20 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
  *   same event name/detail shape from either source) -- this component never appends neighbors
  *   itself, only forwards the request; a host fetches/generates the expansion and assigns updated
- *   `nodes`/`links` back.
- * @event lr-community-click - Bubbles straight through from the composed `lr-graph`, unmodified.
+ *   `nodes`/`edges` back.
+ * @event lr-community-activate - Bubbles straight through from the composed `lr-graph`, unmodified.
+ *   `detail: { communityId }`. Fires before `lr-community-click`.
+ * @event lr-community-click - Deprecated alias of `lr-community-activate`, bubbling straight through
+ *   from the composed `lr-graph` right after it, unmodified. Removal not before 23.0.0.
  * @event lr-relation-activate - Bubbles straight through from the composed `lr-path-strip`, unmodified.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart toolbar - The row wrapping the search input and the type-filter legend.
  * @csspart search - The composed `lr-entity-card` search `lr-input`.
  * @csspart legend - The composed `lr-graph-legend`.
- * @csspart search-results - The search-match list, only rendered while `searchQuery` is non-empty.
+ * @csspart search-results - The search-match list, only rendered while `query` is non-empty.
  * @csspart search-result - One search-match row (`role="listitem"`, wrapping a `<button>`).
- * @csspart search-empty - The "no matches" message, shown when `searchQuery` is non-empty but no node matches.
+ * @csspart search-empty - The "no matches" message, shown when `query` is non-empty but no node matches.
  * @csspart pinned - The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty.
  * @csspart pinned-heading - The pinned-nodes row's leading label.
  * @csspart path - The composed `lr-path-strip`, only rendered while `path` is non-empty.
@@ -261,6 +271,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
+    'edges',
     'links',
     'nodeTypes',
     'communities',
@@ -271,6 +282,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  // Each array alias (`links`, and on lr-graph the id lists) is declared before its canonical
+  // property: initialized second, it would find the canonical default already synced in and warn
+  // as though authored.
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    links: 'edges',
+    searchQuery: 'query',
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-pin-change',
     'lr-hidden-types-change',
@@ -278,8 +296,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   /** Nodes forwarded to the composed graph and search experience. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
-  /** Links forwarded to the composed graph and path interactions. */
+  /** Links forwarded to the composed graph and path interactions.
+   *  @deprecated Use `edges`; removal not before 23.0.0. */
   @property({ attribute: false }) links: readonly LyraGraphLink[] = [];
+  /** Edges forwarded to the composed graph and path interactions. */
+  @property({ attribute: false }) edges: readonly LyraGraphEdge[] = [];
   /** Labels, colors, and shapes for the graph's node-type vocabulary. */
   @property({ attribute: false }) nodeTypes: readonly LyraNodeTypeStyle[] = [];
   /** Community hull definitions forwarded to the graph. */
@@ -319,18 +340,20 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  follow it live as the explorer is resized. `'none'` (the default) keeps forwarding the
    *  numeric `width`/`height` below unchanged. */
   @property({ attribute: 'fit-to' }) fitTo: LyraGraphFit = 'none';
-  /** Requested width of the composed graph viewport in CSS pixels. Ignored by the composed graph
-   *  while `fitTo === 'container'`. */
-  @property({ type: Number }) width = 800;
-  /** Requested height of the composed graph viewport in CSS pixels. Also sizes the rendered
-   *  `[part="graph"]`/host (see `--lr-canvas-reserved-height`'s doc) whenever neither that nor an
-   *  explicit outer `block-size` overrides it. */
-  @property({ type: Number }) height = 600;
+  /** Requested width of the composed graph viewport: a number of CSS pixels, or a CSS length in
+   *  `px`, `rem`, `em`, `vw` or `vh` that the composed graph resolves to pixels. Any other value
+   *  uses the 800px default. Ignored by the composed graph while `fitTo === 'container'`. */
+  @property({ converter: graphLengthConverter }) width: number | string = 800;
+  /** Requested height of the composed graph viewport, in the same forms as `width` (any other
+   *  value uses the 600px default). Also sizes the rendered `[part="graph"]`/host (see
+   *  `--lr-canvas-reserved-height`'s doc) whenever neither that nor an explicit outer `block-size`
+   *  overrides it. */
+  @property({ converter: graphLengthConverter }) height: number | string = 600;
   /** Fallback name for the root group; defaults to localized `graphExplorerLabel`. A non-empty
    *  host `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
    *  empty on the group, and so does an explicitly empty `label`. */
   @property() label?: string;
-  /** What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the
+  /** What drives this component's own `dimmedNodeIds`/`dimmedEdgeIds` forwarding, on top of the
    *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
   @property() highlight: KnowledgeGraphHighlight = 'selection';
 
@@ -342,6 +365,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  `''` (the default) renders no search-result list at all and applies no search dimming.
    *  Removing the attribute uses this empty-filter behavior while retaining null property
    *  readback. */
+  @property() query = '';
+  /** The search filter applied to the visible node set. A node matches when the query appears in
+   *  any name it can be known by -- its `id`, its `label` or its `accessibleLabel` -- each folded
+   *  with the active locale, so a node named only through `accessibleLabel` is findable by the
+   *  very name the results, chips and popover display for it. Presettable (e.g. to restore a query
+   *  from a URL on load) as well as self-managed on every keystroke in the toolbar's search box.
+   *  `''` (the default) renders no search-result list at all and applies no search dimming.
+   *  Removing the attribute uses this empty-filter behavior while retaining null property
+   *  readback.
+   *  @deprecated Use `query`; removal not before 23.0.0. */
   @property({ attribute: 'search-query' }) searchQuery = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
@@ -364,13 +397,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  popover keeps tracking a pan/zoom gesture or simulation tick while it stays open. */
   private trackedNodeEl?: Element;
   private nodeById = new Map<string, LyraGraphNode>();
-  private linksByNodeId = new Map<string, LyraGraphLink[]>();
+  private linksByNodeId = new Map<string, LyraGraphEdge[]>();
   private degreeByNodeId = new Map<string, number>();
   private communityLabelById = new Map<string, string | undefined>();
   private normalizedGraphModel?: NormalizedGraphModel;
   private normalizedGraphSources?: readonly [
     readonly LyraGraphNode[],
-    readonly LyraGraphLink[],
+    readonly LyraGraphEdge[],
     readonly LyraNodeTypeStyle[],
     readonly LyraGraphCommunity[]
   ];
@@ -386,19 +419,19 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (
       !sources ||
       sources[0] !== this.nodes ||
-      sources[1] !== this.links ||
+      sources[1] !== this.edges ||
       sources[2] !== this.nodeTypes ||
       sources[3] !== this.communities
     ) {
       this.normalizedGraphSources = [
         this.nodes,
-        this.links,
+        this.edges,
         this.nodeTypes,
         this.communities,
       ];
       this.normalizedGraphModel = normalizeGraphModel(
         this.nodes,
-        this.links,
+        this.edges,
         this.nodeTypes,
         this.communities
       );
@@ -437,7 +470,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     super.willUpdate(changed);
     if (
       changed.has('nodes') ||
-      changed.has('links') ||
+      changed.has('edges') ||
       changed.has('communities')
     ) {
       this.rebuildDerivedCollections();
@@ -454,8 +487,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.setInternalSelectedNodeId(null);
       if (this.popoverEl) this.popoverEl.open = false;
     }
-    // `changed.has('searchQuery')` is already `true` on the very first `willUpdate()` whenever a
-    // preset `search-query` attribute reached the element before its first render -- there is no
+    // `changed.has('query')` is already `true` on the very first `willUpdate()` whenever a
+    // preset `query` attribute reached the element before its first render -- there is no
     // user action behind that transition, so it must not announce (mirrors `<lr-chat-message>`/
     // `<lr-branch-picker>`'s identical "don't announce on mount" gate). Those two run their own
     // announcement from `updated()`, where `this.hasUpdated` is already `true` on the very first
@@ -465,8 +498,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     // `connectedCallback()`/`canActivateNode()` above already gate on it the same way.
     if (
       this.hasUpdated &&
-      (this.searchQuery ?? '').trim() &&
-      (changed.has('searchQuery') ||
+      (this.query ?? '').trim() &&
+      (changed.has('query') ||
         changed.has('nodes') ||
         changed.has('hiddenTypes') ||
         changed.has('locale') ||
@@ -650,7 +683,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.communityLabelById = new Map(
       model.communities.map((community) => [community.id, community.label])
     );
-    const linksByNodeId = new Map<string, LyraGraphLink[]>();
+    const linksByNodeId = new Map<string, LyraGraphEdge[]>();
     const degrees = new Map<string, number>();
     for (const link of model.links) {
       for (const id of new Set([link.source, link.target])) {
@@ -747,7 +780,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private matchingNodes(): LyraGraphNode[] | undefined {
-    const q = (this.searchQuery ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
+    const q = (this.query ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return undefined;
     return this.graphModel.nodes.filter(
       (node) =>
@@ -777,9 +810,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return ids;
   }
 
-  /** The same key derivation `lr-graph`'s own (private) `linkKey()` uses for `dimmedLinkIds` --
+  /** The same key derivation `lr-graph`'s own (private) `linkKey()` uses for `dimmedEdgeIds` --
    *  an explicit `id` when the link has one, else `source->target`. */
-  private linkKey(link: LyraGraphLink): string {
+  private linkKey(link: LyraGraphEdge): string {
     return graphLinkIdentity(link);
   }
 
@@ -868,11 +901,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
     event.stopPropagation();
     const value = event.detail.value;
-    if (this.searchQuery === value) return;
-    this.searchQuery = value;
+    if (this.query === value) return;
+    this.query = value;
     // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
     // component-initiated change announces itself, so a host that assigns the property back in
-    // response cannot start a feedback loop. `matchingNodes()` already reads `this.searchQuery`,
+    // response cannot start a feedback loop. `matchingNodes()` already reads `this.query`,
     // which was just reassigned above, so it reports the count for the new query, not the old one;
     // it returns `undefined` (not a truncated result) whenever the trimmed query is empty, hence
     // the `?? 0` rather than a truncation-driven `matchCountExact: false`.
@@ -1058,7 +1091,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           <lr-input
             part="search"
             type="search"
-            .value=${this.searchQuery ?? ''}
+            .value=${this.query ?? ''}
             placeholder=${this.localize('graphExplorerSearchPlaceholder')}
             @lr-input=${this.onSearchInput}
           ></lr-input>
@@ -1135,18 +1168,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         <lr-graph
           part="graph"
           .nodes=${model.nodes}
-          .links=${model.links}
+          .edges=${model.links}
           .nodeTypes=${model.nodeTypes}
           .communities=${model.communities}
           .hiddenTypes=${hiddenTypes}
           .selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}
           .dimmedNodeIds=${this.computedDimmedNodeIds}
-          .dimmedLinkIds=${this.computedDimmedLinkIds}
+          .dimmedEdgeIds=${this.computedDimmedLinkIds}
           renderer=${this.renderer}
           fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}
-          width=${finiteRange(this.width, 800, 1)}
-          height=${finiteRange(this.height, 600, 1)}
+          width=${typeof this.width === 'string' ? this.width : finiteRange(this.width, 800, 1)}
+          height=${typeof this.height === 'string' ? this.height : finiteRange(this.height, 600, 1)}
           @lr-node-click=${this.onGraphNodeClick}
           @click=${this.onGraphNativeClick}
           @lr-node-enter=${this.onGraphNodeEnter}

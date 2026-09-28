@@ -46,14 +46,14 @@ interface HostFixture {
  * render, a frame after it learns of the close through `lr-toggle` -- the shape of a framework
  * host whose render is scheduled rather than synchronous with the event.
  */
-async function hostWithHidingTrigger(options: { reShow: boolean; hideToggle?: boolean }): Promise<HostFixture> {
+async function hostWithHidingTrigger(options: { reShow: boolean; withoutToggle?: boolean }): Promise<HostFixture> {
   const trigger = document.createElement('button');
   trigger.type = 'button';
   trigger.id = 'host-trigger';
   trigger.textContent = 'Menu';
   document.body.appendChild(trigger);
   const rail = await fixture<LyraAppRail>(html`
-    <lr-app-rail ?hide-toggle=${options.hideToggle ?? true} style="--lr-transition-base:0ms">
+    <lr-app-rail ?without-toggle=${options.withoutToggle ?? true} style="--lr-transition-base:0ms">
       <button id="nav-item" type="button">Home</button>
     </lr-app-rail>
   `);
@@ -137,7 +137,7 @@ describe('app rail mobile overlay focus return', () => {
   });
 
   it('falls back to the built-in toggle when neither the trigger nor the opener can take focus', async () => {
-    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false, hideToggle: false });
+    const { rail, trigger, cleanup } = await hostWithHidingTrigger({ reShow: false, withoutToggle: false });
     try {
       await openFromTrigger(rail, trigger);
       await sendKeys({ press: 'Escape' });
@@ -421,9 +421,9 @@ function loseHostOnClose(rail: LyraAppRail, loss: HostLoss): () => void {
 }
 
 describe('app rail focus return when nothing held focus at open', () => {
-  async function scriptOpenedRail(hideToggle: boolean): Promise<LyraAppRail> {
+  async function scriptOpenedRail(withoutToggle: boolean): Promise<LyraAppRail> {
     const rail = await fixture<LyraAppRail>(html`
-      <lr-app-rail ?hide-toggle=${hideToggle} style="--lr-transition-base:0ms">
+      <lr-app-rail ?without-toggle=${withoutToggle} style="--lr-transition-base:0ms">
         <button type="button">Home</button>
       </lr-app-rail>
     `);
@@ -444,7 +444,7 @@ describe('app rail focus return when nothing held focus at open', () => {
     await waitUntil(() => deepActive() === toggle, `focus stayed on ${describeActive()}`);
   });
 
-  it('continues past an overlay opened with nothing focused to the rail host under hide-toggle', async () => {
+  it('continues past an overlay opened with nothing focused to the rail host under without-toggle', async () => {
     const rail = await scriptOpenedRail(true);
     rail.open = false;
     await rail.updateComplete;
@@ -501,7 +501,7 @@ describe('app rail focus fallback', () => {
     document.body.appendChild(outer);
     const root = outer.attachShadow({ mode: 'open' });
     root.innerHTML = '<button id="scoped-trigger" type="button">Menu</button>'
-      + '<lr-app-rail hide-toggle focus-fallback="scoped-main" style="--lr-transition-base:0ms">'
+      + '<lr-app-rail without-toggle focus-fallback="scoped-main" style="--lr-transition-base:0ms">'
       + '<button type="button">Home</button></lr-app-rail>'
       + '<main id="scoped-main" tabindex="-1">View</main>';
     const rail = root.querySelector<LyraAppRail>('lr-app-rail')!;
@@ -794,7 +794,7 @@ describe('app rail focus fallback', () => {
 
   it('reaches focusFallback after a script open with nothing focused', async () => {
     const rail = await fixture<LyraAppRail>(html`
-      <lr-app-rail hide-toggle style="--lr-transition-base:0ms">
+      <lr-app-rail without-toggle style="--lr-transition-base:0ms">
         <button type="button">Home</button>
       </lr-app-rail>
     `);

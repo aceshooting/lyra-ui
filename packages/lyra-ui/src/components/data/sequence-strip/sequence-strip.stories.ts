@@ -80,7 +80,7 @@ export const DisabledItem: Story = {
  *  stays readable without hovering each cell. The legend is static: it lists every entry of
  *  `categories` (whether or not any item uses it) and toggles nothing. */
 export const WithLegend: Story = {
-  render: () => html`<lr-sequence-strip show-legend .items=${items} .categories=${categories()}></lr-sequence-strip>`,
+  render: () => html`<lr-sequence-strip with-legend .items=${items} .categories=${categories()}></lr-sequence-strip>`,
 };
 
 /** `marker-label` names what a cell's `marker` means. With the legend shown it adds one trailing
@@ -90,7 +90,7 @@ export const WithLegend: Story = {
 export const WithMarkerLegend: Story = {
   render: () =>
     html`<lr-sequence-strip
-      show-legend
+      with-legend
       marker-label="Dispatched to a subagent"
       .items=${items}
       .categories=${categories()}
@@ -103,7 +103,7 @@ export const LegendNarrowAllocation: Story = {
   render: () => html`
     <div style="inline-size: 320px">
       <lr-sequence-strip
-        show-legend
+        with-legend
         .items=${items}
         .categories=${[
           ...categories(),

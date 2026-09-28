@@ -31,7 +31,7 @@ export const WithoutArrow: Story = {
     docs: {
       description: {
         story:
-          '`without-arrow` suppresses the mapped default arrow. `arrow="false"` is also parsed correctly by the true-default boolean converter.',
+          '`without-arrow` suppresses the mapped default arrow.',
       },
     },
   },
@@ -102,17 +102,17 @@ export const Arrow: Story = {
     docs: {
       description: {
         story:
-          '`arrow` renders a pointer at the popup edge. `arrow-placement` chooses between tracking the anchor (`anchor`, the default), the middle of the edge (`center`), or one logical end of it (`start`/`end`, kept `arrow-padding` from the corner). The arrow part name also carries the resolved side, so `::part(arrow arrow-top)` styles one direction.',
+          'A pointer at the popup edge renders by default; `without-arrow` removes it. `arrow-placement` chooses between tracking the anchor (`anchor`, the default), the middle of the edge (`center`), or one logical end of it (`start`/`end`, kept `arrow-padding` from the corner). The arrow part name also carries the resolved side, so `::part(arrow arrow-top)` styles one direction.',
       },
     },
   },
   render: (_args, context) => html`
     <div style="display: flex; gap: 4rem; padding-block: 3rem;">
-      <lr-popover .open=${context.viewMode !== 'docs'} arrow placement="bottom">
+      <lr-popover .open=${context.viewMode !== 'docs'} placement="bottom">
         <button slot="trigger">Anchor arrow</button>
         <p>Points back at the trigger's centre.</p>
       </lr-popover>
-      <lr-popover .open=${context.viewMode !== 'docs'} arrow arrow-placement="start" arrow-padding="12" placement="bottom-start">
+      <lr-popover .open=${context.viewMode !== 'docs'} arrow-placement="start" arrow-padding="12" placement="bottom-start">
         <button slot="trigger">Start arrow</button>
         <p>Pinned 12px from the popup's logical start corner.</p>
       </lr-popover>
@@ -139,7 +139,7 @@ export const ExternalAnchor: Story = {
       <div id="popover-external-anchor" style="padding: 0.5rem; border: 1px dashed var(--lr-color-border);">
         The popup is positioned against this box
       </div>
-      <lr-popover .open=${context.viewMode !== 'docs'} for="popover-external-anchor" skidding="16" arrow>
+      <lr-popover .open=${context.viewMode !== 'docs'} for="popover-external-anchor" skidding="16">
         <button slot="trigger">Trigger lives down here</button>
         <p>Anchored elsewhere, triggered here.</p>
       </lr-popover>

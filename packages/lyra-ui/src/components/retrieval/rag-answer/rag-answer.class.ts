@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type {
   Citation,
@@ -94,6 +95,10 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showSources: ['withoutSources', invertAlias, invertAlias],
+    showClaims: ['withoutClaims', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-claim-select',
@@ -126,7 +131,14 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
    *  existed once it is set -- otherwise the initial error is announced twice, through the native
    *  role and again through the shared sink. */
   @property({ type: Boolean, reflect: true }) announce = false;
-  /** Whether the source section is rendered when source data or slotted content exists. */
+  /** Omits the source section that otherwise renders when source data or slotted content exists. */
+  @property({ type: Boolean, attribute: 'without-sources', reflect: true })
+  withoutSources = false;
+  /** Stops claim-level details from reaching the grounding summary. */
+  @property({ type: Boolean, attribute: 'without-claims', reflect: true })
+  withoutClaims = false;
+  /** Whether the source section is rendered when source data or slotted content exists.
+   *  @deprecated Use `without-sources`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-sources',
@@ -134,7 +146,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   showSources = true;
-  /** Whether claim-level details are forwarded to the grounding summary. */
+  /** Whether claim-level details are forwarded to the grounding summary.
+   *  @deprecated Use `without-claims`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-claims',
@@ -155,6 +168,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private slotObserver?: MutationObserver;
+
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -301,9 +315,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   private renderSource(source: DocumentRef): TemplateResult {
     return html`<lr-source-card
       frame="plain"
-      compact
+      size="s"
       .sourceId=${source.id}
-      .title=${source.name}
+      .heading=${source.name}
       .href=${source.uri ?? ''}
     >
       ${source.mimeType
@@ -371,7 +385,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             part="grounding"
             .assessment=${assessment}
             .citations=${citations}
-            .showClaims=${this.showClaims}
+            .withoutClaims=${this.withoutClaims}
             @lr-citation-select=${this.onGroundingCitationSelect}
             @lr-citation-open=${this.onGroundingCitationOpen}
           ></lr-grounding-summary>`
@@ -398,7 +412,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             </div>
           </section>`
         : nothing}
-      ${this.showSources && (sources.length > 0 || this.hasSlot('sources'))
+      ${!this.withoutSources && (sources.length > 0 || this.hasSlot('sources'))
         ? html`<section
             part="sources"
             aria-label=${this.localize('ragAnswerSources')}

@@ -89,7 +89,7 @@ export const ForwardedMarkdownConfiguration: Story = {
     docs: {
       description: {
         story:
-          'The rest of `<lr-markdown-core>`\'s configuration surface -- `tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` -- forwards verbatim, so a consumer who has customized any of them (here `link-target=""` for same-tab links and `heading-offset="1"`) keeps that behavior after adopting `<lr-streaming-text-core>`. The composed `<lr-markdown-core>` still applies its own `rel="noopener noreferrer"` guard whenever a non-empty `link-target` is forwarded.',
+          'The rest of `<lr-markdown-core>`\'s configuration surface -- `tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` -- forwards verbatim, so a consumer who has customized any of them (here `link-target=""` for same-tab links and `heading-offset="1"`) keeps that behavior after adopting `<lr-streaming-text-core>`. The composed `<lr-markdown-core>` still applies its own `rel="noopener noreferrer"` guard whenever a non-empty `link-target` is forwarded.',
       },
     },
   },

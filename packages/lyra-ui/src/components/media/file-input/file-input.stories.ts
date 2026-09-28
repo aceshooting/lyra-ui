@@ -205,7 +205,7 @@ export const Compact: Story = {
       <lr-file-input multiple accept=".csv,.xlsx"></lr-file-input>
       <div style="display:flex; align-items:center; gap:0.5rem;">
         <span style="font-size:0.8125rem; color:var(--lr-color-text-quiet);">Attachments</span>
-        <lr-file-input compact multiple accept=".csv,.xlsx" aria-label="Add files" style="flex:1;"
+        <lr-file-input size="s" multiple accept=".csv,.xlsx" aria-label="Add files" style="flex:1;"
           ><span slot="dropzone">Add files</span></lr-file-input
         >
       </div>
@@ -215,7 +215,7 @@ export const Compact: Story = {
     docs: {
       description: {
         story:
-          'Default dropzone above, then `compact` inline in a toolbar row where the full `--lr-space-l` dropzone would not fit. The toolbar control has no form label: its slotted dropzone text is the only visible copy, and a matching host `aria-label` makes the accessible name contain it.',
+          'Default dropzone above, then a dense `size="s"` dropzone inline in a toolbar row where the full `--lr-space-l` dropzone would not fit. The toolbar control has no form label: its slotted dropzone text is the only visible copy, and a matching host `aria-label` makes the accessible name contain it.',
       },
     },
   },

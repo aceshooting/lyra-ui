@@ -22,22 +22,21 @@ export const ExternalDescription: StoryObj = {
   `,
 };
 
-/** Both stepper spellings plus the increment/decrement icon slots. */
+/** The stepper pair, the native spin-button fallback, and the increment/decrement icon slots. */
 export const StepperVariants: StoryObj = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; max-inline-size: 20rem">
       <lr-number-input label="Lyra steppers (default)" value="2" min="0" max="10" step="1"></lr-number-input>
       <lr-number-input
         label="Native spin buttons"
-        steppers="false"
+        without-steppers
         without-spin-buttons="false"
         value="2"
         min="0"
         max="10"
         step="1"
       ></lr-number-input>
-      <lr-number-input label="No steppers at all" steppers="false" value="2"></lr-number-input>
-      <lr-number-input label="Positive without-steppers spelling" without-steppers value="2"></lr-number-input>
+      <lr-number-input label="No steppers at all" without-steppers value="2"></lr-number-input>
       <lr-number-input label="Custom stepper icons" value="2">
         <span slot="decrement-icon" aria-hidden="true">−</span>
         <span slot="increment-icon" aria-hidden="true">+</span>

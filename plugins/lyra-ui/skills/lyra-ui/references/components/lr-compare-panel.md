@@ -7,9 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-compare-panel-selected-background` since `21.1.0`; use css-property `--lr-compare-panel-selected-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 9 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,8 +54,9 @@ internal vote-announcement live region).
 
 **Themeable custom properties:** `--lr-compare-panel-max-height` (default `var(--lr-size-24rem)`) —
 cap on each pane's scroll region before it scrolls internally;
-`--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-compare-panel-selected-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
 `--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`), and
 `--lr-compare-panel-selected-font-weight` (default `var(--lr-font-weight-semibold)`) style the
-selected vote button without changing shared brand tokens.
+selected vote button without changing shared brand tokens. Deprecated alias:
+`--lr-compare-panel-selected-background` (use `--lr-compare-panel-selected-bg`; removed in 23.0.0).

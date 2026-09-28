@@ -3,31 +3,35 @@ import './source-card.js';
 import { LyraSourceCard } from './source-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-source-card', 'appearance');
 
-it('defaults to empty source-id/title and unset page/href', async () => {
+it('defaults to empty source-id/heading and unset page/href', async () => {
   const el = (await fixture(html`<lr-source-card></lr-source-card>`)) as LyraSourceCard;
   expect(el.sourceId).to.equal('');
-  expect(el.title).to.equal('');
+  expect(el.heading).to.equal('');
   expect(el.page).to.be.undefined;
   expect(el.href).to.be.undefined;
 });
 
-it('renders "Untitled source" when title is unset', async () => {
+it('renders "Untitled source" when heading is unset', async () => {
   const el = (await fixture(html`<lr-source-card></lr-source-card>`)) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Untitled source');
 });
 
-it('renders title alone when page is unset', async () => {
-  const el = (await fixture(html`<lr-source-card title="annual_report.pdf"></lr-source-card>`)) as LyraSourceCard;
+it('renders heading alone when page is unset', async () => {
+  const el = (await fixture(html`<lr-source-card heading="annual_report.pdf"></lr-source-card>`)) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf');
 });
 
-it('renders title and page combined', async () => {
+it('renders heading and page combined', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="annual_report.pdf" page="12"></lr-source-card>`,
+    html`<lr-source-card heading="annual_report.pdf" page="12"></lr-source-card>`,
   )) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf — p. 12');
 });
@@ -35,7 +39,7 @@ it('renders title and page combined', async () => {
 it('keeps explicit-empty and dynamic host naming distinct from the visible title button', async () => {
   const el = (await fixture(
     html`<lr-source-card
-      title="annual_report.pdf"
+      heading="annual_report.pdf"
       page="12"
       aria-label="Open the cited annual report"
     ></lr-source-card>`,
@@ -55,28 +59,13 @@ it('keeps explicit-empty and dynamic host naming distinct from the visible title
 });
 
 it('renders a non-numeric page label as-is', async () => {
-  const el = (await fixture(html`<lr-source-card title="notes.txt" page="iv"></lr-source-card>`)) as LyraSourceCard;
+  const el = (await fixture(html`<lr-source-card heading="notes.txt" page="iv"></lr-source-card>`)) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('notes.txt — p. iv');
-});
-
-it('strips the host-level title attribute after syncing it into the title property, avoiding a native tooltip', async () => {
-  const el = (await fixture(html`<lr-source-card title="annual_report.pdf"></lr-source-card>`)) as LyraSourceCard;
-  expect(el.title).to.equal('annual_report.pdf');
-  expect(el.hasAttribute('title')).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf');
-});
-
-it('strips a title attribute set programmatically after connection too', async () => {
-  const el = (await fixture(html`<lr-source-card></lr-source-card>`)) as LyraSourceCard;
-  el.setAttribute('title', 'late.pdf');
-  await el.updateComplete;
-  expect(el.title).to.equal('late.pdf');
-  expect(el.hasAttribute('title')).to.be.false;
 });
 
 it('always renders the excerpt slot content', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview text</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="excerpt">Preview text</span></lr-source-card>`,
   )) as LyraSourceCard;
   const excerptSlot = el.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
   expect(excerptSlot.assignedElements()[0]!.textContent).to.equal('Preview text');
@@ -84,12 +73,12 @@ it('always renders the excerpt slot content', async () => {
 });
 
 it('hides the excerpt wrapper when no excerpt content is slotted', async () => {
-  const el = (await fixture(html`<lr-source-card title="a.pdf"></lr-source-card>`)) as LyraSourceCard;
+  const el = (await fixture(html`<lr-source-card heading="a.pdf"></lr-source-card>`)) as LyraSourceCard;
   expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.true;
 });
 
 it('reveals the excerpt wrapper reactively when excerpt content is added after initial mount', async () => {
-  const el = (await fixture(html`<lr-source-card title="a.pdf"></lr-source-card>`)) as LyraSourceCard;
+  const el = (await fixture(html`<lr-source-card heading="a.pdf"></lr-source-card>`)) as LyraSourceCard;
   const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
   expect(excerptPart.hidden).to.be.true;
 
@@ -107,7 +96,7 @@ it('reveals the excerpt wrapper reactively when excerpt content is added after i
 
 it('does not render a show-more toggle when the full slot is empty', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
   )) as LyraSourceCard;
   expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
@@ -115,7 +104,7 @@ it('does not render a show-more toggle when the full slot is empty', async () =>
 
 it('renders a show-more toggle when the full slot has content, and it starts collapsed', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf">
+    html`<lr-source-card heading="a.pdf">
       <span slot="excerpt">Preview</span>
       <span slot="full">The complete chunk text.</span>
     </lr-source-card>`,
@@ -129,7 +118,7 @@ it('renders a show-more toggle when the full slot has content, and it starts col
 
 it('reveals a toggle reactively when full-slot content is added after initial mount', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="excerpt">Preview</span></lr-source-card>`,
   )) as LyraSourceCard;
   expect((el.shadowRoot!.querySelector('[part="toggle"]')) == null).to.be.true;
 
@@ -147,7 +136,7 @@ it('reveals a toggle reactively when full-slot content is added after initial mo
 
 it('collapses the full wrapper and removes the toggle when its only slotted content is removed while expanded', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
   )) as LyraSourceCard;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   toggle.click();
@@ -167,7 +156,7 @@ it('collapses the full wrapper and removes the toggle when its only slotted cont
 
 it('announces the automatic collapse through lr-expand when the full slot empties while expanded', async () => {
   const el = (await fixture(
-    html`<lr-source-card source-id="doc-1" title="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
+    html`<lr-source-card source-id="doc-1" heading="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
   )) as LyraSourceCard;
   (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -185,7 +174,7 @@ it('announces the automatic collapse through lr-expand when the full slot emptie
 
 it('stays silent when the full slot empties while the card was already collapsed', async () => {
   const el = (await fixture(
-    html`<lr-source-card source-id="doc-1" title="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
+    html`<lr-source-card source-id="doc-1" heading="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
   )) as LyraSourceCard;
   await el.updateComplete;
 
@@ -202,7 +191,7 @@ it('stays silent when the full slot empties while the card was already collapsed
 
 it('toggles the full wrapper and fires lr-expand with sourceId and the new state', async () => {
   const el = (await fixture(
-    html`<lr-source-card source-id="doc-1" title="a.pdf">
+    html`<lr-source-card source-id="doc-1" heading="a.pdf">
       <span slot="full">Full text.</span>
     </lr-source-card>`,
   )) as LyraSourceCard;
@@ -229,7 +218,7 @@ it('toggles the full wrapper and fires lr-expand with sourceId and the new state
 
 it('links the toggle to the full-content wrapper it controls via aria-controls', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="full">Full text.</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="full">Full text.</span></lr-source-card>`,
   )) as LyraSourceCard;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const full = el.shadowRoot!.querySelector('[part="full"]') as HTMLElement;
@@ -239,7 +228,7 @@ it('links the toggle to the full-content wrapper it controls via aria-controls',
 
 it('fires lr-open with sourceId and href when the title is activated', async () => {
   const el = (await fixture(
-    html`<lr-source-card source-id="doc-1" title="a.pdf" href="https://example.com/a.pdf"></lr-source-card>`,
+    html`<lr-source-card source-id="doc-1" heading="a.pdf" href="https://example.com/a.pdf"></lr-source-card>`,
   )) as LyraSourceCard;
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLButtonElement;
 
@@ -250,7 +239,7 @@ it('fires lr-open with sourceId and href when the title is activated', async () 
 });
 
 it('fires lr-open with an undefined href when none is set', async () => {
-  const el = (await fixture(html`<lr-source-card source-id="doc-1" title="a.pdf"></lr-source-card>`)) as LyraSourceCard;
+  const el = (await fixture(html`<lr-source-card source-id="doc-1" heading="a.pdf"></lr-source-card>`)) as LyraSourceCard;
   const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLButtonElement;
 
   const firing = oneEvent(el, 'lr-open');
@@ -260,13 +249,13 @@ it('fires lr-open with an undefined href when none is set', async () => {
 });
 
 it('is accessible with only a title (no excerpt/full content)', async () => {
-  const el = (await fixture(html`<lr-source-card title="a.pdf"></lr-source-card>`)) as LyraSourceCard;
+  const el = (await fixture(html`<lr-source-card heading="a.pdf"></lr-source-card>`)) as LyraSourceCard;
   await expect(el).to.be.accessible();
 });
 
 it('is accessible fully populated and expanded', async () => {
   const el = (await fixture(
-    html`<lr-source-card source-id="doc-1" title="annual_report.pdf" page="12" href="https://example.com">
+    html`<lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12" href="https://example.com">
       <span slot="excerpt">Revenue grew 12% year over year.</span>
       <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
     </lr-source-card>`,
@@ -278,7 +267,7 @@ it('is accessible fully populated and expanded', async () => {
 
 it('keeps short title and disclosure controls at the live hit-area token override', async () => {
   const el = (await fixture(html`
-    <lr-source-card source-id="s" title="A" style="--lr-icon-button-size: 52px">
+    <lr-source-card source-id="s" heading="A" style="--lr-icon-button-size: 52px">
       <span slot="full">Full text</span>
     </lr-source-card>
   `)) as LyraSourceCard;
@@ -296,7 +285,7 @@ it('contains an unbroken title inside a 320px allocation', async () => {
   parent.style.inlineSize = '320px';
   const el = (await fixture(
     html`<lr-source-card
-      title="source-with-a-deliberately-long-unbroken-filename-that-must-not-overflow-the-card.pdf"
+      heading="source-with-a-deliberately-long-unbroken-filename-that-must-not-overflow-the-card.pdf"
     ></lr-source-card>`,
     { parentNode: parent },
   )) as LyraSourceCard;
@@ -314,7 +303,7 @@ it('localizes the "Untitled source" fallback via this.localize()', async () => {
 
 it('localizes the page-suffix format via this.localize()', async () => {
   const el = (await fixture(
-    html`<lr-source-card title="Report" .page=${4} .strings=${{ sourcePageSuffix: '{base}, page {page}' }}></lr-source-card>`,
+    html`<lr-source-card heading="Report" .page=${4} .strings=${{ sourcePageSuffix: '{base}, page {page}' }}></lr-source-card>`,
   )) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Report, page 4');
 });
@@ -334,19 +323,19 @@ const baseChrome = (el: LyraSourceCard) => {
   };
 };
 
-it('defaults to compact=false and frame="card", rendering identically to those values restated', async () => {
+it('defaults to size="m" and frame="card", rendering identically to those values restated', async () => {
   const implicit = (await fixture(
-    html`<lr-source-card title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   const explicit = (await fixture(
-    html`<lr-source-card title="a.pdf" frame="card" .compact=${false}
+    html`<lr-source-card heading="a.pdf" frame="card" size="m"
       ><span slot="excerpt">x</span></lr-source-card
     >`,
   )) as LyraSourceCard;
 
-  expect(implicit.compact).to.be.false;
+  expect(implicit.size).to.equal('m');
   expect(implicit.frame).to.equal('card');
-  expect(implicit.hasAttribute('compact')).to.be.false;
+  expect(implicit.getAttribute('size')).to.equal('m');
   expect(implicit.getAttribute('frame')).to.equal('card');
 
   expect(baseChrome(explicit)).to.deep.equal(baseChrome(implicit));
@@ -358,11 +347,11 @@ it('defaults to compact=false and frame="card", rendering identically to those v
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('reflects compact and tightens the base padding/gap, keeping the card border', async () => {
+it('reflects size="s" and tightens the base padding/gap, keeping the card border', async () => {
   const el = (await fixture(
-    html`<lr-source-card compact title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
-  expect(el.hasAttribute('compact')).to.be.true;
+  expect(el.getAttribute('size')).to.equal('s');
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('4px'); // --lr-space-xs
   expect(chrome.rowGap).to.equal('2px'); // --lr-space-2xs
@@ -370,9 +359,9 @@ it('reflects compact and tightens the base padding/gap, keeping the card border'
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('lets a consumer retune the compact values through --lr-source-card-compact-*', async () => {
+it('lets a consumer retune the dense-tier values through --lr-source-card-compact-*', async () => {
   const el = (await fixture(
-    html`<lr-source-card compact title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   el.style.setProperty('--lr-source-card-compact-padding', '3px');
   el.style.setProperty('--lr-source-card-compact-gap', '5px');
@@ -384,7 +373,7 @@ it('lets a consumer retune the compact values through --lr-source-card-compact-*
 
 it('drops border, background, padding and radius under frame="plain"', async () => {
   const el = (await fixture(
-    html`<lr-source-card frame="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card frame="plain" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   expect(el.getAttribute('frame')).to.equal('plain');
   const chrome = baseChrome(el);
@@ -401,7 +390,7 @@ it('drops border, background, padding and radius under frame="plain"', async () 
 // selector that still matched the old attribute would be invisible to every other assertion here.
 it('ignores a stale appearance="plain", leaving the card chrome intact', async () => {
   const stale = (await fixture(
-    html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card appearance="plain" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   expect(stale.frame).to.equal('card');
   const chrome = baseChrome(stale);
@@ -410,9 +399,9 @@ it('ignores a stale appearance="plain", leaving the card chrome intact', async (
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('lets plain win over compact when both are set', async () => {
+it('lets plain win over size="s" when both are set', async () => {
   const el = (await fixture(
-    html`<lr-source-card compact frame="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    html`<lr-source-card size="s" frame="plain" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
   )) as LyraSourceCard;
   const chrome = baseChrome(el);
   expect(chrome.paddingTop).to.equal('0px');
@@ -421,7 +410,7 @@ it('lets plain win over compact when both are set', async () => {
 
 it('keeps the title/toggle affordances under plain (they never depended on the card chrome)', async () => {
   const el = (await fixture(
-    html`<lr-source-card frame="plain" title="a.pdf">
+    html`<lr-source-card frame="plain" heading="a.pdf">
       <span slot="excerpt">x</span><span slot="full">y</span>
     </lr-source-card>`,
   )) as LyraSourceCard;
@@ -451,9 +440,9 @@ it('keeps the title/toggle affordances under plain (they never depended on the c
   }
 });
 
-it('is accessible in the populated compact and plain states', async () => {
+it('is accessible in the populated size="s" and plain states', async () => {
   const compactEl = (await fixture(
-    html`<lr-source-card compact source-id="doc-1" title="annual_report.pdf" page="12">
+    html`<lr-source-card size="s" source-id="doc-1" heading="annual_report.pdf" page="12">
       <span slot="excerpt">Revenue grew 12% year over year.</span>
       <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
     </lr-source-card>`,
@@ -463,7 +452,7 @@ it('is accessible in the populated compact and plain states', async () => {
   await expect(compactEl).to.be.accessible();
 
   const plainEl = (await fixture(
-    html`<lr-source-card frame="plain" source-id="doc-2" title="annual_report.pdf" page="12">
+    html`<lr-source-card frame="plain" source-id="doc-2" heading="annual_report.pdf" page="12">
       <span slot="excerpt">Revenue grew 12% year over year.</span>
       <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
     </lr-source-card>`,
@@ -508,7 +497,7 @@ describe('lifecycle: super calls', () => {
 
 it('wraps long unbroken excerpt content inside the card allocation', async () => {
   const el = (await fixture(html`
-    <lr-source-card title="Source"><span slot="excerpt">${'x'.repeat(500)}</span></lr-source-card>
+    <lr-source-card heading="Source"><span slot="excerpt">${'x'.repeat(500)}</span></lr-source-card>
   `)) as LyraSourceCard;
   const excerpt = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
   expect(getComputedStyle(excerpt).minInlineSize).to.equal('0px');
@@ -521,14 +510,14 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('retints the resting card frame through --lr-source-card-bg', async () => {
     const el = (await fixture(
-      html`<lr-source-card title="a.pdf" style="--lr-source-card-bg: rgb(1, 2, 3)"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" style="--lr-source-card-bg: rgb(1, 2, 3)"></lr-source-card>`
     )) as LyraSourceCard;
     expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgb(1, 2, 3)');
   });
 
   it('leaves the resting frame on the shared surface token when --lr-source-card-bg is unset', async () => {
     const el = (await fixture(
-      html`<lr-source-card title="a.pdf" style="--lr-color-surface: rgb(4, 5, 6)"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" style="--lr-color-surface: rgb(4, 5, 6)"></lr-source-card>`
     )) as LyraSourceCard;
     expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgb(4, 5, 6)');
   });
@@ -536,7 +525,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
   it('keeps frame="plain" transparent regardless of the new token', async () => {
     const el = (await fixture(
       html`<lr-source-card
-        title="a.pdf"
+        heading="a.pdf"
         frame="plain"
         style="--lr-source-card-bg: rgb(1, 2, 3)"
       ></lr-source-card>`
@@ -546,7 +535,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('defaults disabled to false and leaves both controls operable', async () => {
     const el = (await fixture(html`
-      <lr-source-card title="a.pdf"><span slot="full">Full text</span></lr-source-card>
+      <lr-source-card heading="a.pdf"><span slot="full">Full text</span></lr-source-card>
     `)) as LyraSourceCard;
     expect(el.disabled).to.equal(false);
     expect(el.hasAttribute('disabled')).to.equal(false);
@@ -556,7 +545,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('disables every self-rendered control, not just the title', async () => {
     const el = (await fixture(html`
-      <lr-source-card title="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
+      <lr-source-card heading="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
     `)) as LyraSourceCard;
     expect(el.hasAttribute('disabled')).to.equal(true);
     expect((partOf(el, 'title') as HTMLButtonElement).disabled).to.equal(true);
@@ -568,7 +557,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('stops lr-open and lr-expand while disabled and removes both controls from the tab order', async () => {
     const el = (await fixture(html`
-      <lr-source-card source-id="s1" title="a.pdf" disabled>
+      <lr-source-card source-id="s1" heading="a.pdf" disabled>
         <span slot="full">Full text</span>
       </lr-source-card>
     `)) as LyraSourceCard;
@@ -597,7 +586,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
   // ::part(title)[data-disabled] would never parse.
   it('lets an outside rule reach the disabled title and toggle through ::part(x):disabled', async () => {
     const el = (await fixture(html`
-      <lr-source-card title="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
+      <lr-source-card heading="a.pdf" disabled><span slot="full">Full text</span></lr-source-card>
     `)) as LyraSourceCard;
     const sheet = document.createElement('style');
     sheet.textContent =
@@ -618,7 +607,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('leaves an enabled title and toggle untouched by that same ::part(x):disabled rule', async () => {
     const el = (await fixture(html`
-      <lr-source-card title="a.pdf"><span slot="full">Full text</span></lr-source-card>
+      <lr-source-card heading="a.pdf"><span slot="full">Full text</span></lr-source-card>
     `)) as LyraSourceCard;
     const sheet = document.createElement('style');
     sheet.textContent =
@@ -634,7 +623,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('applies the disabled opacity and the not-allowed cursor', async () => {
     const el = (await fixture(
-      html`<lr-source-card title="a.pdf" disabled style="--lr-opacity-disabled: 0.42"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" disabled style="--lr-opacity-disabled: 0.42"></lr-source-card>`
     )) as LyraSourceCard;
     expect(getComputedStyle(partOf(el, 'base')).opacity).to.equal('0.42');
     expect(getComputedStyle(partOf(el, 'title')).cursor).to.equal('not-allowed');
@@ -642,7 +631,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('resumes emitting once disabled is cleared', async () => {
     const el = (await fixture(
-      html`<lr-source-card source-id="s1" title="a.pdf" disabled></lr-source-card>`
+      html`<lr-source-card source-id="s1" heading="a.pdf" disabled></lr-source-card>`
     )) as LyraSourceCard;
     el.disabled = false;
     await el.updateComplete;
@@ -653,7 +642,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('forwards host aria-pressed and aria-current reactively onto the title button', async () => {
     const el = (await fixture(
-      html`<lr-source-card title="a.pdf" aria-pressed="true" aria-current="page"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" aria-pressed="true" aria-current="page"></lr-source-card>`
     )) as LyraSourceCard;
     const title = () => partOf(el, 'title');
     expect(title().getAttribute('aria-pressed')).to.equal('true');
@@ -672,7 +661,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('ignores values outside the aria-pressed/aria-current vocabularies', async () => {
     const el = (await fixture(
-      html`<lr-source-card title="a.pdf" aria-pressed="yes" aria-current="maybe"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" aria-pressed="yes" aria-current="maybe"></lr-source-card>`
     )) as LyraSourceCard;
     expect(partOf(el, 'title').hasAttribute('aria-pressed')).to.equal(false);
     expect(partOf(el, 'title').hasAttribute('aria-current')).to.equal(false);
@@ -680,7 +669,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('never puts aria-pressed on the expand toggle, which already owns aria-expanded', async () => {
     const el = (await fixture(html`
-      <lr-source-card title="a.pdf" aria-pressed="true">
+      <lr-source-card heading="a.pdf" aria-pressed="true">
         <span slot="full">Full text</span>
       </lr-source-card>
     `)) as LyraSourceCard;
@@ -690,11 +679,141 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('stays accessible as a selected, right-to-left card', async () => {
     const el = (await fixture(html`
-      <lr-source-card dir="rtl" source-id="s1" title="تقرير.pdf" page="12" aria-pressed="true">
+      <lr-source-card dir="rtl" source-id="s1" heading="تقرير.pdf" page="12" aria-pressed="true">
         <span slot="excerpt">مقتطف</span>
         <span slot="full">النص الكامل</span>
       </lr-source-card>
     `)) as LyraSourceCard;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-source-card heading and the deprecated title alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'title' }];
+  const text = (el: LyraSourceCard): string =>
+    el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
+
+  it('renders heading without a deprecation warning or a host title attribute', async () => {
+    let rendered = '';
+    let hostTitle: string | null = 'unset';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      const el = await fixture<LyraSourceCard>(html`<lr-source-card heading="annual_report.pdf" page="12"></lr-source-card>`);
+      rendered = text(el);
+      hostTitle = el.getAttribute('title');
+    });
+    expect(rendered).to.equal('annual_report.pdf — p. 12');
+    expect(hostTitle).to.equal(null);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps title working as an alias, still stripping the host title attribute, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = text(await fixture<LyraSourceCard>(html`<lr-source-card heading="annual_report.pdf"></lr-source-card>`));
+      const el = await fixture<LyraSourceCard>(html`<lr-source-card title="annual_report.pdf"></lr-source-card>`);
+      alias = text(el);
+      readback = [el.heading, el.title, el.hasAttribute('title')];
+      // The canonical property syncs back into the alias.
+      el.heading = 'renamed.pdf';
+      await el.updateComplete;
+      readback.push(el.title, el.hasAttribute('title'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(readback).to.deep.equal(['annual_report.pdf', 'annual_report.pdf', false, 'renamed.pdf', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-card:property:title',
+    ]);
+    expect(warnings[0]!.message).to.contain('heading');
+  });
+
+  it('strips a title attribute set programmatically after connection, applying it as the heading', async () => {
+    let readback: unknown[] = [];
+    await captureDeprecationWarnings(ALIAS, async () => {
+      const el = await fixture<LyraSourceCard>(html`<lr-source-card></lr-source-card>`);
+      el.setAttribute('title', 'late.pdf');
+      await el.updateComplete;
+      el.title = 'later.pdf';
+      await el.updateComplete;
+      readback = [el.heading, el.hasAttribute('title'), text(el)];
+    });
+    expect(readback).to.deep.equal(['later.pdf', false, 'later.pdf']);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    const headings: string[] = [];
+    await captureDeprecationWarnings(ALIAS, async () => {
+      for (const markup of [
+        html`<lr-source-card heading="first.pdf" title="later.pdf"></lr-source-card>`,
+        html`<lr-source-card title="first.pdf" heading="later.pdf"></lr-source-card>`,
+      ]) {
+        headings.push(text(await fixture<LyraSourceCard>(markup)));
+      }
+    });
+    expect(headings).to.deep.equal(['later.pdf', 'later.pdf']);
+  });
+});
+
+describe('lr-source-card size and the deprecated compact alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'compact' }];
+  const observe = (el: LyraSourceCard): string => {
+    const chrome = baseChrome(el);
+    return `${chrome.paddingTop}|${chrome.rowGap}`;
+  };
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceCard>(markup);
+
+  it('applies size="s" without a deprecation warning', async () => {
+    let dense = '';
+    let regular = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      dense = observe(await mount(html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      regular = observe(await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+    });
+    expect(dense).to.equal('4px|2px');
+    expect(regular).to.equal('8px|4px');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      alias = observe(await mount(html`<lr-source-card compact heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      const el = await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-card:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      const el = await mount(html`<lr-source-card compact heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-source-card compact size="m" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
   });
 });

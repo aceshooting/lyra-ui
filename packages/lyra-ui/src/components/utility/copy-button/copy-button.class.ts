@@ -153,7 +153,7 @@ export interface LyraCopyButtonEventMap {
  * (the subtree-scoped input) or `--lr-theme-icon-button-size` (the application-wide one) -- NOT
  * `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and so
  * never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or
- * any ancestor of it; `::part(base__control)` also reaches the same composed native control
+ * any ancestor of it; `::part(base-control)` also reaches the same composed native control
  * directly for a one-off override. Either way the shrink is local to the elements it targets, not
  * a library-wide floor change. A coarse-pointer/no-hover safety net (`internal/tokens.styles.ts`'s
  * `baseTokens`) then floors the rendered hit area back at 2.75rem/44px regardless of how far the
@@ -180,11 +180,13 @@ export interface LyraCopyButtonEventMap {
  *   component's own `<button>` as of 16.0.0. It still owns the accessible name, the activation and
  *   every part token below; its paint (background, radius, hover/press mixes, focus ring, hit-area
  *   floor) now comes from `<lr-icon-button>`'s own `--lr-icon-button-*` contract, so a rule that
- *   set `background`/`border`/`padding` through `::part(base)` must move to `base__control` or to
+ *   set `background`/`border`/`padding` through `::part(base)` must move to `base-control` or to
  *   the token.
  * @csspart button - Mapped alias for `base` on the same composed trigger.
- * @csspart base__control - The composed `<lr-icon-button>`'s own native control, forwarded so the
+ * @csspart base-control - The composed `<lr-icon-button>`'s own native control, forwarded so the
  *   painted surface stays reachable across the extra shadow boundary.
+ * @csspart base__control - Deprecated alias of `base-control` on the same node; removal not before
+ *   23.0.0.
  * @csspart base-success - The trigger while the copied confirmation is showing.
  * @csspart base-error - The trigger while the failure state is showing.
  * @csspart copy-icon - The resting copy glyph.
@@ -709,7 +711,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
           : html`
               <lr-icon-button
                 part=${part}
-                exportparts="button:base__control"
+                exportparts="button:base-control, button:base__control"
                 ?disabled=${this.disabled}
                 aria-label=${buttonLabel}
                 @click=${this.onClick}

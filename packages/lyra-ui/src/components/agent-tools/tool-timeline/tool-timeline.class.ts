@@ -2,12 +2,14 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { ToolInvocation, ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
+import type { LyraDetailsToggleDetail } from '../../layout/details/details.class.js';
 import { styles } from './tool-timeline.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
@@ -271,7 +273,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * ceiling masks the affected branch rather than exposing data or exhausting the page. Redaction
  * only ever affects the read-only detail view: the copy of `args` handed to the
  * approval dialog is always the entry's real, unmasked value. Approving a masked-args call must
- * let the reviewer see (and, if `approvalEditable`, edit) what will actually be sent — handing the
+ * let the reviewer see (and, unless `approval-readonly` is set, edit) what will actually be sent — handing the
  * dialog a placeholder string in place of a real field would silently corrupt the decision.
  *
  * Approval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and
@@ -286,7 +288,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * `revertPendingApproval()` to restore the same open dialog and its draft for retry. A host that
  * instead resolves the decision synchronously by reassigning `entries` from within the same
  * `preventDefault()`ed listener wins outright: the entry's live state is re-checked immediately
- * after dispatch, so the shared dialog's `pending` flag is never parked on an entry the host already
+ * after dispatch, so the shared dialog's `pendingAction` flag is never parked on an entry the host already
  * finalized. A chip
  * belonging to an entry that isn't pending approval emits the timeline-owned, correlated
  * `lr-tool-activate`; raw child selection and disclosure lifecycle events are contained.
@@ -374,12 +376,21 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    approvalEditable: ['approvalReadonly', invertAlias, invertAlias],
+  };
+
   /** The calls to render, in any order — see the class doc's ordering note. Entries with empty
    *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. */
   @property({ attribute: false }) entries: readonly ToolTimelineEntry[] = [];
 
+  /** Forwarded to the shared approval dialog's own `readonly` — withholds editing an entry's
+   *  arguments before approving it. */
+  @property({ type: Boolean, reflect: true, attribute: 'approval-readonly' }) approvalReadonly = false;
+
   /** Forwarded to the shared approval dialog's own `editable` — whether a reviewer can edit an
-   *  entry's arguments before approving it. */
+   *  entry's arguments before approving it.
+   *  @deprecated Use `approval-readonly`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, attribute: 'approval-editable', converter: trueDefaultBooleanConverter })
   approvalEditable = true;
 
@@ -614,11 +625,11 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     this.approvalPending = null;
   }
 
-  private onDetailsToggle(entry: CanonicalToolTimelineEntry, event: CustomEvent<{ open: boolean }>): void {
+  private onDetailsToggle(entry: CanonicalToolTimelineEntry, event: CustomEvent<LyraDetailsToggleDetail>): void {
     event.stopPropagation();
     const key = entryIdentity(entry);
     const next = new Set(this.openedEntryIds);
-    if (event.detail.open) next.add(key);
+    if (event.detail.expanded ?? event.detail.open) next.add(key);
     else next.delete(key);
     this.openedEntryIds = next;
   }
@@ -722,7 +733,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
             @lr-after-show=${this.stopOwnedEvent}
             @lr-hide=${this.stopOwnedEvent}
             @lr-after-hide=${this.stopOwnedEvent}
-            @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onDetailsToggle(entry, event)}
+            @lr-toggle=${(event: CustomEvent<LyraDetailsToggleDetail>) => this.onDetailsToggle(entry, event)}
           >
             ${detailsOpened ? this.openedDetailsTemplate(entry, placeholder) : nothing}
           </lr-details>
@@ -752,8 +763,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         tool-name=${reviewing?.name ?? ''}
         .proposalKey=${reviewing === undefined ? '' : entryIdentity(reviewing)}
         .args=${reviewing?.args ?? {}}
-        .editable=${this.approvalEditable}
-        .pending=${this.approvalPending}
+        .readonly=${this.approvalReadonly}
+        .pendingAction=${this.approvalPending}
         .open=${reviewing !== undefined}
         @focus=${this.stopOwnedEvent}
         @blur=${this.stopOwnedEvent}

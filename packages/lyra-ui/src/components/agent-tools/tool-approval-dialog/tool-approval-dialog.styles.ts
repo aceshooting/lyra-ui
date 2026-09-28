@@ -108,14 +108,14 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* The mouse-side counterpart of the :focus-visible ring above, mirroring lr-textarea's
-     [part='textarea']:hover. Gated on :host(:not([pending])), not :not(:disabled): this raw
+     [part='textarea']:hover. Gated on :host(:not([pending-action])), not :not(:disabled): this raw
      <textarea> is not form-associated and has no disabled state, and pending freezes it to
      readonly, so hover shouldn't relight it. */
   /* no-pressed-state: pressing inside a text surface places a caret, it actuates nothing. The
      mousedown matching :active is the gesture that focuses the field, so a pressed treatment would
      flicker for a frame between hover border and focus ring; focus is the real acting-on-me state,
      as in lr-textarea's [part='textarea']. */
-  :host(:not([pending])) [part="args-editor"]:not([aria-invalid="true"]):hover {
+  :host(:not([pending-action])) [part="args-editor"]:not([aria-invalid="true"]):hover {
     border-color: var(
       --lr-tool-approval-dialog-hover-border-color,
       var(--lr-color-brand)

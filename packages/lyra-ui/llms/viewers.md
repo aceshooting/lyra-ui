@@ -519,22 +519,29 @@ while the viewer and its composed ancestors are exposed to the accessibility tre
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
-`--lr-docx-viewer-table-header-background` (default `var(--lr-color-brand-quiet)`) retints a
+`--lr-docx-viewer-table-header-bg` (default `var(--lr-color-brand-quiet)`) retints a
 rendered document table's header row (`th`), independent of the highlight backgrounds below.
 Highlight backgrounds are independently themeable with
-`--lr-docx-viewer-highlight-accent-background`,
-`--lr-docx-viewer-highlight-success-background`,
-`--lr-docx-viewer-highlight-warning-background`,
-`--lr-docx-viewer-highlight-danger-background`, and
-`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens --
+`--lr-docx-viewer-highlight-accent-bg`,
+`--lr-docx-viewer-highlight-success-bg`,
+`--lr-docx-viewer-highlight-warning-bg`,
+`--lr-docx-viewer-highlight-danger-bg`, and
+`--lr-docx-viewer-highlight-neutral-bg`, defaulting to the matching quiet color tokens --
 except neutral, which defaults to `var(--lr-color-surface-raised)`: `[part='content']` paints no
 background of its own and therefore shows `[part='base']`'s `--lr-color-surface`, so a neutral
 highlight falling back to that same token would render as unhighlighted.
-`--lr-docx-viewer-highlight-active-background` and
+`--lr-docx-viewer-highlight-active-bg` and
 `--lr-docx-viewer-highlight-active-outline` style the active host highlight.
-`--lr-docx-viewer-search-match-background`,
-`--lr-docx-viewer-search-match-active-background`, and
-`--lr-docx-viewer-search-match-active-foreground` style resting and active search matches.
+`--lr-docx-viewer-search-match-bg`,
+`--lr-docx-viewer-search-match-active-bg`, and
+`--lr-docx-viewer-search-match-active-color` style resting and active search matches.
+Deprecated aliases: `--lr-docx-viewer-table-header-background`,
+`--lr-docx-viewer-highlight-accent-background`, `--lr-docx-viewer-highlight-success-background`,
+`--lr-docx-viewer-highlight-warning-background`, `--lr-docx-viewer-highlight-danger-background`,
+`--lr-docx-viewer-highlight-neutral-background`, `--lr-docx-viewer-highlight-active-background`,
+`--lr-docx-viewer-search-match-background` and `--lr-docx-viewer-search-match-active-background`
+(use the matching `-bg` names) and `--lr-docx-viewer-search-match-active-foreground` (use
+`--lr-docx-viewer-search-match-active-color`); removed in 23.0.0.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -759,16 +766,22 @@ stylesheet.
 
 **Themeable custom properties:** `--lr-archive-viewer-max-height` (default `none`) caps the
 scrollable `[part="body"]` and is also settable through `maxHeight`/`max-height`.
-`--lr-archive-viewer-highlight-accent-background`,
-`--lr-archive-viewer-highlight-success-background`,
-`--lr-archive-viewer-highlight-warning-background`,
-`--lr-archive-viewer-highlight-danger-background`, and
-`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds. The neutral default is
+`--lr-archive-viewer-highlight-accent-bg`,
+`--lr-archive-viewer-highlight-success-bg`,
+`--lr-archive-viewer-highlight-warning-bg`,
+`--lr-archive-viewer-highlight-danger-bg`, and
+`--lr-archive-viewer-highlight-neutral-bg` control tone backgrounds. The neutral default is
 `var(--lr-color-surface-raised)`, deliberately not `--lr-color-surface`: entry rows paint no
 background of their own and therefore show the viewer's `--lr-color-surface`, so a neutral highlight
 falling back to that same token would render as unhighlighted.
-`--lr-archive-viewer-highlight-active-background` and
+`--lr-archive-viewer-highlight-active-bg` and
 `--lr-archive-viewer-highlight-active-outline` control the active quote.
+Deprecated aliases: `--lr-archive-viewer-highlight-accent-background`,
+`--lr-archive-viewer-highlight-success-background`,
+`--lr-archive-viewer-highlight-warning-background`,
+`--lr-archive-viewer-highlight-danger-background`,
+`--lr-archive-viewer-highlight-neutral-background` and
+`--lr-archive-viewer-highlight-active-background` (use the matching `-bg` names; removed in 23.0.0).
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
@@ -1546,14 +1559,16 @@ cumulative across a workbook. Exceeding any ceiling surfaces the localized
 Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and virtualizes body rows.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
-header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
+header row included unless `without-header-row` is set; `scrollToAnchor()` scrolls the addressed
 row/column into view via the virtualized list's `active-item-id`. `highlights` paint as a focusable
 `part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
 mid-flight reports `found: false` rather than a phantom success.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
-`has-header-row`) controls whether the first parsed row is rendered as a persistent header above
-the virtualized row scrollport.
+**Properties:** `src: string = ''` and `name: string = ''`. `withoutHeaderRow: boolean = false`
+(attribute `without-header-row`) renders the first parsed row as an ordinary data row instead of the
+persistent header above the virtualized row scrollport. Deprecated alias: `has-header-row`
+(`hasHeaderRow`; use `without-header-row`; `has-header-row="false"` equals `without-header-row`;
+removed in 23.0.0).
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —
@@ -1610,7 +1625,7 @@ same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a s
 the tag it eventually registers.
 
 Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
-(the first row consumes the same budget whether or not `has-header-row` displays it as a header),
+(the first row consumes the same budget whether or not it is displayed as the header),
 1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming
 row callbacks enforce the same ceilings again. Exceeding any ceiling surfaces the localized
 `documentPreviewResourceTooLarge` message instead of a partial grid.
@@ -1655,12 +1670,13 @@ the source is loading and being sanitized. Build error UI from `lr-include-error
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
-- `cache: boolean = true` (attribute is not reflected) — shares matching in-flight work and retains
-  successful sanitized remote documents in a bounded cache. `cache="false"` (including that exact
-  HTML attribute syntax) opts this instance out of both deduplication and retention. Fragment ids
-  are deliberately not part of the key: `/partial.html#one` and `/partial.html#two` share only the
-  fragmentless fetch/sanitize work, then select and clone independently. Request mode, byte cap,
-  and sanitizer profile are part of the key.
+- `withoutCache: boolean = false` (attribute `without-cache`, not reflected) — by default an
+  include shares matching in-flight work and retains successful sanitized remote documents in a
+  bounded cache; `without-cache` opts this instance out of both deduplication and retention.
+  Fragment ids are deliberately not part of the key: `/partial.html#one` and `/partial.html#two`
+  share only the fragmentless fetch/sanitize work, then select and clone independently. Request
+  mode, byte cap, and sanitizer profile are part of the key. Deprecated alias: `cache` (use
+  `without-cache`; `cache="false"` equals `without-cache`; removed in 23.0.0).
 
 **Methods:** `reload(): Promise<void>` invalidates the retained remote document for this URL and
 mode, then loads it again. A same-page source is simply re-cloned from its current DOM.
@@ -1743,12 +1759,14 @@ positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
 to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
-(attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
-activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
-dimensions are nonnegative; an item with a missing/non-array `rects` collection and each invalid
-rectangle are omitted from paint, focus, and activation. When
-`interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
-controls. If every rectangle is invalid, no shadow subtree is rendered.
+(attribute `active-highlight-id`), and `withoutInteraction: boolean = false` (attribute
+`without-interaction`, reflected) — turns off click/keyboard activation. A rectangle is eligible
+only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative; an item
+with a missing/non-array `rects` collection and each invalid rectangle are omitted from paint, focus,
+and activation. With `without-interaction`, the base is `aria-hidden` pure paint with no group role,
+accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
+Deprecated alias: `interactive` (use `without-interaction`; `interactive="false"` equals
+`without-interaction`; it no longer reflects; removed in 23.0.0).
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).
@@ -1764,14 +1782,17 @@ individual targets are replaced by `highlight-actions` (a non-overlapping action
 one `highlight-action` button per rendered highlight.
 
 **Themeable custom properties:**
-`--lr-highlight-layer-accent-background`, `--lr-highlight-layer-accent-outline`,
-`--lr-highlight-layer-success-background`, `--lr-highlight-layer-success-outline`,
-`--lr-highlight-layer-warning-background`, `--lr-highlight-layer-warning-outline`,
-`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-danger-outline`,
-`--lr-highlight-layer-neutral-background`, and `--lr-highlight-layer-neutral-outline` control each
+`--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,
+`--lr-highlight-layer-success-bg`, `--lr-highlight-layer-success-outline`,
+`--lr-highlight-layer-warning-bg`, `--lr-highlight-layer-warning-outline`,
+`--lr-highlight-layer-danger-bg`, `--lr-highlight-layer-danger-outline`,
+`--lr-highlight-layer-neutral-bg`, and `--lr-highlight-layer-neutral-outline` control each
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
-`--lr-highlight-layer-flash-background` controls the temporary flash state (default
-`--lr-color-brand`).
+`--lr-highlight-layer-flash-bg` controls the temporary flash state (default
+`--lr-color-brand`). Deprecated aliases: `--lr-highlight-layer-accent-background`,
+`--lr-highlight-layer-success-background`, `--lr-highlight-layer-warning-background`,
+`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-neutral-background` and
+`--lr-highlight-layer-flash-background` (use the matching `-bg` names; removed in 23.0.0).
 
 ## `lr-page-rail`
 
@@ -1788,7 +1809,10 @@ truth.
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
 `highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers;
 IDs are trimmed and required to be nonempty, with the first record retained when IDs repeat.
-`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
+`thumbWidth: number | string = 96` (attribute `thumb-width`) — thumbnail width, clamped to the
+rail: a number of CSS pixels or a CSS length (`px`, `rem`, `em`, `vw`, `vh`, or `%` of the rail's
+width) resolved to pixels when a thumbnail renders; a numeric attribute value parses to a number and
+an unresolvable value falls back to `96`. `label: string = ''`. A wired
 `PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
 `pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview
 method: the original `renderPageThumbnail(page, canvas, options?)` for bitmap/canvas sources, or
@@ -1937,14 +1961,19 @@ cell currently targeted by an anchor or the active search match — the `cell-ac
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
 the element or on any ancestor.
 
-`--lr-notebook-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
-`--lr-notebook-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
-`--lr-notebook-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-notebook-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
-`--lr-notebook-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are
+`--lr-notebook-viewer-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-notebook-viewer-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-notebook-viewer-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-notebook-viewer-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`), and
+`--lr-notebook-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are
 each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-outline` (default
 `var(--lr-focus-ring-color)`) outlines the highlighted cell whose highlight `id` equals
-`activeHighlightId`.
+`activeHighlightId`. Deprecated aliases: `--lr-notebook-viewer-highlight-accent-background`,
+`--lr-notebook-viewer-highlight-success-background`,
+`--lr-notebook-viewer-highlight-warning-background`,
+`--lr-notebook-viewer-highlight-danger-background` and
+`--lr-notebook-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in
+23.0.0).
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
@@ -1968,7 +1997,7 @@ code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the
 ## `lr-xml-viewer`
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
-UX (`collapsed-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
+UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
 `xml` reassignment) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
 sections, and processing instructions, preserved in their original mixed-child source order.
 Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
@@ -1992,8 +2021,10 @@ string` (property only) — raw XML text to parse and render; wins over `src`, a
 synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
 already configured `src`, or exposes idle when none exists. `source: LyraXmlViewerSource` is the
 readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
-`null`). `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
-`collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
+`null`). `name: string = ''` — accessible label. `expandDepth?: number` (attribute
+`expand-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed, so only the
+levels above it start expanded; unset, nothing auto-collapses. Deprecated alias: `collapsed-depth`
+(`collapsedDepth`; use `expand-depth`, same value and meaning; removed in 23.0.0). `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
@@ -2075,14 +2106,17 @@ be recolored without touching the active one. `--lr-xml-viewer-match-bg` (defaul
 Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
 ancestor; unset, they fall back to the same shared tokens the rules used before.
 
-`--lr-xml-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
-`--lr-xml-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
-`--lr-xml-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-xml-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`) and
-`--lr-xml-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are the row
+`--lr-xml-viewer-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-xml-viewer-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-xml-viewer-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-xml-viewer-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`) and
+`--lr-xml-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are the row
 backgrounds of a resolved `highlights` entry per tone. The neutral default is deliberately
 `--lr-color-surface-raised` and not `--lr-color-surface`: the viewer paints its own surface with the
-latter, so a neutral highlight tinted with it would render as unhighlighted.
+latter, so a neutral highlight tinted with it would render as unhighlighted. Deprecated aliases:
+`--lr-xml-viewer-highlight-accent-background`, `--lr-xml-viewer-highlight-success-background`,
+`--lr-xml-viewer-highlight-warning-background`, `--lr-xml-viewer-highlight-danger-background` and
+`--lr-xml-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in 23.0.0).
 `--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
@@ -2099,7 +2133,7 @@ inherited `dir` change); an expanded chevron points down in either direction.
 ```ts
 const viewer = document.querySelector("lr-xml-viewer");
 viewer.xml = payload;
-viewer.collapsedDepth = 2;
+viewer.expandDepth = 2;
 viewer.copyable = true;
 await viewer.search(query);
 ```
@@ -2136,9 +2170,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
   `language` is treated as `''` without coercion.
-- `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
-  side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
-  `sync-scroll="false"`.
+- `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
+  side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
+  turns that off. Deprecated alias: `sync-scroll` (`syncScroll`; use `without-sync-scroll`;
+  `sync-scroll="false"` equals `without-sync-scroll`; removed in 23.0.0).
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
   preview panes; repeated assignment of the same value still re-runs.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides
@@ -2190,7 +2225,7 @@ metadata before serialization or peer handoff. It then walks every coordinate un
 approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
-collapsed-depth="2">` of the raw value instead of the map.
+expand-depth="2">` of the raw value instead of the map.
 
 The root owns the named `region` landmark while loading, in fallback/error/idle states, and while a
 lazy map initializes. After `lr-map-load`, landmark ownership transfers to the map canvas so there

@@ -8,6 +8,7 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
@@ -200,7 +201,7 @@ it('uses the first unique nonempty column and row keys before counts, focus, act
   expect(pagination.total).to.equal(2);
 
   let clicked: Row | undefined;
-  el.addEventListener('lr-row-click', (event) => {
+  el.addEventListener('lr-row-activate', (event) => {
     clicked = event.detail.row;
   });
   (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
@@ -1520,7 +1521,7 @@ describe('keyboard entry into double-click cell editing (WCAG 2.1.1)', () => {
 
     const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
     row.focus();
-    const clickPromise = oneEvent(el, 'lr-row-click');
+    const clickPromise = oneEvent(el, 'lr-row-activate');
     await sendKeys({ press: 'Enter' });
     const event = await clickPromise;
     expect(event.detail.row).to.deep.equal(rows[0]);
@@ -2393,14 +2394,14 @@ it('emits lr-sort when a sortable header is clicked', async () => {
   expect(ev.detail.sortDir).to.equal('asc');
 });
 
-it('emits lr-row-click with the row data', async () => {
+it('emits lr-row-activate with the row data', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
   const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
   setTimeout(() => row.click());
-  const ev = await oneEvent(el, 'lr-row-click');
+  const ev = await oneEvent(el, 'lr-row-activate');
   expect(ev.detail.row).to.deep.equal(rows[0]);
 });
 
@@ -2480,7 +2481,7 @@ it('resolves the correct row via delegated click after a re-render (sort) reorde
   await el.updateComplete;
   const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
   setTimeout(() => firstRow.click());
-  const ev = await oneEvent(el, 'lr-row-click');
+  const ev = await oneEvent(el, 'lr-row-activate');
   expect(ev.detail.row).to.deep.equal(rows[1]); // Beta, now first after reversing
 });
 
@@ -3006,7 +3007,7 @@ it('keeps hiding and re-admitting declared-width priority columns by their decla
   }
 });
 
-it('swaps the reveal-columns-button label between revealColumnsLabel and hideColumnsLabel on toggle', async () => {
+it('swaps the reveal-columns-button label between revealColumnsLabel and columnsHideLabel on toggle', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
@@ -3025,12 +3026,12 @@ it('swaps the reveal-columns-button label between revealColumnsLabel and hideCol
   expect(revealButton.textContent!.trim()).to.equal('Show all columns');
 });
 
-it('honors custom revealColumnsLabel and hideColumnsLabel property values', async () => {
+it('honors custom revealColumnsLabel and columnsHideLabel property values', async () => {
   const el = (await fixture(html`<lr-table style="display: block; width: 300px;"></lr-table>`)) as LyraTable<Row>;
   el.columns = priorityColumns;
   el.rows = rows;
   el.revealColumnsLabel = 'More columns';
-  el.hideColumnsLabel = 'Fewer columns';
+  el.columnsHideLabel = 'Fewer columns';
   await el.updateComplete;
   await waitUntil(() => el.hasHiddenPriorityColumns === true);
 
@@ -3484,7 +3485,7 @@ it('honors an override of --lr-table-font-size on the table, defaulting to the i
   expect(getComputedStyle(el).fontSize).to.equal('24px');
 });
 
-it('does not emit lr-row-click and does not swallow the click when a button inside a cell() is clicked', async () => {
+it('does not emit lr-row-activate and does not swallow the click when a button inside a cell() is clicked', async () => {
   const actionColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
     {
@@ -3500,7 +3501,7 @@ it('does not emit lr-row-click and does not swallow the click when a button insi
   await el.updateComplete;
 
   let rowClicked = false;
-  el.addEventListener('lr-row-click', () => (rowClicked = true));
+  el.addEventListener('lr-row-activate', () => (rowClicked = true));
 
   let buttonClicked = false;
   const actionButton = el.shadowRoot!.querySelector('[data-action]') as HTMLButtonElement;
@@ -3553,7 +3554,7 @@ it('sets data-align="end" on the header cell and body cell for an end-aligned co
   expect(firstRowCells[1]!.getAttribute('data-align')).to.equal('end');
 });
 
-it('emits lr-row-click via keydown (Enter and Space) on a focused row', async () => {
+it('emits lr-row-activate via keydown (Enter and Space) on a focused row', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
@@ -3562,11 +3563,11 @@ it('emits lr-row-click via keydown (Enter and Space) on a focused row', async ()
   const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
 
   setTimeout(() => row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
-  let ev = await oneEvent(el, 'lr-row-click');
+  let ev = await oneEvent(el, 'lr-row-activate');
   expect(ev.detail.row).to.deep.equal(rows[0]);
 
   setTimeout(() => row.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })));
-  ev = await oneEvent(el, 'lr-row-click');
+  ev = await oneEvent(el, 'lr-row-activate');
   expect(ev.detail.row).to.deep.equal(rows[0]);
 });
 
@@ -3963,7 +3964,7 @@ it('does not treat a custom interactive element inside a cell as a row-activatio
   ];
   let rowClicked = false;
   const el = (await fixture(
-    html`<lr-table .columns=${actionColumns} .rows=${rows} @lr-row-click=${() => (rowClicked = true)}></lr-table>`
+    html`<lr-table .columns=${actionColumns} .rows=${rows} @lr-row-activate=${() => (rowClicked = true)}></lr-table>`
   )) as LyraTable<Row>;
   await el.updateComplete;
   const select = el.shadowRoot!.querySelector('lr-select')!;
@@ -4026,7 +4027,7 @@ it('leaves role- and tabindex-declared cell actions to their semantic owners', a
     html`<lr-table .columns=${semanticColumns} .rows=${rows.slice(0, 1)}></lr-table>`
   )) as LyraTable<Row>;
   let activated = 0;
-  el.addEventListener('lr-row-click', () => activated++);
+  el.addEventListener('lr-row-activate', () => activated++);
 
   for (const action of el.shadowRoot!.querySelectorAll<HTMLElement>(
     'tbody td [role="button"], tbody td [tabindex="0"]'
@@ -4049,7 +4050,7 @@ it('keeps passive custom-element content inside the row activation surface', asy
     html`<lr-table .columns=${passiveColumns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
   )) as LyraTable<Row>;
   let activated = 0;
-  el.addEventListener('lr-row-click', () => activated++);
+  el.addEventListener('lr-row-activate', () => activated++);
 
   (el.shadowRoot!.querySelector('table-passive-label') as HTMLElement).click();
 
@@ -4068,7 +4069,7 @@ it('lets an opaque custom control opt out of delegated row activation explicitly
     html`<lr-table .columns=${opaqueColumns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
   )) as LyraTable<Row>;
   let activated = 0;
-  el.addEventListener('lr-row-click', () => activated++);
+  el.addEventListener('lr-row-activate', () => activated++);
 
   (el.shadowRoot!.querySelector('table-opaque-control') as TableOpaqueControlElement).activate();
 
@@ -4087,7 +4088,7 @@ it('activates a row on a click from inside a non-interactive open-shadow custom 
     html`<lr-table .columns=${openShellColumns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
   )) as LyraTable<Row>;
   let activated = 0;
-  el.addEventListener('lr-row-click', () => activated++);
+  el.addEventListener('lr-row-activate', () => activated++);
 
   const shell = el.shadowRoot!.querySelector('table-open-shell') as TableOpenShellElement;
   shell.innerSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
@@ -4250,6 +4251,29 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     expect(grid.getAttribute('aria-label')).to.equal('');
     expect(grid.hasAttribute('aria-labelledby')).to.be.false;
   });
+
+  it('keeps accessibleLabel ahead of a host aria-label, including after that attribute changes', async () => {
+    const el = (await fixture(
+      html`<lr-table accessible-label="Primary" aria-label="Host"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(grid.getAttribute('aria-label')).to.equal('Primary');
+
+    el.accessibleLabel = 'Typed';
+    await el.updateComplete;
+    el.setAttribute('aria-label', 'Changed host');
+    await el.updateComplete;
+    expect(el.accessibleLabel).to.equal('Typed');
+    expect(grid.getAttribute('aria-label')).to.equal('Typed');
+
+    el.accessibleLabel = undefined;
+    await el.updateComplete;
+    expect(grid.getAttribute('aria-label')).to.equal('Changed host');
+    expect(warnings.length).to.equal(0);
+  });
 });
 
 it('does not trigger a Lit "scheduled an update after an update completed" dev warning when a priority column transitions to actually-hidden', async () => {
@@ -4300,7 +4324,7 @@ it('does not trigger row activation or preventDefault when Enter is pressed on a
   await el.updateComplete;
 
   let rowClicked = false;
-  el.addEventListener('lr-row-click', () => (rowClicked = true));
+  el.addEventListener('lr-row-activate', () => (rowClicked = true));
 
   const actionButton = el.shadowRoot!.querySelector('[data-action]') as HTMLButtonElement;
   actionButton.focus();
@@ -4560,7 +4584,7 @@ describe('expandable rows', () => {
     expect(toggleCells[1]!.querySelector('button') != null).to.equal(true); // row 'b' (Beta)
   });
 
-  it('emits lr-row-expand-toggle with { row, rowKey } when the chevron button is clicked, and does not also emit lr-row-click', async () => {
+  it('emits lr-row-expand-toggle with { row, rowKey } when the chevron button is clicked, and does not also emit lr-row-activate', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -4569,7 +4593,7 @@ describe('expandable rows', () => {
     await el.updateComplete;
 
     let rowClicked = false;
-    el.addEventListener('lr-row-click', () => (rowClicked = true));
+    el.addEventListener('lr-row-activate', () => (rowClicked = true));
 
     const firstToggleButton = el.shadowRoot!.querySelector('[part="expand-toggle-cell"] button') as HTMLButtonElement;
     setTimeout(() => firstToggleButton.click());
@@ -4579,7 +4603,7 @@ describe('expandable rows', () => {
     expect(rowClicked).to.be.false;
   });
 
-  it('still emits lr-row-click when clicking elsewhere in an expandable row', async () => {
+  it('still emits lr-row-activate when clicking elsewhere in an expandable row', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -4592,7 +4616,7 @@ describe('expandable rows', () => {
 
     const nameCell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     setTimeout(() => nameCell.click());
-    const ev = await oneEvent(el, 'lr-row-click');
+    const ev = await oneEvent(el, 'lr-row-activate');
     expect(ev.detail.row).to.deep.equal(rows[0]);
     expect(toggleFired).to.be.false;
   });
@@ -4652,7 +4676,7 @@ describe('expandable rows', () => {
     await el.updateComplete;
 
     let rowClicked = false;
-    el.addEventListener('lr-row-click', () => (rowClicked = true));
+    el.addEventListener('lr-row-activate', () => (rowClicked = true));
 
     const toggleButton = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
     toggleButton.focus();
@@ -5115,9 +5139,9 @@ describe('localization', () => {
     loadingLabel: string;
     moreLabel: string;
     emptyHeading: string;
-    noColumnsHeading: string;
+    emptyColumnsHeading: string;
     revealColumnsLabel: string;
-    hideColumnsLabel: string;
+    columnsHideLabel: string;
   }): Promise<string[]> {
     const strings = {
       tableFilterLabel: 'Filtrer',
@@ -5189,9 +5213,9 @@ describe('localization', () => {
         loadingLabel: 'Loading rows',
         moreLabel: 'Load more',
         emptyHeading: 'No data',
-        noColumnsHeading: 'No columns configured',
+        emptyColumnsHeading: 'No columns configured',
         revealColumnsLabel: 'Show all columns',
-        hideColumnsLabel: 'Show fewer columns',
+        columnsHideLabel: 'Show fewer columns',
       })
     ).to.deep.equal([
       'Filter rows',
@@ -5213,9 +5237,9 @@ describe('localization', () => {
         loadingLabel: '',
         moreLabel: '',
         emptyHeading: '',
-        noColumnsHeading: '',
+        emptyColumnsHeading: '',
         revealColumnsLabel: '',
-        hideColumnsLabel: '',
+        columnsHideLabel: '',
       })
     ).to.deep.equal(['', '', '', '', '', '', '', '']);
   });
@@ -5782,16 +5806,17 @@ describe('empty-state addressability', () => {
     expect((builtIn as HTMLElement).getClientRects().length).to.be.greaterThan(0);
   });
 
-  it('keeps each branch’s built-in compact default and lets emptyCompact override it', async () => {
+  it('keeps each branch’s built-in compact default and lets emptySize override it', async () => {
     const wholeTable = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     wholeTable.columns = columns;
     wholeTable.rows = [];
     await wholeTable.updateComplete;
-    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+    expect(wholeTable.emptySize).to.be.undefined;
+    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.false;
 
-    wholeTable.emptyCompact = true;
+    wholeTable.emptySize = 's';
     await wholeTable.updateComplete;
-    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.true;
+    expect(wholeTable.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.true;
 
     const filtered = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
     filtered.columns = columns;
@@ -5799,31 +5824,40 @@ describe('empty-state addressability', () => {
     filtered.rowKey = (r) => r.id;
     filtered.filterText = 'nonexistent-xyz';
     await filtered.updateComplete;
-    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.true;
+    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.true;
 
-    filtered.emptyCompact = false;
+    filtered.emptySize = 'm';
     await filtered.updateComplete;
-    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
+    expect(filtered.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.false;
   });
 
-  it('parses the literal empty-compact="false" attribute as false, not as mere presence', async () => {
-    const el = (await fixture(html`<lr-table filterable empty-compact="false"></lr-table>`)) as LyraTable<Row>;
+  it('maps every size step onto the compact or spacious rendering and normalizes unknown values to unset', async () => {
+    const compactFor = async (size: string): Promise<boolean> => {
+      const el = (await fixture(html`<lr-table empty-size=${size}></lr-table>`)) as LyraTable<Row>;
+      el.columns = columns;
+      el.rows = [];
+      await el.updateComplete;
+      return el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's';
+    };
+    for (const size of ['2xs', 'xs', 's', 'small']) expect(await compactFor(size), size).to.be.true;
+    for (const size of ['m', 'medium', 'l', 'large', 'xl']) expect(await compactFor(size), size).to.be.false;
+    const unknown = (await fixture(html`<lr-table filterable empty-size="huge"></lr-table>`)) as LyraTable<Row>;
+    expect(unknown.emptySize).to.be.undefined;
+  });
+
+  it('parses a removed empty-size attribute back to undefined, restoring each branch default', async () => {
+    const el = (await fixture(html`<lr-table filterable empty-size="m"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     el.filterText = 'nonexistent-xyz';
     await el.updateComplete;
-    expect(el.emptyCompact).to.be.false;
-    // This branch's own default is compact -- an attribute reading "false" must beat it.
-    expect(el.shadowRoot!.querySelector('[part~="empty"]')!.hasAttribute('compact')).to.be.false;
-  });
-
-  it('parses a removed empty-compact attribute back to undefined, not false', async () => {
-    const el = (await fixture(html`<lr-table empty-compact="false"></lr-table>`)) as LyraTable<Row>;
-    expect(el.emptyCompact).to.be.false;
-    el.removeAttribute('empty-compact');
+    expect(el.emptySize).to.equal('m');
+    expect(el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.false;
+    el.removeAttribute('empty-size');
     await el.updateComplete;
-    expect(el.emptyCompact).to.be.undefined;
+    expect(el.emptySize).to.be.undefined;
+    expect(el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's').to.be.true;
   });
 
   it('is accessible with a slotted empty state', async () => {
@@ -6844,7 +6878,7 @@ describe("editTrigger: 'always'", () => {
   it('does not activate the row when Enter is pressed inside a persistent editor', async () => {
     const el = await alwaysTable();
     let rowClicked = false;
-    el.addEventListener('lr-row-click', () => (rowClicked = true));
+    el.addEventListener('lr-row-activate', () => (rowClicked = true));
     const input = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
     input.focus();
     input.dispatchEvent(
@@ -6892,7 +6926,7 @@ describe("editTrigger: 'always'", () => {
   it('still activates a row clicked in a non-editable column', async () => {
     const el = await alwaysTable();
     let clickedName: string | undefined;
-    el.addEventListener('lr-row-click', (event) => {
+    el.addEventListener('lr-row-activate', (event) => {
       clickedName = (event as CustomEvent<{ row: Row }>).detail.row.name;
     });
     const nameCell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
@@ -7627,7 +7661,7 @@ describe('lr-table client-side sorting', () => {
     await el.updateComplete;
     const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
     setTimeout(() => firstRow.click());
-    const ev = await oneEvent(el, 'lr-row-click');
+    const ev = await oneEvent(el, 'lr-row-activate');
     expect(ev.detail.row.id).to.equal('cy');
   });
 
@@ -7653,7 +7687,7 @@ describe('lr-table client-side sorting', () => {
     await el.updateComplete;
     const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
     setTimeout(() => firstRow.click());
-    const ev = await oneEvent(el, 'lr-row-click');
+    const ev = await oneEvent(el, 'lr-row-activate');
     expect(ev.detail.row.id).to.equal('cy');
     await el.updateComplete;
     // 'cy' is index 2 in `rows`, so the index-based fallback key must be 2, not its sorted slot 0.
@@ -8303,7 +8337,7 @@ it('activates the focused row from Enter and Space', async () => {
   const first = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key]')!;
   first.focus();
 
-  const activated = oneEvent(el, 'lr-row-click');
+  const activated = oneEvent(el, 'lr-row-activate');
   first.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -8313,7 +8347,7 @@ it('activates the focused row from Enter and Space', async () => {
   );
   expect((await activated).detail.row.id).to.equal(rows[0]!.id);
 
-  const spaceActivated = oneEvent(el, 'lr-row-click');
+  const spaceActivated = oneEvent(el, 'lr-row-activate');
   first.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
   expect((await spaceActivated).detail.row.id).to.equal(rows[0]!.id);
 });
@@ -8817,7 +8851,7 @@ describe('coverage: hostile-input collection normalization', () => {
     await el.updateComplete;
     const innerSpan = el.shadowRoot!.querySelector('table-open-passive')!.shadowRoot!.querySelector('span')!;
     let activated = 0;
-    el.addEventListener('lr-row-click', () => activated++);
+    el.addEventListener('lr-row-activate', () => activated++);
     innerSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(activated).to.equal(1);
   });
@@ -9567,5 +9601,209 @@ describe('decorative edges versus control boundaries', () => {
     expect(getComputedStyle(filter).borderTopColor, 'filter field').to.equal(control);
     expect(getComputedStyle(retry).borderTopColor, 'retry button').to.equal(control);
     expect(getComputedStyle(errorCell).borderBottomColor, 'error row rule').to.equal(subtle);
+  });
+});
+
+describe('deprecated lr-table aliases', () => {
+  const EMPTY_COMPACT: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'emptyCompact' };
+  const HIDE_COLUMNS_LABEL: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'hideColumnsLabel' };
+  const NO_COLUMNS_HEADING: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'noColumnsHeading' };
+  const NO_COLUMNS_DESCRIPTION: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'noColumnsDescription' };
+  const populated = async (el: LyraTable<Row>): Promise<LyraTable<Row>> => {
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    return el;
+  };
+  const emptyCompact = (el: LyraTable<Row>): boolean =>
+    el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's';
+
+  it('fires lr-row-click right after lr-row-activate from the same activation, with its own equal detail', async () => {
+    const el = await populated((await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>);
+    const events: [string, CustomEvent][] = [];
+    for (const type of ['lr-row-activate', 'lr-row-click']) {
+      el.addEventListener(type, (event) => events.push([type, event as CustomEvent]));
+    }
+    const warnings = await captureDeprecationWarnings([], async () => {
+      (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
+    });
+    expect(events.map(([type]) => type)).to.deep.equal(['lr-row-activate', 'lr-row-click']);
+    expect(events[1]![1].detail).to.deep.equal(events[0]![1].detail);
+    expect(events[1]![1].detail === events[0]![1].detail).to.equal(false);
+    expect(events[0]![1].detail.row).to.deep.equal(rows[0]);
+    expect(events.map(([, event]) => [event.bubbles, event.composed, event.cancelable])).to.deep.equal([
+      [true, true, false],
+      [true, true, false],
+    ]);
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('maps empty-compact onto empty-size, keeps its tri-state, and warns once, naming empty-size', async () => {
+    let present!: LyraTable<Row>;
+    let spacious!: LyraTable<Row>;
+    const warnings = await captureDeprecationWarnings([EMPTY_COMPACT], async () => {
+      present = (await fixture(html`<lr-table aria-label="Scores" empty-compact></lr-table>`)) as LyraTable<Row>;
+      spacious = (await fixture(
+        html`<lr-table aria-label="Scores" filterable empty-compact="false"></lr-table>`,
+      )) as LyraTable<Row>;
+      const late = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
+      late.emptyCompact = true;
+      await late.updateComplete;
+      expect(late.emptySize).to.equal('s');
+    });
+    present.columns = columns;
+    present.rows = [];
+    await present.updateComplete;
+    expect(present.emptySize).to.equal('s');
+    expect(present.emptyCompact).to.be.true;
+    expect(emptyCompact(present)).to.be.true;
+
+    spacious.columns = columns;
+    spacious.rows = rows;
+    spacious.rowKey = (r) => r.id;
+    spacious.filterText = 'nonexistent-xyz';
+    await spacious.updateComplete;
+    expect(spacious.emptySize).to.equal('m');
+    expect(spacious.emptyCompact).to.be.false;
+    expect(emptyCompact(spacious)).to.be.false;
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-table:property:emptyCompact']);
+    expect(warnings[0]!.message).to.contain('empty-size');
+
+    await captureDeprecationWarnings([EMPTY_COMPACT], async () => {
+      spacious.removeAttribute('empty-compact');
+      await spacious.updateComplete;
+      expect(spacious.emptySize).to.be.undefined;
+      expect(spacious.emptyCompact).to.be.undefined;
+      expect(emptyCompact(spacious)).to.be.true;
+
+      const canonicalLast = (await fixture(
+        html`<lr-table aria-label="Scores" empty-compact empty-size="m"></lr-table>`,
+      )) as LyraTable<Row>;
+      canonicalLast.columns = columns;
+      canonicalLast.rows = [];
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.emptySize).to.equal('m');
+      expect(canonicalLast.emptyCompact).to.be.false;
+      expect(emptyCompact(canonicalLast)).to.be.false;
+
+      const aliasLast = (await fixture(
+        html`<lr-table aria-label="Scores" empty-size="m" empty-compact></lr-table>`,
+      )) as LyraTable<Row>;
+      expect(aliasLast.emptySize).to.equal('s');
+      aliasLast.emptySize = 'xs';
+      await aliasLast.updateComplete;
+      expect(aliasLast.emptyCompact, 'syncs back from a compact empty-size').to.be.true;
+    });
+  });
+
+  it('renders the no-columns state from no-columns-heading/-description exactly like the empty-columns names, warning once each', async () => {
+    const canonical = (await fixture(
+      html`<lr-table aria-label="Scores" empty-columns-heading="Pick columns" empty-columns-description="None chosen yet"></lr-table>`,
+    )) as LyraTable<Row>;
+    let aliased!: LyraTable<Row>;
+    const warnings = await captureDeprecationWarnings([NO_COLUMNS_HEADING, NO_COLUMNS_DESCRIPTION], async () => {
+      aliased = (await fixture(
+        html`<lr-table aria-label="Scores" no-columns-heading="Pick columns" no-columns-description="None chosen yet"></lr-table>`,
+      )) as LyraTable<Row>;
+      const both = (await fixture(
+        html`<lr-table aria-label="Scores" no-columns-heading="Alias" empty-columns-heading="Canonical"></lr-table>`,
+      )) as LyraTable<Row>;
+      expect(both.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Canonical');
+      const aliasLast = (await fixture(
+        html`<lr-table aria-label="Scores" empty-columns-heading="Canonical" no-columns-heading="Alias"></lr-table>`,
+      )) as LyraTable<Row>;
+      expect(aliasLast.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Alias');
+      aliasLast.noColumnsHeading = 'Written';
+      await aliasLast.updateComplete;
+      expect(aliasLast.emptyColumnsHeading).to.equal('Written');
+    });
+    const state = (el: LyraTable<Row>): [string | null, string | null] => {
+      const empty = el.shadowRoot!.querySelector('lr-empty')!;
+      return [empty.getAttribute('heading'), empty.getAttribute('description')];
+    };
+    expect(state(aliased)).to.deep.equal(state(canonical));
+    expect(state(aliased)).to.deep.equal(['Pick columns', 'None chosen yet']);
+    expect([aliased.emptyColumnsHeading, aliased.noColumnsHeading]).to.deep.equal(['Pick columns', 'Pick columns']);
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      'lyra-deprecated:lr-table:property:noColumnsDescription',
+      'lyra-deprecated:lr-table:property:noColumnsHeading',
+    ]);
+  });
+
+  it('syncs every alias back from its canonical property, so the last write wins', async () => {
+    await captureDeprecationWarnings(
+      [EMPTY_COMPACT, HIDE_COLUMNS_LABEL, NO_COLUMNS_HEADING, NO_COLUMNS_DESCRIPTION],
+      async () => {
+        const el = (await fixture(html`<lr-table
+          aria-label="Scores"
+          empty-compact
+          empty-size="m"
+          no-columns-heading="Alias heading"
+          empty-columns-heading="Canonical heading"
+          no-columns-description="Alias description"
+          empty-columns-description="Canonical description"
+          hide-columns-label="Alias fewer"
+          columns-hide-label="Canonical fewer"
+        ></lr-table>`)) as LyraTable<Row>;
+        expect([el.emptySize, el.emptyColumnsHeading, el.emptyColumnsDescription, el.columnsHideLabel]).to.deep.equal(
+          ['m', 'Canonical heading', 'Canonical description', 'Canonical fewer'],
+        );
+        expect([el.emptyCompact, el.noColumnsHeading, el.noColumnsDescription, el.hideColumnsLabel]).to.deep.equal(
+          [false, 'Canonical heading', 'Canonical description', 'Canonical fewer'],
+        );
+        for (const name of ['empty-size', 'empty-columns-heading', 'empty-columns-description', 'columns-hide-label']) {
+          el.removeAttribute(name);
+        }
+        await el.updateComplete;
+        expect([el.emptyCompact, el.noColumnsHeading, el.noColumnsDescription, el.hideColumnsLabel]).to.deep.equal(
+          // A removed string attribute reads back as null through Lit's default converter.
+          [undefined, null, null, null],
+        );
+        expect(el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('No columns configured');
+
+        el.noColumnsHeading = 'Written';
+        el.emptyCompact = true;
+        await el.updateComplete;
+        expect([el.emptyColumnsHeading, el.emptySize]).to.deep.equal(['Written', 's']);
+        expect(emptyCompact(el)).to.be.true;
+        el.emptySize = 'l';
+        await el.updateComplete;
+        expect(el.emptyCompact).to.be.false;
+        expect(emptyCompact(el)).to.be.false;
+      },
+    );
+  });
+
+  it('labels the revealed priority-columns button from hide-columns-label exactly like columns-hide-label, warning once', async () => {
+    const hideLabel = async (el: LyraTable<Row>): Promise<string> => {
+      el.columns = priorityColumns;
+      el.rows = rows;
+      await el.updateComplete;
+      await waitUntil(() => el.hasHiddenPriorityColumns === true);
+      const reveal = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
+      reveal.click();
+      await el.updateComplete;
+      return reveal.textContent!.trim();
+    };
+    const canonical = (await fixture(
+      html`<lr-table aria-label="Scores" style="display: block; width: 300px;" columns-hide-label="Fewer"></lr-table>`,
+    )) as LyraTable<Row>;
+    let aliased!: LyraTable<Row>;
+    const warnings = await captureDeprecationWarnings([HIDE_COLUMNS_LABEL], async () => {
+      aliased = (await fixture(
+        html`<lr-table aria-label="Scores" style="display: block; width: 300px;" hide-columns-label="Fewer"></lr-table>`,
+      )) as LyraTable<Row>;
+      const late = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
+      late.hideColumnsLabel = 'Later';
+      await late.updateComplete;
+      expect(late.columnsHideLabel).to.equal('Later');
+    });
+    const aliasedText = await hideLabel(aliased);
+    const canonicalText = await hideLabel(canonical);
+    expect(aliasedText).to.equal(canonicalText);
+    expect(canonicalText).to.equal('Fewer');
+    expect(aliased.columnsHideLabel).to.equal('Fewer');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-table:property:hideColumnsLabel']);
+    expect(warnings[0]!.message).to.contain('columns-hide-label');
   });
 });

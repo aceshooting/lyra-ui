@@ -239,12 +239,12 @@ export const styles = css`
      its own "nothing in this bucket" treatment through ::part(). */
 
   /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
-     size. Only under show-legend does the host stop being square: the ring keeps its declared size
+     size. Only under with-legend does the host stop being square: the ring keeps its declared size
      and the key flows beneath it. */
-  :host([shape='ring'][show-legend]) {
+  :host([shape='ring'][with-legend]) {
     block-size: auto;
   }
-  :host([shape='ring'][show-legend]) svg[part='base'] {
+  :host([shape='ring'][with-legend]) svg[part='base'] {
     inline-size: var(--lr-size-8em);
     block-size: var(--lr-size-8em);
   }

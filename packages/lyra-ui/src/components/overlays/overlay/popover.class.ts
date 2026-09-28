@@ -23,7 +23,7 @@ import { resolveEffectivePositioningStrategy } from '../../../internal/positioni
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import {
   literalSetConverter,
@@ -40,6 +40,8 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
@@ -216,7 +218,7 @@ export interface LyraPopoverEventMap {
  * @csspart popup__popup - Exported popup alias on the positioned popup.
  * @csspart content - The content wrapper; also carries the `body` alias.
  * @csspart body - Mapped alias on the content wrapper.
- * @csspart arrow - The arrow element, rendered only when `arrow` is set. Its part name also
+ * @csspart arrow - The arrow element, rendered unless `without-arrow` is set. Its part name also
  *   carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`), so
  *   `::part(arrow arrow-top)` can style one side — state after `::part()` never matches.
  * @csspart popup__arrow - Exported mapped alias on the arrow.
@@ -259,6 +261,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  // Optional so a subclass whose own `arrow` is not the deprecated alias (`<lr-dropdown>`) can opt out.
+  protected static override deprecatedAliases: LyraDeprecatedAliases | undefined = {
+    arrow: ['withoutArrow', invertAlias, invertAlias],
+  };
   private _open = false;
   /** Whether the popover is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle.
    * @default false */
@@ -370,10 +376,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Positioning-only element anchor. Takes precedence over `for` and the interaction owner, but
    *  never receives click listeners or generated ARIA. */
   @property({ attribute: false }) anchor: Element | null = null;
-  /** Render an arrow that points at the anchor. Defaults on for the mapped surface. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
-  /** Positive mapped spelling for suppressing the default arrow. */
+  /** Suppresses the arrow that points at the anchor, wherever it would otherwise render. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
+  /** Render an arrow that points at the anchor. Defaults on for the mapped surface.
+   *  @deprecated Use `without-arrow`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
@@ -617,7 +624,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   /** Subclasses can retain a different arrow default without forking rendering/positioning. */
   protected get rendersArrow(): boolean {
-    return this.arrow && !this.withoutArrow;
+    return !this.withoutArrow;
+  }
+
+  /** Part tokens on the arrow; the resolved side is appended to them. Mapped subclasses can add
+   *  their own aliases. */
+  protected get arrowPartNames(): string {
+    return 'arrow popup__arrow';
   }
 
   /** The bridge only exists while a hover popover is actually open: it is a full-viewport element
@@ -1295,7 +1308,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * Only focus inside the popup (or the host's own slotted content) is a reason to stay.
    */
   private hasFocusWithinSurface(): boolean {
-    const active = activeElementIn(this.ownerDocument);
+    // The document reports only the outermost shadow host when focus sits inside a shadow root.
+    const active = deepActiveElementIn(this.ownerDocument);
     if (active === null) return false;
     if (this.triggerElement && composedContains(this.triggerElement, active)) return false;
     return this.isWithinPopoverSurface(active);
@@ -1669,7 +1683,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         @click=${this.onPopupClick}>
         <div part=${this.contentPartNames}>${this.renderPopupContent()}</div>
         ${this.rendersArrow
-          ? html`<span part="arrow popup__arrow arrow-${this.resolvedSide}"></span>`
+          ? html`<span part=${this.arrowPartNames + ' arrow-' + this.resolvedSide}></span>`
           : nothing}
       </div>
     `;

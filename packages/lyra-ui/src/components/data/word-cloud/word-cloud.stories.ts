@@ -103,7 +103,7 @@ export const GroupedColors: Story = {
 
 export const GroupedColorsWithLegend: Story = {
   render: () => html`<lr-word-cloud
-    show-legend
+    with-legend
     style="height: 20rem"
     .words=${[
       { text: 'React', weight: 80, group: 'framework' },
@@ -159,7 +159,7 @@ export const NarrowLegend: Story = {
       const rtl = direction === 'rtl';
       return html`
         <lr-word-cloud
-          show-legend
+          with-legend
           word-rotation="mixed"
           style="block-size: var(--lr-size-20rem)"
           .words=${[

@@ -3676,7 +3676,7 @@ it('orders a forced responsive drawer exit after collapse-change and ignores a t
       { type: 'collapse', state: 'wide', open: true },
       {
         type: 'toggle',
-        detail: { open: false },
+        detail: { open: false, expanded: false },
         cancelable: false,
         open: false,
         defaultPrevented: false,
@@ -3727,7 +3727,7 @@ it('still emits one forced close when a collapse-change listener has already clo
     expect(el.open).to.be.false;
     expect(sequence).to.deep.equal([
       { type: 'collapse', open: true },
-      { type: 'toggle', detail: { open: false }, cancelable: false, open: false },
+      { type: 'toggle', detail: { open: false, expanded: false }, cancelable: false, open: false },
     ]);
   } finally {
     spy.restore();
@@ -4631,7 +4631,7 @@ it('proposes Escape dismissal before committing it and honors a veto', async () 
     await elementUpdated(el);
     expect(el.open).to.be.true;
     expect(proposals).to.deep.equal([{
-      detail: { open: false },
+      detail: { open: false, expanded: false },
       cancelable: true,
       open: true,
       defaultPrevented: true,
@@ -4679,7 +4679,7 @@ it('routes backdrop dismissal through the same cancelable proposal and keeps dir
     await elementUpdated(el);
     expect(el.open).to.be.false;
     expect(proposals).to.deep.equal([{
-      detail: { open: false },
+      detail: { open: false, expanded: false },
       cancelable: true,
       open: true,
     }]);
@@ -4742,9 +4742,9 @@ it('does not overwrite a synchronous effective-collapse change during dismissal 
     expect(el.collapseState).to.equal('rail');
     expect(el.open).to.be.false;
     expect(sequence).to.deep.equal([
-      { type: 'toggle', detail: { open: false }, cancelable: true, open: true },
+      { type: 'toggle', detail: { open: false, expanded: false }, cancelable: true, open: true },
       { type: 'collapse', state: 'rail', open: true },
-      { type: 'toggle', detail: { open: false }, cancelable: false, open: false },
+      { type: 'toggle', detail: { open: false, expanded: false }, cancelable: false, open: false },
     ]);
   } finally {
     spy.restore();

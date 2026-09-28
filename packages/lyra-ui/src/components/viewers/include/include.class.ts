@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
   isAbortError,
@@ -231,6 +232,11 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   // visible body text beside the transcluded fragment. The spoken copy lives in light DOM.
   static override styles = [LyraElement.styles, styles, srOnly];
 
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    cache: ['withoutCache', invertAlias, invertAlias],
+  };
+
   /**
    * HTML fragment source. Remote URLs are validated through the shared
    * `safeFetchUrl()` allowlist (`http:`, `https:`, `blob:`, `data:`). Use
@@ -264,8 +270,12 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     this.requestUpdate('mode', old);
   }
 
+  /** Opts out of sharing bounded, sanitized remote resources with matching Include requests: no
+   *  retained values and no in-flight deduplication. By default they are shared. */
+  @property({ type: Boolean, attribute: 'without-cache' }) withoutCache = false;
   /** Shares bounded, sanitized remote resources with matching Include requests. Set to false to
-   *  opt out of both retained values and in-flight deduplication. */
+   *  opt out of both retained values and in-flight deduplication.
+   *  @deprecated Use `without-cache`; removal not before 23.0.0. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) cache = true;
 
   /** Shared text search and anchor-target API for sanitized light-DOM includes. */
@@ -284,7 +294,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('src') || changed.has('mode') || changed.has('cache')) {
+    if (changed.has('src') || changed.has('mode') || changed.has('withoutCache')) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
   }
@@ -456,7 +466,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
         lease = acquireSanitizedIncludeResource(
           source.url,
           this.effectiveMode,
-          this.cache,
+          !this.withoutCache,
           source.owner,
         );
         this.resourceLease = lease;

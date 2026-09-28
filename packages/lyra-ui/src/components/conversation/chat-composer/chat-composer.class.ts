@@ -8,6 +8,7 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type {
   LyraSelectionDirection,
@@ -139,7 +140,7 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * wraps the same text across more lines, so the previously-fitted height
  * would otherwise go stale and clip content with no scrollbar to reveal it.
  *
- * Enter-to-send (only active while `submit-on-enter` is true, the default):
+ * Enter-to-send (active unless `without-enter-submit` is set):
  * plain Enter submits and is prevented from inserting a newline; Shift+Enter
  * always inserts a newline no matter what; an IME composition step (checked
  * via `isComposing`, with `keyCode === 229` as a defense-in-depth fallback
@@ -174,8 +175,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event change - One native `Event` relayed from the textarea when its edit is committed.
  * @event lr-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
  * @event lr-change - Fired with `detail: { value }` beside the native `change` event.
- * @event lr-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"` and `submitDisabled` is false. `detail: { value }`.
- * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
+ * @event lr-submit - Fired by Enter (unless `without-enter-submit`) or the built-in button while `status="idle"` and `submitDisabled` is false. `detail: { value }`.
+ * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `without-stop` is not set. No detail.
  * @event blur - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
  * @event focus - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
  * @event lr-invalid - The composer failed a validity check. Cancelable — preventing this alias
@@ -194,8 +195,10 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart stop-glyph - Symmetric stop glyph wrapper.
  * @csspart action-button - The built-in send/stop button. Absent whenever `end` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`, or the dedicated `--lr-chat-composer-busy-bg` cssprop below.
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
- * @cssprop [--lr-chat-composer-background=var(--lr-color-surface)] - Fill of the card
+ * @cssprop [--lr-chat-composer-bg=var(--lr-color-surface)] - Fill of the card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-chat-composer-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-chat-composer-bg`; removal not before 23.0.0.
  * @cssprop [--lr-chat-composer-border-color=var(--lr-color-border)] - Resting colour of the card's
  *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
  * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
@@ -228,6 +231,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    submitOnEnter: ['withoutEnterSubmit', invertAlias, invertAlias],
+    stoppable: ['withoutStop', invertAlias, invertAlias],
+  };
 
   @property() placeholder = '';
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
@@ -296,6 +303,16 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.requestUpdate('actionsLayout', previous);
   }
 
+  /** Turns off Enter-to-send: plain Enter inserts a newline, as Shift+Enter always does. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-enter-submit' })
+  withoutEnterSubmit = false;
+
+  /**
+   * Deprecated inverted alias of `without-enter-submit`: `submit-on-enter="false"` equals
+   * `without-enter-submit`. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-enter-submit`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -305,10 +322,20 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   submitOnEnter = true;
   /** Consumer-controlled validation gate for submission. While idle, disables the built-in Send
    * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior
-   * remains governed by `status` and `stoppable`. */
+   * remains governed by `status` and `without-stop`. */
   @property({ type: Boolean, reflect: true, attribute: 'submit-disabled' })
   submitDisabled = false;
 
+  /** While `status` is busy, renders a disabled Send button instead of the Stop action and never
+   *  fires `lr-stop`. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-stop' }) withoutStop = false;
+
+  /**
+   * Deprecated inverted alias of `without-stop`: `stoppable="false"` equals `without-stop`.
+   * Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-stop`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -760,11 +787,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // a mention selection as an ordinary message.
     if (e.defaultPrevented) return;
     if (e.key !== 'Enter') return;
-    // Shift+Enter always inserts a newline, regardless of submit-on-enter --
+    // Shift+Enter always inserts a newline, regardless of without-enter-submit --
     // leave the browser's own default action alone.
     if (e.shiftKey) return;
-    // submit-on-enter="false": Enter always inserts a newline too.
-    if (!this.submitOnEnter) return;
+    // without-enter-submit: Enter always inserts a newline too.
+    if (this.withoutEnterSubmit) return;
     // An IME composition step (e.g. confirming a Japanese/Chinese/Korean
     // candidate) must never be treated as "the user pressed Enter to send" --
     // keyCode 229 is a defense-in-depth fallback for browsers that report
@@ -782,10 +809,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (this.effectiveDisabled) return;
     if (this.status === 'idle') {
       this.submit();
-    } else if (this.stoppable) {
+    } else if (!this.withoutStop) {
       this.emit('lr-stop', null);
     }
-    // Busy and non-stoppable: the button already renders `disabled` above, so
+    // Busy under without-stop: the button already renders `disabled` above, so
     // this is unreachable via a real click; guarded here too in case a
     // consumer dispatches a synthetic click directly at the handler.
   };
@@ -837,7 +864,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   private renderActionButton(): TemplateResult {
     const busy = this.status !== 'idle';
-    const showStop = busy && this.stoppable;
+    const showStop = busy && !this.withoutStop;
     return html`
       <button
         part="action-button"
@@ -846,7 +873,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
           ? this.localize('stopGenerating')
           : this.localize('sendMessage')}
         ?disabled=${this.effectiveDisabled ||
-        (busy ? !this.stoppable : this.submitDisabled)}
+        (busy ? this.withoutStop : this.submitDisabled)}
         @click=${this.onActionClick}
       >
         <span part=${showStop ? 'stop-glyph' : 'send-glyph'}>

@@ -144,7 +144,7 @@ export const RunningEdgeMotion: Story = {
   `,
 };
 
-/** Enabling `locked` during a pan rolls the preview back and retires the pointer stream. */
+/** Enabling `readonly` during a pan rolls the preview back and retires the pointer stream. */
 export const LiveLockCancelsGesture: Story = {
   render: () => {
     const lockMidPan = async (event: Event): Promise<void> => {
@@ -153,7 +153,7 @@ export const LiveLockCancelsGesture: Story = {
       const output = wrapper?.querySelector('output');
       const background = canvas?.shadowRoot?.querySelector<HTMLElement>('[part="background"]');
       if (!canvas || !background || !output) return;
-      canvas.locked = false;
+      canvas.readonly = false;
       await canvas.updateComplete;
       background.setPointerCapture = () => {};
       background.dispatchEvent(new PointerEvent('pointerdown', {
@@ -162,7 +162,7 @@ export const LiveLockCancelsGesture: Story = {
       window.dispatchEvent(new PointerEvent('pointermove', {
         pointerId: 61, clientX: 150, clientY: 80,
       }));
-      canvas.locked = true;
+      canvas.readonly = true;
       await canvas.updateComplete;
       output.textContent = `Locked viewport: ${JSON.stringify(canvas.viewport)}`;
     };

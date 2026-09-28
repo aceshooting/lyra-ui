@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `approvalEditable` / `approval-editable` since `21.1.0`; use property `approval-readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,10 +49,10 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   copy of `args` handed to the approval dialog. While `needsApproval` is `true` and `approved` is
   still `undefined`, activating the entry's chip opens the shared approval dialog instead of merely
   firing the chip's own selection event
-- `approvalEditable: boolean = true` (attribute `approval-editable`, reflected) — forwarded to the
-  shared approval dialog's `editable`: whether a reviewer may edit an entry's arguments before
-  approving. Uses a `true`-defaulting string converter, so plain-HTML `approval-editable="false"`
-  works
+- `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
+  shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
+  Deprecated alias: `approval-editable`/`approvalEditable` (use `approval-readonly`; removed in
+  23.0.0) — inverted, so `approval-editable="false"` equals `approval-readonly`
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
 - `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while

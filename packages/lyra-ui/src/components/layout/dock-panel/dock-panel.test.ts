@@ -14,17 +14,24 @@ import type {
 } from "./dock-panel.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-dock-panel', 'size');
 expectStaleAttribute('lr-dock-panel', 'min-size');
 expectStaleAttribute('lr-dock-panel', 'max-size');
+// The Arabic value-text fixture overrides only `resizeValuePixels`; the handle name stays English.
+expectLocaleFallback('ar-EG', ['dockPanelResize']);
 
 async function dockedFixture(attrs = "", edge = "end"): Promise<LyraDockPanel> {
   const wrapper = (await fixture(
     `<div style="position: relative; height: 20rem; display: flex;">
       <div style="flex: 1;">main</div>
-      <lr-dock-panel edge="${edge}" ${attrs}>panel body</lr-dock-panel>
+      <lr-dock-panel placement="${edge}" ${attrs}>panel body</lr-dock-panel>
     </div>`
   )) as HTMLDivElement;
   return wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
@@ -47,8 +54,8 @@ function primaryPointer(
 it("renders with defaults: docked to the end edge, a resizable handle, no collapse toggle", async () => {
   const el = await dockedFixture();
   await elementUpdated(el);
-  expect(el.edge).to.equal("end");
-  expect(el.resizable).to.equal(true);
+  expect(el.placement).to.equal("end");
+  expect(el.withoutResize).to.equal(false);
   expect(el.collapsible).to.equal(false);
   const handle = el.shadowRoot!.querySelector('[part="handle"]');
   expect(handle !== null).to.equal(true);
@@ -80,7 +87,7 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
         ${longText}
       </main>
       <lr-dock-panel
-        edge="end"
+        placement="end"
         extent="240px"
         min-extent="160px"
         max-extent="280px"
@@ -149,19 +156,19 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
   assertContained();
 });
 
-it("renders no drag handle at all when resizable is false", async () => {
+it("renders no drag handle at all when withoutResize is set", async () => {
   const el = await dockedFixture();
-  el.resizable = false;
+  el.withoutResize = true;
   await elementUpdated(el);
   expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
     true
   );
 });
 
-it('honors the plain resizable="false" attribute form, not just a property binding', async () => {
-  const el = await dockedFixture('resizable="false"');
+it('honors the plain without-resize attribute form, not just a property binding', async () => {
+  const el = await dockedFixture('without-resize');
   await elementUpdated(el);
-  expect(el.resizable).to.equal(false);
+  expect(el.withoutResize).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
     true
   );
@@ -235,7 +242,7 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
   });
   let legacyEvents = 0;
   el.addEventListener("lr-resize", () => (legacyEvents += 1));
-  // edge="end" in LTR: the panel's right edge is pinned, so ArrowLeft (moving
+  // placement="end" in LTR: the panel's right edge is pinned, so ArrowLeft (moving
   // the draggable left edge further left) grows it.
   handle.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
@@ -360,14 +367,14 @@ it("snaps a rejected pointer-drag final settle back to the size the gesture star
   expect(changes, "lr-resize-change must not fire for a rejected settle").to.equal(0);
 });
 
-it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
+it('swaps ArrowLeft/ArrowRight for placement="end" under dir="rtl"', async () => {
   const el = await fixture(
     html`<div
       dir="rtl"
       style="position: relative; height: 10rem; display: flex;"
     >
       <lr-dock-panel
-        edge="end"
+        placement="end"
         extent="300px"
         min-extent="100px"
         max-extent="500px"
@@ -380,7 +387,7 @@ it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
     '[part="handle"]'
   ) as HTMLElement;
 
-  // Under RTL, edge="end" is physically pinned to the left, so ArrowRight now
+  // Under RTL, placement="end" is physically pinned to the left, so ArrowRight now
   // grows it (the mirror image of the LTR case above).
   handle.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
@@ -396,7 +403,7 @@ it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', asyn
       style="position: relative; height: 20rem; display: flex; flex-direction: column;"
     >
       <lr-dock-panel
-        edge="top"
+        placement="top"
         extent="150px"
         min-extent="80px"
         max-extent="300px"
@@ -441,7 +448,7 @@ it('grows bottom and start edges with their physical backward/forward keys', asy
   const rtlWrapper = await fixture<HTMLElement>(html`
     <div dir="rtl" style="position:relative;display:flex;inline-size:500px;block-size:200px">
       <lr-dock-panel
-        edge="start"
+        placement="start"
         extent="200px"
         min-extent="80px"
         max-extent="300px"
@@ -495,7 +502,7 @@ it("emits live input on a pointer transition and one terminal change on genuine 
   handle.dispatchEvent(
     new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
   );
-  // edge="end" LTR: dragging left (toward more-negative clientX) grows it.
+  // placement="end" LTR: dragging left (toward more-negative clientX) grows it.
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
@@ -525,12 +532,12 @@ it("emits live input on a pointer transition and one terminal change on genuine 
   expect(changes).to.equal(1);
 });
 
-it('mirrors the physical pointer growth direction for edge="end" under RTL', async () => {
+it('mirrors the physical pointer growth direction for placement="end" under RTL', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div dir="rtl" style="display:flex;inline-size:600px;block-size:200px">
       <main style="flex:1 1 0;min-inline-size:0">main</main>
       <lr-dock-panel
-        edge="end"
+        placement="end"
         extent="300px"
         min-extent="100px"
         max-extent="500px"
@@ -690,7 +697,7 @@ it("cancels a terminal resize when live edge, extent, direction, or bounds inval
   const cases = [
     {
       label: "edge",
-      mutate: (el: LyraDockPanel) => (el.edge = "start"),
+      mutate: (el: LyraDockPanel) => (el.placement = "start"),
     },
     {
       label: "extent",
@@ -891,7 +898,7 @@ it("falls back to its owner viewport when it has no containing element", async (
     frameDocument.adoptNode(el);
     const internals = el as unknown as { containerPx(): number };
     expect(internals.containerPx()).to.equal(321);
-    el.edge = "top";
+    el.placement = "top";
     expect(internals.containerPx()).to.equal(654);
   } finally {
     if (widthDescriptor)
@@ -949,7 +956,7 @@ it("aborts an active pointer resize when collapsed is enabled mid-gesture", asyn
   expect(events).to.equal(0);
 });
 
-it("aborts an active pointer resize when resizable is revoked mid-gesture", async () => {
+it("aborts an active pointer resize when resizing is revoked mid-gesture", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
@@ -960,7 +967,7 @@ it("aborts an active pointer resize when resizable is revoked mid-gesture", asyn
     new PointerEvent("pointerdown", primaryPointer(32, { clientX: 200 }))
   );
 
-  el.resizable = false;
+  el.withoutResize = true;
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 32, clientX: 100 })
   );
@@ -1014,8 +1021,8 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   await elementUpdated(el);
 
   expect(el.collapsed).to.equal(true);
-  expect(requestDetail).to.deep.equal({ collapsed: true });
-  expect(detail).to.deep.equal({ collapsed: true });
+  expect(requestDetail).to.deep.equal({ collapsed: true, expanded: false });
+  expect(detail).to.deep.equal({ collapsed: true, expanded: false });
   expect(requestDetail).to.not.equal(detail);
   expect(Object.isFrozen(requestDetail)).to.equal(true);
   expect(Object.isFrozen(detail)).to.equal(true);
@@ -1083,7 +1090,7 @@ it("preserves the last expanded extent across a collapse/expand round trip", asy
 
 // The start/end chevron mirroring is a live CSS :dir(rtl) rule (dock-panel.styles.ts), not a
 // JS-computed inline style, so it's read back through getComputedStyle's resolved transform
-// matrix rather than the (now edge="top"/"bottom"-only) inline style attribute.
+// matrix rather than the (now placement="top"/"bottom"-only) inline style attribute.
 function chevronRotationDeg(el: LyraDockPanel): number {
   const span = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"] span'
@@ -1093,7 +1100,7 @@ function chevronRotationDeg(el: LyraDockPanel): number {
 }
 
 it("rotates the collapse-toggle chevron toward the pinned edge when expanded, away when collapsed", async () => {
-  // edge="end" in LTR is physically pinned to the right: expanded, the
+  // placement="end" in LTR is physically pinned to the right: expanded, the
   // chevron (which points right at 0deg by default) should point straight
   // at that pinned edge; collapsed, it should flip to point away (left).
   const endLtr = await dockedFixture("collapsible", "end");
@@ -1103,15 +1110,15 @@ it("rotates the collapse-toggle chevron toward the pinned edge when expanded, aw
   await elementUpdated(endLtr);
   expect(Math.abs(chevronRotationDeg(endLtr))).to.equal(180);
 
-  // Mirrored case: edge="start" under dir="rtl" is *also* physically pinned
+  // Mirrored case: placement="start" under dir="rtl" is *also* physically pinned
   // to the right (the inline-start side flips to the right under RTL), so
-  // it must match the edge="end" LTR case exactly.
+  // it must match the placement="end" LTR case exactly.
   const rtlWrapper = (await fixture(
     html`<div
       dir="rtl"
       style="position: relative; height: 10rem; display: flex;"
     >
-      <lr-dock-panel edge="start" collapsible></lr-dock-panel>
+      <lr-dock-panel placement="start" collapsible></lr-dock-panel>
     </div>`
   )) as HTMLDivElement;
   const startRtl = rtlWrapper.querySelector("lr-dock-panel") as LyraDockPanel;
@@ -1130,7 +1137,7 @@ it("mirrors the collapse-toggle chevron immediately when an ancestor's dir flips
   // all -- the browser re-evaluates it the instant the ancestor's `dir` changes.
   const wrapper = (await fixture(
     html`<div style="position: relative; height: 10rem; display: flex;">
-      <lr-dock-panel edge="start" collapsible></lr-dock-panel>
+      <lr-dock-panel placement="start" collapsible></lr-dock-panel>
     </div>`
   )) as HTMLDivElement;
   const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
@@ -1168,7 +1175,7 @@ it('flips the top/bottom collapse-toggle centering translate under dir="rtl"', a
   const toggleTranslateX = async (dirAttr: string): Promise<number> => {
     const wrapper = (await fixture(
       `<div dir="${dirAttr}" style="position: relative; height: 10rem;">
-        <lr-dock-panel edge="top" collapsible>panel body</lr-dock-panel>
+        <lr-dock-panel placement="top" collapsible>panel body</lr-dock-panel>
       </div>`
     )) as HTMLDivElement;
     const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
@@ -1190,7 +1197,7 @@ it("atomically clamps an absolute panel on shrink without restoring or emitting 
     `<div style="position: relative; width: 400px; height: 20rem;">
       <lr-dock-panel
         style="position:absolute;inset-block:0;inset-inline-end:0"
-        edge="end"
+        placement="end"
         extent="350px"
         min-extent="50px"
       ></lr-dock-panel>
@@ -1247,7 +1254,7 @@ it("reconciles direct flex-layout writes, percentage/rem bounds, and inverted ra
     <div style="display:flex;inline-size:400px;block-size:200px">
       <main style="flex:1 1 0;min-inline-size:0">main</main>
       <lr-dock-panel
-        edge="end"
+        placement="end"
         extent="50%"
         min-extent="2rem"
         max-extent="90%"
@@ -1301,7 +1308,7 @@ it("reconciles block-axis percentage, em, and viewport-unit bounds", async () =>
       <main style="flex:1 1 0;min-block-size:0">main</main>
       <lr-dock-panel
         style="font-size:10px"
-        edge="bottom"
+        placement="bottom"
         extent="50%"
         min-extent="2em"
         max-extent="80%"
@@ -1439,7 +1446,7 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     const el = await fixture<HTMLDivElement>(html`
       <div style="position: relative; height: 20rem; display: flex;">
         <lr-dock-panel
-          edge="end"
+          placement="end"
           extent="280px"
           collapsible
           style="--lr-dock-panel-collapse-toggle-hover-bg: rgb(10, 20, 30); --lr-dock-panel-collapse-toggle-hover-color: rgb(40, 50, 60);"
@@ -1523,7 +1530,7 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     const el = await fixture<HTMLDivElement>(html`
       <div style="position: relative; height: 20rem; display: flex;">
         <lr-dock-panel
-          edge="end"
+          placement="end"
           extent="280px"
           style="--lr-dock-panel-handle-hover-color: rgb(70, 80, 90); --lr-dock-panel-handle-active-color: rgb(100, 110, 120);"
         ></lr-dock-panel>
@@ -1560,7 +1567,7 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     const el = await fixture<HTMLDivElement>(html`
       <div style="position: relative; height: 20rem; display: flex;">
         <lr-dock-panel
-          edge="end"
+          placement="end"
           extent="280px"
           style="--lr-dock-panel-handle-hover-color: rgb(200, 0, 0);"
         ></lr-dock-panel>
@@ -1598,5 +1605,130 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     } finally {
       await resetMouse();
     }
+  });
+});
+
+describe("lr-dock-panel canonical names and their deprecated aliases", () => {
+  const usage = (name: string): DeprecatedUsage => ({ tag: "lr-dock-panel", kind: "property", name });
+
+  it('renders resizable="false" exactly like without-resize, and warns once naming without-resize', async () => {
+    const handles: boolean[] = [];
+    const warnings = await captureDeprecationWarnings([usage("resizable")], async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await dockedFixture('resizable="false"');
+        await elementUpdated(el);
+        expect(el.withoutResize).to.equal(true);
+        handles.push(el.shadowRoot!.querySelector('[part="handle"]') === null);
+      }
+    });
+    expect(handles).to.deep.equal([true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-dock-panel:property:resizable"]);
+    expect(warnings[0]!.message).to.contain("without-resize");
+  });
+
+  it("keeps the resizable property working as the inverse, both sides reflecting", async () => {
+    const el = await dockedFixture();
+    expect(el.resizable).to.equal(true);
+    await captureDeprecationWarnings([usage("resizable")], async () => {
+      el.resizable = false;
+      await elementUpdated(el);
+    });
+    expect(el.withoutResize).to.equal(true);
+    expect(el.hasAttribute("without-resize")).to.equal(true);
+    expect(el.getAttribute("resizable")).to.equal("false");
+    el.withoutResize = false;
+    await elementUpdated(el);
+    expect(el.resizable).to.equal(true);
+    expect(el.hasAttribute("resizable")).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);
+  });
+
+  it("keeps the edge alias docking the panel exactly like placement, and warns once", async () => {
+    const wrap = async (attr: string) =>
+      ((await fixture(
+        `<div style="position: relative; height: 20rem; display: flex;"><lr-dock-panel ${attr} extent="120px">x</lr-dock-panel></div>`
+      )) as HTMLDivElement).querySelector("lr-dock-panel") as LyraDockPanel;
+    const canonical = await wrap('placement="top"');
+    await elementUpdated(canonical);
+    const aliased: LyraDockPanel[] = [];
+    const warnings = await captureDeprecationWarnings([usage("edge")], async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await wrap('edge="top"');
+        await elementUpdated(el);
+        aliased.push(el);
+      }
+    });
+    for (const el of aliased) {
+      expect(el.placement).to.equal("top");
+      expect(el.getAttribute("placement"), "the canonical attribute reflects").to.equal("top");
+      expect(el.shadowRoot!.querySelector('[part="handle"]')!.getAttribute("aria-orientation")).to.equal(
+        canonical.shadowRoot!.querySelector('[part="handle"]')!.getAttribute("aria-orientation")
+      );
+      expect(getComputedStyle(el).blockSize).to.equal(getComputedStyle(canonical).blockSize);
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-dock-panel:property:edge"]);
+    expect(warnings[0]!.message).to.contain("placement");
+  });
+
+  it("lets the last authored attribute win between canonical names and their aliases", async () => {
+    const results: string[] = [];
+    await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
+      for (const attrs of [
+        'edge="start" placement="bottom" resizable without-resize',
+        'placement="bottom" edge="start" without-resize resizable',
+      ]) {
+        const el = ((await fixture(
+          `<div style="position: relative; height: 20rem; display: flex;"><lr-dock-panel ${attrs}>x</lr-dock-panel></div>`
+        )) as HTMLDivElement).querySelector("lr-dock-panel") as LyraDockPanel;
+        await elementUpdated(el);
+        results.push(`${el.placement}:${el.withoutResize}`);
+      }
+    });
+    expect(results).to.deep.equal(["bottom:true", "start:false"]);
+  });
+
+  it("lets the last write win in both directions after the first render", async () => {
+    const warnings = await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
+      const el = await dockedFixture("without-resize", "start");
+      await elementUpdated(el);
+      el.setAttribute("edge", "top");
+      el.setAttribute("resizable", "");
+      await elementUpdated(el);
+      expect(el.placement).to.equal("top");
+      expect(el.getAttribute("placement")).to.equal("top");
+      expect(el.withoutResize).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);
+      el.placement = "bottom";
+      el.withoutResize = true;
+      await elementUpdated(el);
+      expect(el.edge).to.equal("bottom");
+      expect(el.getAttribute("edge")).to.equal("bottom");
+      expect(el.resizable).to.equal(false);
+      expect(el.getAttribute("resizable")).to.equal("false");
+      expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(true);
+    });
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      "lyra-deprecated:lr-dock-panel:property:edge",
+      "lyra-deprecated:lr-dock-panel:property:resizable",
+    ]);
+  });
+
+  it("keeps a lone alias driving its canonical attribute after the first render", async () => {
+    await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
+      const el = ((await fixture(
+        `<div style="position: relative; height: 20rem; display: flex;"><lr-dock-panel edge="start" resizable="false">x</lr-dock-panel></div>`
+      )) as HTMLDivElement).querySelector("lr-dock-panel") as LyraDockPanel;
+      await elementUpdated(el);
+      expect(el.getAttribute("placement"), "reflected from the alias").to.equal("start");
+      expect(el.hasAttribute("without-resize"), "reflected from the alias").to.equal(true);
+      el.setAttribute("edge", "top");
+      el.removeAttribute("resizable");
+      await elementUpdated(el);
+      expect(el.placement).to.equal("top");
+      expect(el.getAttribute("placement")).to.equal("top");
+      expect(el.withoutResize).to.equal(false);
+      expect(el.hasAttribute("without-resize")).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);
+    });
   });
 });

@@ -4,7 +4,7 @@ import './message-actions.js';
 import type { LyraMessageActions } from './message-actions.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px;';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px;';
 
 const CONTROLS = ['copy', 'regenerate', 'edit'] as const;
 
@@ -24,6 +24,13 @@ describe('lr-message-actions: composed lr-icon-buttons', () => {
     await el.updateComplete;
     expect(part(el, 'regenerate-button').localName).to.equal('lr-icon-button');
     expect(part(el, 'edit-button').localName).to.equal('lr-icon-button');
+    expect(part(el, 'regenerate-button').getAttribute('exportparts')).to.contain(
+      'button:regenerate-button-control'
+    );
+    expect(part(el, 'edit-button').getAttribute('exportparts')).to.contain(
+      'button:edit-button-control'
+    );
+    // The deprecated double-underscore spellings stay forwarded from the same native button.
     expect(part(el, 'regenerate-button').getAttribute('exportparts')).to.contain(
       'button:regenerate-button__control'
     );

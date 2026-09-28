@@ -20,7 +20,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
-  render: () => html`<lr-sequence-playback item-count="10" interval-ms="500" loop></lr-sequence-playback>`,
+  render: () => html`<lr-sequence-playback item-count="10" interval-ms="500"></lr-sequence-playback>`,
 };
 
 /** `focus()` targets the primary play/pause control; native and prefixed focus listeners each
@@ -28,7 +28,7 @@ export const Default: Story = {
 export const ProgrammaticFocus: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; justify-items: start;">
-      <lr-sequence-playback item-count="10" interval-ms="500" loop></lr-sequence-playback>
+      <lr-sequence-playback item-count="10" interval-ms="500"></lr-sequence-playback>
       <button
         type="button"
         @click=${(event: Event) => {
@@ -44,7 +44,7 @@ export const ProgrammaticFocus: Story = {
 
 export const NoLoop: Story = {
   render: () =>
-    html`<lr-sequence-playback item-count="10" interval-ms="500" .loop=${false}></lr-sequence-playback>`,
+    html`<lr-sequence-playback item-count="10" interval-ms="500" without-loop></lr-sequence-playback>`,
 };
 
 export const SingleFrame: Story = {
@@ -68,7 +68,7 @@ export const ThemedActivePlayButton: Story = {
         --lr-sequence-playback-play-button-active-border-color: ${storyColor('success')};
       "
     >
-      <lr-sequence-playback item-count="10" interval-ms="500" loop></lr-sequence-playback>
+      <lr-sequence-playback item-count="10" interval-ms="500"></lr-sequence-playback>
     </div>
   `,
 };

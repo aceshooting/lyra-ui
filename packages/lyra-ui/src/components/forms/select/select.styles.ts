@@ -643,7 +643,7 @@ export const styles = css`
       var(--lr-select-unknown-value-border-style, dashed)
       var(--lr-select-unknown-value-border-color, var(--lr-color-border));
   }
-  /* The synthetic listbox row for that same unmatched value (showUnknownOption): same dashed and
+  /* The synthetic listbox row for that same unmatched value (withUnknownOption): same dashed and
      italic treatment, so the row and the trigger read as one thing. */
   [part~="option"][data-unknown-value] [part="option-label"] {
     font-style: italic;

@@ -292,10 +292,11 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           @lr-page-change=${this.stopOwnedEvent}
           @lr-cell-edit=${this.stopOwnedEvent}
           @lr-column-resize=${this.stopOwnedEvent}
-          @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => {
+          @lr-row-activate=${(e: CustomEvent<{ row: EvalRunResult }>) => {
             e.stopPropagation();
             this.emit('lr-run-activate', { runId: e.detail.row.id, run: e.detail.row });
           }}
+          @lr-row-click=${this.stopOwnedEvent}
         ></lr-table>
         ${selected ? this.renderReview(selected) : nothing}
         ${selected ? this.renderDiff(selected, this.baselineRun) : nothing}

@@ -7,7 +7,8 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-map-legend-panel-toggle` since `21.1.0`; use event `addEventListener('lr-map-legend-panel-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated event** `lr-map-legend-toggle` since `21.1.0`; use event `addEventListener('lr-map-legend-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 26 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -131,7 +132,7 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   renders the SAME `<button>` element with its implicit role overridden to `role="checkbox"` and
   `aria-checked` in place of `aria-pressed` — the swatch, the label, the click handler and the
   platform's own Enter/Space activation are unchanged, so `hiddenCategories`, the cancelable
-  `lr-map-legend-toggle` veto, `group` sections and `legendCollapsible` all compose with either
+  `lr-map-legend-toggle-request` veto, `group` sections and `legendCollapsible` all compose with either
   role. `aria-checked` tracks the same visibility flag `aria-pressed` does, inverted from
   `hiddenCategories`: a hidden category renders `aria-checked="false"`. Prefer `'checkbox'` when the
   legend reads as a checklist of independent show/hide toggles; prefer the `'button'` default when
@@ -525,7 +526,7 @@ function showMarkers(markers: LyraMapMarker[]): void {
 ```
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
-`lr-map-legend-toggle` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
+`lr-map-legend-toggle-request` (**cancelable**; frozen `LyraMapLegendToggleDetail { value, visible,
 hiddenCategories }` — the activated row's category key, its proposed visibility, and the complete
 proposed hidden set in the order it would be committed, with the array detached and frozen so a
 listener cannot mutate the component's state through it). `preventDefault()` is a genuine veto, not
@@ -535,13 +536,18 @@ the set and assign its own value instead. There is deliberately no second, confi
 committed state is `hiddenCategories`, which the host already observes, so a paired before/after
 vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
 proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
-Also `lr-map-legend-panel-toggle` (**cancelable**; frozen `LyraMapLegendPanelToggleDetail { open }` —
-the proposed `legendOpen` value), fired once when the `legendCollapsible` disclosure is activated by
-pointer or by Enter/Space. It is the *panel's* disclosure, not a *category's* visibility, so it
-deliberately does not reuse `lr-map-legend-toggle`. `preventDefault()` is the same genuine veto:
-`legendOpen` is not written, the rendered rows and the disclosure's `aria-expanded` do not change,
-so a host can own the open state and assign its own value from `event.detail.open`. A programmatic
-`legendOpen` assignment reconciles without emitting it, so a controlled host cannot loop.
+Deprecated alias: `lr-map-legend-toggle` (use `lr-map-legend-toggle-request`; removed in 23.0.0) —
+it still fires right after the request with an equal detail, and either event may veto.
+Also `lr-map-legend-panel-toggle-request` (**cancelable**; frozen
+`LyraMapLegendPanelToggleDetail { open }` — the proposed `legendOpen` value), fired once when the
+`legendCollapsible` disclosure is activated by pointer or by Enter/Space. It is the *panel's*
+disclosure, not a *category's* visibility, so it deliberately does not reuse
+`lr-map-legend-toggle-request`. `preventDefault()` is the same genuine veto: `legendOpen` is not
+written, the rendered rows and the disclosure's `aria-expanded` do not change, so a host can own the
+open state and assign its own value from `event.detail.open`. A programmatic `legendOpen` assignment
+reconciles without emitting it, so a controlled host cannot loop. Deprecated alias:
+`lr-map-legend-panel-toggle` (use `lr-map-legend-panel-toggle-request`; removed in 23.0.0) — it
+still fires right after the request with an equal detail, and either event may veto.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`

@@ -194,7 +194,7 @@ describe("v9 canonical heatmap data and bounded projections", () => {
     ).to.equal("1");
     const event = new Promise<CustomEvent>((resolve) =>
       el.addEventListener(
-        "lr-cell-click",
+        "lr-cell-activate",
         (value) => resolve(value as CustomEvent),
         { once: true }
       )
@@ -1102,7 +1102,7 @@ it('moves focus through accessible cells with physical (non-mirrored) arrow keys
   ).to.equal("matrix-0-1");
 
   const event = new Promise<CustomEvent>((resolve) =>
-    el.addEventListener("lr-cell-click", resolve, { once: true })
+    el.addEventListener("lr-cell-activate", resolve, { once: true })
   );
   cells[0]!.click();
   expect((await event).detail).to.deep.equal({ row: 0, col: 0, value: 1 });
@@ -2167,7 +2167,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(live.textContent).to.equal("Mar 2: 9");
   });
 
-  it("matrix mode: emits lr-cell-click with {row, col, value} on click", async () => {
+  it("matrix mode: emits lr-cell-activate with {row, col, value} on click", async () => {
     const el = (await fixture(
       html`<lr-heatmap cell-size="22"></lr-heatmap>`
     )) as LyraHeatmap;
@@ -2184,7 +2184,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { row: number; col: number; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2197,7 +2197,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(detail).to.deep.equal({ row: 1, col: 0, value: 1 });
   });
 
-  it("matrix mode: emits lr-cell-click via Enter on the focused cell", async () => {
+  it("matrix mode: emits lr-cell-activate via Enter on the focused cell", async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     setMatrixData(el, { rowLabels: ["a"] });
     setMatrixData(el, { colLabels: ["x", "y"] });
@@ -2209,7 +2209,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     ); // focuses (0,0)
     let detail: { row: number; col: number; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2218,7 +2218,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(detail).to.deep.equal({ row: 0, col: 0, value: 3 });
   });
 
-  it("matrix mode: emits lr-cell-click via Space on the focused cell", async () => {
+  it("matrix mode: emits lr-cell-activate via Space on the focused cell", async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     setMatrixData(el, { rowLabels: ["a"] });
     setMatrixData(el, { colLabels: ["x", "y"] });
@@ -2230,7 +2230,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     ); // focuses (0,0)
     let detail: { row: number; col: number; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2239,7 +2239,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(detail).to.deep.equal({ row: 0, col: 0, value: 3 });
   });
 
-  it("calendar mode: emits lr-cell-click with {date, value} on click", async () => {
+  it("calendar mode: emits lr-cell-activate with {date, value} on click", async () => {
     const el = (await fixture(
       html`<lr-heatmap .data=${{ kind: "calendar", days: [] }}></lr-heatmap>`
     )) as LyraHeatmap;
@@ -2249,7 +2249,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2262,7 +2262,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     expect(detail).to.deep.equal({ date: "2026-03-01", value: 5 });
   });
 
-  it("calendar mode: emits lr-cell-click via Enter on the focused cell", async () => {
+  it("calendar mode: emits lr-cell-activate via Enter on the focused cell", async () => {
     const el = (await fixture(
       html`<lr-heatmap .data=${{ kind: "calendar", days: [] }}></lr-heatmap>`
     )) as LyraHeatmap;
@@ -2274,7 +2274,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     ); // focuses (week 0, weekday 0)
     let detail: { date: string; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2299,7 +2299,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
     await el.updateComplete;
     let detail: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2581,7 +2581,7 @@ describe("columnX override (calendar mode)", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2610,7 +2610,7 @@ describe("columnX override (calendar mode)", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     // Week 1's *default*-formula position (CAL_PAD_LEFT + 1*(CAL_CELL+CAL_GAP) = 41) is below
@@ -2702,7 +2702,7 @@ describe("first-day-of-week (calendar mode)", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
 
@@ -2819,7 +2819,7 @@ describe("rowY override (calendar mode)", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { date: string; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -2848,7 +2848,7 @@ describe("rowY override (calendar mode)", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     // weekday 2's *default*-formula position (CAL_LABEL_H(16) + 2*(CAL_CELL(11)+CAL_GAP(2)) = 42)
@@ -3007,10 +3007,10 @@ describe("cellInteractive predicate", () => {
     const rect = canvas.getBoundingClientRect();
     let clicked: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (clicked = (e as CustomEvent).detail)
     );
-    // (row 0, col 1) is excluded -- a click there must not fire lr-cell-click.
+    // (row 0, col 1) is excluded -- a click there must not fire lr-cell-activate.
     const cellSize = 22; // DEFAULT_MATRIX_CELL_SIZE
     const padLeft = 60; // PAD_LEFT
     const padTop = 20; // PAD_TOP
@@ -3061,7 +3061,7 @@ describe("cellInteractive predicate", () => {
     const rect = canvas.getBoundingClientRect();
     let clicked: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (clicked = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -3101,7 +3101,7 @@ describe("cellInteractive predicate", () => {
     await el.updateComplete;
     let clicked: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (clicked = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -5681,7 +5681,7 @@ describe("CalendarCellPos.date", () => {
     ).to.equal(false);
   });
 
-  it("does not change lr-cell-click's detail shape", async () => {
+  it("does not change lr-cell-activate's detail shape", async () => {
     const el = (await fixture(html`
       <lr-heatmap .data=${{ kind: "calendar", days: SPARSE_DAYS }}></lr-heatmap>
     `)) as LyraHeatmap;
@@ -5692,7 +5692,7 @@ describe("CalendarCellPos.date", () => {
     );
     await el.updateComplete;
     let detail: unknown = null;
-    el.addEventListener("lr-cell-click", (e) => {
+    el.addEventListener("lr-cell-activate", (e) => {
       detail = (e as CustomEvent).detail;
     });
     canvas.dispatchEvent(
@@ -6118,7 +6118,7 @@ describe("accessible cell overlay edge paths", () => {
     const cell =
       el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cell"]')!;
     let clicks = 0;
-    el.addEventListener("lr-cell-click", () => clicks++);
+    el.addEventListener("lr-cell-activate", () => clicks++);
 
     cell.dataset["cellKey"] = "matrix-99-99";
     cell.dispatchEvent(new FocusEvent("focus"));
@@ -6162,7 +6162,7 @@ describe("accessible cell overlay edge paths", () => {
       ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]'),
     ];
     const clicked: unknown[] = [];
-    el.addEventListener("lr-cell-click", (e) =>
+    el.addEventListener("lr-cell-activate", (e) =>
       clicked.push((e as CustomEvent).detail)
     );
 
@@ -6895,7 +6895,7 @@ describe("coverage: additional edge-path gaps", () => {
     const rect = canvas.getBoundingClientRect();
     let clicked: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (clicked = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -6955,7 +6955,7 @@ describe("coverage: additional edge-path gaps", () => {
     expect(live!.textContent).to.equal("v:-1");
   });
 
-  it("matrix mode: emits lr-cell-click with value -1 for a sparse row missing from `values`", async () => {
+  it("matrix mode: emits lr-cell-activate with value -1 for a sparse row missing from `values`", async () => {
     const el = (await fixture(html`
       <lr-heatmap
         cell-size="22"
@@ -6972,7 +6972,7 @@ describe("coverage: additional edge-path gaps", () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { row: number; col: number; value: number } | undefined;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (detail = (e as CustomEvent).detail)
     );
     canvas.dispatchEvent(
@@ -7000,7 +7000,7 @@ describe("coverage: additional edge-path gaps", () => {
     await el.updateComplete;
     let clicked: unknown;
     el.addEventListener(
-      "lr-cell-click",
+      "lr-cell-activate",
       (e) => (clicked = (e as CustomEvent).detail)
     );
     (
@@ -7486,7 +7486,7 @@ describe("signed data: domain and midpoint", () => {
     expect(gap.getAttribute('aria-label')).to.equal('gap');
 
     let detail: { date: string; value: number } | undefined;
-    el.addEventListener('lr-cell-click', (event) => {
+    el.addEventListener('lr-cell-activate', (event) => {
       detail = (event as CustomEvent<{ date: string; value: number }>).detail;
     });
     gap.click();
@@ -8532,7 +8532,7 @@ describe('bounded heatmap fallback paths', () => {
     expect(ellipsize('WW', 0.1)).to.equal('');
 
     let detail: unknown;
-    el.addEventListener('lr-cell-click', (event) => {
+    el.addEventListener('lr-cell-activate', (event) => {
       detail = (event as CustomEvent).detail;
     });
     (el as unknown as { emitCellClick(pos: MatrixCellPos): void }).emitCellClick({
@@ -8699,5 +8699,78 @@ describe('bounded heatmap fallback paths', () => {
     await aTimeout(0);
     expect((el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell).to.equal(null);
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.contain('base');
+  });
+});
+
+describe("deprecated lr-cell-click alias", () => {
+  const matrixHeatmap = async (): Promise<LyraHeatmap> => {
+    const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["Mon", "Tue"] });
+    setMatrixData(el, { colLabels: ["0h", "1h"] });
+    setMatrixData(el, {
+      values: [
+        [3, 7],
+        [1, 2],
+      ],
+    });
+    await el.updateComplete;
+    return el;
+  };
+  const clickCell = (el: LyraHeatmap): void => {
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new MouseEvent("click", {
+        clientX: rect.left + 60 + 11,
+        clientY: rect.top + 20 + 33,
+        bubbles: true,
+      })
+    );
+  };
+
+  it("fires right after lr-cell-activate from the same activation, with its own equal detail", async () => {
+    const el = await matrixHeatmap();
+    const order: string[] = [];
+    const events: CustomEvent[] = [];
+    for (const type of ["lr-cell-activate", "lr-cell-click"]) {
+      el.addEventListener(type, (e) => {
+        order.push(type);
+        events.push(e as CustomEvent);
+      });
+    }
+    clickCell(el);
+    expect(order).to.deep.equal(["lr-cell-activate", "lr-cell-click"]);
+    expect(events[0]!.detail).to.deep.equal({ row: 1, col: 0, value: 1 });
+    expect(events[1]!.detail).to.deep.equal(events[0]!.detail);
+    expect(events[1]!.detail === events[0]!.detail).to.equal(false);
+    expect(events.map((e) => [e.bubbles, e.composed, e.cancelable])).to.deep.equal([
+      [true, true, false],
+      [true, true, false],
+    ]);
+  });
+
+  it("keeps an alias-only listener hearing every activation", async () => {
+    const el = await matrixHeatmap();
+    let detail: unknown;
+    el.addEventListener("lr-cell-click", (e) => (detail = (e as CustomEvent).detail));
+    clickCell(el);
+    expect(detail).to.deep.equal({ row: 1, col: 0, value: 1 });
+  });
+});
+
+describe("--lr-heatmap-tooltip-color and its deprecated --lr-heatmap-tooltip-text alias", () => {
+  const tooltipColor = async (style: string): Promise<string> => {
+    const el = (await fixture(html`<lr-heatmap style=${style}></lr-heatmap>`)) as LyraHeatmap;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    return getComputedStyle(tooltip).color;
+  };
+
+  it("colors the tooltip text from the canonical property, still honors the alias, and lets the canonical one win", async () => {
+    expect(await tooltipColor("--lr-heatmap-tooltip-color: rgb(1, 2, 3)")).to.equal("rgb(1, 2, 3)");
+    expect(await tooltipColor("--lr-heatmap-tooltip-text: rgb(4, 5, 6)")).to.equal("rgb(4, 5, 6)");
+    expect(
+      await tooltipColor("--lr-heatmap-tooltip-color: rgb(1, 2, 3); --lr-heatmap-tooltip-text: rgb(4, 5, 6)")
+    ).to.equal("rgb(1, 2, 3)");
+    expect(await tooltipColor("")).to.equal(await tooltipColor("--lr-heatmap-tooltip-color: var(--lr-color-text)"));
   });
 });

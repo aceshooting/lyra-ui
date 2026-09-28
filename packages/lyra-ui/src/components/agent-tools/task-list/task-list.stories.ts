@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one level of nested sub-steps. Omit `label` to localize the header; any supplied string, including 'Tasks' or an empty string, is a verbatim override.",
+          "A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one level of nested sub-steps. Omit `heading` to localize the header; any supplied string, including 'Tasks' or an empty string, is a verbatim override.",
       },
     },
   },
@@ -133,7 +133,7 @@ export const WithToolCallChipDetail: Story = {
 };
 
 export const Collapsed: Story = {
-  render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items} expanded="false"></lr-task-list>`,
+  render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items} collapsed></lr-task-list>`,
 };
 
 export const NonCollapsible: Story = {
@@ -143,16 +143,16 @@ export const NonCollapsible: Story = {
       style="max-width: 32rem;"
       heading-level="2"
       .items=${items}
-      collapsible="false"
+      without-collapse
     ></lr-task-list>`,
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-task-list .items=${items}></lr-task-list>
-      <lr-task-list compact .items=${items}></lr-task-list>
+      <lr-task-list size="s" .items=${items}></lr-task-list>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-task-list frame="plain" .items=${items}></lr-task-list>
       </div>
@@ -162,17 +162,17 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter header/body padding, gap, and typography with chrome intact), and `frame="plain"` nested inside a container that already draws its own border — without `plain` the two frames would double up.',
+          'Top to bottom: the default card, `size="s"` (tighter header/body padding, gap, and typography with chrome intact), and `frame="plain"` nested inside a container that already draws its own border — without `plain` the two frames would double up.',
       },
     },
   },
 };
 
 export const RetunedCompactHeader: Story = {
-  name: 'Compact header typography rethemed',
+  name: 'Dense header typography rethemed',
   render: () => html`
     <lr-task-list
-      compact
+      size="s"
       style="max-width: 32rem; --lr-task-list-compact-header-font-size: var(--lr-font-size-xs);"
       .items=${items}
     ></lr-task-list>
@@ -184,7 +184,6 @@ export const Narrow320: Story = {
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-task-list
-        expanded
         .items=${[
           ...items,
           {

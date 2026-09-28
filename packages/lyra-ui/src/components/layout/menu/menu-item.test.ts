@@ -19,6 +19,10 @@ import {
   sendMouse,
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -926,7 +930,7 @@ it('leaves host click() inert while disabled or loading', async () => {
     el.addEventListener('lr-menu-item-select', () => {
       selections += 1;
     });
-    el.addEventListener('lr-menu-item-change', () => {
+    el.addEventListener('lr-menu-item-change-request', () => {
       changes += 1;
     });
 
@@ -996,7 +1000,7 @@ it('host click() emits a checkbox change proposal before mutating checked, then 
   const changes: CustomEvent<{ value: string; checked: boolean }>[] = [];
   const checkedDuringChanges: boolean[] = [];
   const changeCancelable: boolean[] = [];
-  el.addEventListener('lr-menu-item-change', (event) => {
+  el.addEventListener('lr-menu-item-change-request', (event) => {
     order.push('change');
     changes.push(event as CustomEvent<{ value: string; checked: boolean }>);
     checkedDuringChanges.push(el.checked);
@@ -1031,7 +1035,7 @@ it('honors preventDefault on a checkbox change proposal without suppressing sele
   );
   let checkedDuringChange = true;
   let selectionCount = 0;
-  el.addEventListener('lr-menu-item-change', (event) => {
+  el.addEventListener('lr-menu-item-change-request', (event) => {
     checkedDuringChange = el.checked;
     event.preventDefault();
   });
@@ -1046,21 +1050,21 @@ it('honors preventDefault on a checkbox change proposal without suppressing sele
   expect(selectionCount).to.equal(1);
 });
 
-it('select() toggles checked and fires lr-menu-item-change for type="checkbox" (Enter/Space, via a parent menu\'s own keydown handling)', async () => {
+it('select() toggles checked and fires lr-menu-item-change-request for type="checkbox" (Enter/Space, via a parent menu\'s own keydown handling)', async () => {
   const el = (await fixture(
     html`<lr-menu-item type="checkbox" value="wrap">Wrap text</lr-menu-item>`
   )) as LyraMenuItem;
 
   setTimeout(() => el.select());
-  const ev = await oneEvent(el, 'lr-menu-item-change');
+  const ev = await oneEvent(el, 'lr-menu-item-change-request');
   expect(ev.detail).to.deep.equal({ value: 'wrap', checked: true });
 
   setTimeout(() => el.select());
-  const ev2 = await oneEvent(el, 'lr-menu-item-change');
+  const ev2 = await oneEvent(el, 'lr-menu-item-change-request');
   expect(ev2.detail).to.deep.equal({ value: 'wrap', checked: false });
 });
 
-it('does not toggle checked or fire lr-menu-item-change on click or select() while disabled', async () => {
+it('does not toggle checked or fire lr-menu-item-change-request on click or select() while disabled', async () => {
   const el = (await fixture(
     html`<lr-menu-item type="checkbox" disabled value="wrap"
       >Wrap text</lr-menu-item
@@ -1068,7 +1072,7 @@ it('does not toggle checked or fire lr-menu-item-change on click or select() whi
   )) as LyraMenuItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   let fired = false;
-  el.addEventListener('lr-menu-item-change', () => (fired = true));
+  el.addEventListener('lr-menu-item-change-request', () => (fired = true));
   base.click();
   el.select();
   expect(fired).to.be.false;
@@ -1090,7 +1094,7 @@ it('renders a checkmark glyph only when type="checkbox" and checked', async () =
   expect(checked.shadowRoot!.querySelector('[part="checkmark"]')).to.exist;
 });
 
-it('type="normal" (default, omitted) is completely unaffected -- same role, no aria-checked, no checkmark, no lr-menu-item-change event', async () => {
+it('type="normal" (default, omitted) is completely unaffected -- same role, no aria-checked, no checkmark, no lr-menu-item-change-request event', async () => {
   const { menu, item: el } = await fixtureInOwnedMenu(
     html`<lr-menu-item value="rename">Rename</lr-menu-item>`
   );
@@ -1100,7 +1104,7 @@ it('type="normal" (default, omitted) is completely unaffected -- same role, no a
 
   let changeFired = false;
   let selectFired = false;
-  el.addEventListener('lr-menu-item-change', () => (changeFired = true));
+  el.addEventListener('lr-menu-item-change-request', () => (changeFired = true));
   menu.addEventListener('lr-select', () => (selectFired = true));
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   base.click();
@@ -1146,7 +1150,7 @@ it('activating an unchecked radio proposes checked:true and, unless vetoed, unch
   let selectCount = 0;
   menu.addEventListener('lr-select', () => (selectCount += 1));
   const changes: { value: string; checked: boolean }[] = [];
-  eurItem!.addEventListener('lr-menu-item-change', (event) => {
+  eurItem!.addEventListener('lr-menu-item-change-request', (event) => {
     changes.push(
       (event as CustomEvent<{ value: string; checked: boolean }>).detail
     );
@@ -1172,7 +1176,7 @@ it('activating an already-checked radio is a no-op: no change proposal, no state
   ) as LyraMenuItem[];
   let changeFired = false;
   let selectCount = 0;
-  usdItem!.addEventListener('lr-menu-item-change', () => (changeFired = true));
+  usdItem!.addEventListener('lr-menu-item-change-request', () => (changeFired = true));
   menu.addEventListener('lr-select', () => (selectCount += 1));
 
   usdItem!.select();
@@ -1193,7 +1197,7 @@ it('honors preventDefault on a radio change proposal, leaving checked state and 
     menu.querySelectorAll('lr-menu-item')
   ) as LyraMenuItem[];
   let selectCount = 0;
-  eurItem!.addEventListener('lr-menu-item-change', (event) =>
+  eurItem!.addEventListener('lr-menu-item-change-request', (event) =>
     event.preventDefault()
   );
   menu.addEventListener('lr-select', () => (selectCount += 1));
@@ -2492,4 +2496,114 @@ it('keeps empty forwarding slots and whitespace-only details hidden', async () =
   expect(forwarded.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!.hidden).to.equal(true);
   const el = await fixtureInMenu(html`<lr-menu-item>New<slot slot="details">   </slot></lr-menu-item>`);
   expect(el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!.hidden).to.equal(true);
+});
+
+describe('lr-menu-item-change-request and its deprecated lr-menu-item-change alias', () => {
+  for (const tagName of ['lr-menu-item', 'lr-dropdown-item'] as const) {
+    const aliasUsage: readonly DeprecatedUsage[] = [
+      { tag: tagName, kind: 'event', name: 'lr-menu-item-change' },
+    ];
+
+    async function checkboxItem(): Promise<{ menu: LyraMenu; item: LyraMenuItem }> {
+      const menu = document.createElement('lr-menu') as LyraMenu;
+      menu.label = 'Actions';
+      const item = document.createElement(tagName) as LyraMenuItem;
+      item.type = 'checkbox';
+      item.value = 'wrap';
+      item.textContent = 'Wrap text';
+      menu.append(item);
+      await fixture(html`<div>${menu}</div>`);
+      await item.updateComplete;
+      return { menu, item };
+    }
+
+    it(`${tagName}: fires the canonical request first, then the alias, as separate equal cancelable details`, async () => {
+      const { item } = await checkboxItem();
+      const seen: CustomEvent<{ value: string; checked: boolean }>[] = [];
+      const record = (event: Event) =>
+        seen.push(event as CustomEvent<{ value: string; checked: boolean }>);
+      item.addEventListener('lr-menu-item-change-request', record);
+      item.addEventListener('lr-menu-item-change', record);
+      item.select();
+      expect(seen.map((event) => event.type)).to.deep.equal([
+        'lr-menu-item-change-request',
+        'lr-menu-item-change',
+      ]);
+      expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
+        JSON.stringify({ value: 'wrap', checked: true }),
+        JSON.stringify({ value: 'wrap', checked: true }),
+      ]);
+      expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
+      expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
+        [true, true, true],
+        [true, true, true],
+      ]);
+      expect(item.checked).to.equal(true);
+    });
+
+    it(`${tagName}: vetoes through the canonical request without a warning`, async () => {
+      const { item } = await checkboxItem();
+      let aliasPrevented: boolean | undefined;
+      item.addEventListener('lr-menu-item-change-request', (event) => event.preventDefault());
+      item.addEventListener('lr-menu-item-change', (event) => {
+        aliasPrevented = event.defaultPrevented;
+      });
+      const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
+      expect(item.checked).to.equal(false);
+      expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
+      expect(warnings).to.have.length(0);
+    });
+
+    it(`${tagName}: still lets a listener on only the alias veto a radio proposal, and warns once`, async () => {
+      const results: boolean[] = [];
+      const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+        for (let index = 0; index < 2; index += 1) {
+          const { item } = await checkboxItem();
+          item.type = 'radio';
+          await item.updateComplete;
+          item.addEventListener('lr-menu-item-change', (event) => event.preventDefault());
+          item.select();
+          results.push(item.checked);
+        }
+      });
+      expect(results).to.deep.equal([false, false]);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        `lyra-deprecated:${tagName}:event:lr-menu-item-change`,
+      ]);
+      expect(warnings[0]!.message).to.contain('lr-menu-item-change-request');
+    });
+
+    it(`${tagName}: does not warn when an alias listener only observes`, async () => {
+      const { item } = await checkboxItem();
+      let observed = 0;
+      item.addEventListener('lr-menu-item-change', () => (observed += 1));
+      const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
+      expect(observed).to.equal(1);
+      expect(item.checked).to.equal(true);
+      expect(warnings).to.have.length(0);
+    });
+  }
+});
+
+describe('lr-dropdown-item spinner part names', () => {
+  it('names the loading spinner spinner-base beside its deprecated spinner__base alias', async () => {
+    const el = (await fixture(
+      html`<lr-dropdown-item loading>Saving</lr-dropdown-item>`
+    )) as LyraMenuItem;
+    const spinner = el.shadowRoot!.querySelector<HTMLElement>('[part~="spinner-base"]');
+    expect(spinner).to.exist;
+    expect(spinner!.getAttribute('part')!.split(' ')).to.include.members([
+      'spinner',
+      'spinner-base',
+      'spinner__base',
+    ]);
+  });
+
+  it('keeps lr-menu-item on its mirrored spinner__base name only', async () => {
+    const el = (await fixture(
+      html`<lr-menu-item loading>Saving</lr-menu-item>`
+    )) as LyraMenuItem;
+    const spinner = el.shadowRoot!.querySelector<HTMLElement>('[part~="spinner"]');
+    expect(spinner!.getAttribute('part')).to.equal('spinner spinner__base');
+  });
 });

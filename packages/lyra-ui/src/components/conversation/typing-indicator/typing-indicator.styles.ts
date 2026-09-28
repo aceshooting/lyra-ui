@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-// `--lr-typing-duration` is this component's own dedicated animation-cycle
+// `--lr-typing-indicator-duration` is this component's own dedicated animation-cycle
 // token. It defaults to (aliases) `--lr-transition-ambient` rather than
 // `--lr-transition-fast`/`--lr-transition-base`: ambient is the token the
 // library reserves for infinite looping "still alive" motion, whereas
@@ -10,7 +10,7 @@ import { css } from 'lit';
 // component's loop without touching `--lr-transition-ambient` itself, which
 // every other ambient-looping component in the library also keys off.
 // Both tokens are *compound* values (`1.8s ease-in-out`, duration +
-// timing-function together), so `--lr-typing-duration` is consumed only in
+// timing-function together), so `--lr-typing-indicator-duration` is consumed only in
 // the `animation:` shorthand. Its use-site fallback keeps tracking the shared
 // reduced-motion-aware ambient token without shadowing an ancestor override.
 export const styles = css`
@@ -24,10 +24,10 @@ export const styles = css`
     --_lr-inline-cursor-width-default: var(--lr-size-0-125rem);
     --_lr-inline-cursor-height-default: var(--lr-size-1em);
     --_lr-typing-duration-default: var(--lr-transition-ambient);
-    /* Themeable, not auto-derived from --lr-typing-duration: that token aliases the compound
+    /* Themeable, not auto-derived from --lr-typing-indicator-duration: that token aliases the compound
        --lr-transition-ambient (duration + timing-function, e.g. "1.8s ease-in-out") baked into the
        animation: shorthand, so calc() cannot decompose it into a fraction of the duration alone. A
-       consumer retiming --lr-typing-duration keeps the stagger proportional by setting these two
+       consumer retiming --lr-typing-indicator-duration keeps the stagger proportional by setting these two
        explicitly. */
     --_lr-typing-dot-stagger-1-default: 600ms;
     --_lr-typing-dot-stagger-2-default: 1200ms;
@@ -56,7 +56,7 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-typing-gap, var(--_lr-typing-gap-default));
+    gap: var(--lr-typing-indicator-gap, var(--lr-typing-gap, var(--_lr-typing-gap-default)));
   }
 
   /* label-placement="after": renders the accessible label visibly next to the shape, mirroring
@@ -70,18 +70,18 @@ export const styles = css`
 
   /* -- dots -------------------------------------------------------------- */
   [part='dot'] {
-    inline-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
-    block-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
+    inline-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
+    block-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: lr-typing-dot-bounce var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
+    animation: lr-typing-dot-bounce var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
   }
   [part='dot']:nth-child(2) {
-    animation-delay: var(--lr-typing-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default));
+    animation-delay: var(--lr-typing-indicator-dot-stagger-1, var(--lr-typing-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default)));
   }
   [part='dot']:nth-child(3) {
-    animation-delay: var(--lr-typing-dot-stagger-2, var(--_lr-typing-dot-stagger-2-default));
+    animation-delay: var(--lr-typing-indicator-dot-stagger-2, var(--lr-typing-dot-stagger-2, var(--_lr-typing-dot-stagger-2-default)));
   }
   @keyframes lr-typing-dot-bounce {
     0%,
@@ -99,13 +99,13 @@ export const styles = css`
   /* -- pulse --------------------------------------------------------------
      A single breathing dot, meant for tighter spaces than three dots allow. */
   [part='pulse'] {
-    inline-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
-    block-size: var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default));
+    inline-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
+    block-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
     border-radius: 50%;
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: lr-typing-pulse var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
+    animation: lr-typing-pulse var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
   }
   @keyframes lr-typing-pulse {
     0%,
@@ -129,7 +129,7 @@ export const styles = css`
     background: currentColor;
     border-radius: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
     opacity: 1;
-    animation: lr-typing-cursor-blink var(--lr-typing-duration, var(--_lr-typing-duration-default)) infinite;
+    animation: lr-typing-cursor-blink var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite;
   }
   @keyframes lr-typing-cursor-blink {
     0%,

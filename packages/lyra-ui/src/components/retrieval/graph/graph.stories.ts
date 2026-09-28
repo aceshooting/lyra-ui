@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type {
   LyraGraphCommunity,
-  LyraGraphLink,
+  LyraGraphEdge,
   LyraGraphNode,
   LyraGraph,
 } from './graph.js';
@@ -15,7 +15,7 @@ const nodes: LyraGraphNode[] = [
   { id: 'd', label: 'D' },
 ];
 
-const links: LyraGraphLink[] = [
+const links: LyraGraphEdge[] = [
   { source: 'a', target: 'b' },
   { source: 'a', target: 'c' },
   { source: 'b', target: 'd' },
@@ -44,7 +44,7 @@ const relationshipNodes: LyraGraphNode[] = [
   },
 ];
 
-const relationshipLinks: LyraGraphLink[] = [
+const relationshipLinks: LyraGraphEdge[] = [
   {
     id: 'judgment-cites-opinion',
     source: 'judgment',
@@ -84,7 +84,7 @@ export const Default: Story = {
       height="320"
       style="height: 20rem"
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
     ></lr-graph>
   `,
 };
@@ -93,7 +93,7 @@ export const DeclarativeFocus: Story = {
   render: () => html`
     <lr-graph
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       focus-node-id="b"
       width="480"
       height="320"
@@ -112,7 +112,7 @@ export const NarrowLongContent: Story = {
         width="320"
         height="320"
         seed="42"
-        show-edge-labels
+        with-edge-labels
         style="block-size: 20rem"
         .nodes=${[
           {
@@ -129,7 +129,7 @@ export const NarrowLongContent: Story = {
               'A second deliberately long description for narrow tooltip containment.',
           },
         ] satisfies LyraGraphNode[]}
-        .links=${[
+        .edges=${[
           {
             source:
               'unbroken-source-identifier-that-must-not-expand-the-allocation',
@@ -137,7 +137,7 @@ export const NarrowLongContent: Story = {
             label: 'a-very-long-relationship-label-without-natural-breaks',
             directed: true,
           },
-        ] satisfies LyraGraphLink[]}
+        ] satisfies LyraGraphEdge[]}
       ></lr-graph>
     </div>
   `,
@@ -165,12 +165,12 @@ export const NormalizedLinkWidths: Story = {
           seed="42"
           style="height: 20rem"
           .nodes=${nodes}
-          .links=${[
+          .edges=${[
             { source: 'a', target: 'd', width: 0, directed: true },
             { source: 'a', target: 'b', width: Number.NaN },
             { source: 'a', target: 'c', width: -4 },
             { source: 'b', target: 'd', width: 2.5 },
-          ] satisfies LyraGraphLink[]}
+          ] satisfies LyraGraphEdge[]}
         ></lr-graph>
       `
     )}`,
@@ -182,7 +182,7 @@ export const DimmedNeighborhood: Story = {
     docs: {
       description: {
         story:
-          'dimmedNodeIds/dimmedLinkIds are controlled -- the host computes the complement of a ' +
+          'dimmedNodeIds/dimmedEdgeIds are controlled -- the host computes the complement of a ' +
           "hovered node's neighbor set (e.g. from lr-node-enter) and assigns it back. This story " +
           'holds a static example: node "a" and its incident links stay at full opacity; everything ' +
           'else is dimmed via --lr-graph-dimmed-opacity.',
@@ -192,9 +192,9 @@ export const DimmedNeighborhood: Story = {
   render: () => html`
     <lr-graph
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .dimmedNodeIds=${['c', 'd']}
-      .dimmedLinkIds=${['b->d', 'c->d']}
+      .dimmedEdgeIds=${['b->d', 'c->d']}
       style="--lr-graph-dimmed-opacity: 0.15; width: 100%; height: 400px;"
     ></lr-graph>
   `,
@@ -221,7 +221,7 @@ export const ClickPosition: Story = {
           style="height: 20rem"
           seed="42"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           @lr-node-click=${report}
         ></lr-graph>
         <output>Click a node to inspect its local position.</output>
@@ -237,9 +237,9 @@ export const TunedForces: Story = {
       height="320"
       style="height: 20rem"
       charge-strength="-900"
-      link-distance="200"
+      edge-distance="200"
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
     ></lr-graph>
   `,
 };
@@ -278,7 +278,7 @@ export const BoundedZoom: Story = {
             min-zoom="1"
             max-zoom="2"
             .nodes=${nodes}
-            .links=${links}
+            .edges=${links}
           ></lr-graph>
         </div>
       `
@@ -299,7 +299,7 @@ export const SeededLayout: Story = {
         style="height: 15rem"
         seed="42"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-graph>
       <lr-graph
         width="320"
@@ -307,7 +307,7 @@ export const SeededLayout: Story = {
         style="height: 15rem"
         seed="42"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-graph>
     </div>
   `,
@@ -341,7 +341,7 @@ export const DirectedRelationships: Story = {
           seed="42"
           style="height: 20rem"
           .nodes=${relationshipNodes}
-          .links=${relationshipLinks}
+          .edges=${relationshipLinks}
           @lr-link-click=${reportLink}
         ></lr-graph>
         <output aria-live="polite"
@@ -358,7 +358,7 @@ const typedNodes: LyraGraphNode[] = [
   { id: 'answer', label: 'Answer', type: 'output', communityId: 'response' },
 ];
 
-const typedLinks: LyraGraphLink[] = [
+const typedLinks: LyraGraphEdge[] = [
   {
     id: 'collect-rank',
     source: 'collect',
@@ -418,7 +418,7 @@ export const CanvasLayeredCommunities: Story = {
     ) => {
       const graph = event.currentTarget as LyraGraph;
       graph.selectedNodeIds = event.detail.nodeIds;
-      graph.selectedLinkIds = event.detail.linkIds;
+      graph.selectedEdgeIds = event.detail.linkIds;
     };
     const togglePalette = (event: Event) => {
       const graph = (event.currentTarget as HTMLElement)
@@ -428,11 +428,11 @@ export const CanvasLayeredCommunities: Story = {
       const alternate = graph.dataset['palette'] !== 'alternate';
       graph.dataset['palette'] = alternate ? 'alternate' : 'default';
       graph.style.setProperty(
-        '--lr-node-fill',
+        '--lr-graph-node-fill',
         alternate ? 'var(--lr-color-warning)' : 'var(--lr-color-brand)'
       );
       graph.style.setProperty(
-        '--lr-link-color',
+        '--lr-graph-edge-color',
         alternate ? 'var(--lr-color-success)' : 'var(--lr-color-border)'
       );
     };
@@ -452,20 +452,20 @@ export const CanvasLayeredCommunities: Story = {
           renderer="canvas"
           layout="layered"
           selection-mode="multiple"
-          show-edge-labels
+          with-edge-labels
           width="520"
           height="320"
           style="height:20rem"
           .nodes=${typedNodes}
-          .links=${typedLinks}
+          .edges=${typedLinks}
           .nodeTypes=${nodeTypes}
           .communities=${communities}
           .selectedNodeIds=${['rank']}
           @lr-selection-change=${applySelection}
           @lr-node-enter=${showHover}
           @lr-node-leave=${showHover}
-          @lr-link-enter=${showHover}
-          @lr-link-leave=${showHover}
+          @lr-edge-enter=${showHover}
+          @lr-edge-leave=${showHover}
         ></lr-graph>
       </div>
     `;
@@ -495,7 +495,7 @@ export const ContainerFit: Story = {
         seed="42"
         style="block-size: 100%"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-graph>
     </div>
   `,

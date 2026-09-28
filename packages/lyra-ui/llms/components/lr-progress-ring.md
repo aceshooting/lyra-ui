@@ -7,7 +7,8 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `with-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,11 +22,11 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
-`showValue: boolean = false` (attribute `show-value`),
+`withValue: boolean = false` (attribute `with-value`),
 `label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
-accessible-name spelling retained by this progress component, while several sibling components use
-`aria-label` directly). Also
+`accessibleLabel: string = ''` (property only; in markup, name the ring with the host
+`aria-label`). Deprecated aliases: `show-value` (use `with-value`; removed in 23.0.0) and
+`accessible-label` (use `aria-label`; removed in 23.0.0). Also
 `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
 `2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
@@ -39,13 +40,13 @@ visible default- or `label`-slot text when supplied, then the localized "Progres
 Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage **only when `show-value` is set** (and nothing at all while `indeterminate`); `label` —
+percentage **only when `with-value` is set** (and nothing at all while `indeterminate`); `label` —
 named alias for center content, matching `lr-progress-bar`.
 **Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
 to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
 to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
-`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` to keep the
-percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
+`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` (now spelled
+`with-value`) to keep the percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
 independence there, so the accessible value is unaffected.
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.

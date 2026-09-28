@@ -8,6 +8,7 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
@@ -60,6 +61,11 @@ export type ThreadListGrouping = 'date' | 'custom' | 'none';
 /** Payload shared by the `lr-group-toggle-request`/`lr-group-toggle` pair. */
 export interface ThreadGroupToggleDetail {
   groupId: string;
+  /** Whether the group is shown in the resulting (on `lr-group-toggle-request`, the proposed)
+   *  state. Always present on events this component dispatches. */
+  expanded?: boolean;
+  /** The inverse of `expanded`.
+   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
   collapsed: boolean;
 }
 
@@ -312,13 +318,14 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   correlated `lr-rename` request (data mode only).
  * @event lr-filter-change - `detail: { text, matchCount }` -- data-mode query plus owned results.
  * @event lr-query-change - `detail: { text }` -- slotted-mode query request; the host owns results.
- * @event lr-group-toggle-request - `detail: { groupId, collapsed }` -- cancelable proposal before a
+ * @event lr-group-toggle-request - `detail: { groupId, expanded, collapsed }` (`expanded` is the
+ *   canonical key, the deprecated `collapsed` its inverse) -- cancelable proposal before a
  *   custom/date group's collapse state changes. Calling `preventDefault()` skips the built-in
  *   `collapsedGroupIds` write below and suppresses the following `lr-group-toggle`, leaving the
  *   group's collapse state fully controlled -- the host must then reassign `collapsedGroupIds`
  *   itself, mirroring `<lr-chat-message>`'s and `<lr-code-block>`'s own
  *   `lr-toggle-request`/`lr-toggle` pairs.
- * @event lr-group-toggle - `detail: { groupId, collapsed }` -- a custom/date group's collapse-state
+ * @event lr-group-toggle - `detail: { groupId, expanded, collapsed }` -- a custom/date group's collapse-state
  *   change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
  *   `collapsedGroupIds`. A host that already listens here and reassigns `collapsedGroupIds` itself
  *   keeps working unchanged: this component's own write, when it happens, always precedes that
@@ -419,10 +426,14 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @cssprop [--lr-thread-list-row-action-hover-color=var(--lr-color-text)] - Row-action hover foreground.
  * @cssprop [--lr-thread-list-row-action-active-bg=color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Row-action pressed background.
  * @cssprop [--lr-thread-list-row-action-active-color=var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))] - Row-action pressed foreground.
- * @cssprop [--lr-thread-list-excerpt-highlight-background=var(--lr-color-warning-quiet)] -
+ * @cssprop [--lr-thread-list-excerpt-highlight-bg=var(--lr-color-warning-quiet)] -
  *   Background of `<mark>` descendants returned by `renderExcerpt`.
- * @cssprop [--lr-thread-list-excerpt-highlight-foreground=inherit] - Foreground of `<mark>`
+ * @cssprop [--lr-thread-list-excerpt-highlight-background=var(--lr-color-warning-quiet)] - Deprecated alias of
+ *   `--lr-thread-list-excerpt-highlight-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-thread-list-excerpt-highlight-color=inherit] - Foreground of `<mark>`
  *   descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-foreground=inherit] - Deprecated alias of
+ *   `--lr-thread-list-excerpt-highlight-color`; removal not before 23.0.0.
  * @cssprop [--lr-thread-list-excerpt-highlight-radius=var(--lr-radius-xs)] - Corner radius of
  *   `<mark>` descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
@@ -465,6 +476,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showArchived: 'withArchived',
+    renamable: ['withoutRename', invertAlias, invertAlias],
+  };
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
    *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
@@ -609,10 +624,28 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ attribute: false }) formatDate?: (date: Date) => string;
 
   /** Data mode: include `archived` threads (in their own trailing group under `grouping="date"`). */
+  @property({ type: Boolean, attribute: 'with-archived', reflect: true })
+  withArchived = false;
+
+  /**
+   * Deprecated alias of `with-archived` (`withArchived`), with identical behavior. Setting it logs a
+   * one-time development warning.
+   *
+   * @deprecated Use `with-archived`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-archived', reflect: true })
   showArchived = false;
 
-  /** Forwarded to each data-mode row's inline rename. */
+  /** Forwarded to each data-mode row: turns off its inline rename. */
+  @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
+
+  /**
+   * Deprecated inverted alias of `without-rename` (`withoutRename`): `renamable="false"` equals
+   * `without-rename`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-rename`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     reflect: true,
@@ -620,9 +653,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   })
   renamable = true;
 
-  /** Data mode only: forwarded to every row `<lr-conversation-item>`'s own `compact`, tightening
-   *  each row's padding and gaps in one place. Slotted mode is a deliberate no-op — this component
-   *  renders host-supplied items as-is, so the host sets `compact` on its own items there, the same
+  /** Data mode only: forwarded to every row `<lr-conversation-item>` as its dense `size="s"`,
+   *  tightening each row's padding and gaps in one place. Slotted mode is a deliberate no-op — this
+   *  component renders host-supplied items as-is, so the host sets `size` on its own items there, the same
    *  division of responsibility slotted mode already has for every other row property. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
@@ -713,7 +746,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       changed.has('groupBy') ||
       changed.has('groupOrder') ||
       changed.has('collapsedGroupIds') ||
-      changed.has('showArchived')
+      changed.has('withArchived')
     ) {
       this.focusTaskGeneration++;
     }
@@ -803,7 +836,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private get visibleThreads(): LyraChatThread[] {
     const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
     const withArchiveFilter = this.normalizedThreads.filter(
-      (thread) => this.showArchived || !thread.archived
+      (thread) => this.withArchived || !thread.archived
     );
     if (q === '') return withArchiveFilter;
     return withArchiveFilter.filter((t) =>
@@ -1056,14 +1089,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** The rendered `<lr-conversation-item>` for one thread's `conversationId` -- a data-mode
    *  thread's own `id`, or a slotted item's own `conversation-id` -- or `null` when it is not
-   *  currently rendered: filtered out by `showArchived`/search, windowed out of the virtualized
+   *  currently rendered: filtered out by `withArchived`/search, windowed out of the virtualized
    *  viewport, removed from `threads`, or never present. `conversationId` is not a second identity
    *  scheme -- it is the same stable id `<lr-conversation-item>` already exposes on its own public
    *  `conversation-id` attribute/property, which every row event (`lr-select`, `lr-thread-rename`,
    *  `lr-thread-pin`, ...) already keys off; this method documents an accessor for it instead of
    *  requiring a consumer to pierce the shadow root and walk rendered rows themselves the way this
    *  component's own internals do. Reads the DOM as it stands -- `await threadList.updateComplete`
-   *  before calling it after changing `threads`, `searchText`, `showArchived`, or scroll
+   *  before calling it after changing `threads`, `searchText`, `withArchived`, or scroll
    *  position. */
   itemElement(conversationId: string): LyraConversationItem | null {
     return (
@@ -1325,7 +1358,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  `lr-group-toggle` listener keeps working unchanged: this component's own write, when it
    *  happens, always precedes that listener in the same synchronous dispatch. */
   private toggleGroupCollapsed(groupId: string, collapsed: boolean): void {
-    const detail: ThreadGroupToggleDetail = { groupId, collapsed };
+    const detail: ThreadGroupToggleDetail = { groupId, expanded: !collapsed, collapsed };
     // The library's one request/commit helper rather than a hand-written `defaultPrevented`
     // branch. No write-tracking guard is passed, and the reason is the ordering a guard would
     // observe on THIS dispatch, not the one the JSDoc above describes: a guard watches
@@ -1412,8 +1445,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         excerpt=${thread.excerpt ?? ''}
         .timestamp=${thread.timestamp}
         ?active=${thread.id === this.activeConversationId}
-        ?compact=${this.compact}
-        .renamable=${this.renamable}
+        size=${this.compact ? 's' : 'm'}
+        .withoutRename=${this.withoutRename}
         @lr-select=${(e: Event) => {
           // conversation-item's own lr-select bubbles+composes with no detail (LyraElement.emit()'s
           // defaults) -- without stopping it here it would keep bubbling straight through this

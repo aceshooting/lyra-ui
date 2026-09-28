@@ -1,5 +1,6 @@
 import { property } from 'lit/decorators.js';
 import { LyraInput } from './input.class.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -48,6 +49,14 @@ export class LyraNativeTimeInput extends LyraInput {
   @property({ converter: timeBoundConverter }) override min?: string | number;
   /** Latest selectable native time. */
   @property({ converter: timeBoundConverter }) override max?: string | number;
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { noSpinButtons: 'withoutSpinButtons' };
+  /**
+   * Second spelling of `without-spin-buttons` on this element, with identical behavior: the two
+   * stay in step and the last write wins. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-spin-buttons`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'no-spin-buttons' }) override noSpinButtons = false;
 
   constructor() {
     super();

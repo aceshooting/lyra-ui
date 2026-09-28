@@ -3,6 +3,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 /** The close control's own native button, one shadow boundary deeper than `[part="close-button"]`
  *  since 16.0.0 composed it from `<lr-icon-button>`. Every painted surface lives here. */
@@ -44,9 +45,9 @@ afterEach(() => {
 
 it('honors inherited and direct public callout hooks without host defaults shadowing them', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-callout-background: rgb(1, 2, 3); --lr-callout-padding: 7px">
+    <div style="--lr-callout-bg: rgb(1, 2, 3); --lr-callout-padding: 7px">
       <lr-callout>Inherited</lr-callout>
-      <lr-callout style="--lr-callout-background: rgb(4, 5, 6); --lr-callout-padding: 9px">Direct</lr-callout>
+      <lr-callout style="--lr-callout-bg: rgb(4, 5, 6); --lr-callout-padding: 9px">Direct</lr-callout>
     </div>
   `);
   const [inherited, direct] = Array.from(wrapper.querySelectorAll('lr-callout')) as LyraCallout[];
@@ -777,7 +778,7 @@ it('repairs direct close state writes but preserves newer listener focus', async
   expect(el.ownerDocument.activeElement === explicit).to.equal(true);
 });
 
-it('forwards a host-level aria-label to the base region when accessible-label is unset', async () => {
+it('forwards a host-level aria-label to the base region when accessibleLabel is unset', async () => {
   const el = (await fixture(html`<lr-callout aria-label="Storage warning">Disk is nearly full</lr-callout>`)) as LyraCallout;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-label')).to.equal('Storage warning');
@@ -785,9 +786,9 @@ it('forwards a host-level aria-label to the base region when accessible-label is
   expect(base.hasAttribute('aria-live')).to.be.false;
 });
 
-it('lets a host-level aria-label take precedence over accessible-label on the status owner', async () => {
+it('lets a host-level aria-label take precedence over accessibleLabel on the status owner', async () => {
   const el = (await fixture(
-    html`<lr-callout accessible-label="Explicit label" aria-label="Host label">Message</lr-callout>`
+    html`<lr-callout .accessibleLabel=${'Explicit label'} aria-label="Host label">Message</lr-callout>`
   )) as LyraCallout;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-label')).to.equal('Host label');
@@ -795,9 +796,9 @@ it('lets a host-level aria-label take precedence over accessible-label on the st
   expect(base.hasAttribute('aria-live')).to.be.false;
 });
 
-it('lets an explicitly empty host aria-label suppress accessible-label semantics but preserves visible announcements', async () => {
+it('lets an explicitly empty host aria-label suppress accessibleLabel semantics but preserves visible announcements', async () => {
   const el = (await fixture(html`
-    <lr-callout aria-label="" accessible-label="Fallback label">Message</lr-callout>
+    <lr-callout aria-label="" .accessibleLabel=${'Fallback label'}>Message</lr-callout>
   `)) as LyraCallout;
   await settleLiveRegion(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -814,7 +815,7 @@ it('lets an explicitly empty host aria-label suppress accessible-label semantics
 
 it('uses a nonempty host label as announcement context without replacing visible status text', async () => {
   const el = (await fixture(html`
-    <lr-callout aria-label="Storage warning" accessible-label="Fallback label">
+    <lr-callout aria-label="Storage warning" .accessibleLabel=${'Fallback label'}>
       Initial message
     </lr-callout>
   `)) as LyraCallout;
@@ -1077,7 +1078,7 @@ it('gives close-button a rendered hover state', async () => {
   }
 });
 
-it('decouples the close-button hover fill from --lr-callout-background so a brand-variant panel is not the sole override hook', async () => {
+it('decouples the close-button hover fill from --lr-callout-bg so a brand-variant panel is not the sole override hook', async () => {
   const el = (await fixture(
     html`<lr-callout variant="brand" closable>Message</lr-callout>`,
   )) as LyraCallout;
@@ -1118,7 +1119,7 @@ describe('quiet-tier background in dark mode', () => {
 
   it('darkens the standalone fallback background, the arm an unset variant actually renders', async () => {
     // An unset variant matches none of the contextual variant rules, so --lr-color-fill-quiet is
-    // undefined on the host and the SECOND arm of --lr-callout-background is what paints the panel.
+    // undefined on the host and the SECOND arm of --lr-callout-bg is what paints the panel.
     // That fallback arm is the one place a light-mode literal could hide, so it gets its own case.
     const light = (await fixture(html`<lr-callout>Message</lr-callout>`)) as LyraCallout;
     const dark = (await fixture(html`<lr-callout data-lr-theme="dark">Message</lr-callout>`)) as LyraCallout;
@@ -1304,4 +1305,83 @@ it('composes the initial announcement through the localized context template, un
     'Disk is nearly full ← Storage warning',
   ]);
   el.remove();
+});
+
+describe('renamed callout members', () => {
+  const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
+    { tag: 'lr-callout', kind: 'attribute', name: 'accessible-label' },
+  ];
+
+  it('names the grouped panel through the host aria-label', async () => {
+    const el = (await fixture(html`<lr-callout aria-label="Storage">Message</lr-callout>`)) as LyraCallout;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Storage');
+    await expect(el).to.be.accessible();
+  });
+
+  it('keeps the deprecated accessible-label attribute naming the panel, warning once', async () => {
+    let el!: LyraCallout;
+    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      el = (await fixture(html`<lr-callout accessible-label="Storage">Message</lr-callout>`)) as LyraCallout;
+      await fixture(html`<lr-callout accessible-label="Other">Message</lr-callout>`);
+    });
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Storage');
+    expect(el.accessibleLabel).to.equal('Storage');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-callout:attribute:accessible-label']);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('lets the host aria-label win over the deprecated attribute, whose removal clears the name', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const el = (await fixture(
+        html`<lr-callout accessible-label="Alias" aria-label="Host">Message</lr-callout>`,
+      )) as LyraCallout;
+      const base = el.shadowRoot!.querySelector('[part="base"]')!;
+      expect(base.getAttribute('aria-label')).to.equal('Host');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(base.getAttribute('aria-label')).to.equal('Alias');
+      el.removeAttribute('accessible-label');
+      await el.updateComplete;
+      expect(base.hasAttribute('aria-label')).to.be.false;
+    });
+  });
+
+  it('paints the host from --lr-callout-bg, with --lr-callout-background as its deprecated fallback', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-callout style="--lr-callout-bg: rgb(1, 2, 3)">Canonical</lr-callout>
+        <lr-callout style="--lr-callout-background: rgb(1, 2, 3)">Alias</lr-callout>
+        <lr-callout style="--lr-callout-bg: rgb(1, 2, 3); --lr-callout-background: rgb(9, 9, 9)">Both</lr-callout>
+      </div>
+    `);
+    const fills = Array.from(wrapper.querySelectorAll('lr-callout')).map(
+      (callout) => getComputedStyle(callout).backgroundColor,
+    );
+    expect(fills).to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(1, 2, 3)']);
+  });
+
+  it('forwards the close control under close-button-control and its deprecated close-button__control alias', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-callout.canonical::part(close-button-control) { background-color: rgb(1, 2, 3); }
+          lr-callout.alias::part(close-button__control) { background-color: rgb(4, 5, 6); }
+        </style>
+        <lr-callout class="canonical" closable>Canonical</lr-callout>
+        <lr-callout class="alias" closable>Alias</lr-callout>
+      </div>
+    `);
+    const [canonical, alias] = Array.from(wrapper.querySelectorAll('lr-callout')) as LyraCallout[];
+    await Promise.all([canonical!.updateComplete, alias!.updateComplete]);
+    const control = (el: LyraCallout): HTMLElement =>
+      el.shadowRoot!.querySelector('[part="close-button"]')!.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="button"]',
+      )!;
+    expect(getComputedStyle(control(canonical!)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
 });

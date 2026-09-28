@@ -5,6 +5,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -98,7 +99,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @csspart base - The root `<svg>`.
  * @csspart track - The background track arc/line.
  * @csspart fill - The animated fill arc/line.
- * @csspart value - The value text. Rendered only while `showValue` is true.
+ * @csspart value - The value text. Omitted while `without-value` is set.
  * @csspart label - The label text. Rendered only while `label` is non-empty.
  * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear
  * gauges. The token default follows the effective variant -- `variant`, or the matching
@@ -128,6 +129,9 @@ export class LyraGauge extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showValue: ['withoutValue', invertAlias, invertAlias],
+  };
 
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'role'])];
@@ -163,18 +167,21 @@ export class LyraGauge extends LyraElement {
   /** Displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: 'value-text' }) valueText?: string;
-  /** Whether the decorative `part="value"` caption renders at all. The accessible value --
-   *  `aria-valuenow`/`aria-valuetext` and the host's computed accessible name -- comes from
-   *  `value`/`valueText` directly and stays correct either way, since the caption itself is
-   *  always `aria-hidden`. Mirrors `<lr-progress-bar>`'s and `<lr-progress-ring>`'s own
-   *  `showValue` name and meaning; the default differs (`true` here, `false` there) because
-   *  unlike a progress indicator, a gauge's whole purpose is showing the reading it announces, so
-   *  hiding the caption is the opt-out rather than the opt-in -- leaving it unset renders exactly
-   *  as before this property existed. Uses the shared parse-only `trueDefaultBooleanConverter`
-   *  rather than Lit's default presence-based `type: Boolean` handling, so a plain-HTML consumer
-   *  with no way to write a `.showValue` property binding can still turn this off with
-   *  `show-value="false"`. Deliberately not reflected: nothing styles or queries
-   *  `[show-value]`. */
+  /** Omits the decorative `part="value"` caption. The accessible value -- `aria-valuenow`/
+   *  `aria-valuetext` and the host's computed accessible name -- comes from `value`/`valueText`
+   *  directly and stays correct either way, since the caption itself is always `aria-hidden`.
+   *  Unlike a progress indicator, a gauge's whole purpose is showing the reading it announces, so
+   *  hiding the caption is the opt-out rather than the opt-in. Deliberately not reflected: nothing
+   *  styles or queries it. */
+  @property({ type: Boolean, attribute: 'without-value' }) withoutValue = false;
+  /**
+   * Whether the decorative `part="value"` caption renders at all. Deprecated inverted alias of
+   * `without-value`: `show-value="false"` equals `without-value`. Uses the shared parse-only
+   * `trueDefaultBooleanConverter`, so `show-value="false"` turns the caption off from plain HTML.
+   * Deliberately not reflected.
+   *
+   * @deprecated Use `without-value`; removal not before 23.0.0.
+   */
   @property({ attribute: 'show-value', converter: trueDefaultBooleanConverter })
   showValue = true;
   /** Semantic palette for the fill, read from the library's shared semantic-tone vocabulary
@@ -356,7 +363,7 @@ export class LyraGauge extends LyraElement {
         stroke-dasharray=${RADIAL_ARC_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></path>
-      ${this.showValue
+      ${!this.withoutValue
         ? svg`<text
             part="value"
             x="50"
@@ -415,7 +422,7 @@ export class LyraGauge extends LyraElement {
             aria-hidden="true"
           >${label}</text>`
         : nothing}
-      ${this.showValue
+      ${!this.withoutValue
         ? svg`<text
             part="value"
             x=${endX}
@@ -449,7 +456,7 @@ export class LyraGauge extends LyraElement {
         stroke-dashoffset=${dashoffset}
         transform="rotate(-90 50 50)"
       ></circle>
-      ${this.showValue
+      ${!this.withoutValue
         ? svg`<text
             part="value"
             x="50"

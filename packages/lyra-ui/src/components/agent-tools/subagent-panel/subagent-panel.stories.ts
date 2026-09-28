@@ -74,11 +74,11 @@ const densityRuns: SubagentRun[] = [
 ];
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-subagent-panel .runs=${densityRuns}></lr-subagent-panel>
-      <lr-subagent-panel compact .runs=${densityRuns}></lr-subagent-panel>
+      <lr-subagent-panel size="s" .runs=${densityRuns}></lr-subagent-panel>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-subagent-panel frame="plain" .runs=${densityRuns}></lr-subagent-panel>
       </div>
@@ -88,7 +88,7 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter run-trigger padding, gap, and task/model typography with each row\'s own border intact), and `frame="plain"` nested inside a container that already draws its own border -- without `plain` the two frames would double up.',
+          'Top to bottom: the default card, `size="s"` (tighter run-trigger padding, gap, and task/model typography with each row\'s own border intact), and `frame="plain"` nested inside a container that already draws its own border -- without `plain` the two frames would double up.',
       },
     },
   },

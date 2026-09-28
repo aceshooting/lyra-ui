@@ -822,3 +822,60 @@ it('invalidates tool-result correlation when a connected frame is adopted or rec
   el.postToolResult('current', { frameGeneration: afterReconnect, result: 'current' });
   expect(posted).to.have.lengthOf(1);
 });
+
+describe('CSS-length height and max-height', () => {
+  const frameHeight = (el: LyraMcpApp): string => el.shadowRoot!.querySelector('iframe')!.style.height;
+  const rootPx = (): number => Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+  it('keeps a numeric height attribute a number, as before', async () => {
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+      .resource=${{ uri: 'ui://numeric', html: '<p>Numeric</p>' }}
+      height="400"
+      max-height="600"
+    ></lr-mcp-app>`);
+    expect(el.height).to.equal(400);
+    expect(el.maxHeight).to.equal(600);
+    expect(frameHeight(el)).to.equal('400px');
+  });
+
+  it('resolves rem and px lengths for height and clamps them by a CSS-length max-height', async () => {
+    const root = rootPx();
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+      .resource=${{ uri: 'ui://lengths', html: '<p>Lengths</p>' }}
+      height="20rem"
+      max-height="30rem"
+    ></lr-mcp-app>`);
+    expect(el.height).to.equal('20rem');
+    expect(frameHeight(el)).to.equal(`${20 * root}px`);
+
+    el.height = '5000px';
+    await el.updateComplete;
+    expect(frameHeight(el), 'max-height caps a CSS-length height').to.equal(`${30 * root}px`);
+  });
+
+  it('clamps frame resize requests to a CSS-length max-height', async () => {
+    const root = rootPx();
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+      .resource=${{ uri: 'ui://resize-length', html: '<p>Resize</p>' }}
+      max-height="25rem"
+    ></lr-mcp-app>`);
+    const iframe = el.shadowRoot!.querySelector('iframe')!;
+    const resize = oneEvent(el, 'lr-mcp-resize');
+    dispatchFrameMessage(
+      iframe.contentWindow,
+      { channel: 'lyra-mcp-app', version: 1, type: 'resize', height: 50_000 },
+      'null',
+    );
+    expect((await resize).detail.height).to.equal(25 * root);
+    await el.updateComplete;
+    expect(iframe.style.height).to.equal(`${25 * root}px`);
+  });
+
+  it('falls back to the defaults for an unresolvable length', async () => {
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+      .resource=${{ uri: 'ui://fallback', html: '<p>Fallback</p>' }}
+      height="calc(1px + 2px)"
+    ></lr-mcp-app>`);
+    expect(frameHeight(el)).to.equal('320px');
+  });
+});

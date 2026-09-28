@@ -37,7 +37,7 @@ describe('table live derived rows and responsive bands', () => {
       const displayed = () => element.shadowRoot!.querySelector<HTMLElement>('tbody tr[data-row-key]')!;
       expect(displayed().textContent).to.contain('ä');
       const activated: Row[] = [];
-      element.addEventListener('lr-row-click', (event) => activated.push((event as CustomEvent<{ row: Row }>).detail.row));
+      element.addEventListener('lr-row-activate', (event) => activated.push((event as CustomEvent<{ row: Row }>).detail.row));
       displayed().click();
       expect(activated[0] === rows[0]).to.equal(true);
       displayed().focus();
@@ -280,7 +280,7 @@ const priorityInertLabelColumns: TableColumn<Row>[] = [
   { key: 'id', label: 'Id', priority: 'low', cell: (row) => row.id },
 ];
 
-describe('inert revealColumnsLabel/hideColumnsLabel dev warning', () => {
+describe('inert revealColumnsLabel/columnsHideLabel dev warning', () => {
   let originalWarn: typeof console.warn;
   let originalIssuedWarnings: Set<string> | undefined;
   let warnings: unknown[][];
@@ -303,7 +303,7 @@ describe('inert revealColumnsLabel/hideColumnsLabel dev warning', () => {
     const element = await fixture<LyraTable<Row>>(html`<lr-table
       caption="Names"
       reveal-columns-label="Show columns"
-      hide-columns-label="Hide columns"
+      columns-hide-label="Hide columns"
       .rows=${rows}
       .columns=${plainInertLabelColumns}
       .rowKey=${rowKey}
@@ -323,7 +323,7 @@ describe('inert revealColumnsLabel/hideColumnsLabel dev warning', () => {
     const element = await fixture<LyraTable<Row>>(html`<lr-table
       caption="Names"
       reveal-columns-label="Show columns"
-      hide-columns-label="Hide columns"
+      columns-hide-label="Hide columns"
       .rows=${rows}
       .columns=${priorityInertLabelColumns}
       .rowKey=${rowKey}

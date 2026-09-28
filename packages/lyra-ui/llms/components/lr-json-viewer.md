@@ -7,7 +7,8 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `collapsedDepth` / `collapsed-depth` since `21.1.0`; use property `expand-depth`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecated property** `search` / `search` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,30 +30,34 @@ being patched in place. A container value that self-references (directly or thro
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
-Removing `search` clears matches while retaining null property readback. Before any match is active,
+Removing `query` clears matches while retaining null property readback. Before any match is active,
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
-- `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
-  (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
+- `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
+  (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
+  means nothing auto-collapses. Deprecated alias: `collapsed-depth` (`collapsedDepth`; use
+  `expand-depth`, same value and meaning; removed in 23.0.0)
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `search: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+- `query: string = ''` — case-insensitive substring match against keys/values; matches are
+  highlighted and their ancestors auto-expanded. Deprecated alias: `search` (use `query`; removed in
+  23.0.0)
 
-**Methods:** `runSearch(query)` sets the declarative `search` property and awaits the recompute,
+**Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
 resolving the match count — named distinctly from `search` because a class member can't share a name
-with a reactive property. `searchNext()`/`searchPrevious()` advance/step back a match cursor
+with a reactive property (the deprecated `search` alias). `searchNext()`/`searchPrevious()`
+advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
 mark it as the active `aria-current` result, announce its position, and scroll it into view;
-they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
+they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
 **Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
@@ -65,7 +70,7 @@ announce localized `copyFailed`; the raw platform error is never rendered. Copyi
 renders, instead of throwing. `lr-search-change`
 (`detail: { query, matchCount, matchCountExact, activeIndex }`) —
 fired whenever the search query, match count, or active-match cursor changes, from
-`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `search`/`data`
+`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `query`/`data`
 property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
 the rendered count uses an “at least” prefix in the same case.
 
@@ -74,11 +79,11 @@ the rendered count uses an “at least” prefix in the same case.
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
 tree; a host `aria-label` is forwarded here), `row` (every structural opening/value and
-closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `search`,
+closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `query`,
 `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
 `string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
-while it matches `search`, and `data-active` while it is the current cursor position), `bracket` (a
+while it matches `query`, and `data-active` while it is the current cursor position), `bracket` (a
 `{`, `}`, `[`, or `]` delimiter), `toggle` (a container node's expand/collapse button; hidden but
 present for row alignment on leaf/empty nodes),
 `copy-button` (a copy-to-clipboard button — the top-level one in `toolbar` (aria-label "Copy JSON to
@@ -101,7 +106,7 @@ motion preferences and best-effort clipboard writes use the viewer's current own
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
-box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
+box-shadow, of a key/value that currently matches `query`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
 without repainting every other warning-toned surface that reads the same shared token;
 `--lr-json-viewer-row-hover-bg` (default `var(--lr-color-brand-quiet)`) — structural-row hover
@@ -127,7 +132,7 @@ html`<lr-json-viewer
   .data=${apiResponse}
   copyable
   max-height="24rem"
-  search=${query}
+  query=${query}
 ></lr-json-viewer>`;
 ```
 
@@ -148,7 +153,7 @@ html`<lr-json-viewer
 - Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
-  `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
+  `expandDepth` and declarative search-driven auto-expansion for that path. Imperative
   `searchNext()`/`searchPrevious()` navigation may reopen the ancestors of the selected result so
   the active match is never hidden; otherwise the override persists until `data` is reassigned with
   a different shape.

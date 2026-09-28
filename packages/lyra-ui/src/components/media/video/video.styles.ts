@@ -108,11 +108,14 @@ export const styles = css`
       var(--lr-color-brand)
     );
     background: var(
-      --lr-video-poster-play-button-hover-background,
-      color-mix(
-        in oklab,
-        var(--poster-play-button-background, var(--lr-color-surface-overlay)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      --lr-video-poster-play-button-hover-bg,
+      var(
+        --lr-video-poster-play-button-hover-background,
+        color-mix(
+          in oklab,
+          var(--poster-play-button-background, var(--lr-color-surface-overlay)),
+          var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+        )
       )
     );
   }

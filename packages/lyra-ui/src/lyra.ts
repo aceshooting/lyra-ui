@@ -622,6 +622,7 @@ export type {
 export { LyraGraph } from './components/retrieval/graph/graph.class.js';
 export type {
   LyraGraphCommunity,
+  LyraGraphEdge,
   LyraGraphFit,
   LyraGraphLayout,
   LyraGraphLink,
@@ -751,6 +752,7 @@ export type {
   AnnouncerOptions,
   AnnouncerTimerHost,
 } from './internal/announcer.js';
+export type { LyraAliasMapping, LyraDeprecatedAliases } from './internal/deprecated-aliases.js';
 export type { LyraEmitOptions } from './internal/lyra-element.js';
 export type { LyraEventMap } from './internal/lyra-element.js';
 export type { LyraMatchTarget } from './internal/match-constraint.js';
@@ -787,7 +789,9 @@ export { loadMarkdownDeps as preloadMarkdown } from './components/conversation/m
 export type { MarkdownHtmlMode } from './components/conversation/markdown/markdown-shared.js';
 export { LyraChatMessage } from './components/conversation/chat-message/chat-message.class.js';
 export type {
+  ChatMessageActionsPlacement,
   ChatMessageActionsPosition,
+  ChatMessageAttachmentsPlacement,
   ChatMessageRole,
   ChatMessageStatus,
   ChatMessageToggleDetail,
@@ -962,7 +966,7 @@ export type {
   LyraGenerationMetricsEventMap,
 } from './components/conversation/generation-metrics/generation-metrics.class.js';
 export { LyraCodeBlock } from './components/conversation/code-block/code-block.class.js';
-export type { LyraCodeBlockCopyAppearance } from './components/conversation/code-block/code-block-shared.js';
+export type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './components/conversation/code-block/code-block-shared.js';
 export { LyraToolApprovalDialog } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
 export type {
   ToolApprovalDialogWrap,

@@ -7,7 +7,8 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `actionsPosition` / `actions-position` since `21.1.0`; use property `actions-placement`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecated property** `attachmentsPosition` / `attachments-position` since `21.1.0`; use property `attachments-placement`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 14 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -50,19 +51,25 @@ after the write fulfills.
 - `collapsed: boolean = false` (reflected) — whether the message body is hidden; effective whenever
   set, independent of `collapsible` (which only controls whether the toggle button itself is
   rendered) — mirrors `lr-widget`'s identical `collapsible`/`collapsed` pair
-- `attachmentsPosition: 'before'|'after' = 'after'` (attribute `attachments-position`) — places the
-  `attachments` slot before or after the message body; both the visual and reading order follow it
-- `actionsPosition: ChatMessageActionsPosition = 'inside'` (`'inside' | 'outside'`, attribute
-  `actions-position`, reflected) — `'outside'` renders the `actions` slot's content as a sibling
+- `attachmentsPlacement: ChatMessageAttachmentsPlacement = 'after'` (`'before' | 'after'`,
+  attribute `attachments-placement`) — places the `attachments` slot before or after the message
+  body; both the visual and reading order follow it. Deprecated alias: `attachments-position`/
+  `attachmentsPosition` (use `attachments-placement`; removed in 23.0.0)
+- `actionsPlacement: ChatMessageActionsPlacement = 'inside'` (`'inside' | 'outside'`, attribute
+  `actions-placement`, reflected) — `'outside'` renders the `actions` slot's content as a sibling
   immediately after `[part="bubble"]` instead of nested inside `[part="footer"]`'s own
-  padding/background box, for an action row that must sit visually outside the bubble's chrome
+  padding/background box, for an action row that must sit visually outside the bubble's chrome.
+  Deprecated alias: `actions-position`/`actionsPosition` (use `actions-placement`; removed in
+  23.0.0). `ChatMessageActionsPosition` remains exported as the same union.
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
   included in `lr-message-retry` detail when the built-in retry control is activated
 
 **Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
 only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
-`{ collapsed: boolean }`; preventing it vetoes the built-in collapse/expand transaction.
-`lr-toggle` carries that same detail after the accepted state is committed.
+`{ expanded: boolean, collapsed: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the
+proposed state; the deprecated `collapsed` key is its inverse and is removed in 23.0.0; preventing
+it vetoes the built-in collapse/expand transaction. `lr-toggle` carries that same detail after the
+accepted state is committed.
 
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
 (small status/metric chips — e.g. token count, latency, model name — entirely app-supplied), `actions`
@@ -78,7 +85,7 @@ entirely; unset, `status="failed"` renders exactly as before)
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
 `failure` slot is empty), `actions` (rendered inside the footer by default; a sibling immediately
-after `bubble` when `actionsPosition="outside"`), `failure` (`display: contents` wrapper for the
+after `bubble` when `actions-placement="outside"`), `failure` (`display: contents` wrapper for the
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max

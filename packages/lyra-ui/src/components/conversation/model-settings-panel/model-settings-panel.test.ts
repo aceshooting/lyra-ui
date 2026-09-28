@@ -62,7 +62,7 @@ it('defaults temperature to 1 (the midpoint of the default [0, 2] range) and ran
 
 it('suppresses the internal slider’s own value readout in favor of the panel’s temperature-value part', async () => {
   const el = (await fixture(html`<lr-model-settings-panel></lr-model-settings-panel>`)) as LyraModelSettingsPanel;
-  expect(slider(el).showValue).to.be.false;
+  expect(slider(el).withValue).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
 });
 

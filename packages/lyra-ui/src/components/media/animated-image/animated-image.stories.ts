@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Displays an animated GIF/APNG/WebP with a play/pause control. Defaults to a frozen first frame, both at rest and automatically under `prefers-reduced-motion: reduce` -- set `respect-reduced-motion="false"` to opt a specific instance back into ignoring that OS-level preference. The control relays one native `FocusEvent` for `focus`/`blur`.',
+          'Displays an animated GIF/APNG/WebP with a play/pause control. Defaults to a frozen first frame, both at rest and automatically under `prefers-reduced-motion: reduce` -- set `ignore-reduced-motion` to opt a specific instance back into ignoring that OS-level preference. The control relays one native `FocusEvent` for `focus`/`blur`.',
       },
     },
   },
@@ -54,20 +54,20 @@ export const UpstreamSizingHooks: Story = {
   `,
 };
 
-export const RespectReducedMotionOverride: Story = {
-  name: 'respect-reduced-motion="false"',
+export const IgnoreReducedMotionOverride: Story = {
+  name: 'ignore-reduced-motion',
   parameters: {
     docs: {
       description: {
         story:
-          'By default, an OS-level `prefers-reduced-motion: reduce` preference keeps this component frozen and disables the play button even if `play` is set. Setting `respect-reduced-motion="false"` is a deliberate, page-author-level override that lets `play` take effect regardless -- it never appears as an end-user-facing control.',
+          'By default, an OS-level `prefers-reduced-motion: reduce` preference keeps this component frozen and disables the play button even if `play` is set. Setting `ignore-reduced-motion` is a deliberate, page-author-level override that lets `play` take effect regardless -- it never appears as an end-user-facing control.',
       },
     },
   },
   render: () => html`
     <lr-animated-image
       play
-      respect-reduced-motion="false"
+      ignore-reduced-motion
       src=${SAMPLE_GIF}
       alt="A Newton's cradle swinging"
       style="max-inline-size: 20rem;"

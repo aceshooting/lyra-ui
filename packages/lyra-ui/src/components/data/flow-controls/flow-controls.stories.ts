@@ -28,7 +28,7 @@ export const Default: Story = {
 export const HorizontalHideLock: Story = {
   render: () => html`
     <lr-flow-canvas style="width:100%;height:20rem" .nodes=${nodes}>
-      <lr-flow-controls slot="bottom-start" orientation="horizontal" hide-lock></lr-flow-controls>
+      <lr-flow-controls slot="bottom-start" orientation="horizontal" without-lock></lr-flow-controls>
     </lr-flow-canvas>
   `,
 };
@@ -82,7 +82,7 @@ export const NarrowAllocation: Story = {
 export const LockActiveColor: Story = {
   name: 'Pressed lock color',
   render: () => html`
-    <lr-flow-canvas locked style="width:100%;height:20rem" .nodes=${nodes}>
+    <lr-flow-canvas readonly style="width:100%;height:20rem" .nodes=${nodes}>
       <lr-flow-controls
         slot="bottom-start"
         style="--lr-flow-controls-lock-active-color: var(--lr-color-success)"

@@ -6,7 +6,7 @@ export const styles = css`
     position: relative;
     min-inline-size: 0;
     /* The overlay's own ladder -- identical scale to lr-file-input's private dropzone ladder, so a
-       neighboring compact lr-file-input and lr-drop-zone match at the same tier. These :host values
+       neighboring lr-file-input and lr-drop-zone match at the same tier. These :host values
        ARE the m/medium tier, so an unset or default-size drop-zone renders unchanged. */
     --_lr-drop-zone-overlay-font-size: var(--lr-font-size-md-sm);
     --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-xl);

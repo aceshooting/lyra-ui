@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -72,7 +73,7 @@ export interface LyraToolApprovalDialogEventMap {
  * buttons (e.g. a "remember this choice for this tool" checkbox) — its
  * content renders to the start of the action row, before Deny/Edit/Approve.
  *
- * Editing: while `editable`, an Edit button swaps the read-only
+ * Editing: unless `readonly` is set, an Edit button swaps the read-only
  * `<lr-json-viewer>` for a plain `<textarea>` pre-filled with
  * `JSON.stringify(args, null, 2)`. Every keystroke is re-validated with
  * `JSON.parse` — the Approve button is `disabled` for as long as the current
@@ -94,7 +95,7 @@ export interface LyraToolApprovalDialogEventMap {
  * every time the dialog transitions from closed to open or its open proposal (`proposalKey`,
  * `toolName`, or `args`) changes, so a reused instance never leaks one proposal's half-finished
  * edit into the next.
- * `editable` flipping to `false` mid-edit does the same (see `willUpdate()`)
+ * `readonly` turning on mid-edit does the same (see `willUpdate()`)
  * and, if the textarea it unmounts still held focus, `updated()` refocuses
  * Deny so the focus trap keeps engaging instead of silently letting focus
  * fall through to the document.
@@ -116,16 +117,16 @@ export interface LyraToolApprovalDialogEventMap {
  * `<lr-confirm-bar>`), each re-exporting `lr-button`'s own `base`/`label`/`start`/
  * `end`/`spinner` parts under `{deny,approve}-button-{base,label,start,end,spinner}`. An
  * `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while its
- * own async work (e.g. a network call) is in flight: `pending` is set to `'approve'`/`'deny'`,
+ * own async work (e.g. a network call) is in flight: `pendingAction` is set to `'approve'`/`'deny'`,
  * showing `loading` on that button and `disabled` on the other (and, for Approve, alongside the
  * existing invalid-JSON `disabled` gate), until the host finalizes by calling
- * `close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. A listener that
+ * `close('approve'|'deny')` or bounces back by clearing `.pendingAction` to `null`. A listener that
  * instead resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
- * `.pending` directly before returning from the `preventDefault()`ed handler) wins outright:
- * `onApprove`/`onDeny` only fall back to their own `pending` bookkeeping when the listener left both
- * `pending` and `open` untouched. While `pending` is
+ * `.pendingAction` directly before returning from the `preventDefault()`ed handler) wins outright:
+ * `onApprove`/`onDeny` only fall back to their own `pendingAction` bookkeeping when the listener left both
+ * `pendingAction` and `open` untouched. While `pendingAction` is
  * set, Escape and an enabled backdrop dismissal are suppressed -- a decision in flight should not
- * be abandonable out from under the host mid-request -- and `pending` itself resets to `null` every
+ * be abandonable out from under the host mid-request -- and `pendingAction` itself resets to `null` every
  * time the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen
  * contract.
  *
@@ -135,10 +136,10 @@ export interface LyraToolApprovalDialogEventMap {
  * @event lr-approve - The call was approved. `detail: { args }` — the
  * current, already-parsed arguments object: the original `args` prop, or (if
  * an edit was in progress) the user's edited-and-validated version. Cancelable: a listener
- * calling `preventDefault()` sets `pending` to `'approve'` instead of closing. Otherwise always
+ * calling `preventDefault()` sets `pendingAction` to `'approve'` instead of closing. Otherwise always
  * followed by `lr-close` with reason `'approve'`.
- * @event lr-deny - The call was denied (no detail). Cancelable, same `pending` mechanism as
- * `lr-approve` (`pending` is set to `'deny'`). Otherwise always followed by `lr-close` with
+ * @event lr-deny - The call was denied (no detail). Cancelable, same `pendingAction` mechanism as
+ * `lr-approve` (`pendingAction` is set to `'deny'`). Otherwise always followed by `lr-close` with
  * reason `'deny'`.
  * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
  * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
@@ -165,8 +166,8 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
  * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
- * part, present only while `pending` is `'deny'`.
- * @csspart edit-button - The built-in Edit/Cancel toggle button (only rendered while `editable`).
+ * part, present only while `pendingAction` is `'deny'`.
+ * @csspart edit-button - The built-in Edit/Cancel toggle button (not rendered while `readonly`).
  * @csspart approve-button - The built-in Approve `<lr-button>` — `disabled` while an in-progress edit is invalid JSON (or while Deny is pending).
  * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
  * `base` and `button` wrapper aliases.
@@ -174,7 +175,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart approve-button-start - Forwarded from the internal Approve `<lr-button>`'s own `start` part.
  * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
  * @csspart approve-button-spinner - Forwarded from the internal Approve `<lr-button>`'s own
- * `spinner` part, present only while `pending` is `'approve'`.
+ * `spinner` part, present only while `pendingAction` is `'approve'`.
  * @cssprop [--lr-tool-approval-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  * @cssprop [--lr-tool-approval-dialog-invalid-border-color=var(--lr-color-danger)] - Border color of an invalid raw-JSON editor.
@@ -200,16 +201,23 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   static override styles = [LyraElement.styles, styles];
 
-  // `open`/`pending` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    editable: ['readonly', invertAlias, invertAlias],
+    pending: 'pendingAction',
+  };
+
+  // `open`/`pendingAction` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
   // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
   // `dispatchWriteGuard` below. Comparing before/after *values* cannot make that distinction:
-  // both guards only reach their check once `pending` is already `null`, so a listener that writes
-  // `pending = null` right back (bouncing out to an out-of-band resolution) is value-identical to a
+  // both guards only reach their check once `pendingAction` is already `null`, so a listener that
+  // writes `pendingAction = null` right back (bouncing out to an out-of-band resolution) is value-identical to a
   // listener that touched nothing at all.
   private _open = false;
+  private _pendingAction: ToolApprovalDialogPending = null;
+  /** Backs the deprecated `pending` alias, kept in step with `_pendingAction` by `deprecatedAliases`. */
   private _pending: ToolApprovalDialogPending = null;
 
-  /** Marked on every write to `open`/`pending`, from any source. `onApprove`/`onDeny` open it
+  /** Marked on every write to `open`/`pendingAction`, from any source. `onApprove`/`onDeny` open it
    *  immediately before dispatching `lr-approve`/`lr-deny` and read it back afterward: since the
    *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
    *  marked it in between. */
@@ -244,7 +252,12 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** The proposed call's arguments — any JSON-serializable value, rendered via `<lr-json-viewer>` (or, while editing, stringified into the textarea). */
   @property({ attribute: false }) args: unknown = {};
 
-  /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval. */
+  /** Withholds the "Edit" affordance: `args` is always shown read-only and can never be changed
+   *  before approval. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+
+  /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval.
+   *  @deprecated Use `readonly`; removal not before 23.0.0. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
 
   /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
@@ -254,6 +267,23 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
    *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
    *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). */
+  @property({ attribute: 'pending-action', reflect: true })
+  get pendingAction(): ToolApprovalDialogPending { return this._pendingAction; }
+  set pendingAction(value: ToolApprovalDialogPending) {
+    const previous = this._pendingAction;
+    this._pendingAction = value;
+    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.requestUpdate('pendingAction', previous);
+  }
+
+  /** Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called
+   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
+   *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
+   *  to `null` every time the dialog transitions from closed to open, mirroring
+   *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
+   *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
+   *  enabled backdrop dismissal are suppressed (see `activateOverlay()`).
+   *  @deprecated Use `pending-action`; removal not before 23.0.0. */
   @property({ reflect: true })
   get pending(): ToolApprovalDialogPending { return this._pending; }
   set pending(value: ToolApprovalDialogPending) {
@@ -288,7 +318,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.editing = false;
     this.draftText = '';
     this.draftError = '';
-    this.pending = null;
+    this.pendingAction = null;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -321,11 +351,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     if (this.hasUpdated && proposalChanged && !(changed.has('open') && this.open)) {
       this.resetProposalState();
     }
-    // A consumer flipping editable off mid-edit (e.g. a policy change
+    // A consumer turning readonly on mid-edit (e.g. a policy change
     // pushed while this dialog happens to be open) must not leave an
     // unreachable edit UI on screen with no Edit/Cancel button left to
     // dismiss it.
-    if (changed.has('editable') && !this.editable && this.editing) {
+    if (changed.has('readonly') && this.readonly && this.editing) {
       this.editing = false;
       this.draftText = '';
       this.draftError = '';
@@ -350,7 +380,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
       } else if (this.open && !activeElementIn(this.shadowRoot)) {
         // Reached when editing was turned off some way other than clicking
-        // Cancel (e.g. `editable` flipping to false while the textarea held
+        // Cancel (e.g. `readonly` turning on while the textarea held
         // focus, in willUpdate above) -- the textarea that held focus was
         // just unmounted without anything else claiming it, which would
         // otherwise drop focus to <body> and silently stop the Tab trap
@@ -398,11 +428,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => {
-        if (this.pending != null) return;
+        if (this.pendingAction != null) return;
         this.close('escape');
       },
       onBackdrop: () => {
-        if (this.pending != null || !this.lightDismiss) return;
+        if (this.pendingAction != null || !this.lightDismiss) return;
         this.close('backdrop');
       },
       preferredInitialFocus: () =>
@@ -455,7 +485,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   }
 
   private toggleEdit = (): void => {
-    if (this.pending != null) return;
+    if (this.pendingAction != null) return;
     if (this.editing) {
       this.editing = false;
       this.draftText = '';
@@ -468,7 +498,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   private onDraftInput = (e: Event): void => {
-    if (this.pending != null) {
+    if (this.pendingAction != null) {
       e.stopPropagation();
       return;
     }
@@ -489,7 +519,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private onEditorBlur = (): void => { this.emit('blur'); };
 
   private onApprove = (): void => {
-    if (this.pending != null) return;
+    if (this.pendingAction != null) return;
     let currentArgs: unknown = this.args;
     if (this.editing) {
       // The Approve button is disabled whenever draftError is non-empty, so
@@ -501,14 +531,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         return;
       }
     }
-    // The guard above proves `pending` is null right up to this point -- but `emit()` below
-    // dispatches synchronously, so a listener can still write `pending` or `open` from inside it
+    // The guard above proves `pendingAction` is null right up to this point -- but `emit()` below
+    // dispatches synchronously, so a listener can still write `pendingAction` or `open` from inside it
     // (e.g. it calls preventDefault() and resolves the decision itself out of band by calling
-    // close('approve') directly, or bounces `pending` back to null immediately). A before/after
+    // close('approve') directly, or bounces `pendingAction` back to null immediately). A before/after
     // *value* comparison can't detect that last case -- both are already null/true respectively, so
-    // a listener writing `pending = null` reads identically to a listener that touched nothing.
+    // a listener writing `pendingAction = null` reads identically to a listener that touched nothing.
     // `dispatchWriteGuard` tracks the write itself, not its value: opened here, then marked by
-    // the `open`/`pending` setters if a listener assigns either one during the synchronous `emit()`
+    // the `open`/`pendingAction` setters if a listener assigns either one during the synchronous `emit()`
     // below. Only when it stays untouched did the listener leave both alone, and the built-in
     // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
     // listener just did.
@@ -516,7 +546,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     const event = this.emit('lr-approve', { args: currentArgs }, { cancelable: true });
     if (event.defaultPrevented) {
       if (!this.dispatchWriteGuard.touched) {
-        this.pending = 'approve';
+        this.pendingAction = 'approve';
       }
       return;
     }
@@ -524,12 +554,12 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   private onDeny = (): void => {
-    if (this.pending != null) return;
+    if (this.pendingAction != null) return;
     this.dispatchWriteGuard.open();
     const event = this.emit('lr-deny', null, { cancelable: true });
     if (event.defaultPrevented) {
       if (!this.dispatchWriteGuard.touched) {
-        this.pending = 'deny';
+        this.pendingAction = 'deny';
       }
       return;
     }
@@ -583,7 +613,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}
-                  ?readonly=${this.pending != null}
+                  ?readonly=${this.pendingAction != null}
                   .value=${this.draftText}
                   @input=${this.onDraftInput}
                   @focus=${this.onEditorFocus}
@@ -600,16 +630,16 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             variant="neutral"
             appearance="outlined"
             type="button"
-            ?loading=${this.pending === 'deny'}
-            ?disabled=${this.pending === 'approve'}
+            ?loading=${this.pendingAction === 'deny'}
+            ?disabled=${this.pendingAction === 'approve'}
             exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
             @click=${this.onDeny}
           >${this.localize('deny')}</lr-button>
-          ${this.editable
+          ${!this.readonly
             ? html`<button
                 part="edit-button"
                 type="button"
-                ?disabled=${this.pending != null}
+                ?disabled=${this.pendingAction != null}
                 @click=${this.toggleEdit}
               >
                 ${this.editing ? this.localize('cancel') : this.localize('edit')}
@@ -619,8 +649,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             part="approve-button"
             variant="brand"
             type="button"
-            ?loading=${this.pending === 'approve'}
-            ?disabled=${hasError || this.pending === 'deny'}
+            ?loading=${this.pendingAction === 'approve'}
+            ?disabled=${hasError || this.pendingAction === 'deny'}
             exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
             @click=${this.onApprove}
           >${this.localize('approve')}</lr-button>

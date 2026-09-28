@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `steppers` / `steppers` since `21.1.0`; use property `without-steppers`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 23 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -61,20 +61,15 @@ unchanged.
 
 Stepper switches:
 
-- `steppers: boolean = true` (attribute `steppers`, reflected) — renders the increment/decrement
-  pair inside the control row. It **defaults to `true`**, so it needs a custom converter to switch
-  off: write `steppers="false"` as an attribute, or `.steppers=${false}` as a property binding.
-  A bare `?steppers=${false}` (or removing the attribute in a framework that models booleans by
-  presence) cannot reset a `true`-defaulting property.
+- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — hides the
+  increment/decrement pair the control row renders by default. Deprecated alias: `steppers` (use
+  `without-steppers`, inverted: `steppers="false"` is `without-steppers`; kept in step, last write wins; removed in 23.0.0).
 - `withoutSpinButtons: boolean = true` (attribute `without-spin-buttons`, reflected) — the same
   knob `lr-input` exposes, but **defaulted the other way here** (`lr-input`'s default is `false`),
   so the component's own steppers are never shown alongside the browser's built-in spin buttons.
-  It is `true`-defaulting too, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
-  brings the native pair back. The two properties are independent: `steppers="false"
+  It is `true`-defaulting, so `without-spin-buttons="false"` / `.withoutSpinButtons=${false}`
+  brings the native pair back. The two properties are independent: `without-steppers
 without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
-- `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — the positive
-  upstream spelling for hiding the custom pair. It does not invert `steppers`: either
-  `without-steppers` or `steppers="false"` hides the same controls, and both unset leaves them on.
 
 Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
 handling stay the platform's. Unlike those silent methods, a stepper **click** is a user edit and
@@ -135,7 +130,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <!-- A bare numeric field: no steppers, and the browser's own spinners back: -->
 <lr-number-input
   label="Quantity"
-  steppers="false"
+  without-steppers
   without-spin-buttons="false"
 ></lr-number-input>
 <script type="module">
@@ -145,13 +140,12 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 **Known gotchas:**
 
-- **`steppers` and `without-spin-buttons` both default to `true` here.** Only the literal string
-  `"false"` parses as `false`; every other attribute value — including an empty one, and including
-  _removing_ the attribute — parses as `true`. So `?attr=${false}` and a removed attribute cannot
-  reset either; use the `="false"` attribute value or the `.prop=${false}` property binding. The
-  two also serialize differently when reflected: `steppers` is absent while `true` and appears as
-  `steppers="false"` while `false`, whereas `without-spin-buttons` appears empty while `true` and is
-  absent while `false`. Assert the rendered result, not the attribute's presence.
+- **`without-spin-buttons` defaults to `true` here.** Only the literal string `"false"` parses as
+  `false`; every other attribute value — including an empty one, and including _removing_ the
+  attribute — parses as `true`. So `?without-spin-buttons=${false}` and a removed attribute cannot
+  reset it; use the `="false"` attribute value or the `.withoutSpinButtons=${false}` property
+  binding. It reflects as an empty attribute while `true` and is absent while `false`; assert the
+  rendered result, not the attribute's presence.
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
   toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the

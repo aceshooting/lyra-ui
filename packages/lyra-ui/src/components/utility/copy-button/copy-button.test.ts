@@ -1266,20 +1266,22 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
     expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
   });
 
-  it('reaches the same composed control directly through the forwarded base__control part', async () => {
-    const style = document.createElement('style');
-    style.textContent = 'lr-copy-button.dense::part(base__control) { min-inline-size: 24px; min-block-size: 24px; }';
-    document.head.append(style);
-    try {
-      const el = (await fixture(
-        html`<lr-copy-button class="dense" value="hello"></lr-copy-button>`,
-      )) as LyraCopyButton;
-      expect(paintedControl(el).getBoundingClientRect().width).to.equal(24);
-      expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
-    } finally {
-      style.remove();
-    }
-  });
+  for (const part of ['base-control', 'base__control']) {
+    it(`reaches the same composed control directly through the forwarded ${part} part`, async () => {
+      const style = document.createElement('style');
+      style.textContent = `lr-copy-button.dense::part(${part}) { min-inline-size: 24px; min-block-size: 24px; }`;
+      document.head.append(style);
+      try {
+        const el = (await fixture(
+          html`<lr-copy-button class="dense" value="hello"></lr-copy-button>`,
+        )) as LyraCopyButton;
+        expect(paintedControl(el).getBoundingClientRect().width).to.equal(24);
+        expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
+      } finally {
+        style.remove();
+      }
+    });
+  }
 
   it('grows a dense row back to the platform touch-target floor under a coarse pointer', async () => {
     const wrapper = (await fixture(html`

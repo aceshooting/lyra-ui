@@ -14,6 +14,7 @@ import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 // Registers the real 'ar' catalog so the lang="ar"/"ar-EG" tests below -- which exercise
 // number/case-folding formatting, not string-catalog completeness -- resolve every key they
 // incidentally touch (jsonObject, jsonExpandLabel, jsonKeyCount, jsonCollapseLabel) instead of
@@ -139,7 +140,7 @@ it("renders nested arrays and objects with bracket parts", async () => {
   expect(brackets).to.include("]");
 });
 
-it("everything is expanded by default when collapsed-depth is unset", async () => {
+it("everything is expanded by default when expand-depth is unset", async () => {
   const el = await withData(sample);
   // "London" only appears in the rendered tree once `address` (depth 1) is expanded.
   const values = Array.from(
@@ -148,9 +149,9 @@ it("everything is expanded by default when collapsed-depth is unset", async () =
   expect(values).to.include('"London"');
 });
 
-it('collapsed-depth="0" collapses the top-level node immediately', async () => {
+it('expand-depth="0" collapses the top-level node immediately', async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
 
   // Collapsed root shows a preview instead of rendering any nested keys/values.
@@ -158,18 +159,18 @@ it('collapsed-depth="0" collapses the top-level node immediately', async () => {
   expect(el.shadowRoot!.querySelector(".preview")).to.exist;
 });
 
-it("normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently disabling auto-collapse", async () => {
+it("normalizes a NaN expandDepth to 0 (fully collapsed) instead of silently disabling auto-collapse", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = NaN;
+  el.expandDepth = NaN;
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="key"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector(".preview")).to.exist;
 });
 
-it("collapsed-depth collapses nodes at or beyond that depth but leaves shallower ones expanded", async () => {
+it("expand-depth collapses nodes at or beyond that depth but leaves shallower ones expanded", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 1;
+  el.expandDepth = 1;
   await el.updateComplete;
 
   // Top-level (depth 0) keys are visible...
@@ -186,7 +187,7 @@ it("collapsed-depth collapses nodes at or beyond that depth but leaves shallower
 
 it("toggles a node open/closed on clicking its toggle button", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
 
   const toggle = el.shadowRoot!.querySelector(
@@ -223,7 +224,7 @@ it("renders an empty object/array as a bare pair of brackets with no item count"
 
 it("shows an item/key count preview only for a collapsed, non-empty container", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
   const preview = el.shadowRoot!.querySelector(".preview");
   expect(preview!.textContent).to.equal("6 keys");
@@ -233,7 +234,7 @@ it("labels a budget-truncated collapsed preview as a lower bound instead of a fa
   const broad: Record<string, number> = {};
   for (let index = 0; index < 6000; index += 1) broad[`key-${index}`] = index;
   const el = (await fixture(
-    html`<lr-json-viewer collapsed-depth="0" .data=${broad}></lr-json-viewer>`
+    html`<lr-json-viewer expand-depth="0" .data=${broad}></lr-json-viewer>`
   )) as LyraJsonViewer;
   const preview = el.shadowRoot!.querySelector(".preview")!;
   expect(preview.textContent?.trim().startsWith("≥")).to.be.true;
@@ -248,7 +249,7 @@ it("locale-formats collapsed item/key counts before interpolation", async () => 
   const el = (await fixture(
     html`<lr-json-viewer
       lang="ar"
-      collapsed-depth="0"
+      expand-depth="0"
       .data=${data}
     ></lr-json-viewer>`
   )) as LyraJsonViewer;
@@ -592,7 +593,7 @@ it("routes rendered row hover fill through --lr-json-viewer-row-hover-bg", async
 
 it("highlights matching keys/values with data-match when search is set", async () => {
   const el = await withData(sample);
-  el.search = "ada";
+  el.query = "ada";
   await el.updateComplete;
 
   const match = el.shadowRoot!.querySelector('[part="value"][data-match]');
@@ -600,10 +601,10 @@ it("highlights matching keys/values with data-match when search is set", async (
   expect(match!.textContent).to.equal('"Ada Lovelace"');
 });
 
-it("auto-expands ancestors of a match even under a collapsing collapsed-depth", async () => {
+it("auto-expands ancestors of a match even under a collapsing expand-depth", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 0;
-  el.search = "london";
+  el.expandDepth = 0;
+  el.query = "london";
   await el.updateComplete;
 
   // Root is forced open by the match living inside `address`, and `address`
@@ -617,7 +618,7 @@ it("auto-expands ancestors of a match even under a collapsing collapsed-depth", 
 
 it("matches keys as well as values", async () => {
   const el = await withData(sample);
-  el.search = "address";
+  el.query = "address";
   await el.updateComplete;
 
   const keyMatch = Array.from(
@@ -628,14 +629,14 @@ it("matches keys as well as values", async () => {
 
 it("does not highlight anything when search is empty", async () => {
   const el = await withData(sample);
-  el.search = "";
+  el.query = "";
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector("[data-match]") == null).to.be.true;
 });
 
 it("preserves manual toggle overrides across a data reassignment with the same shape", async () => {
   const el = await withData(sample);
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
 
   const toggle = el.shadowRoot!.querySelector(
@@ -746,8 +747,8 @@ it("bounds broad search traversal instead of matching beyond the node budget", a
   const el = (await fixture(
     html`<lr-json-viewer
       .data=${data}
-      collapsed-depth="0"
-      search="needle-at-tail"
+      expand-depth="0"
+      query="needle-at-tail"
     ></lr-json-viewer>`
   )) as LyraJsonViewer;
   expect(el.shadowRoot!.querySelectorAll("[data-match]").length).to.equal(0);
@@ -843,14 +844,14 @@ it("does not re-walk the data tree to recompute search state on a toggle-only re
     html`<lr-json-viewer></lr-json-viewer>`
   )) as LyraJsonViewer;
   // "hidden" (depth 1) starts collapsed from this very first render (data,
-  // collapsed-depth, and search are all assigned before the first await, so
+  // expand-depth, and search are all assigned before the first await, so
   // Lit batches them into one update) -- normal rendering never descends
   // into it, so the descriptor projection into trackedChild can only come
   // from the search walk itself, which -- unlike rendering -- traverses the
   // whole tree regardless of what's currently expanded.
   el.data = { other: { a: 1 }, hidden: { nested: trackedChild } };
-  el.collapsedDepth = 1;
-  el.search = "no-match-anywhere";
+  el.expandDepth = 1;
+  el.query = "no-match-anywhere";
   await el.updateComplete;
 
   const descriptorReadsAfterFirstRender = descriptorReads;
@@ -872,7 +873,7 @@ it("does not re-walk the data tree to recompute search state on a toggle-only re
 
 it("prunes stale expandedOverrides entries once their path no longer exists after a data reassignment", async () => {
   const el = await withData({ old: { deep: { x: 1 } } });
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
 
   const rootToggle = el.shadowRoot!.querySelector(
@@ -898,7 +899,7 @@ it("prunes stale expandedOverrides entries once their path no longer exists afte
   // Reintroduce an unrelated "old" node that coincidentally reuses the
   // exact same path key ('["old"]'). If the stale override had survived,
   // this brand-new node would render already-expanded despite
-  // collapsed-depth="0" defaulting everything closed.
+  // expand-depth="0" defaulting everything closed.
   el.data = { old: { other: 2 } };
   await el.updateComplete;
 
@@ -976,7 +977,7 @@ it("keeps the tree LTR in RTL: a collapsed chevron still points right, expanded 
     <div dir="rtl">
       <lr-json-viewer
         .data=${{ nested: true }}
-        collapsed-depth="0"
+        expand-depth="0"
         style="--lr-transition-fast: 0s"
       ></lr-json-viewer>
     </div>
@@ -1019,7 +1020,7 @@ it("is accessible with a populated, expanded tree", async () => {
 it("is accessible with copyable buttons and a collapsed root", async () => {
   const el = await withData(sample);
   el.copyable = true;
-  el.collapsedDepth = 0;
+  el.expandDepth = 0;
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -1148,7 +1149,7 @@ describe("imperative search API", () => {
       const el = (await fixture(
         html`<lr-json-viewer
           .data=${SAMPLE}
-          collapsed-depth=${99}
+          expand-depth=${99}
         ></lr-json-viewer>`
       )) as LyraJsonViewer;
       const sinkSelector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
@@ -1384,7 +1385,7 @@ describe("imperative search API", () => {
       matchCountExact: true,
       activeIndex: -1,
     });
-    expect(el.search).to.equal("");
+    expect(el.query).to.equal("");
   });
 
   it("marks search event counts as lower bounds when traversal is truncated", async () => {
@@ -1407,7 +1408,7 @@ describe("imperative search API", () => {
 
   it("back-compat: rendered DOM is unchanged until a cursor exists", async () => {
     const before = (await fixture(
-      html`<lr-json-viewer .data=${SAMPLE} search="name"></lr-json-viewer>`
+      html`<lr-json-viewer .data=${SAMPLE} query="name"></lr-json-viewer>`
     )) as LyraJsonViewer;
     await before.updateComplete;
     const after = (await fixture(
@@ -1538,7 +1539,7 @@ describe("search-match highlight cssprop indirection", () => {
   it("recolors the match highlight from --lr-json-viewer-match-bg on an ancestor, not a bare shared token", async () => {
     const el = await withData(sample);
     el.style.setProperty("--lr-json-viewer-match-bg", "rgb(10, 20, 30)");
-    el.search = "ada";
+    el.query = "ada";
     await el.updateComplete;
     const match = el.shadowRoot!.querySelector(
       '[part="value"][data-match]'
@@ -1548,7 +1549,7 @@ describe("search-match highlight cssprop indirection", () => {
 
   it("renders byte-identically to the pre-cssprop-indirection output when the prop is unset", async () => {
     const el = await withData(sample);
-    el.search = "ada";
+    el.query = "ada";
     await el.updateComplete;
     const match = el.shadowRoot!.querySelector(
       '[part="value"][data-match]'
@@ -1581,7 +1582,7 @@ describe("lifecycle: willUpdate calls super", () => {
     };
     try {
       const el = await withData(sample);
-      el.search = "ada";
+      el.query = "ada";
       await el.updateComplete;
       expect(sawCall).to.be.true;
     } finally {
@@ -1920,5 +1921,121 @@ describe('template whitespace', () => {
     const controlWidth = control.getBoundingClientRect().width;
     control.remove();
     expect(value.getBoundingClientRect().width).to.be.greaterThan(controlWidth);
+  });
+});
+
+describe("deprecated collapsed-depth and search aliases", () => {
+  const COLLAPSED_DEPTH = { tag: "lr-json-viewer", kind: "property", name: "collapsedDepth" } as const;
+  const SEARCH = { tag: "lr-json-viewer", kind: "property", name: "search" } as const;
+  const renderedKeys = (el: LyraJsonViewer): string[] =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((key) => key.textContent ?? "");
+  const matchCount = (el: LyraJsonViewer): number => el.shadowRoot!.querySelectorAll("[data-match]").length;
+
+  it("collapsed-depth renders exactly what expand-depth renders and warns once", async () => {
+    const canonical = await fixture<LyraJsonViewer>(
+      html`<lr-json-viewer .data=${sample} expand-depth="1"></lr-json-viewer>`
+    );
+    let alias!: LyraJsonViewer;
+    const warnings = await captureDeprecationWarnings([COLLAPSED_DEPTH], async () => {
+      alias = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer .data=${sample} collapsed-depth="1"></lr-json-viewer>`
+      );
+      // The attribute fills an unset (`undefined`) alias during construction, which never warns;
+      // a later changed write does.
+      alias.collapsedDepth = 0;
+      alias.collapsedDepth = 1;
+      await alias.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-json-viewer:property:collapsedDepth",
+    ]);
+    expect(alias.expandDepth).to.equal(1);
+    expect(alias.collapsedDepth).to.equal(1);
+    expect(renderedKeys(alias)).to.deep.equal(renderedKeys(canonical));
+  });
+
+  it("search renders exactly what query renders, reports the same lr-search-change detail, and warns once", async () => {
+    const canonical = await fixture<LyraJsonViewer>(
+      html`<lr-json-viewer .data=${sample}></lr-json-viewer>`
+    );
+    const canonicalChange = oneEvent(canonical, "lr-search-change");
+    canonical.query = "ada";
+    const canonicalDetail = (await canonicalChange).detail;
+
+    let alias!: LyraJsonViewer;
+    let aliasDetail: unknown;
+    const warnings = await captureDeprecationWarnings([SEARCH], async () => {
+      alias = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer .data=${sample}></lr-json-viewer>`
+      );
+      const aliasChange = oneEvent(alias, "lr-search-change");
+      alias.search = "ada";
+      aliasDetail = (await aliasChange).detail;
+      alias.setAttribute("search", "ada");
+      await alias.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-json-viewer:property:search",
+    ]);
+    expect(alias.query).to.equal("ada");
+    expect(alias.search).to.equal("ada");
+    expect(aliasDetail).to.deep.equal(canonicalDetail);
+    expect(matchCount(alias)).to.equal(matchCount(canonical));
+    expect(matchCount(alias)).to.be.greaterThan(0);
+  });
+
+  it("never warns for the defaults, the canonical attributes, or the imperative search methods", async () => {
+    const warnings = await captureDeprecationWarnings([COLLAPSED_DEPTH, SEARCH], async () => {
+      const el = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer .data=${sample} expand-depth="1" query="ada"></lr-json-viewer>`
+      );
+      await el.runSearch("london");
+      el.clearSearch();
+      await el.updateComplete;
+      const defaulted = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer .data=${sample}></lr-json-viewer>`
+      );
+      await defaulted.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it("keeps each alias in step with its canonical, the last write winning in either direction", async () => {
+    let canonicalLast!: LyraJsonViewer;
+    let aliasLast!: LyraJsonViewer;
+    await captureDeprecationWarnings([COLLAPSED_DEPTH, SEARCH], async () => {
+      canonicalLast = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer
+          .data=${sample}
+          collapsed-depth="0"
+          expand-depth="1"
+          search="london"
+          query="ada"
+        ></lr-json-viewer>`
+      );
+      aliasLast = await fixture<LyraJsonViewer>(
+        html`<lr-json-viewer
+          .data=${sample}
+          expand-depth="1"
+          collapsed-depth="0"
+          query="ada"
+          search="london"
+        ></lr-json-viewer>`
+      );
+    });
+    expect(canonicalLast.expandDepth, "the later expand-depth attribute wins").to.equal(1);
+    expect(canonicalLast.collapsedDepth).to.equal(1);
+    expect(canonicalLast.query, "the later query attribute wins").to.equal("ada");
+    expect(canonicalLast.search).to.equal("ada");
+    expect(aliasLast.expandDepth, "the later collapsed-depth attribute wins").to.equal(0);
+    expect(aliasLast.collapsedDepth).to.equal(0);
+    expect(aliasLast.query, "the later search attribute wins").to.equal("london");
+    expect(aliasLast.search).to.equal("london");
+
+    canonicalLast.expandDepth = 2;
+    canonicalLast.query = "london";
+    await canonicalLast.updateComplete;
+    expect(canonicalLast.collapsedDepth, "collapsedDepth syncs back from expandDepth").to.equal(2);
+    expect(canonicalLast.search, "search syncs back from query").to.equal("london");
   });
 });

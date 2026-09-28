@@ -32,7 +32,7 @@ async function openPicker(el: LyraLocalePicker): Promise<void> {
 describe('lr-locale-picker optionDisplay', () => {
   it('defaults to label-tag and renders one tag line per row', async () => {
     const el = await fixture<LyraLocalePicker>(
-      html`<lr-locale-picker .showFlags=${false} .locales=${CATALOG}></lr-locale-picker>`,
+      html`<lr-locale-picker without-flags .locales=${CATALOG}></lr-locale-picker>`,
     );
     await openPicker(el);
     expect(el.optionDisplay).to.equal('label-tag');
@@ -48,7 +48,7 @@ describe('lr-locale-picker optionDisplay', () => {
     const el = await fixture<LyraLocalePicker>(
       html`<lr-locale-picker
         option-display="label"
-        .showFlags=${false}
+        without-flags
         .locales=${CATALOG}
       ></lr-locale-picker>`,
     );
@@ -73,7 +73,7 @@ describe('lr-locale-picker optionDisplay', () => {
 
   it('restores the tag line when the attribute is removed again (unset regression)', async () => {
     const el = await fixture<LyraLocalePicker>(
-      html`<lr-locale-picker .showFlags=${false} .locales=${CATALOG}></lr-locale-picker>`,
+      html`<lr-locale-picker without-flags .locales=${CATALOG}></lr-locale-picker>`,
     );
     await openPicker(el);
     expect(optionTags(el).length).to.equal(CATALOG.length);
@@ -125,7 +125,7 @@ describe('lr-locale-picker optionDisplay', () => {
   it('omits the tag under dir="rtl" as well, keeping the stacked logical row layout', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div dir="rtl">
-        <lr-locale-picker option-display="label" .showFlags=${false} .locales=${CATALOG}></lr-locale-picker>
+        <lr-locale-picker option-display="label" without-flags .locales=${CATALOG}></lr-locale-picker>
       </div>
     `);
     const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
@@ -142,7 +142,7 @@ describe('lr-locale-picker optionDisplay', () => {
 
   it('still commits the actually-focused row from the keyboard with the tag omitted', async () => {
     const el = await fixture<LyraLocalePicker>(
-      html`<lr-locale-picker option-display="label" .showFlags=${false} .locales=${CATALOG}></lr-locale-picker>`,
+      html`<lr-locale-picker option-display="label" without-flags .locales=${CATALOG}></lr-locale-picker>`,
     );
     // The page-level locale is the host's job once a listener vetoes; keep this fixture from
     // mutating the shared registry state every other test in the run reads.

@@ -136,13 +136,13 @@ export const CancelableToggle: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-thinking-panel expanded>
         Default card framing keeps this reasoning block visually distinct.
       </lr-thinking-panel>
-      <lr-thinking-panel compact expanded>
+      <lr-thinking-panel size="s" expanded>
         Compact keeps the card while tightening the header and transcript padding.
       </lr-thinking-panel>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
@@ -156,17 +156,17 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter header/body spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal disclosure divider.',
+          'Top to bottom: the default card, `size="s"` (tighter header/body spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal disclosure divider.',
       },
     },
   },
 };
 
 export const RetunedCompactHeader: Story = {
-  name: 'Compact header typography rethemed',
+  name: 'Dense header typography rethemed',
   render: () => html`
     <lr-thinking-panel
-      compact
+      size="s"
       expanded
       style="max-width:32rem; --lr-thinking-panel-compact-header-font-size: var(--lr-font-size-xs);"
     >

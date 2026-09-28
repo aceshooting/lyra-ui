@@ -104,15 +104,14 @@ export function joinAccessibleVisibleText(
  * string here -- the caller resolves it through `localize()` so `registerLyraLocale()` keeps
  * working).
  */
-export function resolveProgressLabel(
-  host: Element,
-  parts: {
-    label: string;
-    accessibleLabel: string;
-    visibleText: string;
-    localizedFallback: string;
-  },
-): string {
-  if (host.hasAttribute('aria-label')) return host.getAttribute('aria-label') ?? '';
+export function resolveProgressLabel(parts: {
+  /** The host `aria-label` attribute's value, `null` while it is absent. */
+  hostAriaLabel: string | null;
+  label: string;
+  accessibleLabel: string;
+  visibleText: string;
+  localizedFallback: string;
+}): string {
+  if (parts.hostAriaLabel !== null) return parts.hostAriaLabel;
   return parts.label || parts.accessibleLabel || parts.visibleText || parts.localizedFallback;
 }

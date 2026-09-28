@@ -8,7 +8,7 @@ export const BatchedPaste: Story = {
     docs: {
       description: {
         story:
-          'Paste or type several comma-separated values and press Enter. The control deduplicates and commits once; lr-add reports the final token plus the complete ordered added batch in detail.values.',
+          'Paste or type several comma-separated values and press Enter. The control deduplicates and commits once; lr-token-add-request reports the final token plus the complete ordered added batch in detail.values.',
       },
     },
   },
@@ -16,8 +16,8 @@ export const BatchedPaste: Story = {
     <lr-token-input
       label="Recipients"
       hint="Try Ada,Grace,Ada,Linus and press Enter."
-      @lr-add=${(event: CustomEvent<{ value: string; values: readonly string[] }>) =>
-        console.log('batched lr-add', event.detail)}
+      @lr-token-add-request=${(event: CustomEvent<{ value: string; values: readonly string[] }>) =>
+        console.log('batched lr-token-add-request', event.detail)}
     ></lr-token-input>
   `,
 };
@@ -61,7 +61,7 @@ export const AliasSizesAndPill: Story = {
 };
 /**
  * `editable` turns every token into a roving tab stop that opens an inline editor on click, Enter,
- * or F2 — Enter commits and emits `lr-token-edit`, Escape reverts. `.delimiter=${null}` keeps
+ * or F2 — Enter commits and emits `lr-token-edit-request`, Escape reverts. `.delimiter=${null}` keeps
  * commas (and every other character) inside a token instead of splitting it, which is what a rule
  * like `Bash(git status:*)` needs.
  */
@@ -73,8 +73,8 @@ export const Editable: Story = {
     editable
     .delimiter=${null}
     .value=${['Bash(git status:*)', 'Read(src/**)', 'WebFetch(domain:example.com)']}
-    @lr-token-edit=${(event: CustomEvent<{ value: string; previousValue: string; index: number }>) =>
-      console.log('lr-token-edit', event.detail)}
+    @lr-token-edit-request=${(event: CustomEvent<{ value: string; previousValue: string; index: number }>) =>
+      console.log('lr-token-edit-request', event.detail)}
   ></lr-token-input>`,
 };
 

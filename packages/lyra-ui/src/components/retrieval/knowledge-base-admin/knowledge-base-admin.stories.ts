@@ -19,14 +19,14 @@ export const UnavailableIngestionFallback: Story = {
     docs: {
       description: {
         story:
-          'When `hide-ingestion` makes the controlled active tab unavailable, the component normalizes `activeTab` to Sources through `lr-tab-change`.',
+          'When `without-ingestion` makes the controlled active tab unavailable, the component normalizes `activeTab` to Sources through `lr-tab-change`.',
       },
     },
   },
   render: () => html`
     <lr-knowledge-base-admin
       active-tab="ingestion"
-      hide-ingestion
+      without-ingestion
       .sources=${sources}
       .ingestionItems=${ingestionItems}
     ></lr-knowledge-base-admin>

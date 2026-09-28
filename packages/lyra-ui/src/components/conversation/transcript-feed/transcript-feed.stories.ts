@@ -123,7 +123,7 @@ export const LiveInterimTranscription: Story = {
 export const WithTimestamps: Story = {
   render: () => html`
     <div style="block-size: 240px;">
-      <lr-transcript-feed .entries=${entries} show-timestamps></lr-transcript-feed>
+      <lr-transcript-feed .entries=${entries} with-timestamps></lr-transcript-feed>
     </div>
   `,
 };
@@ -145,7 +145,7 @@ export const Narrow320: Story = {
       dir="rtl"
       style="inline-size:320px;max-inline-size:100%;block-size:200px;outline:1px dashed var(--lr-color-border);"
     >
-      <lr-transcript-feed follow="false" .entries=${narrowRtlEntries} show-timestamps></lr-transcript-feed>
+      <lr-transcript-feed follow="false" .entries=${narrowRtlEntries} with-timestamps></lr-transcript-feed>
     </div>
   `,
 };

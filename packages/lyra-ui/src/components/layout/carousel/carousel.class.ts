@@ -12,6 +12,7 @@ import {
 import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
@@ -240,7 +241,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return this._slides;
   }
   /** Accessible name used when the host has no `aria-label`; omitted falls back to the localized
-   *  `carouselLabel` default. An explicitly empty `accessible-label` is used as-is. */
+   *  `carouselLabel` default. An explicitly empty `accessible-label` is used as-is. In markup, name
+   *  the carousel with the host `aria-label`: the `accessible-label` attribute is deprecated
+   *  (removal not before 23.0.0) and logs a one-time development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
@@ -317,6 +320,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       return;
     }
     super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
     if (
       name === 'current-slide' &&
       newValue === null &&

@@ -46,7 +46,10 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-export-button-border, var(--_lr-export-button-border));
     border-radius: var(--lr-export-button-radius, var(--lr-radius));
-    background: var(--lr-export-button-background, var(--_lr-export-button-background));
+    background: var(
+      --lr-export-button-bg,
+      var(--lr-export-button-background, var(--_lr-export-button-background))
+    );
     color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;
     min-inline-size: var(--lr-icon-button-size);
@@ -57,14 +60,20 @@ export const styles = css`
      [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
      below, swallowing the pressed state. */
   :where([part~='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-export-button-hover-background, var(--_lr-export-button-hover-background));
+    background: var(
+      --lr-export-button-hover-bg,
+      var(--lr-export-button-hover-background, var(--_lr-export-button-hover-background))
+    );
     color: var(--lr-export-button-hover-color, var(--_lr-export-button-hover-color));
     border-color: var(--lr-export-button-hover-border, var(--_lr-export-button-hover-border));
   }
   /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
      this one the press. */
   :where([part~='trigger']):active:where(:not(:disabled)) {
-    background: var(--lr-export-button-active-background, var(--_lr-export-button-active-background));
+    background: var(
+      --lr-export-button-active-bg,
+      var(--lr-export-button-active-background, var(--_lr-export-button-active-background))
+    );
     color: var(--lr-export-button-active-color, var(--_lr-export-button-active-color));
     border-color: var(--lr-export-button-active-border, var(--_lr-export-button-active-border));
   }

@@ -11,7 +11,7 @@ describe('disabled vote button paint', () => {
   for (const selected of [false, true]) {
     it(`retains ${selected ? 'selected' : 'unselected'} paint during hover and press`, async () => {
       const el = await fixture<LyraComparePanel>(html`
-        <lr-compare-panel disabled vote="a" style="--lr-transition-fast: 0s; --lr-compare-panel-selected-background: rgb(0, 51, 102);"></lr-compare-panel>
+        <lr-compare-panel disabled vote="a" style="--lr-transition-fast: 0s; --lr-compare-panel-selected-bg: rgb(0, 51, 102);"></lr-compare-panel>
       `);
       const button = el.shadowRoot!.querySelector<HTMLButtonElement>(selected
         ? '[part="vote-button"][data-selected]'

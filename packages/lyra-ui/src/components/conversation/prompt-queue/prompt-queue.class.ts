@@ -11,6 +11,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -248,7 +249,7 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * @csspart heading - The queue heading.
  * @csspart list - The ordered queue list.
  * @csspart item - One queued prompt.
- * @csspart value - Read-only prompt text when `editable` is false.
+ * @csspart value - Read-only prompt text while `readonly`.
  * @csspart editor - A queued prompt editor.
  * @csspart attachments - The visible attachment-name list for one prompt.
  * @csspart attachment - One attachment name.
@@ -282,6 +283,9 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    editable: ['readonly', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-queue-change',
     'lr-send-now',
@@ -298,6 +302,15 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   /** Controlled queued prompts. Accessor-backed or malformed rows and attachments are omitted;
    * duplicate nonblank item ids normalize first-wins after full row validation. */
   @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
+  /** Renders each queued prompt as read-only text instead of an editor. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
+
+  /**
+   * Deprecated inverted alias of `readonly`: `editable="false"` equals `readonly`, and removing it
+   * restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `readonly`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Visible queue heading and accessible-name fallback. Omitting it localizes the default
@@ -349,7 +362,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('items') && !changed.has('editable') && !changed.has('disabled')) return;
+    if (!changed.has('items') && !changed.has('readonly') && !changed.has('disabled')) return;
     const focusedControl = activeElementIn(this.shadowRoot) as HTMLElement | null;
     const action = focusedControl?.getAttribute('data-action') ?? undefined;
     const editorFocused = focusedControl?.getAttribute('part') === 'editor';
@@ -363,7 +376,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       : EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
     const items = this.effectiveItems;
     const rowRemoved = changed.has('items') && !items.some((item) => item.id === focusedId);
-    const editorRemoved = editorFocused && changed.has('editable') && !this.editable;
+    const editorRemoved = editorFocused && changed.has('readonly') && this.readonly;
     const controlDisabled = changed.has('disabled') && this.disabled;
     if (!rowRemoved && !editorRemoved && !controlDisabled) return;
     const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
@@ -431,7 +444,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   }
 
   private edit(item: CanonicalPromptQueueItem, value: string): void {
-    if (this.disabled || !this.editable) return;
+    if (this.disabled || this.readonly) return;
     this.emitChange(
       this.effectiveItems.map((candidate) => toPromptQueueItem(
         candidate,
@@ -483,7 +496,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const actionLabel = (action: string): string =>
       this.localize('promptQueueActionLabel', undefined, { action, index: formattedIndex });
     return html`<li part="item" data-id=${item.id}>
-      ${this.editable
+      ${!this.readonly
         ? html`<lr-textarea
             part="editor"
             .value=${item.value}
@@ -492,7 +505,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
             resize="auto"
             @lr-input=${(event: CustomEvent<{ value: string }>) => {
               event.stopPropagation();
-              if (this.disabled || !this.editable) return;
+              if (this.disabled || this.readonly) return;
               this.edit(item, event.detail.value);
             }}
           ></lr-textarea>`

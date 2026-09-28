@@ -11,6 +11,7 @@ import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 type PositionedOverlay = LyraPopover | LyraTooltip;
 
@@ -69,7 +70,7 @@ describe('effective arrow layout', () => {
 
   it('keeps non-arrow popovers scrollable and delegates dropdown scrolling to the menu list', async () => {
     const popover = await fixture<LyraPopover>(html`
-      <lr-popover open arrow="false"
+      <lr-popover open without-arrow
         ><button slot="trigger">Open</button>
         <p>Details</p></lr-popover
       >
@@ -1654,7 +1655,7 @@ it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-backgr
   expect(getComputedStyle(popup).maxInlineSize).to.equal(`${20 * remPx}px`);
 
   el.style.setProperty('--lr-tooltip-max-inline-size', '10rem');
-  el.style.setProperty('--lr-tooltip-background', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-tooltip-bg', 'rgb(1, 2, 3)');
   el.style.setProperty('--lr-tooltip-color', 'rgb(4, 5, 6)');
   await el.updateComplete;
 
@@ -2752,7 +2753,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
       html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
     )) as LyraPopover;
     await popover.updateComplete;
-    expect(popover.arrow).to.be.true;
+    expect(popover.withoutArrow).to.be.false;
     expect(popover.arrowPlacement).to.equal('anchor');
     expect(popover.arrowPadding).to.equal(0);
     expect(popover.skidding).to.equal(0);
@@ -2766,7 +2767,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
 
   it('renders an arrow carrying the resolved side in its part name', async () => {
     const popover = (await fixture(
-      html`<lr-popover open arrow placement="bottom"
+      html`<lr-popover open placement="bottom"
         ><button slot="trigger">Open</button><p>Details</p></lr-popover
       >`,
     )) as LyraPopover;
@@ -2785,7 +2786,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
 
   it('centres the arrow along the popup edge for arrow-placement="center"', async () => {
     const popover = (await fixture(
-      html`<lr-popover open arrow arrow-placement="center" placement="bottom"
+      html`<lr-popover open arrow-placement="center" placement="bottom"
         ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
       >`,
     )) as LyraPopover;
@@ -2803,7 +2804,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
 
   it('keeps a start-placed arrow arrow-padding away from the popup corner', async () => {
     const popover = (await fixture(
-      html`<lr-popover open arrow arrow-placement="start" arrow-padding="20" placement="bottom"
+      html`<lr-popover open arrow-placement="start" arrow-padding="20" placement="bottom"
         ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
       >`,
     )) as LyraPopover;
@@ -2862,7 +2863,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
         <button id="tip-anchor" style="position: absolute; inset-block-start: 280px; inset-inline-start: 300px;">
           Anchor
         </button>
-        <lr-tooltip open manual arrow for="tip-anchor" placement="bottom-start" show-delay="0"
+        <lr-tooltip open manual for="tip-anchor" placement="bottom-start" show-delay="0"
           >Info<button slot="trigger">Help</button></lr-tooltip
         >
       </div>
@@ -2880,7 +2881,7 @@ describe('anchored-overlay arrows and external anchoring', () => {
 
   it('is accessible with an arrow rendered', async () => {
     const popover = (await fixture(
-      html`<lr-popover open arrow aria-label="Details"
+      html`<lr-popover open aria-label="Details"
         ><button slot="trigger">Open</button><p>Details</p></lr-popover
       >`,
     )) as LyraPopover;
@@ -3054,10 +3055,10 @@ describe('mapped popover and tooltip compatibility', () => {
 
     expect(popover.placement).to.equal('top');
     expect(popover.distance).to.equal(8);
-    expect(popover.arrow).to.equal(true);
+    expect(popover.withoutArrow).to.equal(false);
     expect(tooltip.placement).to.equal('top');
     expect(tooltip.distance).to.equal(8);
-    expect(tooltip.arrow).to.equal(true);
+    expect(tooltip.withoutArrow).to.equal(false);
     expect(dropdown.placement).to.equal('bottom-start');
     expect(dropdown.distance).to.equal(0);
     expect(dropdown.arrow).to.equal(false);
@@ -3316,4 +3317,142 @@ describe('top-layer escape specifics', () => {
     await waitUntil(() => getComputedStyle(surface).transform === 'none', 'the open submenu rests at none');
     await el.hide({ focusTrigger: false });
   });
+});
+
+for (const tag of ['lr-popover', 'lr-tooltip'] as const) {
+  describe(`${tag} deprecated arrow alias`, () => {
+    const ARROW: readonly DeprecatedUsage[] = [{ tag, kind: 'property', name: 'arrow' }];
+    const body = tag === 'lr-popover'
+      ? '<button slot="trigger">Open</button><p>Details</p>'
+      : '<button slot="trigger">Help</button>Explanation';
+    const mount = async (attributes: string): Promise<LyraPopover | LyraTooltip> => {
+      const host = await fixture<HTMLDivElement>(html`<div></div>`);
+      host.innerHTML = `<${tag} open ${attributes}>${body}</${tag}>`;
+      const el = host.firstElementChild as LyraPopover | LyraTooltip;
+      await el.updateComplete;
+      return el;
+    };
+    const arrows = (el: Element): number => el.shadowRoot!.querySelectorAll('[part~="arrow"]').length;
+
+    it('renders the arrow by default and drops it for without-arrow, without warning', async () => {
+      const warnings = await captureDeprecationWarnings(ARROW, async () => {
+        const bare = await mount('');
+        expect(arrows(bare)).to.equal(1);
+        expect(bare.withoutArrow).to.be.false;
+        expect(bare.hasAttribute('arrow')).to.be.false;
+        const without = await mount('without-arrow');
+        expect(arrows(without)).to.equal(0);
+        expect(without.arrow).to.be.false;
+      });
+      expect(warnings).to.have.length(0);
+    });
+
+    it('treats arrow="false" exactly like without-arrow and warns once, naming without-arrow', async () => {
+      let aliased!: LyraPopover | LyraTooltip;
+      const warnings = await captureDeprecationWarnings(ARROW, async () => {
+        aliased = await mount('arrow="false"');
+        await mount('arrow="false"');
+      });
+      expect(aliased.withoutArrow).to.be.true;
+      expect(aliased.arrow).to.be.false;
+      expect(arrows(aliased)).to.equal(0);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:property:arrow`]);
+      expect(warnings[0]!.message).to.contain('without-arrow');
+    });
+
+    it('restores the default when the alias is removed or set true, syncs back, and lets the last write win', async () => {
+      await captureDeprecationWarnings(ARROW, async () => {
+        const el = await mount('arrow="false"');
+        el.removeAttribute('arrow');
+        await el.updateComplete;
+        expect(el.withoutArrow).to.be.false;
+        expect(arrows(el)).to.equal(1);
+        el.arrow = false;
+        await el.updateComplete;
+        expect(el.getAttribute('without-arrow')).to.equal('');
+        expect(arrows(el)).to.equal(0);
+        el.arrow = true;
+        await el.updateComplete;
+        expect(arrows(el)).to.equal(1);
+        el.withoutArrow = true;
+        await el.updateComplete;
+        expect(el.arrow).to.be.false;
+        expect(el.getAttribute('arrow')).to.equal('false');
+        el.withoutArrow = false;
+        await el.updateComplete;
+        expect(el.arrow).to.be.true;
+        expect(el.hasAttribute('arrow')).to.be.false;
+        const canonicalLast = await mount('arrow without-arrow');
+        expect(canonicalLast.withoutArrow).to.be.true;
+        expect(canonicalLast.arrow).to.be.false;
+        expect(arrows(canonicalLast)).to.equal(0);
+        const aliasLast = await mount('without-arrow arrow');
+        expect(aliasLast.withoutArrow).to.be.false;
+        expect(arrows(aliasLast)).to.equal(1);
+      });
+    });
+  });
+}
+
+describe('lr-dropdown arrow and hyphenated popup parts', () => {
+  const ARROW: readonly DeprecatedUsage[] = [
+    { tag: 'lr-dropdown', kind: 'property', name: 'arrow' },
+    { tag: 'lr-popover', kind: 'property', name: 'arrow' },
+  ];
+
+  it('keeps its own false-defaulting arrow opt-in, which never warns', async () => {
+    let bare!: LyraDropdown;
+    let opted!: LyraDropdown;
+    const warnings = await captureDeprecationWarnings(ARROW, async () => {
+      bare = await fixture<LyraDropdown>(
+        html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+      );
+      opted = await fixture<LyraDropdown>(
+        html`<lr-dropdown open arrow><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+      );
+    });
+    expect(warnings).to.have.length(0);
+    expect(bare.arrow).to.be.false;
+    expect(bare.getAttribute('arrow')).to.equal('false');
+    expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
+    expect(opted.arrow).to.be.true;
+    const arrow = opted.shadowRoot!.querySelector('[part~="arrow"]')!;
+    expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow', 'popup__arrow']);
+    opted.withoutArrow = true;
+    await opted.updateComplete;
+    expect(opted.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
+  });
+
+  it('carries popup-popup beside the deprecated popup__popup, while lr-popover keeps its mapped names only', async () => {
+    const dropdown = await fixture<LyraDropdown>(
+      html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
+    );
+    const popover = await fixture<LyraPopover>(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    );
+    const partsOf = (el: Element, selector: string): string[] =>
+      el.shadowRoot!.querySelector(selector)!.getAttribute('part')!.split(/\s+/);
+    expect(partsOf(dropdown, '[part~="popup"]')).to.include.members(['popup-popup', 'popup__popup']);
+    expect(partsOf(popover, '[part~="popup"]')).to.include('popup__popup');
+    expect(partsOf(popover, '[part~="popup"]')).to.not.include('popup-popup');
+    expect(partsOf(popover, '[part~="arrow"]')).to.not.include('popup-arrow');
+  });
+});
+
+describe('lr-tooltip background custom property', () => {
+  for (const [name, style] of [
+    ['canonical --lr-tooltip-bg', '--lr-tooltip-bg: rgb(1, 2, 3);'],
+    ['deprecated --lr-tooltip-background', '--lr-tooltip-background: rgb(1, 2, 3);'],
+    ['canonical over deprecated', '--lr-tooltip-bg: rgb(1, 2, 3); --lr-tooltip-background: rgb(9, 9, 9);'],
+  ] as const) {
+    it(`paints the bubble and its arrow from ${name}`, async () => {
+      const el = await fixture<LyraTooltip>(
+        html`<lr-tooltip open style=${style}><button slot="trigger">Help</button>Explanation</lr-tooltip>`,
+      );
+      const popup = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      const arrow = el.shadowRoot!.querySelector<HTMLElement>('[part~="arrow"]')!;
+      expect(getComputedStyle(popup).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(arrow).backgroundColor).to.equal('rgb(1, 2, 3)');
+    });
+  }
 });

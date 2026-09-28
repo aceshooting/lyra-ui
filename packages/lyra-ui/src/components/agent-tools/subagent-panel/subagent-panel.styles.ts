@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='list'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding: 0; list-style: none; }
-  /* Run-row chrome behind inline var() fallbacks, same convention as the compact density below:
+  /* Run-row chrome behind inline var() fallbacks, same convention as the dense size tier below:
      each fallback is the pre-existing token, so an unset panel paints exactly as before while a
      transcript can retune every nested run row without a ::part(run) override. */
   [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-l)); border: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); border-radius: var(--lr-subagent-panel-radius, var(--lr-radius)); overflow: hidden; }
@@ -13,7 +13,7 @@ export const styles = css`
   [part='run-row'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   [part='run-trigger'] {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); min-inline-size: 0; min-block-size: var(--lr-icon-button-size);
-    padding: var(--lr-space-s); border: 0; background: var(--lr-subagent-panel-background, var(--lr-color-surface)); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
+    padding: var(--lr-space-s); border: 0; background: var(--lr-subagent-panel-bg, var(--lr-subagent-panel-background, var(--lr-color-surface))); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   /* Hover carries its own hook rather than the resting one: a transcript that retunes the resting
@@ -21,7 +21,7 @@ export const styles = css`
      hover, so the resting hook could not be used coherently on its own. The fallback is the
      pre-existing token, so an unretuned panel paints exactly as before. */
   [part='run-trigger']:hover, [part='cancel']:hover, [part='retry']:hover {
-    background: var(--lr-subagent-panel-hover-background, var(--lr-color-surface-raised));
+    background: var(--lr-subagent-panel-hover-bg, var(--lr-subagent-panel-hover-background, var(--lr-color-surface-raised)));
   }
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour -- a distinctly deeper step in both light and dark themes. It
@@ -29,7 +29,7 @@ export const styles = css`
   [part='run-trigger']:active, [part='cancel']:active, [part='retry']:active {
     background: color-mix(
       in oklab,
-      var(--lr-subagent-panel-hover-background, var(--lr-color-surface-raised)),
+      var(--lr-subagent-panel-hover-bg, var(--lr-subagent-panel-hover-background, var(--lr-color-surface-raised))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -49,19 +49,19 @@ export const styles = css`
     background: var(--lr-subagent-panel-progress-fill, var(--lr-color-brand));
   }
   [part='actions'] { display: flex; }
-  [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); background: var(--lr-subagent-panel-background, var(--lr-color-surface)); color: var(--lr-color-text); font: inherit; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
+  [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); background: var(--lr-subagent-panel-bg, var(--lr-subagent-panel-background, var(--lr-color-surface))); color: var(--lr-color-text); font: inherit; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
-     lr-terminal's compact. Values sit behind inline var() fallbacks, not :host declarations that
+     lr-terminal's dense size tier. Values sit behind inline var() fallbacks, not :host declarations that
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every
      embedded panel at once. */
-  :host([compact]) [part='run-trigger'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='run-trigger'] {
     padding: var(--lr-subagent-panel-compact-trigger-padding, var(--lr-space-2xs) var(--lr-space-s));
     gap: var(--lr-subagent-panel-compact-trigger-gap, var(--lr-space-2xs));
   }
-  :host([compact]) [part='task'], :host([compact]) [part='model'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='task'], :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='model'] {
     font-size: var(--lr-subagent-panel-compact-font-size, var(--lr-font-size-2xs));
   }
-  :host([compact]) [part='cancel'], :host([compact]) [part='retry'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='cancel'], :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='retry'] {
     padding: var(--lr-subagent-panel-compact-action-padding, var(--lr-space-2xs));
   }
   /* Chrome escape -- same convention as siblings' frame="plain": drops each run row's own
@@ -72,7 +72,7 @@ export const styles = css`
     border-radius: 0;
   }
   /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
-     lr-terminal's compact. Values sit behind inline var() fallbacks, not :host declarations that
+     lr-terminal's dense size tier. Values sit behind inline var() fallbacks, not :host declarations that
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every
      embedded panel at once. */
   @container (max-inline-size: 20rem) {

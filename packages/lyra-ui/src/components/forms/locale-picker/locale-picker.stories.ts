@@ -101,7 +101,7 @@ export const CountryOverride: Story = {
 export const NoFlags: Story = {
   name: 'Flags off',
   render: () => html`
-    <lr-locale-picker label="Language" .showFlags=${false} .locales=${['fr', 'de', 'ja']}></lr-locale-picker>
+    <lr-locale-picker label="Language" without-flags .locales=${['fr', 'de', 'ja']}></lr-locale-picker>
   `,
 };
 

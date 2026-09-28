@@ -4,7 +4,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -69,6 +69,11 @@ export interface LyraStreamingTextEventMap {
  */
 export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreamingTextEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    gfm: ['withoutGfm', invertAlias, invertAlias],
+    highlightCode: ['withoutSyntaxHighlighting', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
 
   /** The full current text so far -- always the complete string, never a
    *  delta to append. */
@@ -117,9 +122,17 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  matches the composed element's own default. */
   @property({ attribute: 'html-mode' }) htmlMode: MarkdownHtmlMode = 'sanitize';
 
-  /** Forwarded verbatim to the composed Markdown element's own `gfm` -- GitHub-flavored Markdown
-   *  (tables, strikethrough, autolinks, task lists). `true` (the default) matches the composed
-   *  element's own default. */
+  /** Forwarded verbatim to the composed Markdown element's own `withoutGfm` -- disables
+   *  GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). Unset (the default)
+   *  matches the composed element's own default. */
+  @property({ type: Boolean, attribute: 'without-gfm' }) withoutGfm = false;
+
+  /**
+   * Deprecated inverted alias of `without-gfm` (`withoutGfm`): `gfm="false"` equals `without-gfm`,
+   * and removing it restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-gfm`; removal not before 23.0.0.
+   */
   @property({ converter: trueDefaultBooleanConverter }) gfm = true;
 
   /** Forwarded verbatim to the composed Markdown element's own `linkTarget` -- the `target`
@@ -141,8 +154,19 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   // markdown-base.class.ts). A second guard here would duplicate that range and could diverge.
   @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
 
-  /** Forwarded verbatim to the composed Markdown element's own `highlightCode`. `true` (the
-   *  default) matches the composed element's own default. */
+  /** Forwarded verbatim to the composed Markdown element's own `withoutSyntaxHighlighting` --
+   *  turns off fenced-code syntax highlighting. Unset (the default) matches the composed element's
+   *  own default. */
+  @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
+  withoutSyntaxHighlighting = false;
+
+  /**
+   * Deprecated inverted alias of `without-syntax-highlighting` (`withoutSyntaxHighlighting`):
+   * `highlight-code="false"` equals `without-syntax-highlighting`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-syntax-highlighting`; removal not before 23.0.0.
+   */
   @property({ attribute: 'highlight-code', converter: trueDefaultBooleanConverter })
   highlightCode = true;
 
@@ -209,9 +233,6 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('codeBlockChrome') && this.codeBlockChrome === true) {
-      warnDeprecatedUsage(this, 'property', 'codeBlockChrome', 'code-block-header');
-    }
     if (changed.has('coalesceMs')) {
       this.coalescer.throttleMs = this.safeCoalesceMs;
     }

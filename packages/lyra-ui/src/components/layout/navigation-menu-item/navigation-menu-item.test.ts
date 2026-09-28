@@ -204,7 +204,7 @@ describe('<lr-navigation-menu-item>', () => {
     base(el).click();
     await settle(el);
     expect(el.open).to.equal(true);
-    expect(events).to.deep.equal([{ open: true, source: 'user' }]);
+    expect(events).to.deep.equal([{ open: true, expanded: true, source: 'user' }]);
     const surface = panel(el);
     expect(surface.hidden).to.equal(false);
     expect(surface.getBoundingClientRect().height).to.be.greaterThan(0);
@@ -219,8 +219,8 @@ describe('<lr-navigation-menu-item>', () => {
     expect(el.open).to.equal(false);
     expect(surface.hidden).to.equal(true);
     expect(events).to.deep.equal([
-      { open: true, source: 'user' },
-      { open: false, source: 'user' },
+      { open: true, expanded: true, source: 'user' },
+      { open: false, expanded: false, source: 'user' },
     ]);
   });
 
@@ -247,8 +247,8 @@ describe('<lr-navigation-menu-item>', () => {
     expect(el.open, 'Escape must close a standalone item panel').to.equal(false);
     expect(panel(el).hidden).to.equal(true);
     expect(events).to.deep.equal([
-      { open: true, source: 'user' },
-      { open: false, source: 'user' },
+      { open: true, expanded: true, source: 'user' },
+      { open: false, expanded: false, source: 'user' },
     ]);
     expect(el.shadowRoot!.activeElement === base(el), 'focus returns to the trigger').to.equal(true);
   });
@@ -282,7 +282,7 @@ describe('<lr-navigation-menu-item>', () => {
     expect(events).to.have.length(0);
     el.open = false;
     await settle(el);
-    expect(events).to.deep.equal([{ open: false, source: 'programmatic' }]);
+    expect(events).to.deep.equal([{ open: false, expanded: false, source: 'programmatic' }]);
   });
 
   it('follows focus to the new base when href is set on a focused trigger', async () => {

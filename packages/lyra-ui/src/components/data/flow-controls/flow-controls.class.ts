@@ -2,6 +2,7 @@ import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
@@ -18,7 +19,7 @@ interface FlowCanvasLike extends HTMLElement {
   zoomIn(): void;
   zoomOut(): void;
   fit(options?: { padding?: number }): void;
-  locked: boolean;
+  readonly: boolean;
 }
 
 function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
@@ -28,7 +29,7 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
     typeof candidate.zoomIn === 'function' &&
     typeof candidate.zoomOut === 'function' &&
     typeof candidate.fit === 'function' &&
-    typeof candidate.locked === 'boolean'
+    typeof candidate.readonly === 'boolean'
   );
 }
 
@@ -92,7 +93,7 @@ const lockOpenGlyph = () =>
  * @csspart zoom-in - Zoom-in button.
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
- * @csspart lock - Lock/unlock toggle button (omitted when `hideLock`).
+ * @csspart lock - Lock/unlock toggle button (omitted when `without-lock` is set).
  * @cssprop [--lr-flow-controls-lock-active-color=var(--lr-color-brand)] - Pressed lock-button
  *   foreground.
  * @status stable
@@ -112,6 +113,9 @@ export class LyraFlowControls extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideLock: 'withoutLock',
+  };
 
   /** Id of the `lr-flow-canvas` this cluster drives. Empty (the default) resolves to the nearest
    *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
@@ -131,7 +135,15 @@ export class LyraFlowControls extends LyraElement {
   }
   /** Omits the lock/unlock toggle button entirely, for canvases that never expose an interaction
    *  lock. */
+  @property({ type: Boolean, attribute: 'without-lock' }) withoutLock = false;
+  /**
+   * Deprecated alias of `without-lock`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-lock`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
+
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating cluster. `'plain'` removes the border, background, shadow,
    *  padding and corner radius, so a cluster placed in a host toolbar or panel that already draws
@@ -140,7 +152,7 @@ export class LyraFlowControls extends LyraElement {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
-  @state() private locked = false;
+  @state() private canvasReadonly = false;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
@@ -180,24 +192,24 @@ export class LyraFlowControls extends LyraElement {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.snapshot = null;
-    this.locked = false;
+    this.canvasReadonly = false;
     this.canvasEl = canvas ?? undefined;
     if (!canvas) return;
-    this.locked = canvas.locked;
+    this.canvasReadonly = canvas.readonly;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
       if (!this.isConnected || this.canvasEl !== canvas) return;
       this.snapshot = snapshot;
-      this.locked = snapshot.locked;
+      this.canvasReadonly = snapshot.locked;
     });
   }
 
   private toggleLock = (): void => {
     if (!this.canvasEl) return;
-    const locked = !this.canvasEl.locked;
-    this.canvasEl.locked = locked;
+    const nextReadonly = !this.canvasEl.readonly;
+    this.canvasEl.readonly = nextReadonly;
     // The authoritative snapshot follows on the canvas's next coalesced frame. Reflect this
     // control's own committed action immediately so aria-pressed never lags a click by a frame.
-    this.locked = locked;
+    this.canvasReadonly = nextReadonly;
   };
 
   override render(): TemplateResult {
@@ -213,7 +225,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-in"
         type="button"
-        ?disabled=${disabled || this.locked || atMax}
+        ?disabled=${disabled || this.canvasReadonly || atMax}
         aria-label=${this.localize('zoomIn')}
         title=${this.localize('zoomIn')}
         @click=${() => this.canvasEl?.zoomIn()}
@@ -221,7 +233,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-out"
         type="button"
-        ?disabled=${disabled || this.locked || atMin}
+        ?disabled=${disabled || this.canvasReadonly || atMin}
         aria-label=${this.localize('zoomOut')}
         title=${this.localize('zoomOut')}
         @click=${() => this.canvasEl?.zoomOut()}
@@ -229,22 +241,22 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="fit"
         type="button"
-        ?disabled=${disabled || this.locked}
+        ?disabled=${disabled || this.canvasReadonly}
         aria-label=${this.localize('zoomToFit')}
         title=${this.localize('zoomToFit')}
         @click=${() => this.canvasEl?.fit()}
       >${fitGlyph()}</button>
-      ${this.hideLock
+      ${this.withoutLock
         ? nothing
         : html`<button
             part="lock"
             type="button"
             ?disabled=${disabled}
-            aria-pressed=${this.locked ? 'true' : 'false'}
+            aria-pressed=${this.canvasReadonly ? 'true' : 'false'}
             aria-label=${this.localize('flowLockCanvas')}
             title=${this.localize('flowLockCanvas')}
             @click=${this.toggleLock}
-          >${this.locked ? lockClosedGlyph() : lockOpenGlyph()}</button>`}
+          >${this.canvasReadonly ? lockClosedGlyph() : lockOpenGlyph()}</button>`}
       <slot></slot>
     </div>`;
   }

@@ -68,13 +68,13 @@ export const AreaFill: Story = {
   },
 };
 
-/** `zoom` enables wheel/drag/pinch zoom; a reset-zoom button appears once zoomed. */
+/** `zoomable` enables wheel/drag/pinch zoom; a reset-zoom button appears once zoomed. */
 export const WithZoom: Story = {
   render: () => {
     const series: LyraChartSeries[] = [{ label: 'Sessions', data: [4, 7, 6, 9, 12, 8, 15, 10, 6, 9] }];
     return html`
       <lr-line-chart
-        zoom
+        zoomable
         height="16rem"
         style="width: 22rem"
         .labels=${['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O']}
@@ -106,9 +106,8 @@ export const DualAxis: Story = {
 };
 
 /**
- * `beginAtZero` lets the y axis start near the data's own minimum instead of
- * 0. The component's true-default boolean converter accepts the explicit
- * `begin-at-zero="false"` attribute form used below.
+ * `without-zero-baseline` lets the y axis start near the data's own minimum
+ * instead of 0.
  */
 export const WithoutBeginAtZero: Story = {
   render: () => {
@@ -117,7 +116,7 @@ export const WithoutBeginAtZero: Story = {
       <lr-line-chart
         height="16rem"
         style="width: 22rem"
-        begin-at-zero="false"
+        without-zero-baseline
         .labels=${['Jan', 'Feb', 'Mar', 'Apr', 'May']}
         .datasets=${series}
       ></lr-line-chart>

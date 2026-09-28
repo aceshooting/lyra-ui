@@ -93,7 +93,7 @@ describe('app rail sidebar frame', () => {
   it('makes plain frames transparent with an explicit background override', async () => {
     const el = await fixture<LyraAppRail>(html`<lr-app-rail frame="plain"></lr-app-rail>`);
     expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgba(0, 0, 0, 0)'); expect(getComputedStyle(base(el)).borderInlineEndWidth).to.equal('0px');
-    el.style.setProperty('--lr-app-rail-background', 'rgb(12, 34, 56)'); expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(12, 34, 56)');
+    el.style.setProperty('--lr-app-rail-bg', 'rgb(12, 34, 56)'); expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(12, 34, 56)');
   });
 
   for (const direction of ['ltr', 'rtl']) it(`aligns the resizer with the card edge in ${direction}`, async () => {

@@ -1,6 +1,7 @@
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -111,7 +112,7 @@ export interface LyraTraceTreeEventMap {
  * @event lr-span-select - `detail: { spanId }` — a row was activated (click, Enter, Space).
  * @event lr-span-toggle - `detail: { spanId, expanded }` — a row was expanded or collapsed.
  * @csspart base - The root wrapper (`role="tree"`).
- * @csspart header - The column-header row, rendered only when `showTokens`/`showCost` is on.
+ * @csspart header - The column-header row, rendered only when `with-tokens`/`with-cost` is on.
  * @csspart row - One span's row (`role="treeitem"`).
  * @csspart toggle - A row's expand/collapse button.
  * @csspart icon - The span-kind icon.
@@ -119,9 +120,9 @@ export interface LyraTraceTreeEventMap {
  * @csspart detail - The span's secondary text, from `LyraSpan.detail`.
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.
- * @csspart tokens-in - The tokens-in column cell (when `showTokens`).
- * @csspart tokens-out - The tokens-out column cell (when `showTokens`).
- * @csspart cost - The cost column cell (when `showCost`).
+ * @csspart tokens-in - The tokens-in column cell (when `with-tokens`).
+ * @csspart tokens-out - The tokens-out column cell (when `with-tokens`).
+ * @csspart cost - The cost column cell (when `with-cost`).
  * @csspart bar-track - The duration bar's background track.
  * @csspart bar - The duration bar's filled portion.
  * @csspart empty - The empty-state message shown when `spans` is empty.
@@ -194,6 +195,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showTokens: 'withTokens',
+    showCost: 'withCost',
+    hideBars: 'withoutBars',
+  };
+
   /**
    * Flat span array. Hierarchy is derived from `parentId`; siblings order by `startMs`.
    * At most 500 unique spans with finite timestamps are rendered. A resolved `activeSpanId` and
@@ -210,10 +217,19 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    *  names the host itself and is not cloned onto the independently interactive tree. */
   @property() label?: string;
   /** Adds tokens-in/tokens-out columns. */
-  @property({ type: Boolean, attribute: 'show-tokens', reflect: true }) showTokens = false;
+  @property({ type: Boolean, attribute: 'with-tokens', reflect: true }) withTokens = false;
   /** Adds a cost column, rendering `costText` verbatim. */
-  @property({ type: Boolean, attribute: 'show-cost', reflect: true }) showCost = false;
+  @property({ type: Boolean, attribute: 'with-cost', reflect: true }) withCost = false;
   /** Suppresses the inline duration bar, for dense/narrow embeddings. */
+  @property({ type: Boolean, attribute: 'without-bars', reflect: true }) withoutBars = false;
+  /** Adds tokens-in/tokens-out columns.
+   *  @deprecated Use `with-tokens`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-tokens', reflect: true }) showTokens = false;
+  /** Adds a cost column, rendering `costText` verbatim.
+   *  @deprecated Use `with-cost`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-cost', reflect: true }) showCost = false;
+  /** Suppresses the inline duration bar, for dense/narrow embeddings.
+   *  @deprecated Use `without-bars`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'hide-bars', reflect: true }) hideBars = false;
 
   /** Ids of rows explicitly collapsed by the user. Absence means expanded — every row starts expanded. */
@@ -580,12 +596,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         <span part="name">${this.localize('traceTree')}</span>
         <span class="col-detail" aria-hidden="true"></span>
         <span class="col-status" aria-hidden="true"></span>
-        ${!this.hideBars ? html`<span class="col-bar" aria-hidden="true"></span>` : nothing}
+        ${!this.withoutBars ? html`<span class="col-bar" aria-hidden="true"></span>` : nothing}
         <span class="col-duration">${this.localize('duration')}</span>
-        ${this.showTokens
+        ${this.withTokens
           ? html`<span class="col-tokens">${this.localize('tokensIn')}</span><span class="col-tokens">${this.localize('tokensOut')}</span>`
           : nothing}
-        ${this.showCost ? html`<span class="col-cost">${this.localize('cost')}</span>` : nothing}
+        ${this.withCost ? html`<span class="col-cost">${this.localize('cost')}</span>` : nothing}
       </div>
     `;
   }
@@ -606,19 +622,19 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       this.localize(KIND_LABEL_KEY[span.kind]),
       this.localize(STATUS_LABEL_KEY[span.status]),
       durationLabel,
-      this.showTokens && this.validTokenMetric(span.tokensIn)
+      this.withTokens && this.validTokenMetric(span.tokensIn)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensIn'),
             value: this.formatNumber(span.tokensIn),
           })
         : '',
-      this.showTokens && this.validTokenMetric(span.tokensOut)
+      this.withTokens && this.validTokenMetric(span.tokensOut)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensOut'),
             value: this.formatNumber(span.tokensOut),
           })
         : '',
-      this.showCost && span.costText
+      this.withCost && span.costText
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('cost'),
             value: span.costText,
@@ -663,17 +679,17 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         <span part="name">${span.name}</span>
         <span part="detail">${span.detail ?? ''}</span>
         <span part="status-text" data-status=${span.status}>${this.localize(STATUS_LABEL_KEY[span.status])}</span>
-        ${!this.hideBars
+        ${!this.withoutBars
           ? html`<span part="bar-track"
               ><span part="bar" data-status=${span.status} style=${`inset-inline-start:${startPct}%;inline-size:${widthPct}%`}></span
             ></span>`
           : nothing}
         <span part="duration">${durationLabel}</span>
-        ${this.showTokens
+        ${this.withTokens
           ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatNumber(span.tokensIn) : ''}</span>
               <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatNumber(span.tokensOut) : ''}</span>`
           : nothing}
-        ${this.showCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
+        ${this.withCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
       </div>
     `;
   }
@@ -693,7 +709,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       >
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
+          : html`${this.withTokens || this.withCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
         ${hierarchy.truncated
           ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),

@@ -12,21 +12,21 @@ export const styles = css`
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
-    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+    /* The RESTING frame's own hook, alongside the dense size tier's existing padding/gap levers --
        the default tier every citation list actually renders was the only one with no card-specific
        override, so retinting one themed list meant a ::part(base) rule or an app-wide
        --lr-color-surface change. frame='plain' still wins below: it opts out of chrome entirely. */
     background: var(--lr-source-card-bg, var(--lr-color-surface));
   }
-  /* Density escape, as lr-empty's compact. Cards render in lists, so the tuned values sit behind
+  /* Density escape for the dense size tier. Cards render in lists, so the tuned values sit behind
      inline var() fallbacks rather than a :host declaration every instance would re-declare,
      shadowing any ancestor value; a list can then retune every card at once. The fallbacks are the
      pre-existing values one step down, so an unset card is unchanged. */
-  :host([compact]) [part='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
     padding: var(--lr-source-card-compact-padding, var(--lr-space-xs));
     gap: var(--lr-source-card-compact-gap, var(--lr-space-2xs));
   }
-  /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
+  /* MUST stay after the dense size rule: both are :host([x]) [part='base'], equal specificity, so
      source order alone decides which padding/gap wins on a card that is both. plain is the stronger
      statement -- no chrome at all -- so it goes last; its title and toggle affordances are
      brand-colored text with a hover underline, never a border, so they stay legible without it. */

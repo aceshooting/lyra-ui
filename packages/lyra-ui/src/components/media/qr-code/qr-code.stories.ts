@@ -54,7 +54,7 @@ export const CssColorAliases: Story = {
   render: () => html`
     <lr-qr-code
       value="https://example.com/aliases"
-      style="--lr-qr-code-fill: var(--lr-color-success); --lr-qr-code-background: var(--lr-color-success-quiet);"
+      style="--lr-qr-code-fill: var(--lr-color-success); --lr-qr-code-bg: var(--lr-color-success-quiet);"
     ></lr-qr-code>
   `,
 };

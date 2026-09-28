@@ -306,7 +306,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       ${chunks.length > 0
         ? html`<lr-chunk-inspector
             part="chunk-inspector"
-            compact
+            size="s"
             .chunks=${chunks}
             @lr-chunk-open=${(
               event: CustomEvent<{
@@ -322,7 +322,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
                 ...event.detail,
               });
             }}
-            @lr-expand=${(
+            @lr-chunk-toggle=${(
               event: CustomEvent<{ chunkId: string; expanded: boolean }>
             ) => {
               event.stopPropagation();
@@ -332,6 +332,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
                 ...event.detail,
               });
             }}
+            @lr-expand=${(event: Event) => event.stopPropagation()}
           ></lr-chunk-inspector>`
         : nothing}
       ${metaEntries.length > 0

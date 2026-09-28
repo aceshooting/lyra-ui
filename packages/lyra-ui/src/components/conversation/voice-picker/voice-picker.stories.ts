@@ -142,10 +142,10 @@ export const SlottedLabel: Story = {
   `,
 };
 
-/** `preview="false"` (via a property binding) omits both the standalone preview toggle and the
+/** `without-preview` omits both the standalone preview toggle and the
  *  per-row preview icons entirely. */
 export const NoPreview: Story = {
-  render: () => html`<lr-voice-picker label="Voice" .catalog=${catalog} .preview=${false}></lr-voice-picker>`,
+  render: () => html`<lr-voice-picker label="Voice" .catalog=${catalog} without-preview></lr-voice-picker>`,
 };
 
 /** All six shared size tiers. Compact fields retain a 40px preview-action hit area; large tiers

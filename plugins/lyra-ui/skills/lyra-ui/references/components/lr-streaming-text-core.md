@@ -8,6 +8,8 @@
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -20,8 +22,8 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
-`highlightCode`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
 entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
@@ -43,15 +45,17 @@ element's own `languages` to `{}` when unset, unlike the full variant's `undefin
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`); `gfm: boolean = true`; `linkTarget: string | null = '_blank'`
+'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`;
+deprecated alias: `gfm`, use `without-gfm`, removed in 23.0.0); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
 compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
-before 23.0.0); `highlightCode: boolean = true`
-(attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
+before 23.0.0); `withoutSyntaxHighlighting: boolean = false` (attribute
+`without-syntax-highlighting`; deprecated alias: `highlight-code`/`highlightCode`, use
+`without-syntax-highlighting`, removed in 23.0.0); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
 progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches

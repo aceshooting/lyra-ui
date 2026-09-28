@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-nav-toggle` since `21.1.0`; use event `addEventListener('lr-nav-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -56,10 +56,12 @@ This is a deliberate owner-realm safety divergence from Web Awesome 3.11, whose 
 `null` for a null input and measures detached-document geometry against the ambient page viewport;
 code migrating from `wa-page` should treat Lyra's always-finite `number` result as canonical.
 
-**Events:** `lr-nav-toggle` (cancelable; `detail: { open }` is the `navOpen` state proposed by
-`showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
+**Events:** `lr-nav-toggle-request` (cancelable; `detail: { open }` is the `navOpen` state proposed
+by `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
 click, Escape, or the default/custom navigation-toggle control, all of which route through those
-same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.) Deprecated alias:
+`lr-nav-toggle` (use `lr-nav-toggle-request`; removed in 23.0.0) — it still fires right after the
+request with an equal detail, and either event may veto.
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this
@@ -84,7 +86,7 @@ held focus outside the drawer when it opened. When that control cannot take focu
 navigation toggle, then the main landmark, receive it instead. The return is attempted as the
 drawer closes and, if that attempt could not reach the opening control (a host commonly hides its
 menu button while the drawer is open and re-shows it from its own render in response to
-`lr-nav-toggle`), again once the close's update has completed and one animation frame has passed.
+`lr-nav-toggle-request`), again once the close's update has completed and one animation frame has passed.
 That second pass only acts while focus is still inside the closed drawer, on the fallback the first
 attempt chose, or lost to `<body>` — focus moved elsewhere in the meantime (a router focusing the
 new view's heading, say) is never taken back — and it follows the same order.

@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `syncScroll` / `sync-scroll` since `21.1.0`; use property `without-sync-scroll`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,9 +42,10 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff. A runtime non-string
   `language` is treated as `''` without coercion.
-- `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
-  side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
-  `sync-scroll="false"`.
+- `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
+  side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
+  turns that off. Deprecated alias: `sync-scroll` (`syncScroll`; use `without-sync-scroll`;
+  `sync-scroll="false"` equals `without-sync-scroll`; removed in 23.0.0).
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
   preview panes; repeated assignment of the same value still re-runs.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides

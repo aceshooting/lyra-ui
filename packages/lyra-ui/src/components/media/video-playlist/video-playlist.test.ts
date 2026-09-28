@@ -7,6 +7,10 @@ import type {
 } from './video-playlist.js';
 import type { LyraVideo } from '../video/video.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 function childVideos(el: LyraVideoPlaylist): LyraVideo[] {
   return [...el.children].filter((child): child is LyraVideo => child.localName === 'lr-video');
@@ -138,7 +142,7 @@ describe('lr-video-playlist public contract', () => {
     expect(el.getAttribute('controls')).to.equal('full');
     expect(el.iconLibrary).to.equal('system');
     expect(el.hasAttribute('icon-library')).to.be.false;
-    expect(el.autoAdvance).to.be.true;
+    expect(el.withoutAutoAdvance).to.be.false;
     expect(el.repeat).to.equal('none');
     expect(first!.controls).to.equal('full');
     expect(second!.controls).to.equal('full');
@@ -172,12 +176,12 @@ describe('lr-video-playlist public contract', () => {
     expect(second!.iconLibrary).to.equal('custom');
     expect(el.shadowRoot!.querySelector('lr-icon')?.getAttribute('library')).to.equal('custom');
 
-    el.setAttribute('auto-advance', 'false');
+    el.setAttribute('without-auto-advance', '');
     await el.updateComplete;
-    expect(el.autoAdvance).to.be.false;
-    el.removeAttribute('auto-advance');
+    expect(el.withoutAutoAdvance).to.be.true;
+    el.removeAttribute('without-auto-advance');
     await el.updateComplete;
-    expect(el.autoAdvance).to.be.true;
+    expect(el.withoutAutoAdvance).to.be.false;
     el.controls = 'invalid' as typeof el.controls;
     el.repeat = 'invalid' as typeof el.repeat;
     await el.updateComplete;
@@ -219,7 +223,7 @@ describe('lr-video-playlist public contract', () => {
 
     const wrapper = await fixture<HTMLElement>(html`
       <div
-        style="--lr-video-playlist-item-current-border-color: rgb(23, 24, 25); --lr-video-playlist-item-current-background: rgb(26, 27, 28)"
+        style="--lr-video-playlist-item-current-border-color: rgb(23, 24, 25); --lr-video-playlist-item-current-bg: rgb(26, 27, 28)"
       >
         <lr-video-playlist><lr-video title="First"></lr-video></lr-video-playlist>
       </div>
@@ -229,6 +233,22 @@ describe('lr-video-playlist public contract', () => {
     const themedCurrent = items(themed)[0]!;
     expect(getComputedStyle(themedCurrent).borderColor).to.equal('rgb(23, 24, 25)');
     expect(getComputedStyle(themedCurrent).backgroundColor).to.equal('rgb(26, 27, 28)');
+  });
+
+  it('still honors the deprecated --lr-video-playlist-item-current-background alias, below the canonical -bg', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-video-playlist-item-current-background: rgb(31, 32, 33)">
+        <lr-video-playlist><lr-video title="First"></lr-video></lr-video-playlist>
+        <lr-video-playlist style="--lr-video-playlist-item-current-bg: rgb(41, 42, 43)">
+          <lr-video title="First"></lr-video>
+        </lr-video-playlist>
+      </div>
+    `);
+    const [aliasOnly, both] = [...wrapper.querySelectorAll<LyraVideoPlaylist>('lr-video-playlist')];
+    await settle(aliasOnly!);
+    await settle(both!);
+    expect(getComputedStyle(items(aliasOnly!)[0]!).backgroundColor).to.equal('rgb(31, 32, 33)');
+    expect(getComputedStyle(items(both!)[0]!).backgroundColor).to.equal('rgb(41, 42, 43)');
   });
 
   it('keeps the current items themed border-color under hover instead of falling back to the unselected wash, leaving a non-current items hover border unaffected', async () => {
@@ -281,7 +301,7 @@ describe('lr-video-playlist public contract', () => {
   it('resolves the current items hovered and pressed background from its own themed token, differing across two current-item background fixtures', async () => {
     const fixtureX = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist
-        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-background: rgb(11, 22, 33)"
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-bg: rgb(11, 22, 33)"
       >
         <lr-video title="First"></lr-video>
         <lr-video title="Second"></lr-video>
@@ -289,7 +309,7 @@ describe('lr-video-playlist public contract', () => {
     `);
     const fixtureY = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist
-        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-background: rgb(44, 55, 66)"
+        style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-bg: rgb(44, 55, 66)"
       >
         <lr-video title="First"></lr-video>
         <lr-video title="Second"></lr-video>
@@ -653,13 +673,13 @@ describe('lr-video-playlist public contract', () => {
     const [a, b] = childVideos(el);
     const aPlayback = stubPlayback(a!);
     const bPlayback = stubPlayback(b!);
-    el.autoAdvance = false;
+    el.withoutAutoAdvance = true;
     await el.updateComplete;
     a!.dispatchEvent(new Event('ended'));
     expect(a!.hidden).to.be.false;
     expect(bPlayback.playCalls).to.equal(0);
 
-    el.autoAdvance = true;
+    el.withoutAutoAdvance = false;
     el.repeat = 'one';
     await el.updateComplete;
     Object.defineProperty(media(a!), 'currentTime', { configurable: true, value: 9, writable: true });
@@ -1307,6 +1327,100 @@ describe('lr-video-playlist public contract', () => {
     await settle(el);
     expect(items(el).length).to.equal(0);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-video-playlist deprecated autoAdvance alias', () => {
+  const AUTO_ADVANCE: readonly DeprecatedUsage[] = [
+    { tag: 'lr-video-playlist', kind: 'property', name: 'autoAdvance' },
+  ];
+
+  // Ends the first video and reports whether the playlist moved on to the second one.
+  async function advancesOnEnded(el: LyraVideoPlaylist): Promise<boolean> {
+    await settle(el);
+    const [a, b] = childVideos(el);
+    stubPlayback(a!);
+    const bPlayback = stubPlayback(b!);
+    a!.dispatchEvent(new Event('ended'));
+    await aTimeout(0);
+    return !b!.hidden && bPlayback.playCalls === 1;
+  }
+
+  it('auto-advance="false" equals without-auto-advance and warns once', async () => {
+    const canonical = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist without-auto-advance>
+        <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+      </lr-video-playlist>
+    `);
+    expect(await advancesOnEnded(canonical)).to.be.false;
+    expect(canonical.autoAdvance).to.be.false;
+
+    const results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const alias = await fixture<LyraVideoPlaylist>(html`
+          <lr-video-playlist auto-advance="false">
+            <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+          </lr-video-playlist>
+        `);
+        expect(alias.withoutAutoAdvance).to.be.true;
+        results.push(await advancesOnEnded(alias));
+      }
+    });
+    expect(results).to.deep.equal([false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-video-playlist:property:autoAdvance',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-auto-advance');
+  });
+
+  it('keeps the default advancing without a warning, and removing the alias restores it', async () => {
+    const warnings = await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
+      const plain = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+      `);
+      expect(plain.autoAdvance).to.be.true;
+      expect(await advancesOnEnded(plain)).to.be.true;
+    });
+    expect(warnings).to.have.length(0);
+
+    await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
+      const el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist auto-advance="false">
+          <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+        </lr-video-playlist>
+      `);
+      el.removeAttribute('auto-advance');
+      await el.updateComplete;
+      expect(el.withoutAutoAdvance).to.be.false;
+      expect(await advancesOnEnded(el)).to.be.true;
+    });
+  });
+
+  it('forwards a property write and never reflects either spelling', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist><lr-video title="A"></lr-video><lr-video title="B"></lr-video></lr-video-playlist>
+    `);
+    await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
+      el.autoAdvance = false;
+      await el.updateComplete;
+    });
+    expect(el.withoutAutoAdvance).to.be.true;
+    expect(el.hasAttribute('auto-advance')).to.be.false;
+    expect(el.hasAttribute('without-auto-advance')).to.be.false;
+    expect(await advancesOnEnded(el)).to.be.false;
+  });
+
+  it('lets the later-written without-auto-advance win over auto-advance', async () => {
+    await captureDeprecationWarnings(AUTO_ADVANCE, async () => {
+      const el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist auto-advance without-auto-advance>
+          <lr-video title="A"></lr-video><lr-video title="B"></lr-video>
+        </lr-video-playlist>
+      `);
+      expect(el.withoutAutoAdvance).to.be.true;
+      expect(await advancesOnEnded(el)).to.be.false;
+    });
   });
 });
 

@@ -6,6 +6,7 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -79,7 +80,8 @@ interface ResolvedStage {
  * @csspart base - The container element.
  * @csspart stages - The ordered list of stages.
  * @csspart stage - One stage row.
- * @csspart dropoff - The change from the previous stage, above each stage after the first.
+ * @csspart dropoff - The change from the previous stage, above each stage after the first. Omitted
+ *   while `without-dropoff` is set.
  * @csspart stage-header - The text row above a stage's bar.
  * @csspart stage-label - A stage's name.
  * @csspart stage-value - A stage's absolute value.
@@ -115,6 +117,9 @@ export class LyraFunnel extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    dropoff: ['withoutDropoff', invertAlias, invertAlias],
+  };
 
   /** The ordered stages, first to last. Every share is measured against the first entry. */
   @property({ attribute: false }) stages: readonly LyraFunnelStage[] = [];
@@ -132,7 +137,15 @@ export class LyraFunnel extends LyraElement {
   /** Accessible name for the stage list. A host `aria-label` wins over it. */
   @property() label = '';
 
-  /** Whether the change from the previous stage is rendered above each later stage. */
+  /** Omits the change from the previous stage that is otherwise rendered above each later stage. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-dropoff' }) withoutDropoff = false;
+
+  /**
+   * Whether the change from the previous stage is rendered above each later stage. Deprecated
+   * inverted alias of `without-dropoff`: `dropoff="false"` equals `without-dropoff`.
+   *
+   * @deprecated Use `without-dropoff`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter })
   dropoff = true;
 
@@ -240,7 +253,7 @@ export class LyraFunnel extends LyraElement {
     const barPart = share !== null && share > 1 ? 'bar bar-overflow' : 'bar';
     const comparisonName = this.comparisonLabel || this.localize('comparePanel');
     return html`<li part="stage">
-      ${this.dropoff && change !== null
+      ${!this.withoutDropoff && change !== null
         ? html`<span part="dropoff">${this.changeText(change)}</span>`
         : nothing}
       <span part="stage-header">

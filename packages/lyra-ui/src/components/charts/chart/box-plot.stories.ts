@@ -62,7 +62,7 @@ export const ControlledLegendVisibility: Story = {
       <lr-box-plot
         height="16rem"
         style="inline-size: 26rem; max-inline-size: 100%;"
-        legend
+        with-legend
         legend-position="start"
         .hiddenDatasets=${[1]}
         .labels=${['Request latency']}
@@ -100,7 +100,7 @@ export const NarrowLongContent: Story = {
         <lr-box-plot
           aria-label="Request latency distributions by deployment cohort"
           height="16rem"
-          legend
+          with-legend
           .labels=${['Current production cohort', 'Candidate deployment cohort']}
           .datasets=${boxes}
         ></lr-box-plot>
@@ -170,7 +170,7 @@ export const PerBoxInteractivity: Story = {
       <lr-box-plot
         height="16rem"
         style="inline-size: 26rem; max-inline-size: 100%;"
-        legend
+        with-legend
         x-label="Week"
         y-label="Latency (ms)"
         .labels=${['Week 1', 'Week 2']}

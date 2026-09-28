@@ -7,6 +7,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -181,7 +182,7 @@ export interface LyraSequenceStripEventMap {
  * @csspart marker - The small bottom marker on a cell any of whose items sets `marker: true`.
  * @csspart tooltip - The hover/focus tooltip showing the active cell's label, positioned from that
  * active cell.
- * @csspart legend - The static category key rendered below the strip when `showLegend` is set
+ * @csspart legend - The static category key rendered below the strip when `with-legend` is set
  * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
  * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry (plus one
  * trailing marker row when `markerLabel` is set).
@@ -218,6 +219,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showLegend: 'withLegend',
+  };
 
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
@@ -390,10 +394,18 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
    *  strip is a presentational aggregate, and the key describes the scheme, not the current data
    *  (a category with no matching item still gets a row). */
+  @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /** Names what a cell's `marker` means (e.g. `"Subagent"`). Set it to key the marker in the legend
-   *  — with `showLegend` on it adds one trailing `[part="legend-item"]` whose swatch reproduces the
+   *  — with `withLegend` on it adds one trailing `[part="legend-item"]` whose swatch reproduces the
    *  cell's own marker treatment — and to have the marker counted in the auto-generated summary,
    *  which is otherwise per-category only. Unset (the default) nothing changes: no extra legend row
    *  and no extra summary clause. */
@@ -725,7 +737,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
       ${overview === undefined
         ? nothing
         : html`<div part="bucket-summary" aria-hidden="true">${overview}</div>`}
-      ${this.showLegend ? this.renderLegend() : nothing}
+      ${this.withLegend ? this.renderLegend() : nothing}
     `;
   }
 }

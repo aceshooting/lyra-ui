@@ -7,6 +7,7 @@ import {
   composedContains,
   deepActiveElement,
 } from '../../../internal/overlay-manager.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 /** Lets every queued `updateComplete.then()` focus hop settle before focus is asserted. */
 async function settleFocus(el: LyraMemoryPanel): Promise<void> {
@@ -251,7 +252,7 @@ describe('lr-memory-panel', () => {
     expect(body.hasAttribute('hidden')).to.equal(true);
   });
 
-  it('toggling the expand-toggle emits lr-expand, unhides the body, and reveals a populated lr-provenance-panel', async () => {
+  it('toggling the expand-toggle emits lr-memory-toggle, unhides the body, and reveals a populated lr-provenance-panel', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"]'
@@ -260,7 +261,7 @@ describe('lr-memory-panel', () => {
       '[part="expand-toggle"]'
     ) as HTMLButtonElement;
 
-    const listener = oneEvent(el, 'lr-expand');
+    const listener = oneEvent(el, 'lr-memory-toggle');
     toggle.click();
     const event = await listener;
     expect(event.detail.memoryId).to.equal('l1');
@@ -290,7 +291,7 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 
-    const listener = oneEvent(el, 'lr-expand');
+    const listener = oneEvent(el, 'lr-memory-toggle');
     toggle.click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
@@ -1756,5 +1757,37 @@ describe('lr-memory-panel render cap', () => {
   it('renders no truncation notice at or under the render cap', async () => {
     const el = await populated();
     expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});
+
+describe('lr-memory-panel deprecated lr-expand alias', () => {
+  it('fires lr-memory-toggle, then the lr-expand alias with its own equal detail, without warning', async () => {
+    const el = await populated();
+    const toggle = el.shadowRoot!.querySelector(
+      '[part="item"][data-id="l1"] [part="expand-toggle"]'
+    ) as HTMLButtonElement;
+    const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
+    const details = new Set<unknown>();
+    for (const type of ['lr-memory-toggle', 'lr-expand']) {
+      el.addEventListener(type, (event) => {
+        const custom = event as CustomEvent;
+        seen.push({ type, detail: { ...custom.detail }, cancelable: custom.cancelable });
+        details.add(custom.detail);
+      });
+    }
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-memory-panel', kind: 'event', name: 'lr-expand' }],
+      async () => {
+        toggle.click();
+        await el.updateComplete;
+      }
+    );
+    const detail = { memoryId: 'l1', scope: 'long-term', expanded: true };
+    expect(seen).to.deep.equal([
+      { type: 'lr-memory-toggle', detail, cancelable: false },
+      { type: 'lr-expand', detail, cancelable: false },
+    ]);
+    expect(details.size, 'each event carries its own detail object').to.equal(2);
+    expect(warnings).to.have.length(0);
   });
 });

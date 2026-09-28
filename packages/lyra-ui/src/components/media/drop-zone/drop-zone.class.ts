@@ -181,8 +181,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
    *  identical contract to `lr-file-input`'s `heldTotalSize`. */
   @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Density tier for the overlay's padding, icon and instructional text -- identical contract and
-   *  scale to `lr-file-input`'s own `size`, so a compact drop-zone can match a neighboring compact
-   *  `lr-file-input` in the same dense layout. */
+   *  scale to `lr-file-input`'s own `size`, so a small-tier drop-zone can match a neighboring
+   *  small-tier `lr-file-input` in the same dense layout. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
   @state() private dragState: DropSessionState = 'default';

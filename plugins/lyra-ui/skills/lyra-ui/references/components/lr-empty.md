@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -28,9 +28,14 @@ later values restore the corresponding content.
   either the string heading or rich `heading` slot at that semantic level; invalid untyped values
   retain level 3, while `none` keeps the visible text without heading semantics
 - `description: string = ''`
-- `compact: boolean = false` (reflected) — tighter, left-aligned rendering (less padding, a lighter
-  heading weight) for use inside a constrained space like a widget body or table cell, instead of
-  the centered/spacious full-page default
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density — tighter, left-aligned rendering (less padding, a lighter heading weight) for
+  use inside a constrained space like a widget body or table cell; `m` and above keep the
+  centered/spacious full-page default, and leaving it unset renders exactly as before. An
+  unsupported value normalizes to unset and removes the attribute. Deprecated alias: `compact` (use
+  `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like `size="s"`; the two
+  stay in step, the last write winning, and `compact` reads `true` at `s` and every step below it
 - `announce: boolean = false` (reflected) — announces the heading and description this empty state
   already carries when it first mounts, through the same shared light-DOM polite sink later changes
   use. Set it where the empty state replaces a result set the user just asked for; leave it unset
@@ -44,12 +49,12 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** `--lr-empty-compact-align` (compact mode only; defaults preserve
+**Themeable custom properties:** `--lr-empty-compact-align` (compact density only; defaults preserve
 the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
-`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
+`--lr-empty-compact-padding` (default `--lr-space-xs` — padding used at the compact density),
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
-in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
-independently themeable), `--lr-empty-compact-font-size` (compact mode only; unset by default with
+at the compact density; the default layout's gap stays the plain shared `--lr-space-s` token, not
+independently themeable), `--lr-empty-compact-font-size` (compact density only; unset by default with
 **no fallback value** — the compact heading keeps its ordinary inherited font size until a
 consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
@@ -67,7 +72,7 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   <div slot="actions"><button>Clear filters</button></div>
 </lr-empty>
 <lr-empty
-  compact
+  size="s"
   heading="No results"
   description="Try a different search."
   style="--lr-empty-compact-align: center"

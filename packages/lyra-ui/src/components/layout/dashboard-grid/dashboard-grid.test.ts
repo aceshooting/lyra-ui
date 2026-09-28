@@ -7,6 +7,10 @@ import "./dashboard-grid.js";
 import type { LyraDashboardGrid } from "./dashboard-grid.js";
 import type { LyraDashboardCell } from "./layout.js";
 import { styles } from "./dashboard-grid.styles.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 function twoCells(): LyraDashboardCell[] {
   return [
@@ -69,7 +73,7 @@ it('defaults to an empty layout, 12 columns, 80px rows, 8px gap, and collision="
   expect(el.collision).to.equal("reject");
   expect(el.cellsDraggable).to.be.false;
   expect(el.cellsResizable).to.be.false;
-  expect(el.locked).to.be.false;
+  expect(el.readonly).to.be.false;
 });
 
 it("renders lr-empty with the noData message when layout is empty", async () => {
@@ -2078,7 +2082,7 @@ describe("pointer drag", () => {
       {
         name: "grid lock",
         revoke: (el) => {
-          el.locked = true;
+          el.readonly = true;
         },
       },
       {
@@ -2407,7 +2411,7 @@ describe("pointer resize", () => {
       {
         name: "grid lock",
         revoke: (el) => {
-          el.locked = true;
+          el.readonly = true;
         },
       },
       {
@@ -2605,7 +2609,7 @@ describe("narrow allocation", () => {
         );
       }
       expect(cells[1]!.getBoundingClientRect().top).to.be.at.least(
-        cells[0]!.getBoundingClientRect().bottom + el.gap - 1
+        cells[0]!.getBoundingClientRect().bottom + Number(el.gap) - 1
       );
       expect(getComputedStyle(cells[0]!).direction).to.equal(direction);
     });
@@ -3125,7 +3129,7 @@ it("rejects drag admission through labels, disabled controls, editable content, 
 });
 
 describe("defensive edge cases", () => {
-  it("cancels an active drag through willUpdate when locked flips true without a following pointer event", async () => {
+  it("cancels an active drag through willUpdate when readonly flips true without a following pointer event", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
@@ -3153,7 +3157,7 @@ describe("defensive edge cases", () => {
     // No pointermove/pointerup ever follows -- only the property change and the resulting
     // update cycle. If willUpdate() didn't proactively cancel the gesture here, the drag state
     // (and its window-level listeners) would leak indefinitely.
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
 
     expect(
@@ -3163,7 +3167,7 @@ describe("defensive edge cases", () => {
     expect(releasedPointerId).to.equal(42);
   });
 
-  it("cancels an active resize through willUpdate when locked flips true without a following pointer event", async () => {
+  it("cancels an active resize through willUpdate when readonly flips true without a following pointer event", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
@@ -3191,7 +3195,7 @@ describe("defensive edge cases", () => {
     );
     expect(wrapper.hasAttribute("data-resizing")).to.be.true;
 
-    el.locked = true;
+    el.readonly = true;
     await el.updateComplete;
 
     expect(
@@ -3652,4 +3656,164 @@ it('keeps an adopted cell child inside its grid cell, padding and all', async ()
       `cell ${cellId}'s tile fills its allocation rather than overflowing it`
     ).to.be.closeTo(cell.getBoundingClientRect().width, 0.5);
   }
+});
+
+describe("readonly and the deprecated locked alias", () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: "lr-dashboard-grid", kind: "property", name: "locked" },
+  ];
+  /** Whether the single cell renders the pointer resize grip and its action floor. */
+  const gestures = (el: LyraDashboardGrid): string => {
+    const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    return JSON.stringify({
+      handle: el.shadowRoot!.querySelector('[part="resize-handle"]') !== null,
+      resizable: cell.hasAttribute("data-resizable"),
+    });
+  };
+  async function grid(markup: ReturnType<typeof html>): Promise<LyraDashboardGrid> {
+    const el = (await fixture(markup)) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 2 }];
+    await el.updateComplete;
+    return el;
+  }
+
+  it("disables every gesture grid-wide through readonly, reflecting it, without a warning", async () => {
+    let el!: LyraDashboardGrid;
+    let open!: LyraDashboardGrid;
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      open = await grid(html`<lr-dashboard-grid cells-draggable cells-resizable></lr-dashboard-grid>`);
+      el = await grid(
+        html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
+      );
+    });
+    expect(warnings).to.have.length(0);
+    expect(el.readonly).to.equal(true);
+    expect(el.locked, "reading the alias never warns").to.equal(true);
+    expect(el.hasAttribute("readonly")).to.equal(true);
+    expect(gestures(el)).to.not.equal(gestures(open));
+    expect(JSON.parse(gestures(el)).handle).to.equal(false);
+  });
+
+  it("keeps the locked alias working identically, and warns once naming readonly", async () => {
+    const canonical = await grid(
+      html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
+    );
+    const aliased: LyraDashboardGrid[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        aliased.push(
+          await grid(html`<lr-dashboard-grid cells-draggable cells-resizable locked></lr-dashboard-grid>`)
+        );
+      }
+    });
+    for (const el of aliased) {
+      expect(el.readonly).to.equal(true);
+      expect(el.hasAttribute("readonly")).to.equal(true);
+      expect(gestures(el)).to.equal(gestures(canonical));
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-dashboard-grid:property:locked",
+    ]);
+    expect(warnings[0]!.message).to.contain("readonly");
+  });
+
+  it("forwards a locked property write to readonly, and both reflect", async () => {
+    const el = await grid(html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`);
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.locked = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(1);
+    expect(el.readonly).to.equal(true);
+    expect(el.hasAttribute("locked")).to.equal(true);
+    expect(el.hasAttribute("readonly")).to.equal(true);
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.locked).to.equal(false);
+    expect(el.hasAttribute("locked")).to.equal(false);
+  });
+
+  it("lets the last write win between readonly and the locked alias", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await grid(html`<lr-dashboard-grid readonly locked cells-resizable></lr-dashboard-grid>`);
+      expect(el.readonly).to.equal(true);
+      el.removeAttribute("locked");
+      await el.updateComplete;
+      expect(el.readonly).to.equal(false);
+      expect(el.hasAttribute("readonly")).to.equal(false);
+      expect(JSON.parse(gestures(el)).handle).to.equal(true);
+      el.readonly = true;
+      await el.updateComplete;
+      expect(el.locked).to.equal(true);
+      expect(el.hasAttribute("locked")).to.equal(true);
+      expect(JSON.parse(gestures(el)).handle).to.equal(false);
+    });
+  });
+
+  it("keeps a lone locked attribute driving readonly after the first render", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await grid(html`<lr-dashboard-grid locked cells-resizable></lr-dashboard-grid>`);
+      expect(el.hasAttribute("readonly"), "reflected from the alias").to.equal(true);
+      el.removeAttribute("locked");
+      await el.updateComplete;
+      expect(el.readonly).to.equal(false);
+      expect(el.hasAttribute("readonly")).to.equal(false);
+      expect(JSON.parse(gestures(el)).handle).to.equal(true);
+      el.setAttribute("locked", "");
+      await el.updateComplete;
+      expect(el.readonly).to.equal(true);
+    });
+  });
+});
+
+describe("row-height and gap accept CSS lengths", () => {
+  async function populated(markup: ReturnType<typeof html>): Promise<LyraDashboardGrid> {
+    const el = (await fixture(markup)) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    return el;
+  }
+  const computed = (el: LyraDashboardGrid): string[] => {
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    return [
+      base.style.getPropertyValue("--_lr-dashboard-grid-computed-row-height"),
+      base.style.getPropertyValue("--_lr-dashboard-grid-computed-gap"),
+    ];
+  };
+
+  it("keeps numeric attributes as numbers of pixels", async () => {
+    const el = await populated(
+      html`<lr-dashboard-grid row-height="40" gap="4"></lr-dashboard-grid>`
+    );
+    expect(el.rowHeight).to.equal(40);
+    expect(el.gap).to.equal(4);
+    expect(computed(el)).to.deep.equal(["40px", "4px"]);
+  });
+
+  it("resolves rem against the root and em against the grid's own font size", async () => {
+    const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const el = await populated(
+      html`<lr-dashboard-grid
+        style="font-size: 20px"
+        row-height="3rem"
+        gap="0.5em"
+      ></lr-dashboard-grid>`
+    );
+    expect(el.rowHeight).to.equal("3rem");
+    expect(el.gap).to.equal("0.5em");
+    expect(computed(el)).to.deep.equal([`${3 * rootPx}px`, "10px"]);
+    el.rowHeight = "72px";
+    await el.updateComplete;
+    expect(computed(el)[0]).to.equal("72px");
+  });
+
+  it("falls back to the defaults for an unresolvable length, as for an invalid number", async () => {
+    const el = await populated(
+      html`<lr-dashboard-grid row-height="tall" gap="calc(1px + 1px)"></lr-dashboard-grid>`
+    );
+    expect(computed(el)).to.deep.equal(["80px", "8px"]);
+    const empty = await populated(html`<lr-dashboard-grid gap=""></lr-dashboard-grid>`);
+    expect(empty.gap, "an empty value still parses as the number it always did").to.equal(0);
+    expect(computed(empty)[1]).to.equal("0px");
+  });
 });

@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,8 +36,9 @@ position) survives the transition.
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
   sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
   `url()` are ignored.
-- `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
-  `lr-empty`'s `compact`
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+  `xs`/`2xs`) tightens header/body padding for constrained spaces; `m` and larger keep the regular
+  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
   CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
@@ -175,7 +176,7 @@ content hidden behind the backdrop. Escape or clicking the backdrop exits fullsc
 focus to whichever button triggered it. Set `fullscreen-inset` (e.g. `"0 0 0 240px"`) to reserve
 panel space for a persistent sidebar/toolbar while the default backdrop still covers the complete
 viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
-`compact` for tighter header/body padding.
+`size="s"` for tighter header/body padding.
 
 The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
 panel'`) and `widgetExpand` (default `'Expand panel'`) keys.

@@ -390,11 +390,11 @@ describe('<lr-navigation-menu> click and keyboard', () => {
     await settle(menu);
     expect(products.open).to.equal(true);
     expect(activePart(products)).to.contain('base');
-    expect(events).to.deep.equal([{ id: 'products', open: true, source: 'user' }]);
+    expect(events).to.deep.equal([{ id: 'products', open: true, expanded: true, source: 'user' }]);
     base(products).click();
     await settle(menu);
     expect(products.open).to.equal(false);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'user' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'user' });
   });
 
   it('acts on the focused trigger for Enter and Space while the pointer hovers another', async () => {
@@ -427,8 +427,8 @@ describe('<lr-navigation-menu> click and keyboard', () => {
     await settle(menu);
     await aTimeout(10);
     expect(events).to.deep.equal([
-      { id: 'products', open: false, source: 'peer' },
-      { id: 'resources', open: true, source: 'user' },
+      { id: 'products', open: false, expanded: false, source: 'peer' },
+      { id: 'resources', open: true, expanded: true, source: 'user' },
     ]);
     expect(menu.querySelectorAll('lr-navigation-menu-item[open]').length).to.equal(1);
   });
@@ -489,7 +489,7 @@ describe('<lr-navigation-menu> click and keyboard', () => {
     await sendKeys({ press: 'Tab' });
     await settle(menu);
     expect(products.open).to.equal(false);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'user' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'user' });
     expect(activePart(item(menu, 'resources'))).to.contain('base');
   });
 
@@ -630,8 +630,8 @@ describe('<lr-navigation-menu> hover', () => {
     await sendMouse({ type: 'move', position: farPoint() });
     await waitUntil(() => !products.open, 'leaving did not close');
     expect(events).to.deep.equal([
-      { id: 'products', open: true, source: 'user' },
-      { id: 'products', open: false, source: 'user' },
+      { id: 'products', open: true, expanded: true, source: 'user' },
+      { id: 'products', open: false, expanded: false, source: 'user' },
     ]);
   });
 
@@ -815,7 +815,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     await settle(menu);
     expect(products.open).to.equal(false);
     expect(base(products).getAttribute('aria-expanded')).to.equal('false');
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'user' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'user' });
 
     base(products).click();
     await waitPlaced(products);
@@ -828,7 +828,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     await sendMouse({ type: 'up' });
     await settle(menu);
     expect(products.open).to.equal(false);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'user' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'user' });
   });
 
   it('lets a nested popover close first on an outside press', async () => {
@@ -873,6 +873,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     expect(events.filter((event) => event.id === 'products').at(-1)).to.deep.equal({
       id: 'products',
       open: false,
+      expanded: false,
       source: 'peer',
     });
 
@@ -1296,7 +1297,7 @@ describe('<lr-navigation-menu> motion', () => {
       await waitPlaced(products);
       await aTimeout(20);
       expect(panel(products).getAnimations().length).to.equal(0);
-      expect(events).to.deep.equal([{ id: 'products', open: true, source: 'user' }]);
+      expect(events).to.deep.equal([{ id: 'products', open: true, expanded: true, source: 'user' }]);
     } finally {
       release();
     }
@@ -1391,7 +1392,7 @@ describe('<lr-navigation-menu> collapse', () => {
     await waitUntil(() => menu.collapsed, 'never collapsed');
     await settle(menu);
     expect(products.open).to.equal(false);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'programmatic' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'programmatic' });
     expect(menu.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle');
     part(menu, 'toggle')!.click();
     await settle(menu);
@@ -1592,7 +1593,7 @@ describe('<lr-navigation-menu> lifecycle', () => {
     products.querySelector('[slot="panel"]')!.remove();
     await waitUntil(() => !products.open, 'removing the panel content did not close');
     await settle(menu);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'programmatic' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'programmatic' });
     expect(activePart(products)).to.contain('base');
   });
 
@@ -1609,12 +1610,12 @@ describe('<lr-navigation-menu> lifecycle', () => {
     const products = item(menu, 'products');
     products.open = true;
     await settle(menu);
-    expect(events).to.deep.equal([{ id: 'products', open: true, source: 'programmatic' }]);
+    expect(events).to.deep.equal([{ id: 'products', open: true, expanded: true, source: 'programmatic' }]);
     menu.close();
     await settle(menu);
     expect(products.open).to.equal(false);
     expect(menu.expanded).to.equal(false);
-    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, source: 'programmatic' });
+    expect(events.at(-1)).to.deep.equal({ id: 'products', open: false, expanded: false, source: 'programmatic' });
     expect(expanded).to.deep.equal([{ expanded: false, source: 'programmatic' }]);
   });
 });

@@ -33,7 +33,7 @@ export const WithIcon: Story = {
 export const Compact: Story = {
   render: () => html`
     <div style="max-width: 16rem; border: 1px solid var(--lr-color-border);">
-      <lr-empty compact heading="No results" description="Try a different search.">
+      <lr-empty size="s" heading="No results" description="Try a different search.">
         <span slot="actions"><button>Reset</button></span>
       </lr-empty>
     </div>
@@ -46,14 +46,14 @@ export const CompactCentered: Story = {
     docs: {
       description: {
         story:
-          'Compact mode stays dense while `--lr-empty-compact-align: center` centers its heading, description, and actions.',
+          'The compact density (`size="s"`) stays dense while `--lr-empty-compact-align: center` centers its heading, description, and actions.',
       },
     },
   },
   render: () => html`
     <div style="max-width: 16rem; border: 1px solid var(--lr-color-border);">
       <lr-empty
-        compact
+        size="s"
         heading="No results"
         description="Try a different search."
         style="--lr-empty-compact-align: center;"

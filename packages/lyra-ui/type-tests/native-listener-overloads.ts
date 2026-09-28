@@ -29,7 +29,7 @@ const itemFocus = function (this: LyraDropdownItem, event: FocusEvent): void {
 item.addEventListener("focus", itemFocus);
 item.removeEventListener("focus", itemFocus);
 
-page.addEventListener("lr-nav-toggle", (event) => {
+page.addEventListener("lr-nav-toggle-request", (event) => {
   const open: boolean = event.detail.open;
   void open;
 });

@@ -7,9 +7,14 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-xml-viewer-highlight-accent-background` since `21.1.0`; use css-property `--lr-xml-viewer-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-xml-viewer-highlight-danger-background` since `21.1.0`; use css-property `--lr-xml-viewer-highlight-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-xml-viewer-highlight-neutral-background` since `21.1.0`; use css-property `--lr-xml-viewer-highlight-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-xml-viewer-highlight-success-background` since `21.1.0`; use css-property `--lr-xml-viewer-highlight-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-xml-viewer-highlight-warning-background` since `21.1.0`; use css-property `--lr-xml-viewer-highlight-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `collapsedDepth` / `collapsed-depth` since `21.1.0`; use property `expand-depth`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
 - **Optional peers** none
-- **Themeable via** 19 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +22,7 @@
 ## `lr-xml-viewer`
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
-UX (`collapsed-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
+UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
 `xml` reassignment) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
 sections, and processing instructions, preserved in their original mixed-child source order.
 Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
@@ -41,8 +46,10 @@ string` (property only) — raw XML text to parse and render; wins over `src`, a
 synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
 already configured `src`, or exposes idle when none exists. `source: LyraXmlViewerSource` is the
 readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
-`null`). `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
-`collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
+`null`). `name: string = ''` — accessible label. `expandDepth?: number` (attribute
+`expand-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed, so only the
+levels above it start expanded; unset, nothing auto-collapses. Deprecated alias: `collapsed-depth`
+(`collapsedDepth`; use `expand-depth`, same value and meaning; removed in 23.0.0). `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
@@ -124,14 +131,17 @@ be recolored without touching the active one. `--lr-xml-viewer-match-bg` (defaul
 Both are inline `var()` fallbacks at the point of use, so either can be set on the element or any
 ancestor; unset, they fall back to the same shared tokens the rules used before.
 
-`--lr-xml-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
-`--lr-xml-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
-`--lr-xml-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-xml-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`) and
-`--lr-xml-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are the row
+`--lr-xml-viewer-highlight-accent-bg` (default `var(--lr-color-brand-quiet)`),
+`--lr-xml-viewer-highlight-success-bg` (default `var(--lr-color-success-quiet)`),
+`--lr-xml-viewer-highlight-warning-bg` (default `var(--lr-color-warning-quiet)`),
+`--lr-xml-viewer-highlight-danger-bg` (default `var(--lr-color-danger-quiet)`) and
+`--lr-xml-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are the row
 backgrounds of a resolved `highlights` entry per tone. The neutral default is deliberately
 `--lr-color-surface-raised` and not `--lr-color-surface`: the viewer paints its own surface with the
-latter, so a neutral highlight tinted with it would render as unhighlighted.
+latter, so a neutral highlight tinted with it would render as unhighlighted. Deprecated aliases:
+`--lr-xml-viewer-highlight-accent-background`, `--lr-xml-viewer-highlight-success-background`,
+`--lr-xml-viewer-highlight-warning-background`, `--lr-xml-viewer-highlight-danger-background` and
+`--lr-xml-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in 23.0.0).
 `--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
@@ -148,7 +158,7 @@ inherited `dir` change); an expanded chevron points down in either direction.
 ```ts
 const viewer = document.querySelector("lr-xml-viewer");
 viewer.xml = payload;
-viewer.collapsedDepth = 2;
+viewer.expandDepth = 2;
 viewer.copyable = true;
 await viewer.search(query);
 ```

@@ -52,7 +52,7 @@ export const ReloadWithoutCache: Story = {
     docs: {
       description: {
         story:
-          'Property-bound `cache=false` opts out of retained values and in-flight deduplication. The button exercises the public `reload()` method against the same remote source.',
+          '`without-cache` opts out of retained values and in-flight deduplication. The button exercises the public `reload()` method against the same remote source.',
       },
     },
   },
@@ -68,7 +68,7 @@ export const ReloadWithoutCache: Story = {
     };
     return html`
       <div class="include-reload-demo" style="display:grid;gap:0.75rem">
-        <lr-include src=${src} .cache=${false}>Loading fragment…</lr-include>
+        <lr-include src=${src} without-cache>Loading fragment…</lr-include>
         <div>
           <button type="button" @click=${reload}>Reload fragment</button>
           <output style="margin-inline-start:0.5rem" aria-live="polite"></output>

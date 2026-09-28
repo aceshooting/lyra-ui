@@ -612,7 +612,7 @@ describe('original component collection ownership contracts', () => {
     (element.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
     await element.updateComplete;
     (element.shadowRoot!.querySelector('[part="reasons"] lr-chip') as HTMLElement).dispatchEvent(
-      new CustomEvent('lr-chip-select', {
+      new CustomEvent('lr-chip-toggle-request', {
         detail: { selected: true },
         bubbles: true,
         composed: true,

@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hasHeaderRow` / `has-header-row` since `21.1.0`; use property `without-header-row`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `papaparse` — see `llms/peers.md`
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -19,14 +19,16 @@
 Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and virtualizes body rows.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
-header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
+header row included unless `without-header-row` is set; `scrollToAnchor()` scrolls the addressed
 row/column into view via the virtualized list's `active-item-id`. `highlights` paint as a focusable
 `part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
 mid-flight reports `found: false` rather than a phantom success.
 
-**Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
-`has-header-row`) controls whether the first parsed row is rendered as a persistent header above
-the virtualized row scrollport.
+**Properties:** `src: string = ''` and `name: string = ''`. `withoutHeaderRow: boolean = false`
+(attribute `without-header-row`) renders the first parsed row as an ordinary data row instead of the
+persistent header above the virtualized row scrollport. Deprecated alias: `has-header-row`
+(`hasHeaderRow`; use `without-header-row`; `has-header-row="false"` equals `without-header-row`;
+removed in 23.0.0).
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —
@@ -83,7 +85,7 @@ same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a s
 the tag it eventually registers.
 
 Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
-(the first row consumes the same budget whether or not `has-header-row` displays it as a header),
+(the first row consumes the same budget whether or not it is displayed as the header),
 1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming
 row callbacks enforce the same ceilings again. Exceeding any ceiling surfaces the localized
 `documentPreviewResourceTooLarge` message instead of a partial grid.

@@ -25,6 +25,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
 import {
   getOwnDataDescriptor,
@@ -49,7 +50,7 @@ import {
   translucentAreaColor,
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
-import type { LyraVariant } from '../../../internal/variants.js';
+import { normalizeSize, type LyraSize, type LyraVariant } from '../../../internal/variants.js';
 import {
   createForcedColorPattern,
   forcedColorEncoding,
@@ -1471,6 +1472,15 @@ export interface LyraChartDatumActivateDetail<
 }
 
 export interface LyraChartEventMap {
+  /** A data point, segment or generated-table value was activated by pointer or keyboard. */
+  'lr-point-activate': CustomEvent<{
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: unknown;
+  }>;
+  /** @deprecated Use `lr-point-activate`; removal not before 23.0.0. Fired right after it, from
+   *  the same activation, with an identical detail. */
   'lr-point-click': CustomEvent<{
     datasetIndex: number;
     index: number;
@@ -1679,11 +1689,17 @@ function chartDatasetStack(dataset: unknown): string | undefined {
   const value = chartDatasetValue(dataset, 'stack');
   return typeof value === 'string' ? value : undefined;
 }
+/** Whether a `size` selects the compact plot tier the deprecated `compact` boolean spelled. */
+function isDenseChartSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /**
  * `<lr-chart>` — the core Chart.js wrapper used directly and by the typed
  * Chart.js tags plus `<lr-histogram>`. `<lr-lite-chart>` and `<lr-box-plot>`
  * are independent implementations. Requires the optional peer dep `chart.js`; `chartjs-plugin-zoom`
- * (for `zoom`) and `chartjs-plugin-datalabels` (for `data-labels`/`stack-totals`)
+ * (for `zoomable`) and `chartjs-plugin-datalabels` (for `data-labels`/`stack-totals`)
  * are further optional peers loaded only on demand.
  * With IntersectionObserver available, canvas construction waits for the first delivered
  * visibility decision; without it, drawing starts as soon as the peer and canvas are ready.
@@ -1697,7 +1713,7 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  * flexible wrapper around Chart.js" supporting *both* simplified attributes
  * and full Chart.js configuration passthrough, not a `data`/`options` prop
  * pair. `lr-chart` mirrors that dual surface: the `LyraChartSeries`-based
- * `datasets`/`labels`/`type`/`withoutLegend`/`xLabel`/`yLabel`/`zoom` attributes
+ * `datasets`/`labels`/`type`/`withoutLegend`/`xLabel`/`yLabel`/`zoomable` attributes
  * below are the simplified surface (compatible with WA's `type`, `xLabel`,
  * `yLabel`, `withoutLegend`, etc.), and the additional
  * `config` property is the raw-passthrough escape hatch — a
@@ -1712,16 +1728,18 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *
  * @customElement lr-chart
  * @event lr-zoom - `detail: { zoomed }`.
- * @event lr-point-click - Fired when pointer input lands on a data point/segment, when a generated
- *   data-table value is activated, or when Enter/Space activates the keyboard-current canvas datum.
- *   `detail: { datasetIndex: number, index: number, label: string |
+ * @event lr-point-activate - Fired when pointer input lands on a data point/segment, when a
+ *   generated data-table value is activated, or when Enter/Space activates the keyboard-current
+ *   canvas datum. `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`. For scatter/bubble data, `label` prefers the per-point label and
  *   `value` contains the complete `LyraChartPoint` (`x`, `y`, optional `r`, optional `id`, optional
  *   `label`). A primitive `id` is retained for application navigation and selection; unsafe or
  *   non-finite values are omitted. The heterogeneous event value is typed `unknown`; consumers
  *   must narrow the value itself before reading point fields.
+ * @event lr-point-click - Deprecated alias of `lr-point-activate`, fired right after it from the
+ *   same activation with an identical detail; removal not before 23.0.0.
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
- *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail. For scatter/bubble
+ *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-activate` detail. For scatter/bubble
  *   points its `value` is the same `LyraChartPoint`, including a safe primitive `id` when present.
  * @event lr-legend-visibility-change-request - Cancelable proposal emitted before a DOM legend
  *   toggle changes state. `detail` contains the target `datasetIndex`, its proposed `visible`
@@ -1802,8 +1820,10 @@ function chartDatasetStack(dataset: unknown): string | undefined {
  *   defaults to the standard active mix of `--lr-color-brand-quiet`.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Tooltip background color. Resolved
  *   via `getComputedStyle` on every draw.
- * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Tooltip text color. Resolved via
+ * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Tooltip text color. Resolved via
  *   `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Deprecated alias of `--lr-chart-tooltip-color`; removal not
+ *   before 23.0.0.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
  *   `[part='canvas']` hover-state outline.
  * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color, var(--lr-color-border))] - Color of the
@@ -1922,6 +1942,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseChartSize(value as LyraSize)],
+    zoom: 'zoomable',
+    beginAtZero: ['withoutZeroBaseline', invertAlias, invertAlias],
+    showDataTable: 'withDataTable',
+  };
 
   constructor() {
     super();
@@ -2057,10 +2084,25 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * Radial charts ignore this setting. Explicit config scale options retain precedence. */
   @property({ converter: { fromAttribute: (value) => normalizeChartGrid(value) } })
   axes: LyraChartAxes = 'both';
+  /**
+   * Plot density on the shared size scale. `s` (and the smaller `xs`/`2xs`) renders a compact
+   * cartesian plot: axes are hidden and automatic layout padding is removed. Set `height` and
+   * `withoutLegend` too for a small histogram/sparkline. Data tables, tooltips and keyboard actions
+   * are preserved; radial charts ignore the compact tier. `m` (the default) and larger keep the
+   * full plot. Explicit config options retain precedence.
+   */
+  @property() size: LyraSize = 'm';
+
   /** Compact cartesian plot: hide axes and remove automatic layout padding. Set height and
    * withoutLegend for a small histogram/sparkline. Preserves data tables, tooltips and keyboard
-   * actions; radial charts ignore this setting. Explicit config options retain precedence. */
+   * actions; radial charts ignore this setting. Explicit config options retain precedence.
+   * @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean }) compact = false;
+
+  /** Whether `size` selects the compact plot tier. */
+  private get compactPlot(): boolean {
+    return isDenseChartSize(this.size);
+  }
   /** Chart.js index axis. `'y'` is Chart.js's own mechanism for horizontal bars (it also flips
    *  line/area types onto a horizontal category axis). */
   @property({ attribute: 'index-axis' }) indexAxis: LyraChartIndexAxis = 'x';
@@ -2079,8 +2121,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `lr-scatter-chart` and `lr-bar-chart`.
    *
    * A logarithmic axis cannot represent zero or negative values (`log(0)` is `-Infinity`), so
-   * `beginAtZero` is not forwarded in that mode -- Chart.js would otherwise be handed a bound it
-   * cannot place. Non-positive data points are dropped by Chart.js's own log scale.
+   * the zero baseline (`withoutZeroBaseline` unset) is not forwarded in that mode -- Chart.js
+   * would otherwise be handed a bound it cannot place. Non-positive data points are dropped by
+   * Chart.js's own log scale.
    */
   @property({ attribute: 'scale-type' }) scaleType: LyraChartScaleType = 'linear';
   /**
@@ -2145,11 +2188,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: false }) tooltipFooterFormatter?: LyraChartTooltipGroupFormatter;
   /** Chart-wide default fill-under-line setting for line-type series; a series's own `LyraChartSeries.fill` overrides it. */
   @property({ type: Boolean }) area = false;
+  /** Enables wheel, drag and pinch zoom on the `x` axis through the optional `chartjs-plugin-zoom`
+   *  peer (loaded on first demand), and shows the `reset-zoom-button` while zoomed. */
+  @property({ type: Boolean }) zoomable = false;
+
+  /** Deprecated alias of `zoomable`, with identical behavior.
+   * @deprecated Use `zoomable`; removal not before 23.0.0. */
   @property({ type: Boolean }) zoom = false;
   @property() height = '280px';
   @property({ attribute: 'x-label' }) xLabel: string | null = null;
   @property({ attribute: 'y-label' }) yLabel: string | null = null;
   @property({ attribute: 'y2-label' }) y2Label = '';
+  /** Lets a linear value axis start at the data minimum instead of always including zero. */
+  @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
+
+  /** Deprecated inverted alias of `without-zero-baseline` (`withoutZeroBaseline`).
+   * @deprecated Use `without-zero-baseline`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'begin-at-zero',
@@ -2157,15 +2211,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   })
   beginAtZero = true;
   /** Makes the generated data table visible; it remains screen-reader available when false. */
+  @property({ type: Boolean, attribute: 'with-data-table' }) withDataTable = false;
+
+  /** Makes the generated data table visible; it remains screen-reader available when false.
+   * @deprecated Use `with-data-table`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * Render a disclosure button above the accessible data table so a sighted reader can reveal the
-   * numbers behind the chart on demand. `showDataTable` alone is all-or-nothing -- the table is
+   * numbers behind the chart on demand. `withDataTable` alone is all-or-nothing -- the table is
    * either permanently screen-reader-only or permanently visible -- which left a consumer wrapping
    * a duplicated table in their own `<details>`.
    *
-   * With this set, `showDataTable` becomes the disclosure's *initial* state rather than its whole
+   * With this set, `withDataTable` becomes the disclosure's *initial* state rather than its whole
    * behavior. The table stays in the DOM in both states, so assistive technology never loses it.
    * @default false
    */
@@ -2173,17 +2231,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Live disclosure state. Null until the reader actually toggles, so an untouched control keeps
-   * following `showDataTable` (including a later change to it) instead of freezing a seeded copy.
+   * following `withDataTable` (including a later change to it) instead of freezing a seeded copy.
    */
   @state() private dataTableExpandedOverride: boolean | null = null;
 
   private readonly dataTableId = nextId('chart-data-table');
 
-  /** Whether the data table is currently visible. Identical to `showDataTable` whenever
+  /** Whether the data table is currently visible. Identical to `withDataTable` whenever
    *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
   private get dataTableVisible(): boolean {
-    if (!this.dataTableToggle) return this.showDataTable;
-    return this.dataTableExpandedOverride ?? this.showDataTable;
+    if (!this.dataTableToggle) return this.withDataTable;
+    return this.dataTableExpandedOverride ?? this.withDataTable;
   }
 
   private toggleDataTable(): void {
@@ -2216,7 +2274,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * this chart; the peer is attached only to instances that opt in, and
    * `buildConfig()` keeps its per-chart options disabled until this is set. The
    * screen-reader equivalent is the always-present data table (see
-   * `show-data-table`); labels are a purely visual, canvas-only addition.
+   * `with-data-table`); labels are a purely visual, canvas-only addition.
    */
   @property({ type: Boolean, attribute: 'data-labels' }) dataLabels = false;
   /**
@@ -2822,8 +2880,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
     this.updateAutoLegendPosition();
     const generation = ++this.loadGeneration;
-    if (this.zoom) this.requestZoomFeature();
-    const load = this.loadLibrary(this.zoom);
+    if (this.zoomable) this.requestZoomFeature();
+    const load = this.loadLibrary(this.zoomable);
     void load.then(async (mod) => {
       // The server always renders the stable loading branch. A cached/fast optional-peer import can
       // otherwise settle while the browser is still upgrading the declarative-shadow-DOM host,
@@ -2850,7 +2908,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // `data-labels`/`stack-totals` need the optional `chartjs-plugin-datalabels`
     // peer registered before the plugin's `datalabels` options in `buildConfig()`
     // take effect. Load it in parallel with the core (both memoized), then
-    // redraw once it's registered — mirrors the `zoom` on-demand load and its
+    // redraw once it's registered — mirrors the `zoomable` on-demand load and its
     // generation + `isConnected` guard against a disconnect mid-import.
     if (this.needsDataLabels) {
       this.requestDataLabelsFeature();
@@ -3011,13 +3069,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private get zoomFeatureAvailable(): boolean {
-    return this.zoom && this.zoomFeatureState === 'available';
+    return this.zoomable && this.zoomFeatureState === 'available';
   }
 
   private featureWarningMessages(): string[] {
     if (this.loading || this.loadFailed) return [];
     const messages: string[] = [];
-    if (this.zoom && this.zoomFeatureState === 'unavailable') {
+    if (this.zoomable && this.zoomFeatureState === 'unavailable') {
       messages.push(this.localize('chartZoomUnavailable'));
     }
     if (this.dataLabelsFeatureState === 'unavailable') {
@@ -3032,13 +3090,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private requestZoomFeature(): void {
     const generation = ++this.zoomLoadGeneration;
-    if (!this.zoom) {
+    if (!this.zoomable) {
       this.zoomFeatureState = 'idle';
       return;
     }
     this.zoomFeatureState = 'loading';
     void this.loadZoomFeature().then((result) => {
-      if (generation !== this.zoomLoadGeneration || !this.isConnected || !this.zoom) return;
+      if (generation !== this.zoomLoadGeneration || !this.isConnected || !this.zoomable) return;
       this.zoomFeatureState = result.kind === 'available' ? 'available' : 'unavailable';
       // A dynamic request may be the first feature path to return a retained core module. The
       // normal core load remains authoritative for fatal state, but retaining this module keeps a
@@ -3245,7 +3303,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // other property having changed in the meantime.
     if (this.loading) return;
 
-    // `zoom` can also turn on after connect (it was false at
+    // `zoomable` can also turn on after connect (it was false at
     // `connectedCallback()` time, so only the core `loadChartJs()` load was
     // kicked off) — load the zoom plugin on demand now and redraw once it's
     // registered. Mirrors the same `isConnected` guard `connectedCallback()`
@@ -3254,10 +3312,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // dynamic import is in flight — without this guard, `draw()` would
     // construct a new, leaked `Chart` bound to the now-detached canvas once
     // the import resolves.
-    if (changed.has('zoom')) {
+    if (changed.has('zoomable')) {
       this.requestZoomFeature();
     }
-    // `data-labels`/`stack-totals` can turn on after connect (like `zoom`) — load
+    // `data-labels`/`stack-totals` can turn on after connect (like `zoomable`) — load
     // the plugin on demand and redraw once it's registered, with the same
     // generation + `isConnected` guard against a disconnect mid-import.
     if (changed.has('dataLabels') || changed.has('stackTotals')) {
@@ -3302,7 +3360,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'description',
       'grid',
       'axes',
-      'compact',
+      'size',
       'indexAxis',
       'label',
       'legendPosition',
@@ -3321,7 +3379,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'xLabel',
       'yLabel',
       'y2Label',
-      'beginAtZero',
+      'withoutZeroBaseline',
       'stacked',
       'stackedAxes',
       'withoutAnimation',
@@ -3331,7 +3389,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'stackTotals',
       'config',
       'slottedConfig',
-      'zoom',
+      'zoomable',
       'locale',
       'strings',
       'loading',
@@ -3561,8 +3619,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       cs.getPropertyValue('--lr-chart-tooltip-bg').trim() ||
       cs.getPropertyValue('--_lr-chart-tooltip-bg').trim();
     const tooltipText =
+      cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
       cs.getPropertyValue('--lr-chart-tooltip-text').trim() ||
-      cs.getPropertyValue('--_lr-chart-tooltip-text').trim();
+      cs.getPropertyValue('--_lr-chart-tooltip-color').trim();
     return {
       grid: resolveCanvasColor(this, grid, FALLBACK_GRID_COLOR),
       tick: resolveCanvasColor(this, tick, FALLBACK_TICK_COLOR),
@@ -3957,9 +4016,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return this.scaleType === 'logarithmic' ? 'logarithmic' : 'linear';
   }
 
-  /** `beginAtZero` for a value axis, suppressed on a logarithmic scale which cannot place zero. */
+  /** Chart.js `beginAtZero` for a value axis, suppressed on a logarithmic scale which cannot place
+   *  zero. */
   private valueBeginAtZero(): boolean | undefined {
-    return this.valueScaleType() === 'logarithmic' ? undefined : this.beginAtZero;
+    return this.valueScaleType() === 'logarithmic' ? undefined : !this.withoutZeroBaseline;
   }
 
   private scaleBounds(): { min?: number; max?: number } {
@@ -3978,7 +4038,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private axisVisible(axis: LyraChartIndexAxis): boolean {
     const axes = normalizeChartGrid(this.axes);
-    return !this.compact && (axes === 'both' || axes === axis);
+    return !this.compactPlot && (axes === 'both' || axes === axis);
   }
 
   /**
@@ -4019,7 +4079,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return {
         r: {
           ...this.tickLabelIsolation(direction),
-          beginAtZero: this.beginAtZero,
+          beginAtZero: !this.withoutZeroBaseline,
           ...this.scaleBounds(),
           // `z: 1` (any value > 0) moves the ring tick labels into Chart.js's post-dataset
           // `_layers` pass (core.controller.js `draw()` runs every z<=0 layer, then
@@ -4292,7 +4352,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ? 'segment'
             : 'point';
     this.emit('lr-datum-activate', { ...datum, kind });
-    this.emit('lr-point-click', datum);
+    this.emit('lr-point-activate', { ...datum });
+    this.emit('lr-point-click', { ...datum });
   }
 
   private onCanvasFocus(): void {
@@ -4391,7 +4452,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Formatter metadata for one datum, in SOURCE index space -- the same space the data table,
-   * CSV export and `lr-point-click` already report, so a formatter's `datasetIndex`/`index` mean
+   * CSV export and `lr-point-activate` already report, so a formatter's `datasetIndex`/`index` mean
    * one thing across every surface even while sampling has renumbered what Chart.js sees.
    */
   private datumFormatterMetadata(
@@ -4808,7 +4869,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
-        ...(this.compact && !['pie', 'doughnut', 'radar', 'polarArea'].includes(effectiveType)
+        ...(this.compactPlot && !['pie', 'doughnut', 'radar', 'polarArea'].includes(effectiveType)
           ? { layout: { padding: 0, autoPadding: false } } : {}),
         // Chart.js's own mechanism for horizontal bars (also flips line/area
         // types onto a horizontal category axis).
@@ -4886,7 +4947,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               ) !== true;
             },
           },
-          zoom: this.zoom && this.zoomFeatureState !== 'unavailable'
+          zoom: this.zoomable && this.zoomFeatureState !== 'unavailable'
             ? {
                 pan: { enabled: false },
                 zoom: {

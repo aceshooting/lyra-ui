@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showTimer` / `show-timer` since `21.1.0`; use property `without-timer`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,8 +36,10 @@ string = ''` (attribute `device-id`) — a specific input device, `audioConstrai
 PushToTalkAudioConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints;
 it deliberately excludes `deviceId`, whose single authority is the dedicated property,
 `levelEvents: boolean = false` (attribute `level-events`) — opt in to `lr-level`, `maxDurationMs:
-number = 0` (attribute `max-duration-ms`) — auto-stop cap, `0` disables it, `showTimer: boolean =
-true` (attribute `show-timer`), `disabled: boolean = false` (reflected), plus two getter-only
+number = 0` (attribute `max-duration-ms`) — auto-stop cap, `0` disables it, `withoutTimer: boolean =
+false` (attribute `without-timer`) — hides the elapsed timer (deprecated alias: `show-timer`/
+`showTimer`, use `without-timer`, removed in 23.0.0; inverted, so `show-timer="false"` equals
+`without-timer`), `disabled: boolean = false` (reflected), plus two getter-only
 properties: `state: PushToTalkState` (`'idle' | 'requesting' | 'denied' | 'recording' | 'error'`,
 mirrored to `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
@@ -45,7 +47,7 @@ mirrored to `data-state`) and `stream: MediaStream | null` (the live capture str
 A host `aria-label` names the internal trigger by attribute presence; an explicitly empty value is
 preserved instead of being replaced by the generated Hold/Start/Stop label.
 
-`levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
+`levelEvents`, `maxDurationMs`, and `withoutTimer` stay reactive during an active recording: changing
 them starts or stops their audio-analysis, deadline, or elapsed-time work immediately. A changed
 maximum remains measured from the original recording start rather than granting a fresh duration;
 setting it to `0` removes the deadline.
@@ -72,7 +74,7 @@ recorder runtime failures), `lr-level`
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
-`timer` (the localized `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+`timer` (the localized `M:SS` elapsed-time readout, only while recording and `without-timer` is unset), and `status`
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the

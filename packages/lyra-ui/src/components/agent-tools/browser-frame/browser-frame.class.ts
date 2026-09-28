@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './browser-frame.styles.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -44,13 +45,6 @@ function containRect(
   const width = containerH * naturalRatio;
   return { left: (containerW - width) / 2, top: 0, width, height: containerH };
 }
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Mirrors `<lr-agent-run>`'s own
- *  `showCancel`/`showRetry` converter (`toAttribute` omits the attribute for `true` since nothing
- *  in this component's stylesheet keys off `[controls]`'s presence). */
 
 export interface BrowserPing {
   id: string;
@@ -95,14 +89,16 @@ export interface LyraBrowserFrameEventMap {
  * @csspart status - The visible, non-live status text.
  * @csspart controller-badge - The current controller indicator.
  * @csspart actions - The `actions` slot wrapper.
- * @csspart take-over-button - The take-over/hand-back button.
- * @csspart stop-button - The stop button.
+ * @csspart take-over-button - The take-over/hand-back button, not rendered while `without-controls`.
+ * @csspart stop-button - The stop button, not rendered while `without-controls`.
  * @csspart viewport - The frame/media container.
  * @csspart frame - The `frame-src` `<img>` (absent once the default slot is populated).
  * @csspart ping - One action-ping marker; carries `data-kind`.
  * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
- * @cssprop [--lr-browser-frame-controller-background=var(--lr-color-brand-quiet)] - Controller
+ * @cssprop [--lr-browser-frame-controller-bg=var(--lr-color-brand-quiet)] - Controller
  *   badge background.
+ * @cssprop [--lr-browser-frame-controller-background=var(--lr-color-brand-quiet)] - Deprecated alias of
+ *   `--lr-browser-frame-controller-bg`; removal not before 23.0.0.
  * @cssprop [--lr-browser-frame-controller-color=var(--lr-color-brand)] - Controller badge text
  *   color.
  * @cssprop [--lr-browser-frame-ping-click-color=var(--lr-color-brand)] - Click-ping border color.
@@ -146,6 +142,10 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    controls: ['withoutControls', invertAlias, invertAlias],
+  };
+
   private _frameSrc = '';
 
   @property({ attribute: 'frame-src' })
@@ -179,6 +179,12 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   /** Pointer markers keyed by stable id. Empty/blank ids are omitted and duplicates normalize
    *  first-wins before rendering. */
   @property({ attribute: false }) pings: readonly BrowserPing[] = [];
+  /** Hides the built-in take-over/hand-back and stop buttons, for a read-only viewer. The
+   *  `actions` slot still renders. */
+  @property({ type: Boolean, attribute: 'without-controls', reflect: true }) withoutControls = false;
+
+  /** Whether the built-in take-over/hand-back and stop buttons render.
+   *  @deprecated Use `without-controls`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
   private hasDefaultSlotContent = false;
@@ -401,7 +407,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
             )}
           </span>
           <slot name="actions" part="actions"></slot>
-          ${this.controls
+          ${!this.withoutControls
             ? html`
                 <button part="take-over-button" type="button" @click=${this.onTakeOver}>
                   ${this.controller === 'user'

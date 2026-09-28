@@ -7,9 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated part** `copy-button__control` since `21.1.0`; use part `::part(copy-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,7 +40,7 @@ A `language` value absent from `languages` always renders the plain `<pre><code>
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
 path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
 same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/`language`/
-`filename`/`copyable`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
+`filename`/`withoutCopyButton`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
 `<lr-code-block>` exactly, including its CSS parts, themeable custom properties, and stylesheet
 (this component reuses `code-block.styles.ts` directly).
@@ -56,9 +57,9 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
-  `copyable="false"` or a `.copyable=${false}` property binding disables it; a
-  `?copyable=${false}` boolean-attribute binding cannot override the true default.
+- `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
+  copy-to-clipboard button. Deprecated alias: `copyable` (use `without-copy-button`; removed in
+  23.0.0) — inverted, so `copyable="false"` equals `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -106,8 +107,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
-`copy-button-icon`, `copy-button__control`, `header-actions`, `toggle`, `body`, `pre`,
-`code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
+`copy-button-icon`, `copy-button-control` (deprecated alias: `copy-button__control`, removed in
+23.0.0), `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
+identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),

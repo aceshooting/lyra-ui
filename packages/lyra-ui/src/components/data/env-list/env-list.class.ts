@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   writeClipboardText,
@@ -20,11 +21,12 @@ const MASK = '•'.repeat(8);
 const MAX_ENV_ENTRIES = 10_000;
 
 /**
- * `true`-defaulting boolean attribute converter. Lit's built-in `type: Boolean` converter is
- * presence-based -- the attribute's mere presence (regardless of its string value) maps to `true`,
- * so a plain-markup consumer writing the literal `revealable="false"`/`copyable="false"` would
- * actually get `true` (these properties' default), the opposite of what that string reads as --
- * the same bug class `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
+ * The deprecated `revealable`/`copyable` aliases parse with the shared `true`-defaulting boolean
+ * converter. Lit's built-in `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-markup consumer writing the
+ * literal `revealable="false"`/`copyable="false"` would actually get `true`, the opposite of what
+ * that string reads as. Their canonical `without-reveal`/`without-copy-button` replacements are
+ * ordinary false-defaulting presence booleans.
  */
 
 export interface EnvEntry {
@@ -59,8 +61,8 @@ export interface LyraEnvListEventMap {
  * @csspart value-cell - The `<dd>` wrapping one entry's value text and its buttons; buttons live
  * here (not as siblings of `<dt>`/`<dd>`) so the `<dl>` keeps a valid dt/dd content model.
  * @csspart value - The value text itself; carries `data-masked`.
- * @csspart reveal-button - The per-row reveal/hide toggle.
- * @csspart copy-button - The per-row copy button.
+ * @csspart reveal-button - The per-row reveal/hide toggle, omitted while `without-reveal` is set.
+ * @csspart copy-button - The per-row copy button, omitted while `without-copy-button` is set.
  * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
  *   (revealed) reveal toggle, and the base its hover/press mixes from.
  * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a pressed
@@ -87,6 +89,10 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    revealable: ['withoutReveal', invertAlias, invertAlias],
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+  };
 
   private _entries: readonly EnvEntry[] = [];
 
@@ -120,10 +126,28 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     this.requestUpdate('entries', previous);
   }
 
-  /** Whether each secret entry gets a reveal/hide toggle. */
+  /** Omits every secret entry's reveal/hide toggle, so secrets stay masked. Turning it on also
+   *  re-masks any entry that was revealed. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-reveal' }) withoutReveal = false;
+
+  /** Omits every entry's copy-to-clipboard button. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-copy-button' })
+  withoutCopyButton = false;
+
+  /**
+   * Whether each secret entry gets a reveal/hide toggle. Deprecated inverted alias of
+   * `without-reveal`: `revealable="false"` equals `without-reveal`.
+   *
+   * @deprecated Use `without-reveal`; removal not before 23.0.0.
+   */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) revealable = true;
 
-  /** Whether each entry gets a copy-to-clipboard button. */
+  /**
+   * Whether each entry gets a copy-to-clipboard button. Deprecated inverted alias of
+   * `without-copy-button`: `copyable="false"` equals `without-copy-button`.
+   *
+   * @deprecated Use `without-copy-button`; removal not before 23.0.0.
+   */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** Accessible name for the list; falls back to a localized default when unset. An explicitly
@@ -164,7 +188,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('revealable') && !this.revealable && this.revealed.size > 0) {
+    if (changed.has('withoutReveal') && this.withoutReveal && this.revealed.size > 0) {
       this.revealed = new Map();
     }
     if (changed.has('entries')) {
@@ -238,7 +262,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                     `
                   : entry.value}
               </span>
-              ${this.revealable && secret
+              ${!this.withoutReveal && secret
                 ? html`<button
                     part="reveal-button"
                     type="button"
@@ -250,7 +274,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                       : this.localize('envListReveal', undefined, { name: entry.name })}
                   </button>`
                 : nothing}
-              ${this.copyable
+              ${!this.withoutCopyButton
                 ? html`<button
                     part="copy-button"
                     type="button"

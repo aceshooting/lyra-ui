@@ -66,7 +66,7 @@ export const HumanReadableValueText: Story = {
   },
   render: () => html`
     <lr-slider
-      show-value
+      with-value
       label="Temperature level"
       min="0"
       max="2"
@@ -91,9 +91,9 @@ export const WithoutValueReadout: Story = {
 };
 
 export const WithValueReadout: Story = {
-  name: 'With the value readout (show-value on)',
+  name: 'With the value readout (with-value on)',
   render: () => html`
-    <lr-slider label="Opacity" min="0" max="100" value="60" show-value style="max-inline-size: 20rem;"></lr-slider>
+    <lr-slider label="Opacity" min="0" max="100" value="60" with-value style="max-inline-size: 20rem;"></lr-slider>
   `,
 };
 
@@ -137,7 +137,7 @@ export const StandaloneNarrow: Story = {
             <lr-slider
               label="InternationalizedSliderLabelWithoutAnyNaturalBreakOpportunity"
               hint="InternationalizedSliderHintWithoutAnyNaturalBreakOpportunity"
-              show-value
+              with-value
             >
               <span slot="reference">ReferenceUnitWithoutAnyNaturalBreakOpportunity</span>
             </lr-slider>
@@ -373,12 +373,12 @@ export const Sizes: StoryObj = {
   },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-m); justify-items: start;">
-      <lr-slider size="2xs" label="Size 2xs" show-value style="inline-size: 18rem"></lr-slider>
-      <lr-slider size="xs" label="Size xs" show-value style="inline-size: 18rem"></lr-slider>
-      <lr-slider size="s" label="Size s" show-value style="inline-size: 18rem"></lr-slider>
-      <lr-slider size="m" label="Size m" show-value style="inline-size: 18rem"></lr-slider>
-      <lr-slider size="l" label="Size l" show-value style="inline-size: 18rem"></lr-slider>
-      <lr-slider size="xl" label="Size xl" show-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="2xs" label="Size 2xs" with-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xs" label="Size xs" with-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="s" label="Size s" with-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="m" label="Size m" with-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="l" label="Size l" with-value style="inline-size: 18rem"></lr-slider>
+      <lr-slider size="xl" label="Size xl" with-value style="inline-size: 18rem"></lr-slider>
     </div>
   `,
 };
@@ -386,13 +386,13 @@ export const Sizes: StoryObj = {
 export const FormattedLabelReadouts: Story = {
   render: () => html`
     <div style="display:grid;gap:var(--lr-space-l);max-inline-size:var(--lr-size-20rem)">
-      <lr-slider label="Capacity" value="30" show-value value-display="formatted" value-placement="label"
+      <lr-slider label="Capacity" value="30" with-value value-display="formatted" value-placement="label"
         .valueFormatter=${(value: number) => new Intl.NumberFormat(storyLocale(), { style: 'percent' }).format(value / 100)}></lr-slider>
       <lr-slider label="Playback speed" min="0.1" max="2" step="0.1" value="0.5"
-        show-value value-display="formatted" value-placement="label"
+        with-value value-display="formatted" value-placement="label"
         .valueFormatter=${(value: number) => `${new Intl.NumberFormat(storyLocale()).format(value)}×`}></lr-slider>
       <lr-slider label="Duration" range min="0" max="2" step="0.1" min-value="0.3" max-value="1.5"
-        show-value value-display="formatted" value-placement="label"
+        with-value value-display="formatted" value-placement="label"
         .valueFormatter=${(value: number) => new Intl.NumberFormat(storyLocale(), { style: 'unit', unit: 'hour', unitDisplay: 'short' }).format(value)}></lr-slider>
     </div>
   `,
@@ -401,7 +401,7 @@ export const FormattedLabelReadouts: Story = {
 export const FractionalBindings: Story = {
   render: () => html`
     <lr-slider label="Opacity" .value=${0.55} .min=${0} .max=${1} .step=${0.05}
-      show-value value-display="formatted" value-placement="label"
+      with-value value-display="formatted" value-placement="label"
       .valueFormatter=${(value: number) => new Intl.NumberFormat(storyLocale(), { style: 'percent' }).format(value)}
       style="max-inline-size:var(--lr-size-20rem)"></lr-slider>
   `,

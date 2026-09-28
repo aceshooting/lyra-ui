@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hideLock` / `hide-lock` since `21.1.0`; use property `without-lock`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,7 +26,8 @@ otherwise available direction.
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
-- `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
+- `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
+  Deprecated alias: `hide-lock`/`hideLock` (use `without-lock`; removed in 23.0.0)
 - `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
   floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws
@@ -35,7 +36,7 @@ otherwise available direction.
   canonical type is `LyraFrame`; the former component-local appearance alias is removed.
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
-`zoomOut()`/`fit()`, or toggles its `locked` property.
+`zoomOut()`/`fit()`, or toggles its `readonly` property.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
 `<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:
@@ -45,7 +46,7 @@ the consumer nests inside it is left alone — so an icon or label child keeps w
 page gives it.
 
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
-`frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
+`frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted while `without-lock` is set).
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —

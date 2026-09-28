@@ -251,7 +251,7 @@ const composedEventMapTypes: [
   LyraEntityDossierEventMap['lr-entity-activate'],
   LyraEntityDossierEventMap['lr-node-expand'],
   LyraEntityDossierEventMap['lr-chunk-open'],
-  LyraEntityDossierEventMap['lr-expand'],
+  LyraEntityDossierEventMap['lr-chunk-toggle'],
   LyraEntityDossierEventMap['lr-toggle'],
   LyraEntityDossierEventMap['lr-tab-show'],
 ] | undefined = undefined;
@@ -542,7 +542,7 @@ thinkingPanel.addEventListener('lr-toggle', (event) => {
 });
 
 declare const promptStudio: LyraPromptStudio;
-promptStudio.addEventListener('lr-message-reorder', (event) => {
+promptStudio.addEventListener('lr-message-reorder-request', (event) => {
   const detail: PromptStudioMessageReorderDetail = event.detail;
   const messageId: string = detail.messageId;
   const fromIndex: number = detail.fromIndex;
@@ -553,7 +553,7 @@ promptStudio.addEventListener('lr-message-reorder', (event) => {
 });
 
 declare const menuItem: LyraMenuItem;
-menuItem.addEventListener('lr-menu-item-change', (event) => {
+menuItem.addEventListener('lr-menu-item-change-request', (event) => {
   const checked: boolean = event.detail.checked;
   const value: string = event.detail.value;
   void checked;
@@ -601,7 +601,7 @@ toggle.addEventListener('lr-change', (event) => {
 });
 
 declare const table: LyraTable<{ id: string }>;
-table.addEventListener('lr-row-click', (event) => {
+table.addEventListener('lr-row-activate', (event) => {
   const id: string = event.detail.row.id;
   void id;
 });

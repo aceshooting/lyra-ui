@@ -5,6 +5,10 @@ import './source-list.js';
 import '../source-card/source-card.js';
 import '../../utility/copy-button/copy-button.js';
 import { LyraSourceList } from './source-list.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 it('defaults to collapsed with an omitted label and an empty label-plural', async () => {
   const el = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
@@ -52,7 +56,7 @@ it('localizes the fallback "Sources" header text via this.localize() when .strin
 
 it('hides [part="list"] from the accessibility tree while collapsed, shows it while expanded', async () => {
   const el = (await fixture(
-    html`<lr-source-list><lr-source-card title="a.pdf"></lr-source-card></lr-source-list>`,
+    html`<lr-source-list><lr-source-card heading="a.pdf"></lr-source-card></lr-source-list>`,
   )) as LyraSourceList;
   const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
   expect(list.hidden).to.be.true;
@@ -94,8 +98,8 @@ it('links the header to the list region it controls via aria-controls', async ()
 it('exposes a live sourceCount reflecting the slotted children, including on later add/remove', async () => {
   const el = (await fixture(
     html`<lr-source-list>
-      <lr-source-card title="a.pdf"></lr-source-card>
-      <lr-source-card title="b.pdf"></lr-source-card>
+      <lr-source-card heading="a.pdf"></lr-source-card>
+      <lr-source-card heading="b.pdf"></lr-source-card>
     </lr-source-list>`,
   )) as LyraSourceList;
   expect(el.sourceCount).to.equal(2);
@@ -123,7 +127,7 @@ it('reports sourceCount as 0 for an empty list', async () => {
 it('does not throw when sourceCount is assigned, e.g. from a lit-html property binding', async () => {
   const el = (await fixture(
     html`<lr-source-list>
-      <lr-source-card title="a.pdf"></lr-source-card>
+      <lr-source-card heading="a.pdf"></lr-source-card>
     </lr-source-list>`,
   )) as LyraSourceList;
   expect(el.sourceCount).to.equal(1);
@@ -142,7 +146,7 @@ it("keeps willUpdate's pre-count in sync with firstUpdated's authoritative count
   // `firstUpdated`'s slot-based recount.
   const el = fixtureSync<LyraSourceList>(html`
     <lr-source-list>
-      <lr-source-card title="a.pdf"></lr-source-card>
+      <lr-source-card heading="a.pdf"></lr-source-card>
       <span slot="not-a-real-slot">not assigned to the default slot</span>
     </lr-source-list>
   `);
@@ -172,10 +176,10 @@ it('is accessible with no cards and collapsed', async () => {
 it('is accessible with cards and expanded', async () => {
   const el = (await fixture(
     html`<lr-source-list label-plural="2 sources" expanded>
-      <lr-source-card source-id="a" title="annual_report.pdf" page="12">
+      <lr-source-card source-id="a" heading="annual_report.pdf" page="12">
         <span slot="excerpt">Revenue grew 12% year over year.</span>
       </lr-source-card>
-      <lr-source-card source-id="b" title="notes.txt"></lr-source-card>
+      <lr-source-card source-id="b" heading="notes.txt"></lr-source-card>
     </lr-source-list>`,
   )) as LyraSourceList;
   await expect(el).to.be.accessible();
@@ -439,29 +443,29 @@ it('preserves live author roles while connected and after release', async () => 
   expect(card.getAttribute('role')).to.equal('article');
 });
 
-describe('compact and frame', () => {
+describe('size and frame', () => {
   const part = (el: LyraSourceList, name: string) =>
     el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('defaults compact to false and frame to "card", reflecting both as attributes when set', async () => {
+  it('defaults size to "m" and frame to "card", reflecting both as attributes', async () => {
     const plain = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
-    expect(plain.compact).to.be.false;
-    expect(plain.hasAttribute('compact')).to.be.false;
+    expect(plain.size).to.equal('m');
+    expect(plain.getAttribute('size')).to.equal('m');
     expect(plain.frame).to.equal('card');
     expect(plain.getAttribute('frame')).to.equal('card');
 
     const el = (await fixture(
-      html`<lr-source-list compact frame="plain"></lr-source-list>`,
+      html`<lr-source-list size="s" frame="plain"></lr-source-list>`,
     )) as LyraSourceList;
-    expect(el.compact).to.be.true;
-    expect(el.hasAttribute('compact')).to.be.true;
+    expect(el.size).to.equal('s');
+    expect(el.getAttribute('size')).to.equal('s');
     expect(el.frame).to.equal('plain');
   });
 
-  it('compact tightens header padding/gap and list padding/gap, keeping the outer card chrome', async () => {
+  it('size="s" tightens header padding/gap and list padding/gap, keeping the outer card chrome', async () => {
     const regular = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
     const el = (await fixture(
-      html`<lr-source-list compact expanded></lr-source-list>`,
+      html`<lr-source-list size="s" expanded></lr-source-list>`,
     )) as LyraSourceList;
 
     const compactBase = getComputedStyle(part(el, 'base'));
@@ -480,9 +484,9 @@ describe('compact and frame', () => {
     expect(parseFloat(compactList.rowGap)).to.be.lessThan(parseFloat(regularList.rowGap));
   });
 
-  it('lets a consumer retune the compact values through --lr-source-list-compact-*', async () => {
+  it('lets a consumer retune the dense-tier values through --lr-source-list-compact-*', async () => {
     const el = (await fixture(
-      html`<lr-source-list compact expanded></lr-source-list>`,
+      html`<lr-source-list size="s" expanded></lr-source-list>`,
     )) as LyraSourceList;
     el.style.setProperty('--lr-source-list-compact-header-padding', '1px 2px');
     el.style.setProperty('--lr-source-list-compact-header-gap', '3px');
@@ -508,10 +512,10 @@ describe('compact and frame', () => {
     expect(listStyle.borderTopWidth).to.not.equal('0px');
   });
 
-  it('leaves the default presentation byte-identical when compact and frame are unset', async () => {
+  it('leaves the default presentation byte-identical when size and frame are unset', async () => {
     const implicit = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
     const explicit = (await fixture(
-      html`<lr-source-list .compact=${false} frame="card"></lr-source-list>`,
+      html`<lr-source-list size="m" frame="card"></lr-source-list>`,
     )) as LyraSourceList;
     expect(getComputedStyle(part(implicit, 'base')).cssText).to.equal(
       getComputedStyle(part(explicit, 'base')).cssText,
@@ -563,4 +567,67 @@ describe('header text contrast at rest, hover and press', () => {
       }
     });
   }
+});
+
+describe('lr-source-list size and the deprecated compact alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-list', kind: 'property', name: 'compact' }];
+  const observe = (el: LyraSourceList): string => {
+    const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]')!);
+    const list = getComputedStyle(el.shadowRoot!.querySelector('[part="list"]')!);
+    return [header.paddingTop, header.columnGap, list.paddingTop, list.rowGap].join('|');
+  };
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceList>(markup);
+
+  it('applies size="s" without a deprecation warning', async () => {
+    let dense = '';
+    let regular = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      dense = observe(await mount(html`<lr-source-list size="s" expanded></lr-source-list>`));
+      regular = observe(await mount(html`<lr-source-list expanded></lr-source-list>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-list size="s" expanded></lr-source-list>`));
+      alias = observe(await mount(html`<lr-source-list compact expanded></lr-source-list>`));
+      const el = await mount(html`<lr-source-list expanded></lr-source-list>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-list:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-source-list expanded></lr-source-list>`));
+      const el = await mount(html`<lr-source-list compact expanded></lr-source-list>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-source-list compact size="m" expanded></lr-source-list>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
+  });
 });

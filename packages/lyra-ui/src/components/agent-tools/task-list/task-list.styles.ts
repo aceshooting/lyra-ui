@@ -8,22 +8,22 @@ export const styles = [
       display: block;
       --_lr-task-list-spin: var(--lr-transition-ambient);
     }
-    /* Card chrome behind inline var() fallbacks, same convention as the compact density below:
+    /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below:
        each fallback is the pre-existing token, so an unset list paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
     [part="base"] {
       border: var(--lr-border-width-thin) solid
         var(--lr-task-list-border-color, var(--lr-color-border));
       border-radius: var(--lr-task-list-radius, var(--lr-radius));
-      background: var(--lr-task-list-background, var(--lr-color-surface));
+      background: var(--lr-task-list-bg, var(--lr-task-list-background, var(--lr-color-surface)));
       overflow: hidden;
     }
-    /* Density escape -- same convention as lr-agent-run/lr-source-card's compact. Values sit behind
+    /* Density escape -- same convention as lr-agent-run/lr-source-card's dense tier. Values sit behind
        inline var() fallbacks, not :host declarations that every instance re-declares and so shadows
        an ancestor value, so a transcript can retune every embedded list at once. Header and body
        carry their own padding, unlike agent-run/source-card's single [part='base'] padding, since
        that is where this component puts it. */
-    :host([compact]) [part="header"] {
+    :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="header"] {
       padding: var(
         --lr-task-list-compact-header-padding,
         var(--lr-space-2xs) var(--lr-space-s)
@@ -34,7 +34,7 @@ export const styles = [
         var(--lr-font-size-sm)
       );
     }
-    :host([compact]) [part="body"] {
+    :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="body"] {
       gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));
       padding: var(
         --lr-task-list-compact-body-padding,
@@ -101,10 +101,10 @@ export const styles = [
       flex: 0 0 auto;
       transition: transform var(--lr-transition-fast);
     }
-    :host([expanded]) [part="toggle"] {
+    :host(:not([collapsed])) [part="toggle"] {
       transform: rotate(90deg);
     }
-    :host(:not([expanded]):dir(rtl)) [part="toggle"] {
+    :host([collapsed]:dir(rtl)) [part="toggle"] {
       transform: scaleX(-1);
     }
     [part="label"] {

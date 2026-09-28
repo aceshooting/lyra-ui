@@ -1055,10 +1055,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}
           @lr-retry=${this.onTableRetry}
-          @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => {
+          @lr-row-activate=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();
             this.openDocument(event.detail.row);
           }}
+          @lr-row-click=${this.stopOwnedEvent}
         >${this.hasErrorSlot
           ? html`<div slot="error"><slot name="error"></slot></div>`
           : nothing}</lr-table>

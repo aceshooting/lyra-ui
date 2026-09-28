@@ -12,25 +12,25 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: 100%;
     padding: var(--lr-space-m);
-    /* Card chrome behind inline var() fallbacks, same convention as the compact density below:
+    /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below:
        each fallback is the pre-existing token, so an unset run paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
     border: var(--lr-border-width-thin) solid
       var(--lr-agent-run-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-agent-run-radius, var(--lr-radius));
-    background: var(--lr-agent-run-background, var(--lr-color-surface));
+    background: var(--lr-agent-run-bg, var(--lr-agent-run-background, var(--lr-color-surface)));
     color: var(--lr-color-text);
   }
-  /* Density escape -- same convention as lr-empty's compact. Inline var() fallbacks rather than a
+  /* Density escape for the dense size tier. Inline var() fallbacks rather than a
      :host declaration (which every instance re-declares, shadowing any ancestor value), so a
      consumer can retune from outside without restating the whole rule; the fallbacks are the
      pre-existing values, leaving an unset run unchanged. */
-  :host([compact]) [part="base"] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part="base"] {
     padding: var(--lr-agent-run-compact-padding, var(--lr-space-s));
     gap: var(--lr-agent-run-compact-gap, var(--lr-space-s));
   }
-  /* MUST stay after :host([compact]) -- both are :host([x]) [part='base'], equal specificity, so
-     source order alone decides the padding/gap when a run is both compact and frame="plain", and
+  /* MUST stay after the dense size rule -- both are :host(x) [part='base'], equal specificity, so
+     source order alone decides the padding/gap when a run is both dense and frame="plain", and
      plain is the stronger no-chrome statement. The built-in Cancel/Retry buttons keep their own
      border/background -- that chrome is theirs, not the card's -- so a chrome-less run still has a
      visible interactive affordance. */

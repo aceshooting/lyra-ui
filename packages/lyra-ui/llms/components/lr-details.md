@@ -102,14 +102,12 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
 and carry `detail: { item }`. **New in 10.0.0:** a cancelable `lr-toggle-request`
-(`detail: { collapsed, item }`) fires alongside the matching directional event for every transition,
-including sibling auto-collapses in `single`/`single-collapsible` mode and `collapseAll()`. It carries
-the direction in the detail rather than the event name, matching `<lr-code-block>`/`<lr-chat-message>`'s
-`lr-toggle-request` convention, plus an `item` reference the single-panel siblings do not need (an
-accordion's toggling entity is one of several children, so the event target alone cannot identify it).
-`preventDefault()` on **either** event vetoes the transition — the two are a symmetric veto pair, not
-a primary and a notification. Note `<lr-thinking-panel>`'s own `lr-toggle-request` spells its detail
-`{ expanded }` rather than `{ collapsed }`; the two conventions are not fully unified. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+(`detail: { collapsed, item }`) fires alongside the matching directional event for every
+transition, including sibling auto-collapses in `single`/`single-collapsible` mode and
+`collapseAll()`. It carries the direction in the detail rather than the event name — `collapsed:
+true` is the closing direction — plus an `item` reference the single-panel siblings do not need (an accordion's toggling entity is one of several children, so the
+event target alone cannot identify it). `preventDefault()` on **either** event vetoes the
+transition — the two are a symmetric veto pair, not a primary and a notification. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
 it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable
@@ -151,7 +149,8 @@ invariant.
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
-`detail: { open, source }`, then the non-cancelable `lr-after-show` or `lr-after-hide` once
+`detail: { expanded, open, source }` (`expanded` is the new state; the deprecated `open` key, removed
+in 23.0.0, carries the same value), then the non-cancelable `lr-after-show` or `lr-after-hide` once
 rendering and motion settle. `source` is `user` for a summary click or keyboard activation,
 `programmatic` for `show()`, `hide()`, or assigning `open`, and `peer` when another Details with
 the same non-empty `name` closes this one. The full orders are `lr-show` → `lr-toggle` →

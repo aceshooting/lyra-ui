@@ -1558,6 +1558,46 @@ describe('highlights', () => {
     expect(cell.getAttribute('part')).to.not.contain('cell-highlighted-accent');
   });
 
+  describe('-bg custom properties and their deprecated -background aliases', () => {
+    const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+    const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
+    const declarations = (suffix: 'bg' | 'background', offset: number): string =>
+      tones.map((tone, index) => `--lr-notebook-viewer-highlight-${tone}-${suffix}: ${colorFor(index + offset)};`).join(' ');
+    const TONE_NOTEBOOK: NotebookDocument = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: tones.map((tone) => ({ cell_type: 'raw', id: tone, source: `${tone} cell`, metadata: {} })),
+    };
+
+    const paints = async (style: string): Promise<string[]> => {
+      const el = (await fixture(
+        html`<lr-notebook-viewer style=${style} .notebook=${TONE_NOTEBOOK}></lr-notebook-viewer>`,
+      )) as LyraNotebookViewer;
+      await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length === tones.length);
+      el.highlights = tones.map((tone) => ({ id: tone, tone, anchor: { kind: 'fragment', id: tone } }));
+      await el.updateComplete;
+      const root = rowRoot(el);
+      await waitUntil(() => root.querySelectorAll('[part~="cell-highlighted"]').length === tones.length);
+      return tones.map((tone) =>
+        getComputedStyle(root.querySelector(`[part~="cell-highlighted-${tone}"]`)!).backgroundColor,
+      );
+    };
+
+    const expected = (offset: number): string[] => tones.map((_, index) => colorFor(index + offset));
+
+    it('paints every tone from the canonical -bg properties', async () => {
+      expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+    });
+
+    it('still honors the deprecated -background spellings with the same result', async () => {
+      expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
+    });
+
+    it('lets the canonical -bg property win when both spellings are set', async () => {
+      expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
+    });
+  });
+
   it('adds cell-highlight-active only to the entry matching activeHighlightId', async () => {
     const { el, vlistRoot } = await mountHighlighted();
     el.highlights = [

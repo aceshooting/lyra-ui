@@ -78,8 +78,8 @@ export const styles = css`
   [part='zoom-in-button']:not(:disabled):hover,
   [part='zoom-out-button']:not(:disabled):hover {
     background: var(
-      --lr-zoomable-frame-control-hover-background,
-      var(--lr-color-brand-quiet)
+      --lr-zoomable-frame-control-hover-bg,
+      var(--lr-zoomable-frame-control-hover-background, var(--lr-color-brand-quiet))
     );
   }
 
@@ -88,8 +88,8 @@ export const styles = css`
     background: color-mix(
       in oklab,
       var(
-        --lr-zoomable-frame-control-hover-background,
-        var(--lr-color-brand-quiet)
+        --lr-zoomable-frame-control-hover-bg,
+        var(--lr-zoomable-frame-control-hover-background, var(--lr-color-brand-quiet))
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );

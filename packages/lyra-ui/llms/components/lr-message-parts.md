@@ -7,9 +7,11 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Deprecated css-property** `--lr-message-parts-error-background` since `21.1.0`; use css-property `--lr-message-parts-error-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `showReasoning` / `show-reasoning` since `21.1.0`; use property `without-reasoning`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 21 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,8 +32,10 @@ left-to-right inside a right-to-left document. `lr-message-parts` forwards no Ma
 nested code direction cannot be overridden from outside with `::part()`.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
-'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
-`show-reasoning`, reflected, with string-aware true-default conversion);
+'markdown'` (attribute `content-mode`, reflected) and `withoutReasoning: boolean = false` (attribute
+`without-reasoning`, reflected) — omits reasoning parts (deprecated alias: `show-reasoning`/
+`showReasoning`, use `without-reasoning`, removed in 23.0.0; inverted, so `show-reasoning="false"`
+equals `without-reasoning`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
 and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
@@ -136,7 +140,8 @@ emitted. Tool errors are never announced; only `error` parts are.
 `--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
 audio transcript's text color. Error parts have separate
 `--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
-`--lr-message-parts-error-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-message-parts-error-bg` (default `var(--lr-color-danger-quiet)`; deprecated alias:
+`--lr-message-parts-error-background`, removed in 23.0.0), and
 `--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
 fallbacks, so setting one on an ancestor rethemes only that state longhand.
 

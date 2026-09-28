@@ -7,7 +7,7 @@ import {
   sendWheel,
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
-import { LyraGraph, type LyraGraphLink } from './graph.js';
+import { LyraGraph, type LyraGraphEdge } from './graph.js';
 import { drawGraphScene } from './graph-canvas.js';
 
 const nodes = [
@@ -15,7 +15,7 @@ const nodes = [
   { id: 'b', label: 'Beta', color: 'blue' },
 ];
 
-async function readyGraph(renderer: 'svg' | 'canvas', links: LyraGraphLink[]) {
+async function readyGraph(renderer: 'svg' | 'canvas', links: LyraGraphEdge[]) {
   const graph = await fixture<LyraGraph>(html`
     <lr-graph
       renderer=${renderer}
@@ -24,12 +24,14 @@ async function readyGraph(renderer: 'svg' | 'canvas', links: LyraGraphLink[]) {
       height="360"
       style="width:400px;height:360px"
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
     ></lr-graph>
   `);
+  // The d3 peers load lazily; a busy runner can need longer than waitUntil's 1s default.
   await waitUntil(
     () => graph.getNodePosition('b') != null,
-    'Layered nodes positioned'
+    'Layered nodes positioned',
+    { timeout: 5000 }
   );
   await graph.updateComplete;
   await settlePointer();
@@ -100,7 +102,7 @@ describe('graph rendered interaction contracts', () => {
         'Backward navigation returns to Beta'
       );
       expect(hidden.hasAttribute('tabindex')).to.equal(false);
-      expect(graph.links.length).to.equal(dangling ? 1 : 2);
+      expect(graph.edges.length).to.equal(dangling ? 1 : 2);
     });
   }
 
@@ -148,8 +150,8 @@ describe('graph rendered interaction contracts', () => {
     for (const type of [
       'lr-node-enter',
       'lr-node-leave',
-      'lr-link-enter',
-      'lr-link-leave',
+      'lr-edge-enter',
+      'lr-edge-leave',
     ] as const) {
       graph.addEventListener(type, (event) =>
         events.push({ type, detail: event.detail })
@@ -192,11 +194,11 @@ describe('graph rendered interaction contracts', () => {
       { type: 'lr-node-enter', detail: { nodeId: 'a' } },
       { type: 'lr-node-leave', detail: { nodeId: 'a' } },
       {
-        type: 'lr-link-enter',
+        type: 'lr-edge-enter',
         detail: { sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' },
       },
       {
-        type: 'lr-link-leave',
+        type: 'lr-edge-leave',
         detail: { sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' },
       },
       { type: 'lr-node-enter', detail: { nodeId: 'b' } },
@@ -271,7 +273,7 @@ describe('graph rendered interaction contracts', () => {
     expect(bluePixels, 'Visible nodes were painted').to.be.greaterThan(0);
     expect(redPixels).to.equal(0);
     expect(root.querySelectorAll('[part="cursor-item"]').length).to.equal(2);
-    expect(graph.links.length).to.equal(1);
+    expect(graph.edges.length).to.equal(1);
     expect(root.querySelector('[part="data-list"]')!.textContent).to.include(
       'Link from Alpha to Beta'
     );

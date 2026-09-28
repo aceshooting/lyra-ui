@@ -5,12 +5,13 @@ import './confirm-bar.js';
 import type { LyraConfirmBar } from './confirm-bar.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { nextHostUpdateOpportunity } from '../../../internal/focus-navigation.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
-it('defaults to decision null, pending null, variant neutral, and shows Deny before Approve', async () => {
+it('defaults to decision null, pendingAction null, variant neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
   expect(el.decision).to.equal(null);
-  expect(el.pending).to.equal(null);
-  expect(el.hasAttribute('pending')).to.be.false;
+  expect(el.pendingAction).to.equal(null);
+  expect(el.hasAttribute('pending-action')).to.be.false;
   expect(el.variant).to.equal('neutral');
   const buttons = [...el.shadowRoot!.querySelectorAll('lr-button')];
   const denyIndex = buttons.findIndex((b) => b.getAttribute('part') === 'deny-button');
@@ -271,17 +272,17 @@ it('is accessible before and after a decision, with and without args', async () 
   await expect(decided).to.be.accessible();
 });
 
-describe('compact and frame', () => {
+describe('size and frame', () => {
   const part = (el: LyraConfirmBar, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('defaults compact to false and reflects it as an attribute when set', async () => {
+  it('defaults size to "m", reflects it, and reflects size="s" when set', async () => {
     const plain = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    expect(plain.compact).to.be.false;
-    expect(plain.hasAttribute('compact')).to.be.false;
+    expect(plain.size).to.equal('m');
+    expect(plain.getAttribute('size')).to.equal('m');
 
-    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
-    expect(el.compact).to.be.true;
-    expect(el.hasAttribute('compact')).to.be.true;
+    const el = (await fixture(html`<lr-confirm-bar size="s"></lr-confirm-bar>`)) as LyraConfirmBar;
+    expect(el.size).to.equal('s');
+    expect(el.getAttribute('size')).to.equal('s');
   });
 
   it('defaults frame to "card" and reflects it, in the shared container-frame vocabulary', async () => {
@@ -294,9 +295,9 @@ describe('compact and frame', () => {
     expect(el.getAttribute('frame')).to.equal('plain');
   });
 
-  it('compact is density only — it keeps the card border, radius and background', async () => {
+  it('size="s" is density only — it keeps the card border, radius and background', async () => {
     const regular = (await fixture(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
-    const el = (await fixture(html`<lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
+    const el = (await fixture(html`<lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>`)) as LyraConfirmBar;
 
     const compactStyle = getComputedStyle(part(el, 'base'));
     const regularStyle = getComputedStyle(part(regular, 'base'));
@@ -351,9 +352,9 @@ describe('compact and frame', () => {
     expect(baseStyle.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('compact frame="plain" reproduces the pre-9.0.0 compact presentation, even with variant="danger"', async () => {
+  it('size="s" frame="plain" reproduces the pre-9.0.0 compact presentation, even with variant="danger"', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar compact frame="plain" variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
+      html`<lr-confirm-bar size="s" frame="plain" variant="danger" tool-name="delete_row"></lr-confirm-bar>`,
     )) as LyraConfirmBar;
 
     // The host itself must flip too -- restyling only [part='base'] still leaves a
@@ -372,7 +373,7 @@ describe('compact and frame', () => {
   it('drops the compact chrome custom properties — re-chroming is frame="card" now', async () => {
     const el = (await fixture(html`
       <lr-confirm-bar
-        compact
+        size="s"
         frame="plain"
         tool-name="run_shell"
         style="--lr-confirm-bar-compact-background:rgb(1, 2, 3);--lr-confirm-bar-compact-border:2px solid rgb(4, 5, 6);--lr-confirm-bar-compact-radius:9px;"
@@ -387,12 +388,12 @@ describe('compact and frame', () => {
   it('neutralizes the narrow-container query so the buttons are not stretched inside a table cell', async () => {
     const wrap = await fixture(html`
       <div style="inline-size:240px;">
-        <lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>
+        <lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>
         <lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
       </div>
     `);
-    const compact = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar[compact]');
-    const regular = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar:not([compact])');
+    const compact = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar[size="s"]');
+    const regular = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar:not([size="s"])');
     if (!compact || !regular) throw new Error('Expected both compact and regular confirm bars.');
 
     expect(getComputedStyle(compact).containerType).to.equal('normal');
@@ -404,10 +405,10 @@ describe('compact and frame', () => {
     expect(getComputedStyle(part(regular, 'deny-button')).flexGrow).to.equal('1');
   });
 
-  it('does not match an unrelated narrow ancestor query container while compact', async () => {
+  it('does not match an unrelated narrow ancestor query container while size="s"', async () => {
     const wrap = await fixture(html`
       <div style="container-type:inline-size;inline-size:240px;">
-        <lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>
+        <lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>
       </div>
     `);
     const compact = wrap.querySelector('lr-confirm-bar') as LyraConfirmBar;
@@ -415,7 +416,7 @@ describe('compact and frame', () => {
   });
 
   it('keeps the focus-management contract: focus lands on [part="status"] before the buttons unmount', async () => {
-    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    const el = (await fixture(html`<lr-confirm-bar size="s"></lr-confirm-bar>`)) as LyraConfirmBar;
     (part(el, 'approve-button') as LyraButton).click();
     // Synchronous, exactly as in the default presentation.
     expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
@@ -429,7 +430,7 @@ describe('compact and frame', () => {
   // *before* `decision` is set, so an undecided status that were `display: none` would make
   // `.focus()` a no-op and drop focus to `<body>` the instant the buttons unmount.
   it('keeps the undecided [part="status"] rendered-but-zero-sized rather than display:none', async () => {
-    const el = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    const el = (await fixture(html`<lr-confirm-bar size="s"></lr-confirm-bar>`)) as LyraConfirmBar;
     const status = part(el, 'status');
     expect(getComputedStyle(status).display).to.not.equal('none');
     const box = status.getBoundingClientRect();
@@ -443,7 +444,7 @@ describe('compact and frame', () => {
 
   it('fires lr-approve/lr-deny identically', async () => {
     const approveEl = (await fixture(
-      html`<lr-confirm-bar compact .args=${{ x: 1 }}></lr-confirm-bar>`,
+      html`<lr-confirm-bar size="s" .args=${{ x: 1 }}></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     const approvePromise = oneEvent(approveEl, 'lr-approve');
     (part(approveEl, 'approve-button') as LyraButton).click();
@@ -453,7 +454,7 @@ describe('compact and frame', () => {
     await approveEl.updateComplete;
     expect(approveEl.decision).to.equal('approved');
 
-    const denyEl = (await fixture(html`<lr-confirm-bar compact></lr-confirm-bar>`)) as LyraConfirmBar;
+    const denyEl = (await fixture(html`<lr-confirm-bar size="s"></lr-confirm-bar>`)) as LyraConfirmBar;
     const denyPromise = oneEvent(denyEl, 'lr-deny');
     (part(denyEl, 'deny-button') as LyraButton).click();
     const denyDetail = (await denyPromise).detail as { waitUntil: unknown };
@@ -462,7 +463,7 @@ describe('compact and frame', () => {
     expect(denyEl.decision).to.equal('denied');
   });
 
-  it('leaves the default presentation byte-identical when compact is unset', async () => {
+  it('leaves the default presentation byte-identical when size is unset', async () => {
     const el = (await fixture(html`<lr-confirm-bar variant="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
     expect(getComputedStyle(el).display).to.equal('block');
     expect(getComputedStyle(el).containerType).to.equal('inline-size');
@@ -474,10 +475,10 @@ describe('compact and frame', () => {
     expect(baseStyle.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('is accessible in the compact and chrome-less presentations, before and after a decision', async () => {
+  it('is accessible in the dense and chrome-less presentations, before and after a decision', async () => {
     const el = (await fixture(
       html`<lr-confirm-bar
-        compact
+        size="s"
         frame="plain"
         variant="danger"
         tool-name="delete_row"
@@ -491,7 +492,7 @@ describe('compact and frame', () => {
     await expect(el).to.be.accessible();
 
     const dense = (await fixture(
-      html`<lr-confirm-bar compact tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
+      html`<lr-confirm-bar size="s" tool-name="delete_row" .args=${{ id: 7 }}></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     await expect(dense).to.be.accessible();
   });
@@ -828,8 +829,8 @@ describe('async pending decisions', () => {
     (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await approveEl.updateComplete;
     expect(approveEl.decision).to.equal(null);
-    expect(approveEl.pending).to.equal('approve');
-    expect(approveEl.hasAttribute('pending')).to.be.true;
+    expect(approveEl.pendingAction).to.equal('approve');
+    expect(approveEl.hasAttribute('pending-action')).to.be.true;
     expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.exist;
     expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
 
@@ -838,7 +839,7 @@ describe('async pending decisions', () => {
     (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await denyEl.updateComplete;
     expect(denyEl.decision).to.equal(null);
-    expect(denyEl.pending).to.equal('deny');
+    expect(denyEl.pendingAction).to.equal('deny');
   });
 
   it('lr-approve/lr-deny report cancelable:true, and only a prevented listener stops the default finalization', async () => {
@@ -850,7 +851,7 @@ describe('async pending decisions', () => {
     expect(approveEvent.defaultPrevented, 'not prevented here').to.equal(false);
     await approveEl.updateComplete;
     expect(approveEl.decision, 'not-prevented path finalizes normally').to.equal('approved');
-    expect(approveEl.pending).to.equal(null);
+    expect(approveEl.pendingAction).to.equal(null);
 
     const preventedEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
     const preventedPromise = oneEvent(preventedEl, 'lr-approve');
@@ -861,7 +862,7 @@ describe('async pending decisions', () => {
     expect(preventedEvent.defaultPrevented, 'prevented here').to.equal(true);
     await preventedEl.updateComplete;
     expect(preventedEl.decision, 'prevented path never finalizes').to.equal(null);
-    expect(preventedEl.pending).to.equal('approve');
+    expect(preventedEl.pendingAction).to.equal('approve');
 
     const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     const denyPromise = oneEvent(denyEl, 'lr-deny');
@@ -881,7 +882,7 @@ describe('async pending decisions', () => {
     expect(preventedDenyEvent.defaultPrevented).to.equal(true);
     await preventedDenyEl.updateComplete;
     expect(preventedDenyEl.decision).to.equal(null);
-    expect(preventedDenyEl.pending).to.equal('deny');
+    expect(preventedDenyEl.pendingAction).to.equal('deny');
   });
 
   it('shows loading on the pending button and disables the other one', async () => {
@@ -902,7 +903,7 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-approve', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     el.decision = 'approved';
     await el.updateComplete;
@@ -916,9 +917,9 @@ describe('async pending decisions', () => {
     el.addEventListener('lr-deny', (e) => e.preventDefault());
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
 
-    el.pending = null;
+    el.pendingAction = null;
     await el.updateComplete;
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
     const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
@@ -931,13 +932,13 @@ describe('async pending decisions', () => {
 
   it('defaults pending to null and leaves the synchronous decide() path unchanged when never touched', async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     const approvePromise = oneEvent(el, 'lr-approve');
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await approvePromise;
     await el.updateComplete;
     expect(el.decision).to.equal('approved');
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 
   it('is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)', async () => {
@@ -947,7 +948,7 @@ describe('async pending decisions', () => {
     await el.updateComplete;
     // Prove the pending state actually landed before checking accessibility -- otherwise this
     // would pass vacuously against the ordinary undecided render.
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
     expect((el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).loading).to.be.true;
     await expect(el).to.be.accessible();
   });
@@ -960,11 +961,11 @@ describe('async pending decisions', () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
     el.addEventListener('lr-approve', (e) => {
       e.preventDefault();
-      el.pending = null;
+      el.pendingAction = null;
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(el.decision).to.equal(null);
     // Both controls stay enabled and interactive -- the built-in pending presentation never landed.
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
@@ -983,7 +984,7 @@ describe('async pending decisions', () => {
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
     expect(el.decision).to.equal('denied');
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect((el.shadowRoot!.querySelector('[part="deny-button"]')) == null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="approve-button"]')) == null).to.be.true;
   });
@@ -1003,7 +1004,7 @@ describe('async pending decisions', () => {
       button.click();
       await el.updateComplete;
 
-      expect(el.pending, `${which} entered the pending state`).to.equal(
+      expect(el.pendingAction, `${which} entered the pending state`).to.equal(
         which,
       );
       const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
@@ -1140,7 +1141,7 @@ describe('waitUntil (deferred decisions)', () => {
     await el.updateComplete;
 
     expect(sawArgs).to.deep.equal({ x: 1 });
-    expect(el.pending, 'waitUntil() alone enters the pending state').to.equal('approve');
+    expect(el.pendingAction, 'waitUntil() alone enters the pending state').to.equal('approve');
     expect(el.decision, 'and does not finalize yet').to.equal(null);
     const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
@@ -1154,7 +1155,7 @@ describe('waitUntil (deferred decisions)', () => {
     work.resolve();
     await settled;
     expect(el.decision, 'resolution finalizes the decision').to.equal('approved');
-    expect(el.pending, 'and clears pending').to.equal(null);
+    expect(el.pendingAction, 'and clears pending').to.equal(null);
     expect(
       el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim(),
     ).to.equal('Approved');
@@ -1168,14 +1169,14 @@ describe('waitUntil (deferred decisions)', () => {
     });
     (el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('deny');
+    expect(el.pendingAction).to.equal('deny');
 
     work.reject(new Error('network down'));
     await work.promise.catch(() => undefined);
     await el.updateComplete;
     await el.updateComplete;
     expect(el.decision, 'a rejection never finalizes').to.equal(null);
-    expect(el.pending, 'a rejection restores the undecided state').to.equal(null);
+    expect(el.pendingAction, 'a rejection restores the undecided state').to.equal(null);
     const deny = el.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton;
     const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
     expect(deny.loading).to.equal(false);
@@ -1195,13 +1196,13 @@ describe('waitUntil (deferred decisions)', () => {
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     first.resolve();
     await first.promise;
     await el.updateComplete;
     expect(el.decision, 'one of two settled is not settled').to.equal(null);
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
 
     second.resolve();
     await second.promise;
@@ -1218,18 +1219,18 @@ describe('waitUntil (deferred decisions)', () => {
     el.addEventListener('lr-approve', (event) => {
       event.preventDefault();
       (event as CustomEvent<{ waitUntil: (p: Promise<unknown>) => void }>).detail.waitUntil(work.promise);
-      el.pending = null;
+      el.pendingAction = null;
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending, 'the listener\'s own write survives').to.equal(null);
+    expect(el.pendingAction, 'the listener\'s own write survives').to.equal(null);
     expect(el.decision).to.equal(null);
 
     work.resolve();
     await work.promise;
     await el.updateComplete;
     expect(el.decision, 'and the settlement never clobbers it').to.equal(null);
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 
   it('absorbs a waitUntil promise whose rejection the listener\'s own resolution made irrelevant', async () => {
@@ -1262,7 +1263,7 @@ describe('waitUntil (deferred decisions)', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(unhandled, 'the dropped promise is absorbed, not leaked').to.deep.equal([]);
       expect(el.decision).to.equal('approved');
-      expect(el.pending).to.equal(null);
+      expect(el.pendingAction).to.equal(null);
     } finally {
       window.removeEventListener('unhandledrejection', onUnhandled);
     }
@@ -1283,7 +1284,7 @@ describe('waitUntil (deferred decisions)', () => {
     await work.promise.catch(() => undefined);
     await el.updateComplete;
     expect(el.decision, 'the host-set decision stands').to.equal('approved');
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 
   it('waitUntil() called after the dispatch is a no-op, not a retroactive pending state', async () => {
@@ -1300,7 +1301,7 @@ describe('waitUntil (deferred decisions)', () => {
     late!(work.promise);
     await el.updateComplete;
     expect(el.decision).to.equal('approved');
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 
   it('hands focus to [part="status"] when waitUntil() enters the pending state', async () => {
@@ -1338,7 +1339,7 @@ describe('waitUntil (deferred decisions)', () => {
     await work.promise.catch(() => undefined);
     await el.updateComplete;
     await el.updateComplete;
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
     expect(
       el.shadowRoot!.activeElement?.getAttribute('part'),
       'the retryable control gets focus back, not the status text',
@@ -1353,7 +1354,7 @@ describe('waitUntil (deferred decisions)', () => {
     });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending, 'sanity: the pending state actually landed').to.equal('approve');
+    expect(el.pendingAction, 'sanity: the pending state actually landed').to.equal('approve');
     await expect(el).to.be.accessible();
     work.resolve();
     await work.promise;
@@ -1425,7 +1426,7 @@ describe('lr-decision-settled', () => {
     resolveWork();
     const settled = await settledPromise;
     expect(settled.detail).to.deep.equal({ decision: 'approved' });
-    expect(el.pending).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
   });
 });
 
@@ -1503,7 +1504,7 @@ describe('returnFocusTo', () => {
     el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
     (el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await el.updateComplete;
-    expect(el.pending).to.equal('approve');
+    expect(el.pendingAction).to.equal('approve');
     el.decision = 'approved';
     await el.updateComplete;
     expect(document.activeElement === back).to.equal(true);
@@ -1662,7 +1663,7 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
 
     (bar.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
     await bar.updateComplete;
-    expect(bar.pending).to.equal('approve');
+    expect(bar.pendingAction).to.equal('approve');
 
     // The documented deferred-path shape: the decision lands first, and only afterward does the
     // host clear its own state, both from the same async continuation -- matching the reference's
@@ -1707,5 +1708,158 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
     } finally {
       elsewhere.remove();
     }
+  });
+});
+
+describe('lr-confirm-bar size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-confirm-bar', kind: 'property', name: 'compact' }];
+  const density = (el: LyraConfirmBar): string => JSON.stringify({ display: getComputedStyle(el).display, padding: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).padding, direction: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).flexDirection });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`));
+      dense = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>`));
+      const aliased = await fixture<LyraConfirmBar>(html`<lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>`);
+      alias = density(aliased);
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-confirm-bar:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar compact size="l" tool-name="run_shell"></lr-confirm-bar>`);
+      const compactLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="l" compact tool-name="run_shell"></lr-confirm-bar>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-confirm-bar heading-level', () => {
+  const heading = (el: LyraConfirmBar): HTMLElement => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+
+  it('keeps the heading a plain group label by default and exposes it at the requested level', async () => {
+    const plain = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+    expect(plain.headingLevel).to.equal('none');
+    expect(heading(plain).hasAttribute('role')).to.equal(false);
+    expect(heading(plain).hasAttribute('aria-level')).to.equal(false);
+    const leveled = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell" heading-level="2"></lr-confirm-bar>`);
+    expect(heading(leveled).getAttribute('role')).to.equal('heading');
+    expect(heading(leveled).getAttribute('aria-level')).to.equal('2');
+    expect(leveled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-labelledby')).to.equal(heading(leveled).id);
+    await expect(leveled).to.be.accessible();
+  });
+
+  it('returns to the plain group label when the heading-level attribute is removed', async () => {
+    const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell" heading-level="2"></lr-confirm-bar>`);
+    expect(heading(el).getAttribute('aria-level')).to.equal('2');
+    el.removeAttribute('heading-level');
+    await el.updateComplete;
+    expect(heading(el).hasAttribute('role')).to.equal(false);
+    expect(heading(el).hasAttribute('aria-level')).to.equal(false);
+  });
+});
+
+describe('lr-confirm-bar deprecated pending alias', () => {
+  const PENDING: readonly DeprecatedUsage[] = [{ tag: 'lr-confirm-bar', kind: 'property', name: 'pending' }];
+  const button = (el: LyraConfirmBar, name: string): LyraButton => el.shadowRoot!.querySelector(`[part="${name}"]`) as LyraButton;
+
+  it('reads and writes the pending-action state through pending, warning once', async () => {
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(PENDING, async () => {
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      el.pending = 'approve';
+      await el.updateComplete;
+      reads = [el.pendingAction, el.pending, el.getAttribute('pending-action'), button(el, 'approve-button').loading, button(el, 'deny-button').disabled];
+      el.pending = null;
+      await el.updateComplete;
+      reads.push(el.pendingAction, el.hasAttribute('pending-action'));
+      const attr = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending="deny"></lr-confirm-bar>`);
+      reads.push(attr.pendingAction);
+      const both = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending="deny" pending-action="approve"></lr-confirm-bar>`);
+      reads.push(both.pendingAction);
+      const aliasLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending-action="approve" pending="deny"></lr-confirm-bar>`);
+      reads.push(aliasLast.pendingAction);
+    });
+    expect(reads).to.deep.equal(['approve', 'approve', 'approve', true, true, null, false, 'deny', 'approve', 'deny']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-confirm-bar:property:pending']);
+  });
+
+  it('lets a vetoing listener that clears the deprecated pending alias win over the built-in fallback', async () => {
+    let state: unknown[] = [];
+    await captureDeprecationWarnings(PENDING, async () => {
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      el.addEventListener('lr-approve', (e) => {
+        e.preventDefault();
+        el.pending = null;
+      });
+      button(el, 'approve-button').click();
+      await el.updateComplete;
+      state = [el.pendingAction, el.decision, button(el, 'approve-button').loading];
+    });
+    expect(state).to.deep.equal([null, null, false]);
+  });
+
+  it('syncs and reflects pending back from pendingAction without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(PENDING, async () => {
+      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
+      el.pendingAction = 'deny';
+      await el.updateComplete;
+      reads.push(el.pending, el.getAttribute('pending'));
+      el.pendingAction = null;
+      await el.updateComplete;
+      reads.push(el.pending, el.hasAttribute('pending'));
+    });
+    expect(reads).to.deep.equal(['deny', 'deny', null, false]);
+    expect(warnings).to.have.length(0);
   });
 });

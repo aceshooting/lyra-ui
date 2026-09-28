@@ -32,7 +32,7 @@ for (const route of ['attribute', 'property'] as const) {
       const items = [...list.children] as LyraReorderItem[];
       const middle = items[1]!;
       let events = 0;
-      list.addEventListener('lr-reorder', () => events++);
+      list.addEventListener('lr-reorder-request', () => events++);
       expect(button(middle, 'up').disabled).to.equal(true);
       const write = (value: string) => route === 'property' ? middle.value = value : middle.setAttribute('value', value);
       write('b');

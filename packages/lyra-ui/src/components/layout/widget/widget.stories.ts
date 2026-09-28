@@ -116,7 +116,7 @@ export const FullscreenWithSidebarInset: Story = {
 
 export const Compact: Story = {
   render: () => html`
-    <lr-widget label="Alerts" sublabel="3 active" compact collapsible expandable style="max-width: 28rem;">
+    <lr-widget label="Alerts" sublabel="3 active" size="s" collapsible expandable style="max-width: 28rem;">
       <div style="padding: 0.5rem;">Tighter header/body padding for constrained spaces.</div>
     </lr-widget>
   `,

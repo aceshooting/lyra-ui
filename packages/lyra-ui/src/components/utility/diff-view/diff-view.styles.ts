@@ -72,23 +72,23 @@ export const styles = css`
   }
   [part="line"][data-type="add"] {
     background: var(
-      --lr-diff-view-add-background,
-      var(--_lr-diff-view-add-background)
+      --lr-diff-view-add-bg,
+      var(--lr-diff-view-add-background, var(--_lr-diff-view-add-background))
     );
     color: var(--lr-diff-view-add-color, var(--_lr-diff-view-add-color));
   }
   [part="line"][data-type="remove"] {
     background: var(
-      --lr-diff-view-remove-background,
-      var(--_lr-diff-view-remove-background)
+      --lr-diff-view-remove-bg,
+      var(--lr-diff-view-remove-background, var(--_lr-diff-view-remove-background))
     );
     color: var(--lr-diff-view-remove-color, var(--_lr-diff-view-remove-color));
   }
   [part="line"][data-type="fold"] {
     color: var(--lr-diff-view-fold-color, var(--_lr-diff-view-fold-color));
     background: var(
-      --lr-diff-view-fold-background,
-      var(--_lr-diff-view-fold-background)
+      --lr-diff-view-fold-bg,
+      var(--lr-diff-view-fold-background, var(--_lr-diff-view-fold-background))
     );
     text-align: center;
   }
@@ -108,20 +108,35 @@ export const styles = css`
      elsewhere in this family. Neutral takes --lr-color-surface-raised, not --lr-color-surface:
      tinting a row with the viewer's own background would render it unhighlighted. */
   [part="line"][data-highlight] {
-    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-accent-background, var(--lr-color-brand-quiet));
+    --_lr-diff-view-highlight-background: var(
+      --lr-diff-view-highlight-accent-bg,
+      var(--lr-diff-view-highlight-accent-background, var(--lr-color-brand-quiet))
+    );
     background: var(--_lr-diff-view-highlight-background);
   }
   [part="line"][data-highlight="success"] {
-    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-success-background, var(--lr-color-success-quiet));
+    --_lr-diff-view-highlight-background: var(
+      --lr-diff-view-highlight-success-bg,
+      var(--lr-diff-view-highlight-success-background, var(--lr-color-success-quiet))
+    );
   }
   [part="line"][data-highlight="warning"] {
-    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-warning-background, var(--lr-color-warning-quiet));
+    --_lr-diff-view-highlight-background: var(
+      --lr-diff-view-highlight-warning-bg,
+      var(--lr-diff-view-highlight-warning-background, var(--lr-color-warning-quiet))
+    );
   }
   [part="line"][data-highlight="danger"] {
-    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-danger-background, var(--lr-color-danger-quiet));
+    --_lr-diff-view-highlight-background: var(
+      --lr-diff-view-highlight-danger-bg,
+      var(--lr-diff-view-highlight-danger-background, var(--lr-color-danger-quiet))
+    );
   }
   [part="line"][data-highlight="neutral"] {
-    --_lr-diff-view-highlight-background: var(--lr-diff-view-highlight-neutral-background, var(--lr-color-surface-raised));
+    --_lr-diff-view-highlight-background: var(
+      --lr-diff-view-highlight-neutral-bg,
+      var(--lr-diff-view-highlight-neutral-background, var(--lr-color-surface-raised))
+    );
   }
   [part="line"][data-active-highlight] {
     outline: var(--lr-border-width-medium) solid var(--lr-diff-view-highlight-active-outline, var(--lr-color-brand));

@@ -112,7 +112,7 @@ export const TokenBudgetGallery: Story = {
 };
 
 export const WithLegend: Story = {
-  name: 'With legend (show-legend)',
+  name: 'With legend (with-legend)',
   parameters: {
     docs: {
       description: {
@@ -126,12 +126,12 @@ export const WithLegend: Story = {
   render: () => html`
     <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
       <lr-context-meter
-        show-legend
+        with-legend
         total="131072"
         label="128K context window"
         style="max-inline-size: 24rem;"
       ></lr-context-meter>
-      <lr-context-meter show-legend shape="ring" total="131072" label="128K"></lr-context-meter>
+      <lr-context-meter with-legend shape="ring" total="131072" label="128K"></lr-context-meter>
     </div>
   `,
   play: async ({ canvasElement }) => {
@@ -155,19 +155,19 @@ export const LegendQuantities: Story = {
   render: () => html`
     <div style="display: flex; flex-direction: column; gap: 1.5rem; max-inline-size: 28rem;">
       <lr-context-meter
-        show-legend
+        with-legend
         legend-display="label-value"
         total="131072"
         label="Value"
       ></lr-context-meter>
       <lr-context-meter
-        show-legend
+        with-legend
         legend-display="label-percent"
         total="131072"
         label="Share"
       ></lr-context-meter>
       <lr-context-meter
-        show-legend
+        with-legend
         legend-display="label-value-percent"
         total="131072"
         label="Both"
@@ -197,7 +197,7 @@ export const InteractiveFilter: Story = {
     <div style="display: flex; flex-direction: column; gap: 1rem; max-inline-size: 28rem;">
       <lr-context-meter
         interactive
-        show-legend
+        with-legend
         legend-display="label-value-percent"
         total="131072"
         label="Click a band or a legend row"
@@ -242,7 +242,7 @@ export const FilterWithEmptyAndDisabledBands: Story = {
     <lr-context-meter
       class="context-meter-empty-demo"
       interactive
-      show-legend
+      with-legend
       legend-display="label-value"
       total="12"
       label="Issues by status"

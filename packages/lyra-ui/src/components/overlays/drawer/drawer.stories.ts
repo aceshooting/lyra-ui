@@ -68,7 +68,6 @@ export const NarrowLongContent: Story = {
       dir="rtl"
       placement="end"
       heading="تصفيةالإعداداتالدوليةالطويلةجداً"
-      closable
     >
       <p>محتوىدرججانبيمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
       <p>تبقى خيارات التصفية والرسائل الطويلة قابلة للقراءة والتمرير داخل مساحة الدرج الضيقة.</p>
@@ -100,7 +99,6 @@ export const Lifecycle: Story = {
       </button>
       <lr-drawer
         heading="Filters"
-        closable
         @lr-after-show=${() => console.info('lr-after-show')}
         @lr-after-hide=${() => console.info('lr-after-hide')}
       >

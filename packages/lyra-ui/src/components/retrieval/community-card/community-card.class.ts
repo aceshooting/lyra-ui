@@ -1,8 +1,9 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { isNonBlankIdentity, firstByRetrievalIdentity } from '../retrieval-identity.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -35,6 +36,12 @@ export interface LyraCommunityCardEventMap {
   'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /**
  * `<lr-community-card>` — a cluster/community summary card (GraphRAG community report): label,
  * LLM summary excerpt, member count, member chips with overflow, and a drill-in action. Doesn't
@@ -52,8 +59,8 @@ export interface LyraCommunityCardEventMap {
  * @csspart header - The header row.
  * @csspart title - The community label, `role="heading" aria-level="3"` wrapping a `<button>`.
  * @csspart member-count - The `"{count} members"` text.
- * @csspart summary - The LLM summary excerpt, omitted in `compact` mode.
- * @csspart members - The wrapper around member chips, omitted in `compact` mode.
+ * @csspart summary - The LLM summary excerpt, omitted while `size` is `s` or smaller.
+ * @csspart members - The wrapper around member chips, omitted while `size` is `s` or smaller.
  * @csspart member - One member chip button.
  * @csspart overflow - The "+N" overflow chip button.
  * @csspart drill-button - The built-in "Explore community" button.
@@ -62,9 +69,9 @@ export interface LyraCommunityCardEventMap {
  * @cssprop [--lr-community-card-bg=var(--lr-color-surface)] - Resting background of `[part="base"]`.
  *   `frame="plain"` still paints transparent.
  * @cssprop [--lr-community-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
- *   `compact`.
+ *   `size` is `s` or smaller.
  * @cssprop [--lr-community-card-compact-gap=var(--lr-space-xs)] - `[part="base"]` gap while
- *   `compact`.
+ *   `size` is `s` or smaller.
  * @status stable
  * @since 4.0.0
  */
@@ -84,6 +91,9 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
@@ -91,9 +101,22 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   @property({ attribute: false }) members: readonly LyraEntity[] = [];
   /** Visible member chips before the "+N" overflow chip. */
   @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) renders the single-row
+   * layout (title + member count + drill button, no summary/chips) with tighter `[part="base"]`
+   * padding/gap — same convention as the sibling `lr-entity-card`'s `size`. `m` (the default) and
+   * larger render the full card.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Single-row layout (title + member count + drill button, no summary/chips), and tighter
-   *  `[part="base"]` padding/gap — same convention as the sibling `lr-entity-card`'s `compact`. */
+   *  `[part="base"]` padding/gap — same convention as the sibling `lr-entity-card`'s `compact`.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
+
+  /** Whether `size` selects the dense tier (`s` or smaller). */
+  private get dense(): boolean {
+    return isDenseSize(this.size);
+  }
   /** Container treatment, in the shared `LyraFrame` vocabulary — the same property this
    *  component's sibling `lr-entity-card` carries. `'card'` (the default) keeps the bordered,
    *  filled, padded box. `'plain'` removes the border, background, and padding, so a card nested
@@ -159,10 +182,10 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
             >
           </div>
         </div>
-        ${!this.compact && community.summary
+        ${!this.dense && community.summary
           ? html`<p part="summary">${community.summary}</p>`
           : nothing}
-        ${!this.compact
+        ${!this.dense
           ? html`<div part="members">
               ${visibleMembers.map(
                 (m) => html`<button

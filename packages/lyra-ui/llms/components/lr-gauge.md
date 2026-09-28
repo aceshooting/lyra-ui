@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `without-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,12 +42,12 @@ explicitly empty labels remain empty and later labels render normally.
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
   `value` while removing `aria-valuetext`)
-- `showValue: boolean = true` (attribute `show-value`, not reflected) — whether the decorative
-  `part="value"` caption renders at all; `show-value="false"` omits it the same way an empty
-  `label` already omits `part="label"`. `aria-valuenow`/`aria-valuetext` and the host's accessible
-  name are unaffected either way, since the caption itself is always `aria-hidden`. Mirrors
-  `<lr-progress-bar>`'s/`<lr-progress-ring>`'s own `showValue` name and meaning; the default here
-  is `true` (a gauge's whole purpose is showing the reading it announces) where theirs is `false`.
+- `withoutValue: boolean = false` (attribute `without-value`, not reflected) — omits the decorative
+  `part="value"` caption, the same way an empty `label` already omits `part="label"`.
+  `aria-valuenow`/`aria-valuetext` and the host's accessible name are unaffected either way, since
+  the caption itself is always `aria-hidden`. The caption shows by default because a gauge's whole
+  purpose is showing the reading it announces. Deprecated alias: `show-value`/`showValue` (use
+  `without-value`; removed in 23.0.0) — `show-value="false"` still equals `without-value`
 - `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
   `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
   whenever `thresholds` is empty or matches nothing.
@@ -64,8 +64,8 @@ explicitly empty labels remain empty and later labels render normally.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value` (rendered only while `showValue` is
-true), `label` (rendered only while `label` is non-empty)
+**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value` (omitted while `without-value` is
+set), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
@@ -91,7 +91,7 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
 <lr-gauge
   shape="linear"
   size="xs"
-  show-value="false"
+  without-value
   aria-label="Spend"
   value="84"
   max="100"
@@ -141,7 +141,7 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
   on the element instead. The value/label captions are `em`-sized against that same host font-size,
   so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
-  combine a small tier (or a small host `font-size`) with `show-value="false"` for a slim,
+  combine a small tier (or a small host `font-size`) with `without-value` for a slim,
   thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
   `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`

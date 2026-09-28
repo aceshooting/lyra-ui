@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `autoExpandFailures` / `auto-expand-failures` since `21.1.0`; use property `without-auto-expand-failures`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -28,8 +28,11 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 'skipped' | 'running'` (all three exported here). `statusFilter: readonly TestStatus[] =
 []` (attribute: false) — empty shows every status. `runId: string | null = null` (attribute
 `run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
-reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
-(attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
+reflected) exposes its lifecycle. `withoutAutoExpandFailures: boolean = false`
+(attribute `without-auto-expand-failures`) keeps failed rows collapsed until the user expands them.
+Deprecated alias: `auto-expand-failures`/`autoExpandFailures` (use `without-auto-expand-failures`;
+removed in 23.0.0) —
+inverted, so `auto-expand-failures="false"` equals `without-auto-expand-failures`. A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
 test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
 first-wins identity. Foreign runtime statuses normalize

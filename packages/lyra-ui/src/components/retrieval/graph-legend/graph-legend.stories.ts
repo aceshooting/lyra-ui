@@ -95,7 +95,7 @@ export const ReadOnly: Story = {
     html`<lr-graph-legend
       .types=${types()}
       .counts=${{ person: 12 }}
-      .interactive=${false}
+      without-interaction
     ></lr-graph-legend>`,
 };
 

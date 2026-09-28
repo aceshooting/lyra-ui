@@ -7,9 +7,11 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-activity-feed-background` since `21.1.0`; use css-property `--lr-activity-feed-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showTimestamps` / `show-timestamps` since `21.1.0`; use property `with-timestamps`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,16 +48,19 @@ catalog), while any supplied string is a verbatim override, including `'Activity
 non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
 plain and virtualized rendering paths while `label` remains the visible header text. Host
 `aria-labelledby` and `aria-describedby` likewise reach that semantic list in both rendering paths —
-`showTimestamps: boolean = false` (attribute `show-timestamps`),
+`withTimestamps: boolean = false` (attribute `with-timestamps`) — adds a trailing `<time>` per
+entry (deprecated alias: `show-timestamps`/`showTimestamps`, use `with-timestamps`; removed in
+23.0.0),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; replaces the plain text **inside**
 the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
-`virtualize-at`). `compact: boolean = false` (reflected) — tighter header and entry-row padding and
-gap for dense transcript contexts, the same density-only convention `<lr-confirm-bar>`'s and
-`<lr-thinking-panel>`'s own `compact` establish: the outer border and surface stay, so pair it
-with `frame="plain"` to remove card chrome. Retune it through
+`virtualize-at`). `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and
+the smaller `xs`/`2xs`) tightens the header and entry-row padding and gap for dense transcript
+contexts, the same density-only convention `<lr-confirm-bar>`'s and `<lr-thinking-panel>`'s own
+`size` establish: the outer border and surface stay, so pair it with `frame="plain"` to remove card
+chrome. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). Retune it through
 `--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`,
 `--lr-activity-feed-compact-entry-padding`, and `--lr-activity-feed-compact-entry-gap`.
 `frame: LyraFrame = 'card'` (reflected) — `'card' |
@@ -73,32 +78,33 @@ outer card goes.
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
 `variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and
-`entry-timestamp` (only while `showTimestamps` and a valid `timestamp` is set). Every entry-level
+`entry-timestamp` (only while `with-timestamps` and a valid `timestamp` is set). Every entry-level
 part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally; and
 `--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
-The `compact` density is retunable through four properties: `--lr-activity-feed-compact-header-padding`
+The dense `size` tier is retunable through four properties: `--lr-activity-feed-compact-header-padding`
 (default `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-activity-feed-compact-header-gap`
-(default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `compact`, and
+(default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `size` is `s` or smaller, and
 `--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) and
 `--lr-activity-feed-compact-entry-gap` (default `var(--lr-space-2xs)`) both scoped to
-`[part="entry"]` while `compact`. All four are inline `var()` fallbacks at their point
+`[part="entry"]` at that size. All four are inline `var()` fallbacks at their point
 of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
-`lr-thinking-panel`'s own compact tokens. `renderText`'s returned content is otherwise unreachable
+`lr-thinking-panel`'s own dense-tier tokens. `renderText`'s returned content is otherwise unreachable
 by selector from outside the shadow root it renders into (the plain or the internal
 `<lr-virtual-list>`'s), so a returned anchor specifically is given
 `--lr-activity-feed-entry-text-link-color` (default `var(--lr-color-brand)`), mirroring
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
-`--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
+`--lr-activity-feed-bg` (default `var(--lr-color-surface)`) fills `[part="base"]`,
 `--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
-hooks tune the card presentation rather than reinstating chrome you asked to drop.
+hooks tune the card presentation rather than reinstating chrome you asked to drop. Deprecated alias:
+`--lr-activity-feed-background` (use `--lr-activity-feed-bg`; removed in 23.0.0).
 
 **Known gotchas:**
 
@@ -107,7 +113,7 @@ hooks tune the card presentation rather than reinstating chrome you asked to dro
   `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
   `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
   and the dot for DOM queries.
-- `compact`/`frame` render byte-identically to the pre-existing default when unset — neither
+- `size`/`frame` render byte-identically to the pre-existing default when unset — neither
   property changes anything about the plain-card presentation.
 - A `renderText`-returned anchor is the only descendant markup given a default styling hook
   (`--lr-activity-feed-entry-text-link-color`); other rich descendants (`<code>`, `<em>`, custom

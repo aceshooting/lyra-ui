@@ -7,7 +7,8 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showComposer` / `show-composer` since `21.1.0`; use property `without-composer`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showDetails` / `show-details` since `21.1.0`; use property `without-details`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -71,14 +72,18 @@ warnings? }`
   `{ id: string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?:
 Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
 - `contextTotal: number = 0` (attribute `context-total`) — the overall context-window token budget
-- `showDetails: boolean = true` (attribute `show-details`, reflected) — whether the details pane is
-  available at all when data is present
+- `withoutDetails: boolean = false` (attribute `without-details`, reflected) — turns off the
+  built-in details pane even when data is present. Deprecated alias: `show-details`/`showDetails`
+  (use `without-details`; removed in 23.0.0) — inverted, so `show-details="false"` equals
+  `without-details`
 
 **Properties (composer / chrome):**
 
-- `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
-  plain-frame composer renders when no `composer` slot is supplied. Its workspace-owned dock supplies
-  the border and padding; a supplied `composer` slot keeps its own frame.
+- `withoutComposer: boolean = false` (attribute `without-composer`, reflected) — turns off the
+  built-in plain-frame composer that renders when no `composer` slot is supplied. Its workspace-owned
+  dock supplies the border and padding; a supplied `composer` slot keeps its own frame. Deprecated
+  alias: `show-composer`/`showComposer` (use `without-composer`; removed in 23.0.0) — inverted, so
+  `show-composer="false"` equals `without-composer`.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the

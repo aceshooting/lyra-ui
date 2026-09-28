@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -72,7 +73,7 @@ export interface LyraTranscriptFeedEventMap {
  * @csspart entry - One entry row (final or interim).
  * @csspart speaker - An entry's speaker label (omitted for a row that repeats the previous row's speaker).
  * @csspart text - An entry's text (`dir="auto"`, for mixed-language captions).
- * @csspart timestamp - An entry's timestamp, shown only when `show-timestamps` is set.
+ * @csspart timestamp - An entry's timestamp, shown only when `with-timestamps` is set.
  * @csspart interim - Present (alongside `entry`) on an interim row.
  * @csspart jump-button - The "jump to latest" affordance, shown only while `follow` is `false`.
  * @csspart empty - The empty-state wrapper.
@@ -94,9 +95,19 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, srOnly, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { showTimestamps: 'withTimestamps' };
 
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
+  /** Shows each entry's timestamp. */
+  @property({ type: Boolean, attribute: 'with-timestamps' }) withTimestamps = false;
+
+  /**
+   * Deprecated alias of `with-timestamps` (`withTimestamps`), with identical behavior. Setting it
+   * logs a one-time development warning.
+   *
+   * @deprecated Use `with-timestamps`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
   /** Overrides the default `Intl.DateTimeFormat` short-time rendering. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
@@ -305,7 +316,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         ${showSpeaker && entry.speaker ? html`<span part="speaker">${entry.speaker}</span>` : nothing}
         <span part="text" dir="auto">${entry.text}</span>
         ${interim ? html`<span class="sr-only">${this.localize('transcriptFeedInterim')}</span>` : nothing}
-        ${this.showTimestamps && timestamp !== null
+        ${this.withTimestamps && timestamp !== null
           ? html`<span part="timestamp">${timestamp}</span>`
           : nothing}
       </div>

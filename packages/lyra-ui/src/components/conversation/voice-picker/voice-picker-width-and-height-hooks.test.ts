@@ -172,8 +172,8 @@ describe('lr-voice-picker preview action follows the trigger height', () => {
     const el = await fixture<LyraVoicePicker>(
       html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
     );
-    // `preview` defaults to true, so the action is in the row without opting in.
-    expect(el.preview).to.equal(true);
+    // `without-preview` defaults to false, so the action is in the row without opting in.
+    expect(el.withoutPreview).to.equal(false);
     expect(previewButton(el).localName).to.equal('button');
     expect(getComputedStyle(previewButton(el)).blockSize).to.equal(
       resolvedInShadow(el, 'max(var(--lr-icon-button-size), var(--lr-form-control-height))'),

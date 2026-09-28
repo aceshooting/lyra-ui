@@ -7,7 +7,11 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-row-click` since `21.1.0`; use event `addEventListener('lr-row-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `emptyCompact` / `empty-compact` since `21.1.0`; use property `empty-size="s" for compact, empty-size="m" for spacious (remove it to keep each branch default)`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `hideColumnsLabel` / `hide-columns-label` since `21.1.0`; use property `columns-hide-label`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `noColumnsDescription` / `no-columns-description` since `21.1.0`; use property `empty-columns-description`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `noColumnsHeading` / `no-columns-heading` since `21.1.0`; use property `empty-columns-heading`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 46 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -375,21 +379,29 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
-  including `''`, renders verbatim
-- `noColumnsDescription: string = ''` (attribute `no-columns-description`)
-- `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
-  state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
-  branch's own built-in default — the two shadow-root-level branches (no columns, no rows) render
-  spacious, while the filtered-to-zero branch, which sits inside `[part='base']` alongside the filter
-  field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
-  parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
-  filled
+- `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
+  no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
+  including `''`, renders verbatim. Deprecated alias: `no-columns-heading`/`noColumnsHeading` (use
+  `empty-columns-heading`; removed in 23.0.0)
+- `emptyColumnsDescription: string = ''` (attribute `empty-columns-description`) — description of
+  the built-in no-columns state. Deprecated alias: `no-columns-description`/`noColumnsDescription`
+  (use `empty-columns-description`; removed in 23.0.0)
+- `emptySize?: LyraSize` (attribute `empty-size`) — size of the built-in `[part='empty']` state on
+  the shared size ladder: `s` and the steps below it render it compact, `m` and above spacious.
+  Leave it unset (the default) to keep each empty branch's own built-in default — the two
+  shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
+  branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
+  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled. Deprecated
+  alias: `empty-compact`/`emptyCompact` (use `empty-size="s"` for compact or `empty-size="m"` for
+  spacious; removed in 23.0.0) — its presence still renders like `empty-size="s"`,
+  `empty-compact="false"` like `empty-size="m"`, and removing it restores each branch's default
 - `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
   while `priority`-hidden columns are hidden; omission renders localized
   `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
-- `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
-  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
+- `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
+  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
+  Deprecated alias: `hide-columns-label`/`hideColumnsLabel` (use `columns-hide-label`; removed in
+  23.0.0)
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
   Priority-hidden columns hide their header, body, and footer cells together at the same measured
@@ -457,8 +469,10 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. Other events are `lr-row-click`
-(`detail: { row }`), `lr-load-more` (fired on the "load more" button),
+sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
+(a row was activated by pointer or Enter/Space, `detail: { row }`; its deprecated alias
+`lr-row-click` still fires right after it from the same activation with an equal detail — use
+`lr-row-activate`; removed in 23.0.0), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the
@@ -499,7 +513,7 @@ fresh load has actually started, or failed again immediately).
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
 renders as this slot's fallback content. The no-columns branch is deliberately **not**
-slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
+slot-replaceable: it reports a configuration problem (`emptyColumnsHeading`), not "this query returned
 nothing", and one slot covering all three would collapse that distinction. Everything else comes
 from `columns`/`rows`. `error` — replaces the built-in failed-load state, including its retry
 button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as
@@ -645,8 +659,8 @@ declaration to retheme every internal scroll container in the library, including
   t.addEventListener("lr-sort", (e) =>
     console.log("sort committed", e.detail.sortKey, e.detail.sortDir)
   );
-  t.addEventListener("lr-row-click", (e) =>
-    console.log("clicked", e.detail.row)
+  t.addEventListener("lr-row-activate", (e) =>
+    console.log("activated", e.detail.row)
   );
 </script>
 ```
@@ -681,7 +695,7 @@ declaration to retheme every internal scroll container in the library, including
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
   `console.warn` on first render in development builds only — an unnamed grid is an accessibility
   defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
-- `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
+- `revealColumnsLabel`/`columnsHideLabel` only ever reach the DOM on
   `[part='reveal-columns-button']`, which itself only renders while at least one column declares
   `priority`. Setting either label with no `priority` column is therefore always inert — it logs
   the same shape of one-time, development-only, production-silent `console.warn` as the missing

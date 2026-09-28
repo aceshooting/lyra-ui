@@ -1166,6 +1166,55 @@ describe('lr-page-rail', () => {
     expect(viewer.renderCalls[0]!.width).to.equal(0);
   });
 
+  it('keeps a numeric thumb-width attribute a number, and an unresolvable one on the default width', async () => {
+    const numeric = await fixture<LyraPageRail>(html`<lr-page-rail thumb-width="64"></lr-page-rail>`);
+    expect(numeric.thumbWidth).to.equal(64);
+
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(
+      html`<lr-page-rail .viewer=${viewer} thumb-width="wide"></lr-page-rail>`,
+    );
+    expect(el.thumbWidth).to.equal('wide');
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.renderCalls.length > 0);
+    expect(viewer.renderCalls[0]!.width).to.equal(96);
+  });
+
+  it('resolves a CSS length thumb-width to pixels: rem against the root, em against the rail', async () => {
+    const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const remViewer = new StubViewer();
+    await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${remViewer} thumb-width="4rem"></lr-page-rail>`);
+    remViewer.emitLoad(1);
+    await waitUntil(() => remViewer.renderCalls.length > 0);
+    expect(remViewer.renderCalls[0]!.width).to.equal(4 * rootSize);
+
+    const emViewer = new StubViewer();
+    await fixture<LyraPageRail>(
+      html`<lr-page-rail style="font-size: 10px" .viewer=${emViewer} thumb-width="5em"></lr-page-rail>`,
+    );
+    emViewer.emitLoad(1);
+    await waitUntil(() => emViewer.renderCalls.length > 0);
+    expect(emViewer.renderCalls[0]!.width).to.equal(50);
+  });
+
+  it('resolves a percentage thumb-width against the rail allocation and still clamps a large length', async () => {
+    const viewer = new StubViewer();
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="width: 200px"><lr-page-rail .viewer=${viewer} thumb-width="50%"></lr-page-rail></div>`,
+    );
+    const el = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.renderCalls.some((call) => call.width === 100), 'a 50% thumbnail never rendered at half the rail');
+
+    const wide = new StubViewer();
+    el.viewer = wide;
+    el.thumbWidth = '100rem';
+    await el.updateComplete;
+    wide.emitLoad(1);
+    await waitUntil(() => wide.renderCalls.length > 0);
+    expect(wide.renderCalls.at(-1)!.width).to.be.at.most(200);
+  });
+
   it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-item-id binding', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);

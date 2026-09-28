@@ -463,20 +463,23 @@ describe("lr-button", () => {
       computed.color,
       "quiet text is the muted token, not the body text"
     ).to.not.equal(getComputedStyle(el).color);
-    // The two quiet knobs reach the rendered box: re-point each and watch the box follow.
-    const retuned = (await fixture(html`
-      <lr-button
-        appearance="quiet"
-        style="--lr-button-quiet-text: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);"
-        >Save</lr-button
-      >
-    `)) as LyraButton;
-    await retuned.updateComplete;
-    const retunedBase = getComputedStyle(
-      retuned.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
-    );
-    expect(retunedBase.color).to.equal("rgb(1, 2, 3)");
-    expect(retunedBase.borderTopColor).to.equal("rgb(4, 5, 6)");
+    // The two quiet knobs reach the rendered box: re-point each and watch the box follow. The
+    // deprecated --lr-button-quiet-text spelling still works, and the canonical name wins over it.
+    for (const style of [
+      "--lr-button-quiet-color: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);",
+      "--lr-button-quiet-text: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);",
+      "--lr-button-quiet-color: rgb(1, 2, 3); --lr-button-quiet-text: rgb(9, 9, 9); --lr-button-quiet-border: rgb(4, 5, 6);",
+    ]) {
+      const retuned = (await fixture(html`
+        <lr-button appearance="quiet" style=${style}>Save</lr-button>
+      `)) as LyraButton;
+      await retuned.updateComplete;
+      const retunedBase = getComputedStyle(
+        retuned.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+      );
+      expect(retunedBase.color, style).to.equal("rgb(1, 2, 3)");
+      expect(retunedBase.borderTopColor, style).to.equal("rgb(4, 5, 6)");
+    }
   });
 
   it('keeps appearance="quiet"\'s text/border independent of variant (unlike outlined)', async () => {
@@ -2585,6 +2588,40 @@ describe("lr-button hover and press feedback", () => {
       await resetMouse();
     }
   });
+});
+
+describe("--lr-button-hover-bg / --lr-button-active-bg and their deprecated -background aliases", () => {
+  for (const [name, style] of [
+    ["canonical", "--lr-button-hover-bg: rgb(1, 2, 3); --lr-button-active-bg: rgb(4, 5, 6);"],
+    ["deprecated", "--lr-button-hover-background: rgb(1, 2, 3); --lr-button-active-background: rgb(4, 5, 6);"],
+    [
+      "canonical over deprecated",
+      "--lr-button-hover-bg: rgb(1, 2, 3); --lr-button-active-bg: rgb(4, 5, 6); --lr-button-hover-background: rgb(9, 9, 9); --lr-button-active-background: rgb(8, 8, 8);",
+    ],
+  ] as const) {
+    it(`paints the ${name} hover and press backgrounds`, async () => {
+      const el = (await fixture(
+        html`<lr-button style=${`--lr-transition-fast: 0s; ${style}`}>Save</lr-button>`
+      )) as LyraButton;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      try {
+        await hoverUntilMatched(base, `${name} button never received the pointer hover state`);
+        await waitUntil(
+          () => getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)",
+          `${name} hover background never rendered`
+        );
+        await sendMouse({ type: "down" });
+        await waitUntil(
+          () => getComputedStyle(base).backgroundColor === "rgb(4, 5, 6)",
+          `${name} press background never rendered`
+        );
+        await sendMouse({ type: "up" });
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 });
 
 describe("--lr-button-hover-color / --lr-button-hover-border", () => {

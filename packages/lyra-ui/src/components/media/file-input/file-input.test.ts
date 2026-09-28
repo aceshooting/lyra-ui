@@ -8,6 +8,25 @@ import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
+
+// The compact-density regression tests below deliberately keep exercising the deprecated
+// `compact` attribute, which must keep rendering exactly as before until its removal.
+expectDeprecatedUsage("lr-file-input", "property", "compact");
+
+const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
+  { tag: "lr-file-input", kind: "attribute", name: "accessible-label" },
+];
+const PASTE: readonly DeprecatedUsage[] = [
+  { tag: "lr-file-input", kind: "property", name: "paste" },
+];
+const COMPACT: readonly DeprecatedUsage[] = [
+  { tag: "lr-file-input", kind: "property", name: "compact" },
+];
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -140,11 +159,53 @@ it('uses the localized dropzone instruction when the form label is omitted or em
   );
 
   const accessible = (await fixture(
-    html`<lr-file-input label="" accessible-label="Pick reference files"></lr-file-input>`,
+    html`<lr-file-input label="" .accessibleLabel=${'Pick reference files'}></lr-file-input>`,
   )) as LyraFileInput;
   expect(accessible.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
     'Pick reference files',
   );
+  expect(accessible.hasAttribute('accessible-label'), 'the property never reflects').to.equal(false);
+});
+
+describe('the deprecated accessible-label attribute', () => {
+  const baseName = (el: LyraFileInput): string | null =>
+    el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label');
+
+  it('still names the dropzone like the accessibleLabel property, and warns once', async () => {
+    const names: (string | null)[] = [];
+    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(
+          html`<lr-file-input label="Uploads" accessible-label="Pick reference files"></lr-file-input>`,
+        )) as LyraFileInput;
+        expect(el.accessibleLabel).to.equal('Pick reference files');
+        names.push(baseName(el));
+        expect(el.shadowRoot!.querySelector('[part~="base"]')!.hasAttribute('aria-labelledby')).to.equal(false);
+      }
+    });
+    expect(names).to.deep.equal(['Pick reference files', 'Pick reference files']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-file-input:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('keeps an explicitly empty value as an empty name, and loses to a host aria-label', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const empty = (await fixture(
+        html`<lr-file-input label="Uploads" accessible-label=""></lr-file-input>`,
+      )) as LyraFileInput;
+      expect(baseName(empty)).to.equal('');
+
+      const both = (await fixture(
+        html`<lr-file-input aria-label="Host name" accessible-label="Fallback"></lr-file-input>`,
+      )) as LyraFileInput;
+      expect(baseName(both)).to.equal('Host name');
+      both.removeAttribute('aria-label');
+      await both.updateComplete;
+      expect(baseName(both)).to.equal('Fallback');
+    });
+  });
 });
 
 it('treats whitespace-only labels as absent through dynamic changes without changing their readback', async () => {
@@ -539,9 +600,9 @@ it("openPicker() clicks the hidden native input", async () => {
   expect(clicked).to.be.true;
 });
 
-it("accepts pasted files when paste support is enabled", async () => {
+it("accepts pasted files by default", async () => {
   const el = (await fixture(
-    html`<lr-file-input paste></lr-file-input>`
+    html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const event = new Event("paste", { bubbles: true, cancelable: true });
@@ -554,31 +615,102 @@ it("accepts pasted files when paste support is enabled", async () => {
   expect(event.defaultPrevented).to.be.true;
 });
 
-it("defaults paste to true, reflecting the attribute", async () => {
-  const el = (await fixture(
-    html`<lr-file-input></lr-file-input>`
-  )) as LyraFileInput;
-  expect(el.paste).to.be.true;
-  expect(el.hasAttribute("paste")).to.be.true;
-});
-
-it('honors the plain-HTML attribute form paste="false" (regression -- a true-defaulting boolean property needs a custom converter)', async () => {
-  const el = (await fixture(
-    html`<lr-file-input paste="false"></lr-file-input>`
-  )) as LyraFileInput;
-  expect(el.paste).to.be.false;
+/** Dispatches a clipboard paste carrying one file and reports whether `lr-files` fired. */
+function pasteOneFile(el: LyraFileInput): boolean {
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const event = new Event("paste", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
     value: { files: [makeFile("clip.txt", "text/plain")] },
   });
   let fired = false;
-  el.addEventListener("lr-files", () => (fired = true));
+  const listener = (): void => {
+    fired = true;
+  };
+  el.addEventListener("lr-files", listener);
   base.dispatchEvent(event);
+  el.removeEventListener("lr-files", listener);
+  return fired;
+}
+
+it("defaults withoutPaste to false, reflecting only the deprecated paste presence as before", async () => {
+  const el = (await fixture(
+    html`<lr-file-input></lr-file-input>`
+  )) as LyraFileInput;
+  expect(el.withoutPaste).to.be.false;
+  expect(el.paste).to.be.true;
+  expect(el.hasAttribute("without-paste")).to.be.false;
+  expect(el.hasAttribute("paste"), "the alias keeps its baseline presence reflection").to.be.true;
+});
+
+it("without-paste ignores clipboard files, and reflects", async () => {
+  const el = (await fixture(
+    html`<lr-file-input without-paste></lr-file-input>`
+  )) as LyraFileInput;
+  expect(el.withoutPaste).to.be.true;
+  expect(pasteOneFile(el)).to.be.false;
+
+  el.withoutPaste = false;
+  await el.updateComplete;
+  expect(el.hasAttribute("without-paste")).to.be.false;
+  expect(pasteOneFile(el)).to.be.true;
+  el.withoutPaste = true;
+  await el.updateComplete;
+  expect(el.hasAttribute("without-paste")).to.be.true;
+});
+
+it('the deprecated plain-HTML paste="false" equals without-paste and warns once', async () => {
+  const results: boolean[] = [];
+  const warnings = await captureDeprecationWarnings(PASTE, async () => {
+    for (let index = 0; index < 2; index += 1) {
+      // `paste` defaults `true`, so only a `true`-aware converter parses the literal "false".
+      const el = (await fixture(
+        html`<lr-file-input paste="false"></lr-file-input>`
+      )) as LyraFileInput;
+      expect(el.paste).to.be.false;
+      expect(el.withoutPaste).to.be.true;
+      results.push(pasteOneFile(el));
+    }
+  });
   expect(
-    fired,
+    results,
     'paste="false" must actually disable clipboard paste, not just default to true'
-  ).to.be.false;
+  ).to.deep.equal([false, false]);
+  expect(warnings.map(({ key }) => key)).to.deep.equal([
+    "lyra-deprecated:lr-file-input:property:paste",
+  ]);
+  expect(warnings[0]!.message).to.contain("without-paste");
+});
+
+it("forwards the deprecated paste property, syncs back, and lets the last write win", async () => {
+  await captureDeprecationWarnings(PASTE, async () => {
+    const el = (await fixture(
+      html`<lr-file-input paste="false"></lr-file-input>`
+    )) as LyraFileInput;
+    // `paste` keeps its presence reflection, so a false value serializes as an absent attribute.
+    expect(el.hasAttribute("paste")).to.be.false;
+    el.paste = true;
+    await el.updateComplete;
+    expect(el.withoutPaste).to.be.false;
+    expect(el.hasAttribute("paste")).to.be.true;
+    expect(pasteOneFile(el)).to.be.true;
+
+    el.paste = false;
+    await el.updateComplete;
+    expect(el.withoutPaste).to.be.true;
+    expect(el.hasAttribute("paste"), "a false alias reflects as absent").to.be.false;
+    expect(pasteOneFile(el)).to.be.false;
+
+    el.withoutPaste = false;
+    await el.updateComplete;
+    expect(el.paste, "the alias syncs back from the canonical").to.be.true;
+    expect(el.hasAttribute("paste")).to.be.true;
+
+    const both = (await fixture(
+      html`<lr-file-input paste without-paste></lr-file-input>`
+    )) as LyraFileInput;
+    expect(both.withoutPaste).to.be.true;
+    expect(pasteOneFile(both)).to.be.false;
+  });
 });
 
 it("enables native directory selection when requested", async () => {
@@ -1687,6 +1819,51 @@ it("is accessible while compact", async () => {
     html`<lr-file-input compact></lr-file-input>`
   )) as LyraFileInput;
   await expect(el).to.be.accessible();
+});
+
+it("warns once for the deprecated compact, never for a compact left false or for size", async () => {
+  const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+    await fixture(html`<lr-file-input size="s"></lr-file-input>`);
+    await fixture(html`<lr-file-input .compact=${false}></lr-file-input>`);
+    await fixture(html`<lr-file-input compact></lr-file-input>`);
+    const late = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+    late.compact = true;
+    await late.updateComplete;
+    expect(late.hasAttribute("compact"), "compact keeps reflecting").to.be.true;
+  });
+  expect(warnings.map(({ key }) => key)).to.deep.equal([
+    "lyra-deprecated:lr-file-input:property:compact",
+  ]);
+  expect(warnings[0]!.message).to.contain('size="s"');
+});
+
+it("renders the deprecated compact exactly like the documented dropzone custom properties", async () => {
+  const dropzoneContent = (el: LyraFileInput) => {
+    const content = getComputedStyle(
+      el.shadowRoot!.querySelector(".dropzone-content") as HTMLElement
+    );
+    return {
+      padding: content.padding,
+      rowGap: content.rowGap,
+      fontSize: content.fontSize,
+    };
+  };
+  const compact = (await fixture(
+    html`<lr-file-input compact></lr-file-input>`
+  )) as LyraFileInput;
+  const replacement = (await fixture(html`<lr-file-input
+    style="--lr-file-input-dropzone-padding: var(--lr-space-s); --lr-file-input-dropzone-font-size: var(--lr-font-size-sm); --lr-file-input-gap: var(--lr-space-2xs)"
+  ></lr-file-input>`)) as LyraFileInput;
+  expect(fileInputBaseChrome(replacement)).to.deep.equal(fileInputBaseChrome(compact));
+  expect(dropzoneContent(replacement)).to.deep.equal(dropzoneContent(compact));
+});
+
+it("keeps size=\"s\" rendering unchanged by the compact deprecation", async () => {
+  const small = (await fixture(
+    html`<lr-file-input size="s"></lr-file-input>`
+  )) as LyraFileInput;
+  // The s tier's own dropzone padding (--lr-space-m), not the compact --lr-space-s.
+  expect(fileInputBaseChrome(small).paddingTop).to.equal("12px");
 });
 
 it("keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them", async () => {
@@ -3660,7 +3837,7 @@ it("falls back to globalThis.File for a folder-rejection placeholder when its ow
 
 it("tolerates a paste event with no clipboardData", async () => {
   const el = (await fixture(
-    html`<lr-file-input paste></lr-file-input>`
+    html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   let fired = false;

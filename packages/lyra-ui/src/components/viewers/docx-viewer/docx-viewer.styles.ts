@@ -76,7 +76,10 @@ export const styles = css`
   }
 
   [part="content"] th {
-    background: var(--lr-docx-viewer-table-header-background, var(--lr-color-brand-quiet));
+    background: var(
+      --lr-docx-viewer-table-header-bg,
+      var(--lr-docx-viewer-table-header-background, var(--lr-color-brand-quiet))
+    );
     font-weight: var(--lr-font-weight-semibold);
   }
 
@@ -137,26 +140,26 @@ export const styles = css`
      text-highlights.ts creates here. */
   ::highlight(lr-highlight-accent) {
     background-color: var(
-      --lr-docx-viewer-highlight-accent-background,
-      var(--lr-color-brand-quiet)
+      --lr-docx-viewer-highlight-accent-bg,
+      var(--lr-docx-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
     );
   }
   ::highlight(lr-highlight-success) {
     background-color: var(
-      --lr-docx-viewer-highlight-success-background,
-      var(--lr-color-success-quiet)
+      --lr-docx-viewer-highlight-success-bg,
+      var(--lr-docx-viewer-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   ::highlight(lr-highlight-warning) {
     background-color: var(
-      --lr-docx-viewer-highlight-warning-background,
-      var(--lr-color-warning-quiet)
+      --lr-docx-viewer-highlight-warning-bg,
+      var(--lr-docx-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   ::highlight(lr-highlight-danger) {
     background-color: var(
-      --lr-docx-viewer-highlight-danger-background,
-      var(--lr-color-danger-quiet)
+      --lr-docx-viewer-highlight-danger-bg,
+      var(--lr-docx-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   /* --lr-color-surface-raised, not --lr-color-surface: [part='content'] paints no background, so
@@ -165,14 +168,14 @@ export const styles = css`
      neutral fallback. */
   ::highlight(lr-highlight-neutral) {
     background-color: var(
-      --lr-docx-viewer-highlight-neutral-background,
-      var(--lr-color-surface-raised)
+      --lr-docx-viewer-highlight-neutral-bg,
+      var(--lr-docx-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   ::highlight(lr-highlight-active) {
     background-color: var(
-      --lr-docx-viewer-highlight-active-background,
-      var(--lr-color-brand-quiet)
+      --lr-docx-viewer-highlight-active-bg,
+      var(--lr-docx-viewer-highlight-active-background, var(--lr-color-brand-quiet))
     );
     text-decoration: underline;
   }
@@ -182,8 +185,8 @@ export const styles = css`
      --_lr-highlight-layer-background. */
   [part="content"] mark[data-lr-highlight-tone] {
     --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-accent-background,
-      var(--lr-color-brand-quiet)
+      --lr-docx-viewer-highlight-accent-bg,
+      var(--lr-docx-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
     );
     background: var(--_lr-docx-viewer-highlight-background);
     color: inherit;
@@ -212,26 +215,26 @@ export const styles = css`
   }
   [part="content"] mark[data-lr-highlight-tone="success"] {
     --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-success-background,
-      var(--lr-color-success-quiet)
+      --lr-docx-viewer-highlight-success-bg,
+      var(--lr-docx-viewer-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   [part="content"] mark[data-lr-highlight-tone="warning"] {
     --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-warning-background,
-      var(--lr-color-warning-quiet)
+      --lr-docx-viewer-highlight-warning-bg,
+      var(--lr-docx-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   [part="content"] mark[data-lr-highlight-tone="danger"] {
     --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-danger-background,
-      var(--lr-color-danger-quiet)
+      --lr-docx-viewer-highlight-danger-bg,
+      var(--lr-docx-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   [part="content"] mark[data-lr-highlight-tone="neutral"] {
     --_lr-docx-viewer-highlight-background: var(
-      --lr-docx-viewer-highlight-neutral-background,
-      var(--lr-color-surface-raised)
+      --lr-docx-viewer-highlight-neutral-bg,
+      var(--lr-docx-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   [part="content"] mark[data-lr-highlight-name="lr-highlight-active"] {
@@ -242,20 +245,20 @@ export const styles = css`
 
   [part="content"] mark[part~="search-match"] {
     background: var(
-      --lr-docx-viewer-search-match-background,
-      var(--lr-color-warning-quiet)
+      --lr-docx-viewer-search-match-bg,
+      var(--lr-docx-viewer-search-match-background, var(--lr-color-warning-quiet))
     );
     color: inherit;
     border-radius: var(--lr-radius-xs);
   }
   [part="content"] mark[part~="search-match-active"] {
     background: var(
-      --lr-docx-viewer-search-match-active-background,
-      var(--lr-color-warning)
+      --lr-docx-viewer-search-match-active-bg,
+      var(--lr-docx-viewer-search-match-active-background, var(--lr-color-warning))
     );
     color: var(
-      --lr-docx-viewer-search-match-active-foreground,
-      var(--lr-color-on-warning)
+      --lr-docx-viewer-search-match-active-color,
+      var(--lr-docx-viewer-search-match-active-foreground, var(--lr-color-on-warning))
     );
   }
 `;

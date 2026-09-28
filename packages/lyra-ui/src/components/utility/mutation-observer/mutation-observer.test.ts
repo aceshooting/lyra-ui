@@ -96,6 +96,30 @@ describe('<lr-mutation-observer> deprecated observer aliases', () => {
     expect(warnings).to.have.length(0);
   });
 
+  it('keeps character-data and char-data in step, the last write winning in either direction', async () => {
+    let canonicalLast!: LyraMutationObserver;
+    let aliasLast!: LyraMutationObserver;
+    await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      canonicalLast = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      canonicalLast.characterData = true;
+      canonicalLast.charData = false;
+      aliasLast = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      aliasLast.charData = true;
+      aliasLast.characterData = false;
+      await canonicalLast.updateComplete;
+      await aliasLast.updateComplete;
+    });
+    expect(canonicalLast.charData, 'the later char-data write wins').to.equal(false);
+    expect(canonicalLast.characterData).to.equal(false);
+    expect(aliasLast.charData, 'the later characterData write wins').to.equal(false);
+    expect(aliasLast.characterData).to.equal(false);
+
+    canonicalLast.charData = true;
+    await canonicalLast.updateComplete;
+    expect(canonicalLast.characterData, 'characterData syncs back from charData').to.equal(true);
+    expect(canonicalLast.getAttribute('character-data')).to.equal('');
+  });
+
   it('documents why attributes is not a mechanical attr="*" rename: attr ignores attributeFilter', async () => {
     const observed = async (template: ReturnType<typeof html>): Promise<string[]> => {
       const el = await fixture<LyraMutationObserver>(template);
@@ -325,14 +349,15 @@ describe('<lr-mutation-observer>', () => {
         html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
       );
       expect(el.childList).to.equal(false);
+      expect(el.withoutSubtree).to.equal(false);
       expect(el.subtree).to.equal(true);
     });
 
-    it('subtree="false" (plain HTML attribute) excludes a nested-descendant mutation that the true default includes (unset regression)', async () => {
+    it('without-subtree excludes a nested-descendant mutation that the default includes (unset regression)', async () => {
       const scoped = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer child-list subtree="false"><div><span></span></div></lr-mutation-observer>`,
+        html`<lr-mutation-observer child-list without-subtree><div><span></span></div></lr-mutation-observer>`,
       );
-      expect(scoped.subtree).to.equal(false);
+      expect(scoped.withoutSubtree).to.equal(true);
       await scoped.updateComplete;
       const nestedGrandchild = scoped.querySelector('span')!;
 
@@ -342,7 +367,7 @@ describe('<lr-mutation-observer>', () => {
       });
       nestedGrandchild.append(document.createElement('em'));
       await aTimeout(20);
-      expect(fired, 'a mutation nested below the direct slotted child must NOT be reported when subtree=false').to.equal(false);
+      expect(fired, 'a mutation nested below the direct slotted child must NOT be reported without-subtree').to.equal(false);
 
       // Contrast: the identical nested mutation, observed with the true default, IS reported --
       // proving the assertion above exercises subtree's real MutationObserverInit wiring rather
@@ -356,6 +381,78 @@ describe('<lr-mutation-observer>', () => {
       defaultedGrandchild.append(document.createElement('em'));
       const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
       expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('keeps the deprecated subtree alias working: subtree="false" equals without-subtree and warns once', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
+      let fired = false;
+      let scoped!: LyraMutationObserver;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        scoped = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list subtree="false"><div><span></span></div></lr-mutation-observer>`,
+        );
+        await scoped.updateComplete;
+        scoped.subtree = false;
+        await scoped.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-mutation-observer:property:subtree']);
+      expect(scoped.subtree).to.equal(false);
+      expect(scoped.withoutSubtree).to.equal(true);
+      await aTimeout(0);
+      scoped.addEventListener('lr-mutation', () => {
+        fired = true;
+      });
+      scoped.querySelector('span')!.append(document.createElement('em'));
+      await aTimeout(20);
+      expect(fired, 'the alias must scope observation exactly as without-subtree does').to.equal(false);
+
+      // Setting the alias back to true restores descendant observation.
+      await captureDeprecationWarnings([usage], async () => {
+        scoped.subtree = true;
+        await scoped.updateComplete;
+      });
+      expect(scoped.withoutSubtree).to.equal(false);
+      await aTimeout(0);
+      const event = oneEvent(scoped, 'lr-mutation');
+      scoped.querySelector('span')!.append(document.createElement('em'));
+      expect(((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('never warns for the default or the canonical without-subtree', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const plain = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list without-subtree><div></div></lr-mutation-observer>`,
+        );
+        await plain.updateComplete;
+        const defaulted = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`,
+        );
+        await defaulted.updateComplete;
+      });
+      expect(warnings).to.have.length(0);
+    });
+
+    it('keeps subtree and without-subtree in step, the last write winning in either direction', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
+      let canonicalLast!: LyraMutationObserver;
+      let aliasLast!: LyraMutationObserver;
+      await captureDeprecationWarnings([usage], async () => {
+        canonicalLast = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list subtree without-subtree><div></div></lr-mutation-observer>`,
+        );
+        aliasLast = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list without-subtree subtree><div></div></lr-mutation-observer>`,
+        );
+      });
+      expect(canonicalLast.withoutSubtree, 'the later without-subtree attribute wins').to.equal(true);
+      expect(canonicalLast.subtree).to.equal(false);
+      expect(aliasLast.withoutSubtree, 'the later subtree attribute wins').to.equal(false);
+      expect(aliasLast.subtree).to.equal(true);
+
+      aliasLast.withoutSubtree = true;
+      await aliasLast.updateComplete;
+      expect(aliasLast.subtree, 'subtree syncs back from without-subtree').to.equal(false);
     });
 
     it('enables child-list from its plain HTML boolean attribute', async () => {

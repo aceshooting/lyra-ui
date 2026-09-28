@@ -92,6 +92,7 @@ export interface FlowStructureSnapshot {
   readonly nodes: readonly FlowStructureNodeSnapshot[];
   readonly edges: readonly FlowStructureEdgeSnapshot[];
   readonly viewport: FlowViewportSnapshot;
+  /** The canvas's `readonly` state. */
   readonly locked: boolean;
   readonly orientation: LyraOrientation;
   readonly layerGap: number;

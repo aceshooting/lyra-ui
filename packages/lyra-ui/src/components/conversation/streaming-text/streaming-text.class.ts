@@ -50,8 +50,8 @@ export {
  * component's own `languages` through verbatim; plain-text mode
  * renders into a `white-space: pre-wrap` span instead. The rest of
  * `<lr-markdown>`'s configuration surface is forwarded verbatim too --
- * `tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`,
- * `headingOffset`, `highlightCode`, `headingAnchors`, `math`, and
+ * `tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`,
+ * `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, and
  * `maxHeight` -- each defaulting to exactly `<lr-markdown>`'s own default, so
  * leaving all of them unset renders identically to before this wrapper
  * forwarded them. The plain-text path
@@ -149,7 +149,8 @@ export class LyraStreamingText extends StreamingTextRuntimeBase {
   /** Enables source-copy headers in the composed `<lr-markdown>`. */
   @property({ type: Boolean, attribute: 'code-block-header' }) override codeBlockHeader = false;
 
-  /** Deprecated compatibility spelling of `code-block-header`: either property enables the headers.
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins.
    * Setting it logs a one-time development warning.
    * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' }) override codeBlockChrome = false;
@@ -166,15 +167,15 @@ export class LyraStreamingText extends StreamingTextRuntimeBase {
       .content=${this.displayedContent}
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
-      .codeBlockHeader=${this.codeBlockHeader || this.codeBlockChrome}
+      .codeBlockHeader=${this.codeBlockHeader}
       .languages=${this.languages}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}
-      .gfm=${this.gfm}
+      .withoutGfm=${this.withoutGfm}
       .linkTarget=${this.linkTarget}
       .internalLinkPrefix=${this.internalLinkPrefix}
       .headingOffset=${this.headingOffset}
-      .highlightCode=${this.highlightCode}
+      .withoutSyntaxHighlighting=${this.withoutSyntaxHighlighting}
       .headingAnchors=${this.headingAnchors}
       .math=${this.math}
       .maxHeight=${this.maxHeight}

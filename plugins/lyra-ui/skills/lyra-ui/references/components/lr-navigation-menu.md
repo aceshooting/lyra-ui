@@ -191,8 +191,10 @@ hover opening.
 
 **Methods:** `focus(options?)` and `click()` forward to the link or button.
 
-**Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ open, source }`, where
-`source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not cancelable,
+**Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, open, source }`,
+where `expanded` is the new state, the deprecated `open` key (removed in 23.0.0) carries the same
+value, and `source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not
+cancelable,
 fired after an accepted change renders and never for initial markup. `user` covers click, Enter,
 Space, hover, Escape, light dismiss, focus leaving and link activation; `programmatic` covers `open`
 writes, the menu's `close()`, a layout change and losing the panel content; `peer` means a sibling

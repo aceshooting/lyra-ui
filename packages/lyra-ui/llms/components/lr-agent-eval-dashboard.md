@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-agent-eval-dashboard-active-background` since `21.1.0`; use css-property `--lr-agent-eval-dashboard-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `showChart` / `show-chart` since `21.1.0`; use property `without-chart`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,7 +29,10 @@ AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accept
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
 `metricId: string | null = null`; `label?: string` — omission localizes the heading while an
-explicit empty string renders no heading/name; `showChart: boolean = true`; `chartHeight: string =
+explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
+`without-chart`, reflected) suppresses the metric trend chart (deprecated alias:
+`show-chart`/`showChart`, use `without-chart`; removed in 23.0.0 — inverted, so `show-chart="false"`
+equals `without-chart`); `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
@@ -43,4 +47,6 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Additional API surface:**
 
 - `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
-- `--lr-agent-eval-dashboard-active-background` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-agent-eval-dashboard-active-bg` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
+  Deprecated alias: `--lr-agent-eval-dashboard-active-background` (use
+  `--lr-agent-eval-dashboard-active-bg`; removed in 23.0.0).

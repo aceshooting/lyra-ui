@@ -8,6 +8,7 @@ import {
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import { LyraInput, type LyraInputEventMap } from './input.class.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
@@ -30,7 +31,7 @@ export interface LyraNumberInputEventMap extends LyraInputEventMap {
  *
  * The steppers replace the browser's built-in spin buttons rather than sitting beside them:
  * `withoutSpinButtons` therefore defaults to `true` here (it defaults to `false` on `<lr-input>`),
- * and both properties are independently settable, so `steppers="false"
+ * and both properties are independently settable, so `without-steppers
  * without-spin-buttons="false"` returns the field to a plain native `<input type="number">`.
  *
  * Each stepper drives the inherited `stepUp()`/`stepDown()`, so `min`/`max` clamping and decimal
@@ -85,17 +86,20 @@ export class LyraNumberInput extends LyraInput {
     return super.validators;
   }
   static override styles = [LyraElement.styles, sizes, inputStyles, numberInputStyles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    steppers: ['withoutSteppers', invertAlias, invertAlias],
+  };
 
   protected override get inputWrapperParts(): string {
     return `${super.inputWrapperParts} number-input`;
   }
 
-  /** Renders the increment/decrement pair inside the control row. Set `steppers="false"` for a
-   *  bare numeric field. */
-  @property({ converter: trueDefaultBooleanConverter, reflect: true }) steppers = true;
-  /** Positive upstream spelling for hiding the stepper pair. The established `steppers` switch
-   * remains supported; either `without-steppers` or `steppers="false"` hides the same controls. */
+  /** Hides the increment/decrement pair for a bare numeric field. */
   @property({ type: Boolean, attribute: 'without-steppers' }) withoutSteppers = false;
+  /** Renders the increment/decrement pair inside the control row. Set `steppers="false"` for a
+   *  bare numeric field.
+   *  @deprecated Use `without-steppers` (inverted); removal not before 23.0.0. */
+  @property({ converter: trueDefaultBooleanConverter, reflect: true }) steppers = true;
 
   /** Numeric inputs use the outlined field treatment by default. */
   @property({ reflect: true }) override appearance: LyraAppearance = 'outlined';
@@ -165,7 +169,7 @@ export class LyraNumberInput extends LyraInput {
   };
 
   protected override renderControls(): TemplateResult | typeof nothing {
-    if (!this.steppers || this.withoutSteppers) return nothing;
+    if (this.withoutSteppers) return nothing;
     const inert = this.effectiveDisabled || this.readonly;
     return html`
       <button

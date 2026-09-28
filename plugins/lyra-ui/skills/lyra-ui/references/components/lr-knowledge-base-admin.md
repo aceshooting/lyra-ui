@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hideIngestion` / `hide-ingestion` since `21.1.0`; use property `without-ingestion`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,7 +25,9 @@ IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestio
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
 localized admin label, while an explicit empty string stays empty; authored host
 `aria-label` independently names the admin component and is not cloned onto either);
-`hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
+`withoutIngestion: boolean = false` (attribute `without-ingestion`; deprecated alias:
+`hide-ingestion`/`hideIngestion`, use `without-ingestion`; removed in 23.0.0). If ingestion is active when it
+becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.

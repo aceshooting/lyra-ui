@@ -7,9 +7,16 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-schema-viewer-error-bg` since `21.1.0`; use css-property `--lr-json-schema-viewer-error-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-error-border` since `21.1.0`; use css-property `--lr-json-schema-viewer-error-border`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-info-bg` since `21.1.0`; use css-property `--lr-json-schema-viewer-info-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-info-border` since `21.1.0`; use css-property `--lr-json-schema-viewer-info-border`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-max-indent` since `21.1.0`; use css-property `--lr-json-schema-viewer-max-indent`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-selected-border` since `21.1.0`; use css-property `--lr-json-schema-viewer-selected-border`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-warning-bg` since `21.1.0`; use css-property `--lr-json-schema-viewer-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-schema-viewer-warning-border` since `21.1.0`; use css-property `--lr-json-schema-viewer-warning-border`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,17 +48,21 @@ issue cap.
 
 `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
-`--lr-schema-viewer-info-border` (default `var(--lr-color-brand)`) and `--lr-schema-viewer-info-bg`
-(default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
+`--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
+`--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
 library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
 to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 
-**Themeable custom properties:** `--lr-schema-viewer-max-indent` (default `var(--lr-size-12rem)`)
-caps visual nesting indentation while preserving complete JSON Pointer paths;
-`--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see above); otherwise shared tokens
-only.
+**Themeable custom properties:** `--lr-json-schema-viewer-max-indent` (default
+`var(--lr-size-12rem)`) caps visual nesting indentation while preserving complete JSON Pointer paths;
+`--lr-json-schema-viewer-info-border`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
+tokens only. Deprecated aliases: every `--lr-schema-viewer-*` custom property — `--lr-schema-viewer-max-indent`,
+`--lr-schema-viewer-selected-border`, `--lr-schema-viewer-error-border`, `--lr-schema-viewer-error-bg`,
+`--lr-schema-viewer-warning-border`, `--lr-schema-viewer-warning-bg`, `--lr-schema-viewer-info-border`
+and `--lr-schema-viewer-info-bg` (use the same name under `--lr-json-schema-viewer-*`; removed in
+23.0.0).
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
 `issue-limit` show their respective truncation as ordinary, non-live status text. When `selectedPath`
@@ -70,8 +81,8 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
-- `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
-- `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
-- `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
-- `--lr-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-json-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.

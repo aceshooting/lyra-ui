@@ -140,14 +140,14 @@ export const CustomCellGeometry: Story = {
     docs: {
       description: {
         story:
-          "`--lr-cell-size` sets both dimensions of every day cell and the seven matching grid tracks. Its private default is `var(--lr-size-2-25rem)` and follows the public `size` tier; an inherited or direct `--lr-cell-size` remains authoritative.",
+          "`--lr-date-picker-cell-size` sets both dimensions of every day cell and the seven matching grid tracks. Its private default is `var(--lr-size-2-25rem)` and follows the public `size` tier; an inherited or direct `--lr-date-picker-cell-size` remains authoritative.",
       },
     },
   },
   render: () => html`
     <lr-date-picker
       value="2026-07-15"
-      style="--lr-cell-size: calc(var(--lr-size-2-5rem) + var(--lr-space-xs))"
+      style="--lr-date-picker-cell-size: calc(var(--lr-size-2-5rem) + var(--lr-space-xs))"
     ></lr-date-picker>
   `,
 };

@@ -2,6 +2,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function settleClipboard(el: LyraTerminal): Promise<void> {
   await Promise.resolve();
@@ -92,24 +93,24 @@ async function assertTokenizedPointerBackground(
 }
 
 describe('lr-terminal', () => {
-  it('defaults to follow=true, wrap=true, copyable=true, maxScrollback=5000', async () => {
+  it('defaults to follow=true, withoutWrap=false, withoutCopyButton=false, maxScrollback=5000', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     expect(el.follow).to.be.true;
-    expect(el.wrap).to.be.true;
-    expect(el.copyable).to.be.true;
+    expect(el.withoutWrap).to.be.false;
+    expect(el.withoutCopyButton).to.be.false;
     expect(el.maxScrollback).to.equal(5000);
   });
 
-  it('accepts follow="false", wrap="false", and copyable="false" as plain-HTML attribute strings', async () => {
+  it('accepts follow="false", without-wrap, and without-copy-button as plain-HTML attributes', async () => {
     const el = (await fixture(
-      html`<lr-terminal follow="false" wrap="false" copyable="false"></lr-terminal>`,
+      html`<lr-terminal follow="false" without-wrap without-copy-button></lr-terminal>`,
     )) as LyraTerminal;
     expect(el.follow).to.be.false;
-    expect(el.wrap).to.be.false;
-    expect(el.copyable).to.be.false;
+    expect(el.withoutWrap).to.be.true;
+    expect(el.withoutCopyButton).to.be.true;
     expect(el.hasAttribute('follow')).to.be.false;
-    expect(el.hasAttribute('wrap')).to.be.false;
-    expect(el.hasAttribute('copyable')).to.be.false;
+    expect(el.hasAttribute('without-wrap')).to.be.true;
+    expect(el.hasAttribute('without-copy-button')).to.be.true;
   });
 
   it('renders content as plain lines and getPlainText() returns the SGR-stripped text', async () => {
@@ -132,7 +133,7 @@ describe('lr-terminal', () => {
   });
 
   it('keeps the terminal virtual-list key callback stable while its per-render item callback stays fresh', async () => {
-    const el = await fixture<LyraTerminal>(html`<lr-terminal .wrap=${false}></lr-terminal>`);
+    const el = await fixture<LyraTerminal>(html`<lr-terminal without-wrap></lr-terminal>`);
     el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
@@ -140,7 +141,7 @@ describe('lr-terminal', () => {
     const keyFunction = list.keyFunction;
     const renderItem = list.renderItem;
 
-    el.copyable = false;
+    el.withoutCopyButton = true;
     await el.updateComplete;
     await list.updateComplete;
 
@@ -149,7 +150,7 @@ describe('lr-terminal', () => {
   });
 
   it('avoids terminal virtual-list offset rebuilds for unrelated parent updates while new lines reconcile', async () => {
-    const el = await fixture<LyraTerminal>(html`<lr-terminal .wrap=${false}></lr-terminal>`);
+    const el = await fixture<LyraTerminal>(html`<lr-terminal without-wrap></lr-terminal>`);
     el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
@@ -158,7 +159,7 @@ describe('lr-terminal', () => {
     const items = list.items;
     const rebuilds = recordVirtualListOffsetRebuilds(list);
     try {
-      el.copyable = false;
+      el.withoutCopyButton = true;
       await el.updateComplete;
       await list.updateComplete;
       expect(rebuilds.count(), JSON.stringify(rebuilds.updates())).to.equal(0);
@@ -284,7 +285,7 @@ describe('lr-terminal', () => {
       value: { writeText: () => Promise.resolve() },
     });
     try {
-      const el = (await fixture(html`<lr-terminal copyable></lr-terminal>`)) as LyraTerminal;
+      const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
       el.write('\x1b[31mred\x1b[0m plain');
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
@@ -1077,7 +1078,7 @@ describe('lr-terminal', () => {
 
   it('is accessible with content, copy/download buttons, and a highlight set', async () => {
     const el = (await fixture(
-      html`<lr-terminal copyable downloadable></lr-terminal>`,
+      html`<lr-terminal downloadable></lr-terminal>`,
     )) as LyraTerminal;
     el.write('line one\nline two');
     el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 1 } }];
@@ -1398,33 +1399,33 @@ describe('lr-terminal', () => {
     expect(getComputedStyle(base).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('omits the toolbar entirely when both copyable and downloadable are false', async () => {
+  it('omits the toolbar entirely when without-copy-button is set and downloadable is false', async () => {
     const el = (await fixture(
-      html`<lr-terminal .copyable=${false} .downloadable=${false}></lr-terminal>`,
+      html`<lr-terminal without-copy-button .downloadable=${false}></lr-terminal>`,
     )) as LyraTerminal;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="toolbar"]')) === null).to.be.true;
   });
 
-  it('renders only the download button when copyable is false and downloadable is true', async () => {
-    const el = (await fixture(html`<lr-terminal .copyable=${false} downloadable></lr-terminal>`)) as LyraTerminal;
+  it('renders only the download button when without-copy-button is set and downloadable is true', async () => {
+    const el = (await fixture(html`<lr-terminal without-copy-button downloadable></lr-terminal>`)) as LyraTerminal;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="copy-button"]')) === null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="download-button"]')).to.exist;
   });
 
-  it('wrap=false uses a fixed 24px row-height on the virtual list instead of "auto"', async () => {
-    const el = (await fixture(html`<lr-terminal .wrap=${false}></lr-terminal>`)) as LyraTerminal;
+  it('without-wrap uses a fixed 24px row-height on the virtual list instead of "auto"', async () => {
+    const el = (await fixture(html`<lr-terminal without-wrap></lr-terminal>`)) as LyraTerminal;
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     expect(list.getAttribute('row-height')).to.equal('24');
   });
 
-  it('wrap=false makes the painted line span its full horizontal scroll extent', async () => {
+  it('without-wrap makes the painted line span its full horizontal scroll extent', async () => {
     const container = document.createElement('div');
     container.style.inlineSize = '320px';
     const el = await fixture<LyraTerminal>(html`
-      <lr-terminal .wrap=${false} .highlights=${[
+      <lr-terminal without-wrap .highlights=${[
         { id: 'long', anchor: { kind: 'line-range', start: 1 }, tone: 'danger' },
       ]}></lr-terminal>
     `, { parentNode: container });
@@ -1675,7 +1676,7 @@ it('searchNext/searchPrevious resolve a boolean, matching the shared viewer sear
   expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
 });
 
-describe('compact / frame escape hatches', () => {
+describe('size / frame escape hatches', () => {
   // A terminal is routinely nested inside another bordered container (an lr-agent-run panel, a
   // message bubble) -- the same embedded-in-a-transcript positioning its agent-tools siblings
   // lr-result-card, lr-stack-trace, lr-task-list, and lr-thinking-panel all expose `compact` +
@@ -1699,9 +1700,9 @@ describe('compact / frame escape hatches', () => {
     return list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
   }
 
-  it('defaults to compact=false and frame="card", keeping the card chrome', async () => {
+  it('defaults to size="m" and frame="card", keeping the card chrome', async () => {
     const el = (await fixture(html`<lr-terminal .content=${LOG}></lr-terminal>`)) as LyraTerminal;
-    expect(el.compact).to.be.false;
+    expect(el.size).to.equal('m');
     expect(el.frame).to.equal('card');
     expect(el.hasAttribute('compact')).to.be.false;
     expect(el.getAttribute('frame')).to.equal('card');
@@ -1712,14 +1713,14 @@ describe('compact / frame escape hatches', () => {
     expect(style.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it('tightens the toolbar padding and gap under compact, behind retunable cssprops', async () => {
+  it('tightens the toolbar padding and gap under size="s", behind retunable cssprops', async () => {
     const regular = (await fixture(
       html`<lr-terminal downloadable .content=${LOG}></lr-terminal>`,
     )) as LyraTerminal;
     const compact = (await fixture(
-      html`<lr-terminal compact downloadable .content=${LOG}></lr-terminal>`,
+      html`<lr-terminal size="s" downloadable .content=${LOG}></lr-terminal>`,
     )) as LyraTerminal;
-    expect(compact.hasAttribute('compact')).to.be.true;
+    expect(compact.getAttribute('size')).to.equal('s');
 
     const regularStyle = getComputedStyle(toolbar(regular));
     const compactStyle = getComputedStyle(toolbar(compact));
@@ -1742,15 +1743,15 @@ describe('compact / frame escape hatches', () => {
     expect(retuned.paddingInlineStart).to.equal('2px');
     expect(retuned.columnGap).to.equal('3px');
 
-    // compact is a density knob, not a chrome knob -- the card border and background stay.
+    // The dense size tier is a density knob, not a chrome knob -- the card border and background stay.
     expect(getComputedStyle(base(compact)).borderTopStyle).to.equal('solid');
     expect(getComputedStyle(base(compact)).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
-  it("tightens each rendered line's inline padding under compact, behind a retunable cssprop", async () => {
+  it("tightens each rendered line's inline padding under size=\"s\", behind a retunable cssprop", async () => {
     const regular = (await fixture(html`<lr-terminal .content=${LOG}></lr-terminal>`)) as LyraTerminal;
     const compact = (await fixture(
-      html`<lr-terminal compact .content=${LOG}></lr-terminal>`,
+      html`<lr-terminal size="s" .content=${LOG}></lr-terminal>`,
     )) as LyraTerminal;
     const regularPadding = Number.parseFloat(
       getComputedStyle(await firstLine(regular)).paddingInlineStart,
@@ -1787,9 +1788,9 @@ describe('compact / frame escape hatches', () => {
     expect(Number.parseFloat(getComputedStyle(base(el)).borderTopWidth)).to.be.greaterThan(0);
   });
 
-  it('is accessible in the populated compact and plain states', async () => {
+  it('is accessible in the populated dense and plain states', async () => {
     const compact = await fixture(
-      html`<lr-terminal compact downloadable .content=${LOG}></lr-terminal>`,
+      html`<lr-terminal size="s" downloadable .content=${LOG}></lr-terminal>`,
     );
     await expect(compact).to.be.accessible();
     const plain = await fixture(
@@ -1837,7 +1838,7 @@ it('reads its border widths from --lr-border-width-thin, not the generic --lr-si
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
   const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
-  expect(copyButton, 'copy button renders (copyable defaults true)').to.exist;
+  expect(copyButton, 'copy button renders by default').to.exist;
   // A consumer retuning the documented --lr-theme-border-width-thin input must move these
   // borders; retuning the unrelated --lr-theme-size-1px sizing scale must not.
   expect(getComputedStyle(base).borderTopWidth).to.equal('11px');
@@ -1915,7 +1916,7 @@ function glyphRect(root: Node, needle: string): DOMRect {
 
 it('scrolls an unwrapped terminal from the start of its lines under RTL and follows the page when wrapping', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 360px">
-    <lr-terminal wrap="false"></lr-terminal>
+    <lr-terminal without-wrap></lr-terminal>
   </div>`);
   const el = host.querySelector('lr-terminal') as LyraTerminal;
   el.content = `short\n${'x'.repeat(200)}`;
@@ -1927,7 +1928,148 @@ it('scrolls an unwrapped terminal from the start of its lines under RTL and foll
   const port = scrollport.getBoundingClientRect();
   const first = glyphRect(list.shadowRoot!, 'short');
   expect(first.left).to.be.within(port.left, port.right);
-  el.wrap = true;
+  el.withoutWrap = false;
   await el.updateComplete;
   expect(getComputedStyle(scrollport).direction).to.equal('rtl');
+});
+
+describe('lr-terminal size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-terminal', kind: 'property', name: 'compact' }];
+  const density = (el: LyraTerminal): string => JSON.stringify({ padding: getComputedStyle(el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`));
+      dense = density(await fixture<LyraTerminal>(html`<lr-terminal size="s" downloadable></lr-terminal>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraTerminal>(html`<lr-terminal size="s" downloadable></lr-terminal>`));
+      const aliased = await fixture<LyraTerminal>(html`<lr-terminal compact downloadable></lr-terminal>`);
+      alias = density(aliased);
+      const el = await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-terminal:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraTerminal>(html`<lr-terminal compact size="l" downloadable></lr-terminal>`);
+      const compactLast = await fixture<LyraTerminal>(html`<lr-terminal size="l" compact downloadable></lr-terminal>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-terminal deprecated wrap and copyable aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-terminal', kind: 'property', name: 'wrap' },
+    { tag: 'lr-terminal', kind: 'property', name: 'copyable' },
+  ];
+  const view = (el: LyraTerminal): string => JSON.stringify({
+    rowHeight: el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('row-height'),
+    copy: el.shadowRoot!.querySelector('[part="copy-button"]') !== null,
+    unwrapped: el.hasAttribute('without-wrap'),
+  });
+
+  it('treats wrap="false"/copyable="false" exactly like without-wrap/without-copy-button, warning once each', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable without-wrap without-copy-button></lr-terminal>`));
+      const aliased = await fixture<LyraTerminal>(html`<lr-terminal downloadable wrap="false" copyable="false"></lr-terminal>`);
+      alias = view(aliased);
+      reads = [aliased.wrap, aliased.copyable, aliased.withoutWrap, aliased.withoutCopyButton];
+      const el = await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`);
+      el.wrap = false;
+      el.copyable = false;
+      await el.updateComplete;
+      property = view(el);
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal([false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-terminal:property:wrap',
+      'lyra-deprecated:lr-terminal:property:copyable',
+    ]);
+  });
+
+  it('keeps bare wrap/copyable meaning the defaults and applies the last authored spelling', async () => {
+    let plain = '';
+    let bare = '';
+    let canonical = '';
+    let canonicalLast = '';
+    let aliasLast = '';
+    await captureDeprecationWarnings(ALIASES, async () => {
+      plain = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`));
+      bare = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable wrap copyable></lr-terminal>`));
+      canonical = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable without-wrap without-copy-button></lr-terminal>`));
+      canonicalLast = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable wrap copyable without-wrap without-copy-button></lr-terminal>`));
+      aliasLast = view(await fixture<LyraTerminal>(html`<lr-terminal downloadable without-wrap without-copy-button wrap copyable></lr-terminal>`));
+    });
+    expect(bare).to.equal(plain);
+    expect(canonicalLast).to.equal(canonical);
+    expect(aliasLast).to.equal(plain);
+  });
+
+  it('syncs and reflects wrap/copyable back from the canonical properties without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraTerminal>(html`<lr-terminal downloadable></lr-terminal>`);
+      reads.push(el.wrap, el.hasAttribute('wrap'), el.copyable, el.hasAttribute('copyable'));
+      el.withoutWrap = true;
+      el.withoutCopyButton = true;
+      await el.updateComplete;
+      reads.push(el.wrap, el.hasAttribute('wrap'), el.copyable, el.hasAttribute('copyable'));
+    });
+    expect(reads).to.deep.equal([true, true, true, true, false, false, false, false]);
+    expect(warnings).to.have.length(0);
+  });
 });

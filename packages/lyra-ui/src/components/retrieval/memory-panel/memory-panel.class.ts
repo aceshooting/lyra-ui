@@ -202,6 +202,10 @@ export interface LyraMemoryPanelEventMap {
   'lr-add': CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
   'lr-forget': CustomEvent<null>;
+  /** A memory item's provenance disclosure changed its expanded state. */
+  'lr-memory-toggle': CustomEvent<LyraMemoryExpandDetail>;
+  /** @deprecated Use `lr-memory-toggle`; removal not before 23.0.0. Fired right after it from the
+   *  same toggle, with an equal detail. */
   'lr-expand': CustomEvent<LyraMemoryExpandDetail>;
 }
 
@@ -278,8 +282,11 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * the short-term item as-is; the host decides how/whether to persist it.
  * @event lr-remove - A pending "remove" action was approved. `detail: { memoryId, scope }`.
  * @event lr-forget - The pending "forget all long-term memories" action was approved. No detail.
- * @event lr-expand - A memory item's provenance disclosure was toggled.
- * `detail: { memoryId, scope, expanded }`.
+ * @event lr-memory-toggle - A memory item's provenance disclosure was toggled, expanding or
+ * collapsing it. `detail: { memoryId, scope, expanded }`. Fires before `lr-expand`, from the same
+ * toggle.
+ * @event lr-expand - Deprecated alias of `lr-memory-toggle`, kept firing unchanged right after it
+ * with an equal `detail: { memoryId, scope, expanded }`. Removal not before 23.0.0.
  * @csspart base - The root wrapper.
  * @csspart empty - The all-empty `lr-empty` state, shown when both lists are empty.
  * @csspart section - One of the two (short-term/long-term) sections; carries `data-scope`.
@@ -579,6 +586,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (expanded) next.add(key);
     else next.delete(key);
     this.expandedIds = next;
+    this.emit('lr-memory-toggle', { memoryId: item.id, scope, expanded });
+    // Deprecated alias, dispatched with its own equal detail right after the canonical event.
     this.emit('lr-expand', { memoryId: item.id, scope, expanded });
   }
 

@@ -6,6 +6,8 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import type { ChatMessageRole } from '../../conversation/chat-message/chat-message.class.js';
 import { styles } from './prompt-studio.styles.js';
@@ -52,6 +54,10 @@ export interface LyraPromptStudioEventMap {
   focus: CustomEvent<null>;
   blur: CustomEvent<null>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
+  /** Cancelable request to reorder messages, fired before the order changes. */
+  'lr-message-reorder-request': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
+  /** @deprecated Use `lr-message-reorder-request`; removal not before 23.0.0. Fired right after it
+   *  from the same move, with an equal detail; either event's `preventDefault()` vetoes the move. */
   'lr-message-reorder': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
   'lr-run': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   'lr-save': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
@@ -85,10 +91,14 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * @customElement lr-prompt-studio
  * @event lr-change - A cancelable proposal that messages or variables are about to change.
  *   Carries their complete next state. Prevent it to keep the current state unchanged, the same
- *   veto point `lr-message-reorder` already offers for reordering.
- * @event lr-message-reorder - A cancelable request to reorder messages. Carries the proposed
- *   complete message order and the moved message's id and indexes. Prevent it to persist or reject
- *   the proposed order yourself, then assign `messages` when the host is ready to render it.
+ *   veto point `lr-message-reorder-request` already offers for reordering.
+ * @event lr-message-reorder-request - A cancelable request to reorder messages. Carries the
+ *   proposed complete message order and the moved message's id and indexes. Prevent it to persist
+ *   or reject the proposed order yourself, then assign `messages` when the host is ready to render
+ *   it. Fires before `lr-message-reorder`, from the same move; either event may veto.
+ * @event lr-message-reorder - Deprecated cancelable alias of `lr-message-reorder-request`, kept
+ *   firing right after it with an equal detail; either event may veto, and a veto through this
+ *   alias logs a one-time development warning. Removal not before 23.0.0.
  * @event lr-run - The current prompt was requested for execution.
  * @event lr-save - The current prompt was requested for persistence.
  * @event lr-version-select - A complete saved version was activated.
@@ -156,6 +166,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-change',
+    'lr-message-reorder-request',
     'lr-message-reorder',
     'lr-run',
     'lr-save',
@@ -174,10 +185,13 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   @property() label = '';
   /** Visible toolbar heading. Falls back to the localized “Prompt studio” string. */
   @property() heading = '';
+  /** Semantic level of the visible toolbar heading. Use `none` to keep the visual heading text
+   *  without exposing it to heading navigation. Invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   @property({ type: Boolean, reflect: true }) running = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Opts into native move-up/move-down buttons for each message. A move first emits the
-   * cancelable `lr-message-reorder` request, so a host that needs asynchronous persistence can
+   * cancelable `lr-message-reorder-request`, so a host that needs asynchronous persistence can
    * prevent it and later assign its accepted message order. */
   @property({ type: Boolean, reflect: true }) reorderable = false;
   /** Native editing-assistance attributes forwarded to the message textarea and variable inputs. */
@@ -331,19 +345,22 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const [moved] = nextMessages.splice(fromIndex, 1);
     if (!moved) return;
     nextMessages.splice(toIndex, 0, moved);
-    const event = this.emit(
-      'lr-message-reorder',
-      {
-        // The proposal is a snapshot: a listener may hold, persist, or alter its own copy without
-        // mutating the component's accepted next state behind the cancelable veto point.
-        messages: nextMessages.map((message) => ({ ...message })),
-        messageId,
-        fromIndex,
-        toIndex,
-      },
-      { cancelable: true },
-    );
-    if (event.defaultPrevented) return;
+    // Each proposal is its own snapshot: a listener may hold, persist, or alter its copy without
+    // mutating the component's accepted next state behind the cancelable veto point.
+    const proposal = (): PromptStudioMessageReorderDetail => ({
+      messages: nextMessages.map((message) => ({ ...message })),
+      messageId,
+      fromIndex,
+      toIndex,
+    });
+    const request = this.emit('lr-message-reorder-request', proposal(), { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-message-reorder', proposal(), { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-message-reorder', 'lr-message-reorder-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     // A move onto its directional boundary disables the action that initiated it. Keep keyboard
     // focus on the same message by using the other still-enabled move action in that case.
     const part: PromptStudioMessageMovePart =
@@ -523,6 +540,26 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     </button>`;
   }
 
+  /** The toolbar heading at `headingLevel`; `none` keeps the text without heading semantics. */
+  private renderHeading(text: string): TemplateResult {
+    switch (resolveHeadingLevel(this.headingLevel ?? '2')) {
+      case '1':
+        return html`<h1>${text}</h1>`;
+      case '2':
+        return html`<h2>${text}</h2>`;
+      case '3':
+        return html`<h3>${text}</h3>`;
+      case '4':
+        return html`<h4>${text}</h4>`;
+      case '5':
+        return html`<h5>${text}</h5>`;
+      case '6':
+        return html`<h6>${text}</h6>`;
+      default:
+        return html`<span class="heading">${text}</span>`;
+    }
+  }
+
   override render(): TemplateResult {
     const heading = this.heading || this.localize('promptStudioLabel');
     const label = this.label || heading;
@@ -533,7 +570,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     return html`
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">
-          <h2>${heading}</h2>
+          ${this.renderHeading(heading)}
           <button part="save" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-save', this.state())}>
             ${this.localize('promptStudioSave')}
           </button>

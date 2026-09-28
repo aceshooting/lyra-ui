@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -35,18 +36,21 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   score-bar tier cutoffs
 - `sort: ChunkInspectorSort = 'score'` — `ChunkInspectorSort = 'score' | 'none'`, exported by this
   module. The sorted view is memoized on the `chunks`/`sort` pair, so an unrelated update (a new
-  `activeChunkId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
+  `activeChunkId`, a new `size`) hands the internal `lr-virtual-list` the same array reference it
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
-- `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
+- `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
+  and larger render the full rows. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `label: string = ''` — fallback name for the populated result group. A non-empty host
   `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
-`anchor` from the chunk's own), `lr-expand` (`detail: { chunkId, expanded }`, a chunk's text toggle was
-activated).
+`anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
+toggle was activated, expanding or collapsing it). Deprecated alias: `lr-expand` (use
+`lr-chunk-toggle`; fired right after it with an equal detail; removed in 23.0.0).
 
 **Slots:** none.
 
@@ -57,8 +61,9 @@ percent text), `score-current` (additional part on the current row's score line)
 (`aria-hidden` track), `score-fill` (tone-mapped fill), `score-fill-success` /
 `score-fill-warning` / `score-fill-danger` (additional part on the fill, one per scoring tier),
 `open-button`, `title` (the `<span>` inside `open-button` carrying the visible title text), `text`
-(omitted when `compact`), `text-clamped` (additional part on a `text` preview that is still
-collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted when `compact`),
+(omitted while `size` is `s` or smaller), `text-clamped` (additional part on a `text` preview that
+is still collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted while `size`
+is `s` or smaller),
 `empty` (shown when `chunks` is empty).
 
 Every row-level part is reachable through `::part()` in both rendering paths: above

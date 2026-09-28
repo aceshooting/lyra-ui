@@ -15,7 +15,7 @@ import type { LyraVirtualList } from './components/layout/virtual-list/virtual-l
 import type { LyraLiteChart, LyraLiteChartSeries } from './components/charts/chart/lite-chart.js';
 import type { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 import type { LyraTable, TableColumn } from './components/data/table/table.js';
-import type { LyraGraph, LyraGraphNode, LyraGraphLink } from './components/retrieval/graph/graph.js';
+import type { LyraGraph, LyraGraphNode, LyraGraphEdge } from './components/retrieval/graph/graph.js';
 import type {
   LyraFlowCanvas,
   FlowNode,
@@ -336,12 +336,12 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
     id: `n${index}`,
     label: `Node ${index}`,
   }));
-  const links: LyraGraphLink[] = Array.from({ length: GRAPH_LINK_COUNT }, (_, index) => ({
+  const links: LyraGraphEdge[] = Array.from({ length: GRAPH_LINK_COUNT }, (_, index) => ({
     source: `n${index % GRAPH_NODE_COUNT}`,
     target: `n${(index * 7 + 1) % GRAPH_NODE_COUNT}`,
   }));
   host.nodes = nodes;
-  host.links = links;
+  host.edges = links;
   // A seeded layout settles synchronously inside the pending Lit update. Under full-suite CPU
   // contention that update can occupy the main thread for just over waitUntil()'s deadline; its
   // first timer callback then rejects on elapsed wall time even though the canvas has rendered.

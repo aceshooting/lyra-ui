@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './result-card.js';
 import type { LyraResultCard } from './result-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-result-card', 'appearance');
@@ -159,9 +160,9 @@ it('is accessible with a heading, header actions, and populated result-field bod
   await expect(el).to.be.accessible();
 });
 
-it('defaults to compact=false and frame="card", keeping the border/background/padding', async () => {
+it('defaults to size="m" and frame="card", keeping the border/background/padding', async () => {
   const el = (await fixture(html`<lr-result-card heading="x">body</lr-result-card>`)) as LyraResultCard;
-  expect(el.compact).to.be.false;
+  expect(el.size).to.equal('m');
   expect(el.frame).to.equal('card');
   expect(el.hasAttribute('compact')).to.be.false;
   expect(el.getAttribute('frame')).to.equal('card');
@@ -173,23 +174,23 @@ it('defaults to compact=false and frame="card", keeping the border/background/pa
   expect(header.paddingTop).to.equal('4px'); // --lr-space-xs
 });
 
-it('reflects compact and tightens the header/body padding, keeping the card border', async () => {
-  const el = (await fixture(html`<lr-result-card compact heading="x">body</lr-result-card>`)) as LyraResultCard;
-  expect(el.hasAttribute('compact')).to.be.true;
+it('reflects size="s" and tightens the header/body padding, keeping the card border', async () => {
+  const el = (await fixture(html`<lr-result-card size="s" heading="x">body</lr-result-card>`)) as LyraResultCard;
+  expect(el.getAttribute('size')).to.equal('s');
 
   const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
   expect(header.paddingTop).to.equal('4px'); // --lr-space-xs
   const body = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement);
   expect(body.paddingTop).to.equal('4px'); // --lr-space-xs, tighter than the default --lr-space-s (8px)
 
-  // compact is a density escape, not a chrome escape -- the border and background stay.
+  // The dense size tier is a density escape, not a chrome escape -- the border and background stay.
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('1px');
   expect(base.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('lets a consumer retune the compact values through --lr-result-card-compact-* without re-declaring the rule', async () => {
-  const el = (await fixture(html`<lr-result-card compact heading="x">body</lr-result-card>`)) as LyraResultCard;
+it('lets a consumer retune the dense-tier values through --lr-result-card-compact-* without re-declaring the rule', async () => {
+  const el = (await fixture(html`<lr-result-card size="s" heading="x">body</lr-result-card>`)) as LyraResultCard;
   el.style.setProperty('--lr-result-card-compact-header-padding', '3px');
   el.style.setProperty('--lr-result-card-compact-body-padding', '5px');
   await el.updateComplete;
@@ -199,7 +200,7 @@ it('lets a consumer retune the compact values through --lr-result-card-compact-*
   expect(body.paddingTop).to.equal('5px');
 });
 
-it('tightens the header/body gap under compact too, not just padding', async () => {
+it('tightens the header/body gap under size="s" too, not just padding', async () => {
   const normal = (await fixture(
     html`<lr-result-card heading="x"><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
@@ -207,7 +208,7 @@ it('tightens the header/body gap under compact too, not just padding', async () 
   const normalBodyGap = getComputedStyle(normal.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
 
   const el = (await fixture(
-    html`<lr-result-card compact heading="x"><button slot="actions">Copy</button>body</lr-result-card>`,
+    html`<lr-result-card size="s" heading="x"><button slot="actions">Copy</button>body</lr-result-card>`,
   )) as LyraResultCard;
   const compactHeaderGap = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap;
   const compactBodyGap = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
@@ -234,9 +235,9 @@ it('drops the border, background, and radius under frame="plain", without doubli
   expect(header.borderBottomWidth).to.equal('0px');
 });
 
-it('lets plain win over compact when both are set', async () => {
+it('lets plain win over size="s" when both are set', async () => {
   const el = (await fixture(
-    html`<lr-result-card compact frame="plain" heading="x">body</lr-result-card>`,
+    html`<lr-result-card size="s" frame="plain" heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(base.borderTopWidth).to.equal('0px');
@@ -288,9 +289,9 @@ describe('frame', () => {
   });
 });
 
-it('is accessible in the populated compact and plain states', async () => {
+it('is accessible in the populated dense and plain states', async () => {
   const compactEl = (await fixture(
-    html`<lr-result-card compact heading="x">body</lr-result-card>`,
+    html`<lr-result-card size="s" heading="x">body</lr-result-card>`,
   )) as LyraResultCard;
   await expect(compactEl).to.be.accessible();
 
@@ -304,11 +305,11 @@ describe('card chrome theming hooks', () => {
   const part = (el: LyraResultCard, name: string) =>
     el.shadowRoot!.querySelector(`[part='${name}']`) as HTMLElement;
 
-  it('repaints the card through --lr-result-card-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-result-card-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-result-card
         heading="Result"
-        style="--lr-result-card-background: rgb(1, 2, 3); --lr-result-card-border-color: rgb(4, 5, 6); --lr-result-card-radius: 11px"
+        style="--lr-result-card-bg: rgb(1, 2, 3); --lr-result-card-border-color: rgb(4, 5, 6); --lr-result-card-radius: 11px"
         >body</lr-result-card
       >
     `)) as LyraResultCard;
@@ -326,7 +327,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-result-card
         heading="Result"
-        style="--lr-result-card-background: var(--lr-color-surface); --lr-result-card-border-color: var(--lr-color-border-subtle); --lr-result-card-radius: var(--lr-radius)"
+        style="--lr-result-card-bg: var(--lr-color-surface); --lr-result-card-border-color: var(--lr-color-border-subtle); --lr-result-card-radius: var(--lr-radius)"
         >body</lr-result-card
       >
     `)) as LyraResultCard;
@@ -351,5 +352,117 @@ describe('card chrome theming hooks', () => {
     `)) as LyraResultCard;
     expect(getComputedStyle(part(el, 'base')).borderTopColor).to.equal('rgb(7, 8, 9)');
     expect(getComputedStyle(part(el, 'header')).borderBottomColor).to.equal('rgb(7, 8, 9)');
+  });
+});
+
+describe('lr-result-card size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-result-card', kind: 'property', name: 'compact' }];
+  const density = (el: LyraResultCard): string => {
+    const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
+    const body = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement);
+    return JSON.stringify([header.padding, header.gap, body.padding, body.gap]);
+  };
+
+  it('does not warn for the canonical size or the default', async () => {
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      await fixture(html`<lr-result-card heading="x">body</lr-result-card>`);
+      await fixture(html`<lr-result-card size="s" heading="x">body</lr-result-card>`);
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraResultCard>(html`<lr-result-card size="s" heading="x">body</lr-result-card>`));
+      const aliased = await fixture<LyraResultCard>(html`<lr-result-card compact heading="x">body</lr-result-card>`);
+      alias = density(aliased);
+      const el = await fixture<LyraResultCard>(html`<lr-result-card heading="x">body</lr-result-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-result-card:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraResultCard>(html`<lr-result-card compact size="l" heading="x">body</lr-result-card>`);
+      const compactLast = await fixture<LyraResultCard>(html`<lr-result-card size="l" compact heading="x">body</lr-result-card>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraResultCard>(html`<lr-result-card heading="x">body</lr-result-card>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-result-card deprecated --lr-result-card-background alias', () => {
+  const fill = (el: LyraResultCard): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+
+  it('paints from --lr-result-card-bg, still honours the old name, and lets the canonical name win', async () => {
+    const canonical = await fixture<LyraResultCard>(html`<lr-result-card style="--lr-result-card-bg: rgb(1, 2, 3)">x</lr-result-card>`);
+    const alias = await fixture<LyraResultCard>(html`<lr-result-card style="--lr-result-card-background: rgb(1, 2, 3)">x</lr-result-card>`);
+    const both = await fixture<LyraResultCard>(
+      html`<lr-result-card style="--lr-result-card-bg: rgb(4, 5, 6); --lr-result-card-background: rgb(1, 2, 3)">x</lr-result-card>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-result-card heading-level', () => {
+  const heading = (el: LyraResultCard): HTMLElement => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+
+  it('keeps the heading a plain label by default', async () => {
+    const el = await fixture<LyraResultCard>(html`<lr-result-card heading="HTTP request">body</lr-result-card>`);
+    expect(el.headingLevel).to.equal('none');
+    expect(heading(el).hasAttribute('role')).to.be.false;
+    expect(heading(el).hasAttribute('aria-level')).to.be.false;
+  });
+
+  it('exposes the heading at the requested level and drops it again for none', async () => {
+    const el = await fixture<LyraResultCard>(html`<lr-result-card heading="HTTP request" heading-level="3">body</lr-result-card>`);
+    expect(heading(el).getAttribute('role')).to.equal('heading');
+    expect(heading(el).getAttribute('aria-level')).to.equal('3');
+    await expect(el).to.be.accessible();
+    el.headingLevel = 'none';
+    await el.updateComplete;
+    expect(heading(el).hasAttribute('role')).to.be.false;
+    expect(heading(el).hasAttribute('aria-level')).to.be.false;
+  });
+
+  it('returns to the plain label when the heading-level attribute is removed', async () => {
+    const el = await fixture<LyraResultCard>(html`<lr-result-card heading="HTTP request" heading-level="3">body</lr-result-card>`);
+    expect(heading(el).getAttribute('aria-level')).to.equal('3');
+    el.removeAttribute('heading-level');
+    await el.updateComplete;
+    expect(heading(el).hasAttribute('role')).to.be.false;
+    expect(heading(el).hasAttribute('aria-level')).to.be.false;
   });
 });

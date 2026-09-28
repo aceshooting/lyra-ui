@@ -7,9 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated part** `edit-button__control` since `21.1.0`; use part `::part(edit-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated part** `regenerate-button__control` since `21.1.0`; use part `::part(regenerate-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,17 +84,18 @@ own tab stop, and its toggles contribute no actions while grouped.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
 `lr-copy-button`), `regenerate-button`, `edit-button`,
-`regenerate-button__control` / `edit-button__control` (each built-in action's own native `<button>` —
+`regenerate-button-control` / `edit-button-control` (each built-in action's own native `<button>` —
 as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
 toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
-embedded `lr-message-feedback`).
+embedded `lr-message-feedback`). Deprecated aliases: `regenerate-button__control` /
+`edit-button__control` (use the hyphenated names; removed in 23.0.0), on the same nodes.
 
 The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
 shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a
 dense action row, lower `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every
 `LyraElement` re-declares on its own `:host` and so never reaches a composed child) on this element
 or an ancestor, or reach a built-in's composed native control directly through
-`::part(regenerate-button__control)` / `::part(edit-button__control)`. A coarse-pointer/no-hover
+`::part(regenerate-button-control)` / `::part(edit-button-control)`. A coarse-pointer/no-hover
 media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
 override lowered it, so the shrink is safe on a touch device.
 
@@ -101,7 +103,7 @@ override lowered it, so the shrink is safe on a touch device.
 `<lr-icon-button>`s, so a part naming one of them now names the composed child's HOST, which paints
 nothing. A `border`, `background` or `border-radius` set on it is silently dead — only `color` still
 appears to work, because it inherits, which makes such a rule look half-alive rather than broken.
-Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
+Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
 variants) on this element or an ancestor instead: the composed control reads those public tokens
 ahead of any default this component supplies. For SIZE use `--lr-theme-icon-button-size`, not
 `--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it never

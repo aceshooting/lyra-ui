@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
@@ -27,6 +28,11 @@ export interface LyraReorderDetail {
 }
 
 export interface LyraReorderListEventMap {
+  /** Cancelable proposed move; `preventDefault()` holds it for `finalizePendingMove()` or
+   *  `revertPendingMove()`. */
+  'lr-reorder-request': CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>;
+  /** @deprecated Use `lr-reorder-request`; removal not before 23.0.0. Fired right after it from the
+   *  same move, with an equal detail; either event's `preventDefault()` holds the move. */
   'lr-reorder': CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>;
 }
 
@@ -76,7 +82,7 @@ type ReorderReconciliation = {
   direction: 'up' | 'down';
   toIndex: number;
   /** The exact value order a matching host re-render must settle into for this move to
-   *  complete -- the same array previously emitted as the `lr-reorder` event's `order`. */
+   *  complete -- the same array previously emitted as the `lr-reorder-request` event's `order`. */
   expectedValues: readonly string[];
 };
 
@@ -93,19 +99,19 @@ type ReorderReconciliation = {
  * order genuinely is the source of truth (the same principle `<lr-tree>` relies on for its own
  * children). Setting `controlled` opts into the `<lr-tree>`-style contract instead — see its own
  * doc comment. Every item must provide a unique, nonempty `value`; invalid or duplicate identities
- * stay visible but cannot move. The `lr-reorder` event tells the host the resulting stable-id
- * order, so it can persist it without hand-rolling its own splice/resort logic.
+ * stay visible but cannot move. The `lr-reorder-request` event tells the host the resulting
+ * stable-id order, so it can persist it without hand-rolling its own splice/resort logic.
  *
- * An `lr-reorder` listener can call `preventDefault()` to hold a move open while its own async
- * work (e.g. a network call persisting the new order) is in flight -- the same
+ * An `lr-reorder-request` listener can call `preventDefault()` to hold a move open while its own
+ * async work (e.g. a network call persisting the new order) is in flight -- the same
  * cancelable-event-plus-host-resolvable-pending-state pattern `<lr-confirm-bar>` and
  * `<lr-tool-approval-dialog>` already establish for their own approve/deny decisions.
  *
  * @customElement lr-reorder-list
  * @slot - `<lr-reorder-item>` elements.
- * @event lr-reorder - `detail: { order, fromIndex, toIndex }` — fired before a move is applied
- * (button click or Ctrl/Cmd+Arrow). `order` is every valid item's stable `value` in the order the
- * move WOULD produce; `fromIndex`/`toIndex` are the moved item's
+ * @event lr-reorder-request - `detail: { order, fromIndex, toIndex }` — fired before a move is
+ * applied (button click or Ctrl/Cmd+Arrow). `order` is every valid item's stable `value` in the
+ * order the move WOULD produce; `fromIndex`/`toIndex` are the moved item's
  * 0-based position before/after. Cancelable: a listener calling `preventDefault()` holds the move
  * instead of applying it -- the affected `<lr-reorder-item>` exposes `:state(pending)`, every move
  * action becomes disabled, and no other move
@@ -113,7 +119,12 @@ type ReorderReconciliation = {
  * `revertPendingMove()` to discard it and restore the prior order. Uncanceled (the default), the
  * move applies synchronously in the same tick when `controlled` is unset, unchanged from every
  * release before this option existed; while `controlled` is set it instead waits for a matching
- * host re-render, per that property's own doc comment.
+ * host re-render, per that property's own doc comment. Fires before `lr-reorder`, from the same
+ * move; either event may hold it.
+ * @event lr-reorder - Deprecated cancelable alias of `lr-reorder-request`, kept firing unchanged
+ * right after it with an equal `detail: { order, fromIndex, toIndex }`; either event may hold the
+ * move, and a hold through this alias logs a one-time development warning. Removal not before
+ * 23.0.0.
  * @csspart base - The list's root wrapper (`role="list"`).
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
  * @status stable
@@ -132,6 +143,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-reorder-request',
     'lr-reorder',
   ]);
 
@@ -144,7 +156,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  removing any item from the DOM or mutating any item's own `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  /** Opt-in controlled mode. Unset (the default), an uncanceled `lr-reorder` (or a
+  /** Opt-in controlled mode. Unset (the default), an uncanceled `lr-reorder-request` (or a
    *  `finalizePendingMove()` call) moves this list's own slotted `<lr-reorder-item>` light-DOM
    *  nodes itself, exactly as before this property existed. Set, this list stops moving anything
    *  itself -- the host is expected to reorder its OWN backing data and re-render the slotted
@@ -172,8 +184,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private stateItems = new Set<LyraReorderItem>();
   private moveToken = 0;
 
-  /** Set while an `lr-reorder` listener has called `preventDefault()`, holding a move until the
-   *  host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
+  /** Set while an `lr-reorder-request` listener has called `preventDefault()`, holding a move until
+   *  the host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
    *  any further move while this is set -- at most one move is ever held at a time. */
   private pendingMove: {
     token: number;
@@ -499,11 +511,22 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     };
     this.pendingMove = transaction;
 
-    const event = this.emit(
+    const request = this.emit(
+      'lr-reorder-request',
+      Object.freeze({ order: expectedValues, fromIndex, toIndex }),
+      { cancelable: true }
+    );
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name sees every move a canonical listener sees and can still hold or
+    // resolve it. The single currency check below covers a resolution made by either listener.
+    const deprecatedAlias = this.emit(
       'lr-reorder',
       Object.freeze({ order: expectedValues, fromIndex, toIndex }),
       { cancelable: true }
     );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-reorder', 'lr-reorder-request');
+    }
     if (this.pendingMove !== transaction || transaction.token !== this.moveToken) return;
     if (!this.pendingMembershipIsCurrent()) {
       this.pendingMove = null;
@@ -511,7 +534,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       return;
     }
 
-    if (event.defaultPrevented) {
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) {
       if (transaction.resolution === 'revert') {
         this.pendingMove = null;
         this.syncBoundaryState();
@@ -534,8 +557,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.commitMove(item, direction, fromIndex, toIndex, expectedValues);
   }
 
-  /** Applies a move an `lr-reorder` listener held via `preventDefault()`, once the host's own
-   *  async work (e.g. persisting the new order) has succeeded. While `controlled`, this starts
+  /** Applies a move an `lr-reorder-request` listener held via `preventDefault()`, once the host's
+   *  own async work (e.g. persisting the new order) has succeeded. While `controlled`, this starts
    *  waiting for the host's own matching re-render rather than moving anything itself -- see that
    *  property's own doc comment. No-op if nothing is pending. */
   finalizePendingMove(): void {
@@ -554,10 +577,10 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.commitMove(item, direction, fromIndex, toIndex, expectedValues);
   }
 
-  /** Discards a move an `lr-reorder` listener held via `preventDefault()`, leaving the list at its
-   *  prior order -- e.g. once the host's own async work (e.g. persisting the new order) fails, or
-   *  a host that is deferring the decision to a flow of its own (a confirmation dialog, say) and
-   *  will communicate the outcome itself. Pass `{ silent: true }` to suppress the built-in
+  /** Discards a move an `lr-reorder-request` listener held via `preventDefault()`, leaving the list
+   *  at its prior order -- e.g. once the host's own async work (e.g. persisting the new order)
+   *  fails, or a host that is deferring the decision to a flow of its own (a confirmation dialog,
+   *  say) and will communicate the outcome itself. Pass `{ silent: true }` to suppress the built-in
    *  `reorderMoveCancelled` announcement for that second case; the default announces exactly as
    *  before. No-op if nothing is pending. */
   revertPendingMove(options?: { silent?: boolean }): void {

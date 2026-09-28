@@ -574,7 +574,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     const chips = el.shadowRoot!.querySelectorAll('[part="reasons"] lr-chip');
     expect(chips.length).to.equal(2);
     (chips[0] as HTMLElement).dispatchEvent(
-      new CustomEvent("lr-chip-select", {
+      new CustomEvent("lr-chip-toggle-request", {
         detail: { selected: true },
         bubbles: true,
         composed: true,
@@ -902,7 +902,7 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     ).click();
     await el.updateComplete;
     (el.shadowRoot!.querySelector("lr-chip") as HTMLElement).dispatchEvent(
-      new CustomEvent("lr-chip-select", {
+      new CustomEvent("lr-chip-toggle-request", {
         detail: { selected: true },
         bubbles: true,
         composed: true,
@@ -1095,13 +1095,13 @@ it("disables reason chips and ignores their events while the whole control is di
       .disabled
   ).to.be.true;
   chip.dispatchEvent(
-    new CustomEvent("lr-chip-select", { bubbles: true, composed: true })
+    new CustomEvent("lr-chip-toggle-request", { bubbles: true, composed: true })
   );
   await el.updateComplete;
   expect(chip.selected).to.be.false;
 });
 
-it("stops the internal lr-chip-select event from leaking past the host in the reason-chip handler", async () => {
+it("stops the internal chip events (lr-chip-toggle-request and its lr-chip-select alias) from leaking past the host", async () => {
   const el = (await fixture(
     html`<lr-message-feedback .detail=${{ reasons }}></lr-message-feedback>`
   )) as LyraMessageFeedback;
@@ -1111,20 +1111,18 @@ it("stops the internal lr-chip-select event from leaking past the host in the re
   down.click();
   await el.updateComplete;
 
-  let leaked = false;
-  el.addEventListener("lr-chip-select", () => (leaked = true));
+  const leaked: string[] = [];
+  el.addEventListener("lr-chip-select", () => leaked.push("lr-chip-select"));
+  el.addEventListener("lr-chip-toggle-request", () => leaked.push("lr-chip-toggle-request"));
   const chip = el.shadowRoot!.querySelector(
     '[part="reasons"] lr-chip'
-  ) as HTMLElement;
-  chip.dispatchEvent(
-    new CustomEvent("lr-chip-select", {
-      detail: { selected: true },
-      bubbles: true,
-      composed: true,
-    })
-  );
+  ) as LyraChip;
+  const toggle = chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!;
+  toggle.click();
   await el.updateComplete;
-  expect(leaked).to.be.false;
+  await chip.updateComplete;
+  expect(leaked).to.deep.equal([]);
+  expect(chip.selected, "a real activation still toggles the reason exactly once").to.be.true;
 });
 
 it("lets a consumer comment-part hover override win in rendered computed style", async () => {

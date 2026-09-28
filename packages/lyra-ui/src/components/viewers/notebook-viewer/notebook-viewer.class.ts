@@ -461,16 +461,26 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cell"]` currently targeted by an anchor or the active search match.
- * @cssprop [--lr-notebook-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
+ * @cssprop [--lr-notebook-viewer-highlight-accent-bg=var(--lr-color-brand-quiet)] -
  *   Background of an `accent`-tone (the default) highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
+ * @cssprop [--lr-notebook-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
+ *   Deprecated alias of `--lr-notebook-viewer-highlight-accent-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-notebook-viewer-highlight-success-bg=var(--lr-color-success-quiet)] -
  *   Background of a `success`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
+ * @cssprop [--lr-notebook-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
+ *   Deprecated alias of `--lr-notebook-viewer-highlight-success-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-notebook-viewer-highlight-warning-bg=var(--lr-color-warning-quiet)] -
  *   Background of a `warning`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
+ * @cssprop [--lr-notebook-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
+ *   Deprecated alias of `--lr-notebook-viewer-highlight-warning-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-notebook-viewer-highlight-danger-bg=var(--lr-color-danger-quiet)] -
  *   Background of a `danger`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
+ * @cssprop [--lr-notebook-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
+ *   Deprecated alias of `--lr-notebook-viewer-highlight-danger-bg`; removal not before 23.0.0.
+ * @cssprop [--lr-notebook-viewer-highlight-neutral-bg=var(--lr-color-surface-raised)] -
  *   Background of a `neutral`-tone highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
+ *   Deprecated alias of `--lr-notebook-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-active-outline=var(--lr-focus-ring-color)] - Outline of
  *   the highlighted cell whose highlight `id` equals `activeHighlightId`.
  * @status stable
@@ -1033,7 +1043,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       const parsed = typeof data['application/json'] === 'string' ? JSON.parse(joinText(data['application/json'])) : data['application/json'];
       return html`<div part="output" data-output-type=${output.output_type}><lr-json-viewer
         .data=${parsed}
-        collapsed-depth="1"
+        expand-depth="1"
         @lr-copy=${this.stopOwnedEvent}
         @lr-error=${this.stopOwnedEvent}
         @lr-copy-error=${this.stopOwnedEvent}

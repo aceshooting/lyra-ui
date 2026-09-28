@@ -7,9 +7,10 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated part** `popup__arrow` since `21.1.0`; use part `::part(popup-arrow)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated part** `popup__popup` since `21.1.0`; use part `::part(popup-popup)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 13 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -100,8 +101,10 @@ its surface.
   and the top layer**).
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
-- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
-  (`aria-label`) are retained from `lr-popover` for existing Lyra consumers.
+- `arrow: boolean = false` (reflected) — the dropdown's own opt-in arrow; unlike on `lr-popover`
+  it is not deprecated. `withoutArrow` (`without-arrow`) still suppresses it.
+- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are retained from
+  `lr-popover` for existing Lyra consumers.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
   be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
@@ -131,14 +134,15 @@ only keyframes. Passing `null` disables motion without skipping the after-event 
 
 **Slots:** `trigger`; default (`lr-dropdown-item`/`lr-menu-item` rows, or one consumer-supplied
 `lr-menu`; that menu may use its own `header`/`footer` regions). **CSS parts:** `trigger`;
-`popup dialog popup__popup base base__popup panel` (all six tokens on the neutral positioned
+`popup dialog popup-popup base base__popup panel` (all six tokens on the neutral positioned
 popup, preserving the popover, Web Awesome and Shoelace wrapper names on the same node); `menu`
 (the contained semantic/controller owner); `content body`; the retained optional
-`arrow popup__arrow` token set; and the inherited `hover-bridge` — the invisible quad the positioner
+`arrow popup-arrow` token set; and the inherited `hover-bridge` — the invisible quad the positioner
 clips across the `distance` gap between trigger and popup, rendered only while a `hover`-triggered
 dropdown with `hover-bridge` set is open, so a pointer travelling from the trigger to the popup
 never leaves both at once and the surface does not close underneath it. It paints nothing by
-default; style it only to debug the travel region.
+default; style it only to debug the travel region. Deprecated aliases: `popup__popup` and `popup__arrow` (use `popup-popup` and `popup-arrow`;
+removed in 23.0.0), on the same nodes.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained

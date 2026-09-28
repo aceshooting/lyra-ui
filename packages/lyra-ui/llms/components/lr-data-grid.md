@@ -7,9 +7,14 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-data-grid-control-active-background` since `21.1.0`; use css-property `--lr-data-grid-control-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-data-grid-control-hover-background` since `21.1.0`; use css-property `--lr-data-grid-control-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-data-grid-page-size-active-background` since `21.1.0`; use css-property `--lr-data-grid-page-size-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-data-grid-row-active-background` since `21.1.0`; use css-property `--lr-data-grid-row-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-data-grid-sortable-header-active-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-data-grid-sortable-header-hover-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 59 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -304,15 +309,19 @@ anchors, and `--lr-data-grid-cell-link-hover-color` (default
 `var(--lr-data-grid-cell-link-color, var(--lr-color-brand))`) controls those anchors on hover,
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
 default. Six independent interaction-background hooks preserve those state boundaries:
-`--lr-data-grid-control-hover-background` and `--lr-data-grid-control-active-background` theme
-search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-background` themes
-the page-size selector when pressed; `--lr-data-grid-row-active-background` themes pressed data
-rows; and `--lr-data-grid-sortable-header-hover-background` and
-`--lr-data-grid-sortable-header-active-background` theme sortable header states. They default to
+`--lr-data-grid-control-hover-bg` and `--lr-data-grid-control-active-bg` theme
+search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-bg` themes
+the page-size selector when pressed; `--lr-data-grid-row-active-bg` themes pressed data
+rows; and `--lr-data-grid-sortable-header-hover-bg` and
+`--lr-data-grid-sortable-header-active-bg` theme sortable header states. They default to
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
 `--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
 uses the hover mix), so an accent override remains coherent while each surface can still be
-overridden independently.
+overridden independently. Deprecated aliases: `--lr-data-grid-control-hover-background`,
+`--lr-data-grid-control-active-background`, `--lr-data-grid-page-size-active-background`,
+`--lr-data-grid-row-active-background`, `--lr-data-grid-sortable-header-hover-background` and
+`--lr-data-grid-sortable-header-active-background` (use the same names ending in `-bg`; removed in
+23.0.0). Each is still read as the fallback of its `-bg` name.
 
 ```html
 <lr-data-grid

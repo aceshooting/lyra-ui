@@ -358,8 +358,10 @@ function projectDisabledDateKeys(value: unknown): readonly string[] {
  * @csspart view-item-disabled - A disabled selection item.
  * @csspart view-item-selected - The item containing the selected date.
  * @csspart view-item-today - The item containing today.
- * @cssprop [--lr-cell-size=var(--lr-size-2-25rem)] - Inline and block size of each day cell and
- *   the matching calendar grid track.
+ * @cssprop [--lr-date-picker-cell-size=var(--lr-size-2-25rem)] - Inline and block size of each
+ *   day cell and the matching calendar grid track.
+ * @cssprop [--lr-cell-size=var(--lr-size-2-25rem)] - Deprecated alias of
+ *   `--lr-date-picker-cell-size`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
  * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
  * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
@@ -420,7 +422,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ converter: monthsConverter, reflect: true }) months: 1 | 2 = 1;
-  /** Visual size — scales the private default behind `--lr-cell-size` proportionally; not pixel-matched to
+  /** Visual size — scales the private default behind `--lr-date-picker-cell-size` proportionally; not pixel-matched to
    *  `lr-input`'s row-height scale (a calendar cell isn't a text row). The Web Awesome / Shoelace spellings
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */

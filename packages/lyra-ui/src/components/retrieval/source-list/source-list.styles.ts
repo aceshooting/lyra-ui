@@ -12,14 +12,14 @@ export const styles = css`
     overflow: hidden;
   }
   /* Density escape -- same convention as this list's own slotted lr-source-card children's
-     compact. Values sit behind inline var() fallbacks, not :host declarations that every instance
+     dense size tier. Values sit behind inline var() fallbacks, not :host declarations that every instance
      re-declares and so shadows any ancestor value, so a transcript can retune every embedded panel
      at once; the fallbacks are the pre-existing values, so an unset panel renders unchanged. */
-  :host([compact]) [part='header'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='header'] {
     padding: var(--lr-source-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
     gap: var(--lr-source-list-compact-header-gap, var(--lr-space-2xs));
   }
-  :host([compact]) [part='list'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='list'] {
     gap: var(--lr-source-list-compact-gap, var(--lr-space-2xs));
     padding: var(--lr-source-list-compact-list-padding, var(--lr-space-s));
   }

@@ -7,6 +7,7 @@ import type {
 } from './sequence-strip.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-sequence-strip', 'orientation');
@@ -22,7 +23,7 @@ const items = [
 ];
 
 it('rejects declaration-breaking and url category paint values', async () => {
-  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend></lr-sequence-strip>`);
   el.items = [{ id: '1', categoryId: 'bad' }];
   el.categories = [{ id: 'bad', color: 'red;position:fixed', label: 'Bad' }];
   await el.updateComplete;
@@ -185,7 +186,7 @@ it('anchors the sole keyboard entry stop on the cell that owns a valid controlle
 });
 
 it('snapshots readonly models and enforces first-wins unique item/category ids', async () => {
-  const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip with-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
   const sourceItems = [
     { id: '', categoryId: 'first', label: 'Missing item identity' },
     { id: '   ', categoryId: 'first', label: 'Blank item identity' },
@@ -232,7 +233,7 @@ it('retains later valid records after hostile and malformed collection entries',
     }
   );
   const el = (await fixture(html`
-    <lr-sequence-strip show-legend></lr-sequence-strip>
+    <lr-sequence-strip with-legend></lr-sequence-strip>
   `)) as LyraSequenceStrip;
   el.items = [
     hostileItem,
@@ -743,8 +744,8 @@ describe('category legend', () => {
     el.items = items;
     el.categories = categories;
     await el.updateComplete;
-    expect(el.showLegend).to.be.false;
-    expect(el.hasAttribute('show-legend')).to.be.false;
+    expect(el.withLegend).to.be.false;
+    expect(el.hasAttribute('with-legend')).to.be.false;
     expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('list');
     expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.length(3);
@@ -752,12 +753,12 @@ describe('category legend', () => {
 
   it('renders one legend item per category, in order, with that category color and label', async () => {
     const el = (await fixture(
-      html`<lr-sequence-strip show-legend></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend></lr-sequence-strip>`,
     )) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
     await el.updateComplete;
-    expect(el.showLegend).to.be.true;
+    expect(el.withLegend).to.be.true;
     const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
     const entries = [...legend.querySelectorAll('[part="legend-item"]')];
     expect(entries.length).to.equal(2);
@@ -773,7 +774,7 @@ describe('category legend', () => {
 
   it('bounds a large legend and discloses the rendered and total category counts', async () => {
     const el = (await fixture(html`
-      <lr-sequence-strip show-legend></lr-sequence-strip>
+      <lr-sequence-strip with-legend></lr-sequence-strip>
     `)) as LyraSequenceStrip;
     el.categories = Array.from({ length: 205 }, (_, index) => ({
       id: `category-${index}`,
@@ -790,14 +791,14 @@ describe('category legend', () => {
 
   it('keys the whole scheme: an unused category still renders, an uncategorized item adds nothing', async () => {
     const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
-    el.showLegend = true;
+    el.withLegend = true;
     el.categories = [...categories, { id: 'mixed', color: '#b45309', label: 'Mixed' }];
     el.items = [
       { id: '1', categoryId: 'text' },
       { id: '2', categoryId: 'unknown' }, // matches no category entry
     ];
     await el.updateComplete;
-    expect(el.hasAttribute('show-legend')).to.be.true; // reflected
+    expect(el.hasAttribute('with-legend')).to.be.true; // reflected
     const labels = [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
     expect(labels).to.deep.equal(['Text', 'Tool', 'Mixed']); // 'Mixed' has no items but still keys the scheme
     expect(labels).to.not.include('unknown');
@@ -805,7 +806,7 @@ describe('category legend', () => {
 
   it('does not announce the legend a second time — it duplicates the strip aria-label visually only', async () => {
     const el = (await fixture(
-      html`<lr-sequence-strip show-legend></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend></lr-sequence-strip>`,
     )) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
@@ -826,7 +827,7 @@ describe('category legend', () => {
   it('wraps the legend onto multiple lines in a narrow allocation instead of overflowing', async () => {
     const el = (await fixture(
       html`<div style="inline-size: 320px">
-        <lr-sequence-strip show-legend></lr-sequence-strip>
+        <lr-sequence-strip with-legend></lr-sequence-strip>
       </div>`,
     )).querySelector('lr-sequence-strip') as LyraSequenceStrip;
     el.items = items;
@@ -846,7 +847,7 @@ describe('category legend', () => {
 
   it('is accessible with the legend shown', async () => {
     const el = (await fixture(
-      html`<lr-sequence-strip show-legend></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend></lr-sequence-strip>`,
     )) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
@@ -867,7 +868,7 @@ describe('marker legend entry', () => {
   }
 
   it('appends one extra legend item, last, whose swatch is the marker swatch', async () => {
-    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const el = await strip(html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`);
     expect(el.markerLabel).to.equal('Subagent');
     const entries = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')];
     expect(entries.length).to.equal(4); // 3 categories + the marker row
@@ -880,7 +881,7 @@ describe('marker legend entry', () => {
   });
 
   it('keeps the category-only legend shape when markerLabel is unset', async () => {
-    const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
+    const el = (await fixture(html`<lr-sequence-strip with-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
     await el.updateComplete;
@@ -892,7 +893,7 @@ describe('marker legend entry', () => {
   });
 
   it('reproduces the cell marker treatment: a neutral chip with a bottom bar in the marker color', async () => {
-    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const el = await strip(html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`);
     const swatch = el.shadowRoot!.querySelector('[part="legend-marker-swatch"]') as HTMLElement;
     const cellMarker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
     const swatchStyle = getComputedStyle(swatch);
@@ -912,7 +913,7 @@ describe('marker legend entry', () => {
   it('follows --lr-sequence-strip-marker-color and its own neutral-chip cssprop', async () => {
     const wrapper = (await fixture(html`
       <div style="--lr-sequence-strip-marker-color: rgb(0, 51, 102); --lr-sequence-strip-legend-marker-bg: rgb(200, 201, 202);">
-        <lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>
+        <lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
@@ -925,24 +926,24 @@ describe('marker legend entry', () => {
   });
 
   it('announces the marker count in the summary, so the legend row has a spoken counterpart', async () => {
-    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const el = await strip(html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`);
     const label = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')!;
     expect(label).to.equal('Text: 2, Tool: 1, Subagent: 1');
   });
 
   it('leaves the summary untouched when markerLabel is unset, and defers to accessibleLabel when set', async () => {
-    const bare = await strip(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+    const bare = await strip(html`<lr-sequence-strip with-legend></lr-sequence-strip>`);
     expect(bare.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
 
     const custom = await strip(
-      html`<lr-sequence-strip show-legend marker-label="Subagent" accessible-label="Custom"></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend marker-label="Subagent" accessible-label="Custom"></lr-sequence-strip>`,
     );
     expect(custom.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
   });
 
   it('omits the marker count when no item carries a marker, exactly like a zero-count category', async () => {
     const el = (await fixture(
-      html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`,
     )) as LyraSequenceStrip;
     el.items = [{ id: '1', categoryId: 'text' }];
     el.categories = categories;
@@ -952,14 +953,14 @@ describe('marker legend entry', () => {
     expect(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')).to.exist;
   });
 
-  it('renders no legend at all when markerLabel is set but showLegend is off', async () => {
+  it('renders no legend at all when markerLabel is set but withLegend is off', async () => {
     const el = await strip(html`<lr-sequence-strip marker-label="Subagent"></lr-sequence-strip>`);
     expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.contain('Subagent: 1');
   });
 
   it('is accessible with the marker legend row shown', async () => {
-    const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
+    const el = await strip(html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`);
     await expect(el).to.be.accessible();
   });
 });
@@ -1551,7 +1552,7 @@ it('selects nothing for a non-integer or out-of-range selectedIndex past the cap
 });
 
 it('is accessible while showing a bucketed overview with a legend and a selection', async () => {
-  const el = (await fixture(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`)) as LyraSequenceStrip;
+  const el = (await fixture(html`<lr-sequence-strip with-legend marker-label="Subagent"></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.categories = categories;
   el.items = Array.from({ length: 600 }, (_, index) => ({
     id: `item-${index + 1}`,
@@ -1621,4 +1622,77 @@ it('tiles awkward totals exactly and maps every selectable item into its own ran
     el.selectedIndex = -1;
     await el.updateComplete;
   }
+});
+
+describe('lr-sequence-strip deprecated show-legend alias', () => {
+  const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-sequence-strip', kind: 'property', name: 'showLegend' }];
+  const legendLabels = (el: LyraSequenceStrip): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
+
+  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
+    const canonical = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+    let aliased!: LyraSequenceStrip;
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      aliased = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      const second = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+      await second.updateComplete;
+    });
+    await canonical.updateComplete;
+    await aliased.updateComplete;
+    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
+    expect(legendLabels(aliased).length).to.be.greaterThan(0);
+    expect(aliased.withLegend).to.equal(true);
+    expect(aliased.showLegend).to.equal(true);
+    expect(aliased.hasAttribute('with-legend')).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-sequence-strip:property:showLegend']);
+    expect(warnings[0]!.message).to.contain('with-legend');
+  });
+
+  it('never warns for with-legend or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip></lr-sequence-strip>`);
+      expect(el.showLegend).to.equal(false);
+      el.withLegend = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      expect(el.withLegend).to.equal(true);
+      el.removeAttribute('show-legend');
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(false);
+      expect(el.hasAttribute('with-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+      el.showLegend = true;
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(true);
+      expect(legendLabels(el).length).to.be.greaterThan(0);
+      el.withLegend = false;
+      await el.updateComplete;
+      expect(el.showLegend).to.equal(false);
+      expect(el.hasAttribute('show-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
+
+  it('lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const aliasLast = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      aliasLast.showLegend = false;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withLegend).to.equal(false);
+      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+
+      const canonicalLast = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend with-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      canonicalLast.removeAttribute('with-legend');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.showLegend).to.equal(false);
+      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
+      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
 });

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { parseSync } from 'oxc-parser';
 
+import { expandManifestInheritance } from './manifest-compact.mjs';
+
 // 2 added the required top-level `exportDeprecations` ledger for package entry points and types.
 const COMPONENT_METADATA_SCHEMA_VERSION = 2;
 const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
@@ -478,6 +480,11 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
   const covered = new Set();
   const seen = new Set();
   const declarationsByTag = manifestDeclarationsByTag(manifest);
+  // A subclass tag records its own copy of an alias it inherits, so each record is checked against
+  // the tag's full public surface. The compact manifest omits inherited members from a subclass,
+  // so the per-record lookups read the inheritance-expanded view; the closing coverage loop keeps
+  // the compact view, where each deprecated member appears only on its declaring tag.
+  const expandedDeclarationsByTag = manifestDeclarationsByTag(expandManifestInheritance(manifest));
   const componentSinceByTag = deriveSinceByTag(metadata?.history);
   const currentVersion = metadata?.history?.current?.version;
   const taggedCurrent = metadata?.history?.taggedCurrent ?? null;
@@ -496,7 +503,7 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
     if (seen.has(key)) findings.push(`${key}: duplicate deprecation record`);
     seen.add(key);
     const component = componentsByTag.get(entry?.tag);
-    const declaration = declarationsByTag.get(entry?.tag);
+    const declaration = expandedDeclarationsByTag.get(entry?.tag);
     if (!component) {
       findings.push(`${key}: deprecation references an unknown component`);
       continue;
@@ -906,6 +913,14 @@ function clearManifestMetadataProjection(manifest) {
  */
 export function applyComponentMetadataToManifest(metadata, manifest, { packageVersion } = {}) {
   const declarations = manifestDeclarationsByTag(manifest);
+  // A compact manifest omits inherited members from a subclass. A subclass record for an inherited
+  // member then stays only in `declaration.deprecations`; the member itself is marked on the tag
+  // that declares it.
+  let inheritedDeclarations;
+  const inheritedMember = (tag, kind, name) => {
+    inheritedDeclarations ??= manifestDeclarationsByTag(expandManifestInheritance(manifest));
+    return manifestMember(inheritedDeclarations.get(tag), kind, name);
+  };
   const metadataByTag = componentMetadataByTag(metadata, {
     tags: [...declarations.keys()],
     packageVersion,
@@ -938,12 +953,18 @@ export function applyComponentMetadataToManifest(metadata, manifest, { packageVe
         continue;
       }
       const member = manifestMember(declaration, entry.kind, entry.name);
-      if (!member) throw new Error(`${tag}:${entry.kind}:${entry.name}: deprecated public member does not exist`);
-      member.deprecation = structuredClone(entry);
+      if (member) {
+        member.deprecation = structuredClone(entry);
+      } else if (!inheritedMember(tag, entry.kind, entry.name)) {
+        throw new Error(`${tag}:${entry.kind}:${entry.name}: deprecated public member does not exist`);
+      }
       if (entry.kind === 'property' && entry.attribute) {
         const attribute = manifestMember(declaration, 'attribute', entry.attribute);
-        if (!attribute) throw new Error(`${tag}:attribute:${entry.attribute}: paired deprecated attribute does not exist`);
-        attribute.deprecation = structuredClone(entry);
+        if (attribute) {
+          attribute.deprecation = structuredClone(entry);
+        } else if (!inheritedMember(tag, 'attribute', entry.attribute)) {
+          throw new Error(`${tag}:attribute:${entry.attribute}: paired deprecated attribute does not exist`);
+        }
       }
     }
   }

@@ -2,6 +2,7 @@ import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/
 import './chip.js';
 import type { LyraChip } from './chip.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 class ChipLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -80,7 +81,7 @@ describe('disabled', () => {
     )) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     let changes = 0;
-    el.addEventListener('lr-chip-select', () => changes++);
+    el.addEventListener('lr-chip-toggle-request', () => changes++);
 
     expect(el.disabled).to.be.true;
     expect(el.hasAttribute('disabled')).to.be.true;
@@ -791,7 +792,7 @@ describe('selected', () => {
     expect(button.getAttribute('aria-pressed')).to.equal('true');
 
     setTimeout(() => button.click());
-    const ev = await oneEvent(el, 'lr-chip-select');
+    const ev = await oneEvent(el, 'lr-chip-toggle-request');
     expect(ev.detail).to.deep.equal({ value: 'v1', selected: false });
     expect(el.selected).to.be.false;
     await el.updateComplete;
@@ -802,7 +803,7 @@ describe('selected', () => {
     const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     setTimeout(() => button.click());
-    await oneEvent(el, 'lr-chip-select');
+    await oneEvent(el, 'lr-chip-toggle-request');
     expect(el.selected).to.be.false;
   });
 
@@ -832,7 +833,7 @@ describe('selected', () => {
     expect(label.getAttribute('aria-hidden')).to.equal('true');
 
     let changes = 0;
-    el.addEventListener('lr-chip-select', () => changes++);
+    el.addEventListener('lr-chip-toggle-request', () => changes++);
     (el.querySelector('a') as HTMLAnchorElement).click();
     expect(changes).to.equal(0);
     button.click();
@@ -844,7 +845,7 @@ describe('selected', () => {
     const el = (await fixture(html`<lr-chip toggleable>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     let selectedDuringEvent = true;
-    el.addEventListener('lr-chip-select', (event) => {
+    el.addEventListener('lr-chip-toggle-request', (event) => {
       selectedDuringEvent = el.selected;
       event.preventDefault();
     });
@@ -1086,7 +1087,7 @@ describe('selected', () => {
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
 
     setTimeout(() => button.click());
-    const off = await oneEvent(el, 'lr-chip-select');
+    const off = await oneEvent(el, 'lr-chip-toggle-request');
     expect(off.detail).to.deep.equal({ value: 'v1', selected: false });
     expect(el.selected).to.be.false;
     await el.updateComplete;
@@ -1095,7 +1096,7 @@ describe('selected', () => {
     expect(button.localName).to.equal('button');
 
     setTimeout(() => button.click());
-    const on = await oneEvent(el, 'lr-chip-select');
+    const on = await oneEvent(el, 'lr-chip-toggle-request');
     expect(on.detail).to.deep.equal({ value: 'v1', selected: true });
     expect(el.selected).to.be.true;
     await el.updateComplete;
@@ -1112,7 +1113,7 @@ describe('selected', () => {
     expect(el.selected).to.be.false;
 
     setTimeout(() => button.click());
-    const ev = await oneEvent(el, 'lr-chip-select');
+    const ev = await oneEvent(el, 'lr-chip-toggle-request');
     expect(ev.detail).to.deep.equal({ value: 'v1', selected: true });
     expect(el.selected).to.be.true;
   });
@@ -1121,7 +1122,7 @@ describe('selected', () => {
     const el = (await fixture(html`<lr-chip toggleable selected>Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     setTimeout(() => button.click());
-    await oneEvent(el, 'lr-chip-select');
+    await oneEvent(el, 'lr-chip-toggle-request');
     await el.updateComplete;
     expect(button.localName).to.equal('button');
     await expect(el).to.be.accessible();
@@ -1539,7 +1540,7 @@ describe('chip control-guard hardening', () => {
     let removals = 0;
     let toggles = 0;
     el.addEventListener('lr-remove', () => removals++);
-    el.addEventListener('lr-chip-select', () => toggles++);
+    el.addEventListener('lr-chip-toggle-request', () => toggles++);
     (el as unknown as { onRemoveClick(): void }).onRemoveClick();
     (el as unknown as { onToggleClick(): void }).onToggleClick();
     expect(removals).to.equal(0);
@@ -1578,5 +1579,59 @@ describe('chip control-guard hardening', () => {
 
     expect(start.hidden, 'a stale start slotchange after disconnect must not flip hasStartSlot').to.be.false;
     expect(end.hidden, 'a stale end slotchange after disconnect must not flip hasEndSlot').to.be.false;
+  });
+});
+
+describe('deprecated lr-chip-select alias', () => {
+  const CHIP_SELECT: readonly DeprecatedUsage[] = [{ tag: 'lr-chip', kind: 'event', name: 'lr-chip-select' }];
+
+  it('fires after lr-chip-toggle-request with an equal detail and no warning while nothing vetoes', async () => {
+    const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    const order: string[] = [];
+    const details: unknown[] = [];
+    for (const name of ['lr-chip-toggle-request', 'lr-chip-select'] as const) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        details.push((event as CustomEvent).detail);
+        expect(event.cancelable, name).to.be.true;
+      });
+    }
+    const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
+    expect(order).to.deep.equal(['lr-chip-toggle-request', 'lr-chip-select']);
+    expect(details[0]).to.deep.equal({ value: 'v1', selected: true });
+    expect(details[1]).to.deep.equal(details[0]);
+    expect(details[1]).to.not.equal(details[0]);
+    expect(el.selected).to.be.true;
+    expect(warnings).to.have.length(0);
+  });
+
+  it('lets a listener bound only to the alias veto the change, warning once', async () => {
+    const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    el.addEventListener('lr-chip-select', (event) => event.preventDefault());
+    const warnings = await captureDeprecationWarnings(CHIP_SELECT, async () => {
+      button.click();
+      button.click();
+      await el.updateComplete;
+    });
+    expect(el.selected).to.be.false;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-chip:event:lr-chip-select']);
+    expect(warnings[0]!.message).to.contain('lr-chip-toggle-request');
+  });
+
+  it('vetoes through the canonical event without warning, and the alias still hears the proposal', async () => {
+    const el = (await fixture(html`<lr-chip toggleable selected value="v1">Tag</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    el.addEventListener('lr-chip-toggle-request', (event) => event.preventDefault());
+    let aliasDetail: unknown;
+    el.addEventListener('lr-chip-select', (event) => {
+      aliasDetail = (event as CustomEvent).detail;
+    });
+    const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
+    expect(aliasDetail).to.deep.equal({ value: 'v1', selected: false });
+    expect(el.selected).to.be.true;
+    expect(warnings).to.have.length(0);
   });
 });

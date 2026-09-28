@@ -1,6 +1,6 @@
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./tag.js";
 import type { LyraTag } from "./tag.js";
 
@@ -660,4 +660,31 @@ describe('lr-tag name stability inside a hidden container', () => {
     );
     expect(names).to.deep.equal(['Remove Bare Tag', 'Remove Wrapped Tag']);
   });
+});
+
+describe('remove-button hover background', () => {
+  for (const [name, style] of [
+    ['canonical --lr-tag-remove-hover-bg', '--lr-tag-remove-hover-bg: rgb(1, 2, 3);'],
+    ['deprecated --lr-tag-remove-hover-background', '--lr-tag-remove-hover-background: rgb(1, 2, 3);'],
+    [
+      'canonical over deprecated',
+      '--lr-tag-remove-hover-bg: rgb(1, 2, 3); --lr-tag-remove-hover-background: rgb(9, 9, 9);',
+    ],
+  ] as const) {
+    it(`paints the hovered remove button from ${name}`, async () => {
+      const el = (await fixture(
+        html`<lr-tag with-remove style=${`--lr-transition-fast: 0s; ${style}`}>Tag</lr-tag>`,
+      )) as LyraTag;
+      const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]')!;
+      try {
+        await hoverUntilMatched(button, 'the remove button never received the pointer hover state');
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+          `hover background stayed ${getComputedStyle(button).backgroundColor}`,
+        );
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 });

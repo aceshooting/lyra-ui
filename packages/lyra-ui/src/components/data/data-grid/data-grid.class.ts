@@ -782,12 +782,24 @@ function normalizedGroupBy(
  * @cssprop [--header-text-color=var(--lr-color-text)] - Header foreground.
  * @cssprop [--indent-size=var(--lr-size-1-25rem)] - Tree-level indentation.
  * @cssprop [--max-height=var(--lr-size-30rem)] - Scroll viewport maximum height; `none` renders all.
- * @cssprop --lr-data-grid-control-active-background - Pressed background for grid controls.
- * @cssprop --lr-data-grid-control-hover-background - Hovered background for grid controls.
- * @cssprop --lr-data-grid-page-size-active-background - Pressed page-size selector background.
- * @cssprop --lr-data-grid-row-active-background - Pressed data-row background.
- * @cssprop --lr-data-grid-sortable-header-active-background - Pressed sortable-header background.
- * @cssprop --lr-data-grid-sortable-header-hover-background - Hovered sortable-header background.
+ * @cssprop --lr-data-grid-control-active-bg - Pressed background for grid controls.
+ * @cssprop --lr-data-grid-control-active-background - Deprecated alias of `--lr-data-grid-control-active-bg`;
+ *   removal not before 23.0.0.
+ * @cssprop --lr-data-grid-control-hover-bg - Hovered background for grid controls.
+ * @cssprop --lr-data-grid-control-hover-background - Deprecated alias of `--lr-data-grid-control-hover-bg`;
+ *   removal not before 23.0.0.
+ * @cssprop --lr-data-grid-page-size-active-bg - Pressed page-size selector background.
+ * @cssprop --lr-data-grid-page-size-active-background - Deprecated alias of `--lr-data-grid-page-size-active-bg`;
+ *   removal not before 23.0.0.
+ * @cssprop --lr-data-grid-row-active-bg - Pressed data-row background.
+ * @cssprop --lr-data-grid-row-active-background - Deprecated alias of `--lr-data-grid-row-active-bg`;
+ *   removal not before 23.0.0.
+ * @cssprop --lr-data-grid-sortable-header-active-bg - Pressed sortable-header background.
+ * @cssprop --lr-data-grid-sortable-header-active-background - Deprecated alias of `--lr-data-grid-sortable-header-active-bg`;
+ *   removal not before 23.0.0.
+ * @cssprop --lr-data-grid-sortable-header-hover-bg - Hovered sortable-header background.
+ * @cssprop --lr-data-grid-sortable-header-hover-background - Deprecated alias of `--lr-data-grid-sortable-header-hover-bg`;
+ *   removal not before 23.0.0.
  * @cssprop [--row-height=var(--lr-size-3-5rem)] - Estimated and minimum row height.
  * @cssprop --row-hover-background - Hovered-row background.
  * @cssprop [--selected-background=var(--lr-color-brand-quiet)] - Selected-row background.
@@ -4314,10 +4326,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    *  `role="menuitemcheckbox"` rows, roving focus and type-ahead, so `columnsMenuOpen` is now only
    *  mirrored state used to keep the per-column panels mutually exclusive with this one.
    *
-   *  Rows are controlled, never self-toggling: the cancelable `lr-menu-item-change` is always
-   *  prevented and the next visibility comes back out of `columnVisibility` on the next render, so
-   *  a refused toggle (a `hideable: false` column) can never leave a checkmark the grid disagrees
-   *  with. */
+   *  Rows are controlled, never self-toggling: the cancelable `lr-menu-item-change-request` is
+   *  always prevented and the next visibility comes back out of `columnVisibility` on the next
+   *  render, so a refused toggle (a `hideable: false` column) can never leave a checkmark the grid
+   *  disagrees with. The item's deprecated `lr-menu-item-change` alias is only kept from escaping
+   *  the grid. */
   private renderColumnsMenu(): TemplateResult {
     const label = this.localize('showAllColumns');
     return html`
@@ -4339,7 +4352,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             value=${id}
             ?checked=${visible}
             ?disabled=${column.hideable === false}
-            @lr-menu-item-change=${(event: Event) => {
+            @lr-menu-item-change=${(event: Event) => event.stopPropagation()}
+            @lr-menu-item-change-request=${(event: Event) => {
               event.stopPropagation();
               event.preventDefault();
               const { value, checked } = (

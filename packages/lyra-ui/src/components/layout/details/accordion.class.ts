@@ -35,11 +35,10 @@ export interface LyraAccordionEventMap {
   'lr-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   // `lr-expand`/`lr-collapse` put the direction in the event NAME; this shape puts it in the
-  // DETAIL instead, matching `<lr-code-block>`'s and `<lr-chat-message>`'s `lr-toggle-request`
-  // `{ collapsed }` contract (`collapsed: true` is the closing direction in both). `item` is kept
-  // alongside it because, unlike those single-panel components, an accordion's toggling entity is
-  // one of several children -- a generic listener still needs it to know which panel is proposed
-  // to change.
+  // DETAIL instead, as `collapsed` (`collapsed: true` is the closing direction). `item` is kept
+  // alongside it because, unlike single-panel components, an accordion's toggling entity is one of
+  // several children -- a generic listener still needs it to know which panel is proposed to
+  // change.
   'lr-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<{ readonly collapsed: boolean; readonly item: LyraAccordionItem }>
   >;
@@ -79,13 +78,11 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *   Nested groups emit the same name, with a `detail.item` of their own; handle it as this
  *   group's event only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-toggle-request - Emitted alongside `lr-expand`/`lr-collapse` for the same proposed
- *   transition, with the direction in the detail instead of the event name -- the same
- *   `{ collapsed }` shape `<lr-code-block>` and `<lr-chat-message>` use for their own
- *   `lr-toggle-request`, plus `item` to identify which child is proposed to change.
- *   `detail: { collapsed, item }`. Cancelable; a listener calling `preventDefault()` on either
- *   `lr-toggle-request` or the matching `lr-expand`/`lr-collapse` vetoes the transition, and both
- *   always fire so a listener on one name never misses a transition the other name already
- *   vetoed.
+ *   transition, with the direction in the detail instead of the event name, plus `item` to
+ *   identify which child is proposed to change. `detail: { collapsed, item }`. Cancelable; a
+ *   listener calling `preventDefault()` on either `lr-toggle-request` or the matching
+ *   `lr-expand`/`lr-collapse` vetoes the transition, and both always fire so a listener on one
+ *   name never misses a transition the other name already vetoed.
  *
  *   **A nested group's events are not scoped to it, so filter by target.** Every accordion event
  *   bubbles and is composed, so an inner `<lr-accordion>` slotted inside an outer item sends its

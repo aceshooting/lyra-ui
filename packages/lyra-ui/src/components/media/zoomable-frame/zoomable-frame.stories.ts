@@ -79,7 +79,7 @@ export const DecorativeIconSlots: Story = {
 export const ControlHoverTheme: Story = {
   render: () => html`<lr-zoomable-frame
     aria-label="Themed zoom preview"
-    style="--lr-zoomable-frame-control-hover-background: var(--lr-color-success-quiet)"
+    style="--lr-zoomable-frame-control-hover-bg: var(--lr-color-success-quiet)"
     .srcdoc=${previewDocument}
   ></lr-zoomable-frame>`,
 };

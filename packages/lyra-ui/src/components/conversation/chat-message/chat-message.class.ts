@@ -1,6 +1,7 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -19,8 +20,19 @@ import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYR
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
 export type ChatMessageStatus = 'sending' | 'sent' | 'failed' | 'streaming';
 export type ChatMessageActionsPosition = 'inside' | 'outside';
+/** Where `<lr-chat-message>`'s actions row renders relative to the bubble; the same union as
+ *  `ChatMessageActionsPosition`, under the canonical `placement` name. */
+export type ChatMessageActionsPlacement = ChatMessageActionsPosition;
+/** Where `<lr-chat-message>`'s `attachments` slot renders relative to the message body. */
+export type ChatMessageAttachmentsPlacement = 'before' | 'after';
 
+/** `lr-toggle-request`/`lr-toggle` detail of `<lr-chat-message>`. */
 export interface ChatMessageToggleDetail {
+  /** Whether the message body is shown in the resulting (on `lr-toggle-request`, the proposed)
+   *  state. */
+  expanded?: boolean;
+  /** The inverse of `expanded`.
+   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
   collapsed: boolean;
 }
 
@@ -127,7 +139,7 @@ export interface LyraChatMessageEventMap {
  * host semantics; the localized author identity directly names the internal article through its
  * `aria-label`, and a host `aria-label` overrides that fallback by attribute presence.
  *
- * `actionsPosition="outside"` renders the `actions` slot as a sibling immediately after the
+ * `actions-placement="outside"` renders the `actions` slot as a sibling immediately after the
  * message bubble instead of nested inside the footer.
  *
  * @customElement lr-chat-message
@@ -135,7 +147,7 @@ export interface LyraChatMessageEventMap {
  * @slot avatar - An avatar/icon for the message author.
  * @slot badges - Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself.
  * @slot actions - Action controls (e.g. copy, retry), rendered at the end of the footer.
- * @slot attachments - File/image attachment chips, rendered below the message body by default; see `attachments-position`.
+ * @slot attachments - File/image attachment chips, rendered below the message body by default; see `attachments-placement`.
  * @slot failure - Only ever rendered while `status="failed"`. Empty (the default), the footer keeps
  *   its built-in `[part="status-text"]`/`[part="retry-button"]` exactly as before. The moment this
  *   slot has assigned content, that built-in status text and retry button are suppressed — the host
@@ -154,8 +166,11 @@ export interface LyraChatMessageEventMap {
  *   `new CustomEvent('lr-message-retry', { bubbles: true, composed: true })` to stay consistent with the
  *   same event contract a listener further up a conversation surface already relies on for every
  *   other message.
- * @event lr-toggle-request - Cancelable request to change collapse state. `detail: { collapsed }`.
- * @event lr-toggle - Collapse state committed. `detail: { collapsed }`.
+ * @event lr-toggle-request - Cancelable request to change collapse state. `detail: { expanded,
+ *   collapsed }` is the proposed state; `expanded` is the canonical key and the deprecated
+ *   `collapsed` its inverse.
+ * @event lr-toggle - Collapse state committed. `detail: { expanded, collapsed }`, the resulting
+ *   state; the deprecated `collapsed` is the inverse of `expanded`.
  * @csspart bubble - The message article and bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed. Its fill, text, and geometry derive from the documented theme hooks.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
@@ -171,7 +186,7 @@ export interface LyraChatMessageEventMap {
  * @csspart status-text - The visible text twin of `status-indicator` — carries the state in text, not just color.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element.
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
- * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsPosition="outside"`.
+ * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actions-placement="outside"`.
  * @cssprop [--lr-chat-message-max-width=80%] - Maximum inline size of the message bubble.
  * @cssprop [--lr-chat-message-bubble-bg=var(--lr-color-surface)] - Bubble fill for every role except `user`.
  * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
@@ -223,6 +238,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    attachmentsPosition: 'attachmentsPlacement',
+    actionsPosition: 'actionsPlacement',
+  };
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
   // it's declared via `static properties` + `noAccessor` rather than
@@ -263,9 +282,27 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  renders attachments immediately above the body -- both DOM and visual
    *  order move together (no CSS `order` trick), so reading/focus order
    *  always matches what's on screen. */
+  @property({ attribute: 'attachments-placement' })
+  attachmentsPlacement: ChatMessageAttachmentsPlacement = 'after';
+
+  /**
+   * Deprecated alias of `attachments-placement` (`attachmentsPlacement`), with identical values and
+   * behavior. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `attachments-placement`; removal not before 23.0.0.
+   */
   @property({ attribute: 'attachments-position' }) attachmentsPosition: 'before' | 'after' = 'after';
 
   /** Where the actions row renders relative to the bubble. */
+  @property({ reflect: true, attribute: 'actions-placement' })
+  actionsPlacement: ChatMessageActionsPlacement = 'inside';
+
+  /**
+   * Deprecated alias of `actions-placement` (`actionsPlacement`), with identical values and
+   * behavior. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `actions-placement`; removal not before 23.0.0.
+   */
   @property({ reflect: true, attribute: 'actions-position' })
   actionsPosition: ChatMessageActionsPosition = 'inside';
 
@@ -451,10 +488,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   };
 
   private toggleCollapsed = (): void => {
-    const detail = { collapsed: !this.collapsed } as const;
+    const detail = { expanded: this.collapsed, collapsed: !this.collapsed } as const;
     const request = this.emit('lr-toggle-request', detail, { cancelable: true });
     if (request.defaultPrevented) return;
-    this.collapsed = detail.collapsed;
+    this.collapsed = !detail.expanded;
     this.emit('lr-toggle', detail);
   };
 
@@ -479,7 +516,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'` and the built-in UI isn't
     // suppressed, so it alone covers that case here too.
-    const actionsOutside = this.actionsPosition === 'outside';
+    const actionsOutside = this.actionsPlacement === 'outside';
     const showFooter = Boolean(statusText) || Boolean(ts) || (!actionsOutside && this.hasActionsSlot);
     const authorLabel = this.localize(
       this.messageRole === 'user'
@@ -525,11 +562,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
               </button>`
             : nothing}
         </div>
-        ${this.attachmentsPosition === 'before' ? attachmentsBlock : nothing}
+        ${this.attachmentsPlacement === 'before' ? attachmentsBlock : nothing}
         <div part="body" id=${this.bodyId} ?hidden=${this.collapsed}>
           <slot></slot>
         </div>
-        ${this.attachmentsPosition === 'before' ? nothing : attachmentsBlock}
+        ${this.attachmentsPlacement === 'before' ? nothing : attachmentsBlock}
         ${this.status === 'failed'
           ? html`<slot part="failure" name="failure" @slotchange=${this.onFailureSlotChange}></slot>`
           : nothing}

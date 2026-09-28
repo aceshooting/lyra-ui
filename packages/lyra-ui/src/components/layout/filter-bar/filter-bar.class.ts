@@ -1943,6 +1943,12 @@ export class LyraFilterBar<
     return def.labelVisibility === 'auto';
   }
 
+  /** The composed item's deprecated `lr-menu-item-change` alias stays internal like its canonical
+   *  request, which `onCheckboxMenuToggle()` already vetoes. */
+  private readonly stopMenuItemChangeAlias = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   /** A `'checkbox-menu'` row was activated. The composed `<lr-dropdown-item>` fires this
    *  cancelable event with its *proposed* next `checked` state and commits that state itself
    *  unless the event is prevented -- so this handler always prevents it and derives the next
@@ -2084,7 +2090,8 @@ export class LyraFilterBar<
             value=${option.value}
             ?checked=${selected.includes(option.value)}
             ?disabled=${option.disabled === true}
-            @lr-menu-item-change=${(event: Event) => this.onCheckboxMenuToggle(def, event)}
+            @lr-menu-item-change-request=${(event: Event) => this.onCheckboxMenuToggle(def, event)}
+            @lr-menu-item-change=${this.stopMenuItemChangeAlias}
             >${this.renderStartAdornment(option.icon, 'icon')}${option.label}</lr-dropdown-item
           >`
         )}

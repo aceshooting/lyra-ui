@@ -6,6 +6,7 @@ import {
 } from "../../../../test/wtr-mouse.js";
 import { CHAT_COMPOSER_STATUSES } from "./chat-composer.js";
 import type { LyraChatComposer } from "./chat-composer.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 function textareaOf(el: LyraChatComposer): HTMLTextAreaElement {
   return el.shadowRoot!.querySelector(
@@ -42,18 +43,15 @@ function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
   });
 }
 
-it('defaults to status="idle", min-rows=1, max-rows=8, submit-on-enter=true, and submitDisabled=false', async () => {
+it('defaults to status="idle", min-rows=1, max-rows=8, Enter-to-send on, and submitDisabled=false', async () => {
   const el = (await fixture(
     html`<lr-chat-composer></lr-chat-composer>`
   )) as LyraChatComposer;
   expect(el.status).to.equal("idle");
   expect(el.minRows).to.equal(1);
   expect(el.maxRows).to.equal(8);
-  expect(el.submitOnEnter).to.be.true;
-  // `true` is the default -- trueDefaultBooleanConverter's toAttribute omits the attribute
-  // entirely for it (mirroring lr-checkpoint's restorable/confirmRestore), so only the non-default
-  // `false` ever needs a reflected attribute at all.
-  expect(el.hasAttribute("submit-on-enter")).to.be.false;
+  expect(el.withoutEnterSubmit).to.be.false;
+  expect(el.hasAttribute("without-enter-submit")).to.be.false;
   expect(el.submitDisabled).to.be.false;
 });
 
@@ -200,7 +198,7 @@ it("does not clear the value when submitting", async () => {
   expect(el.value).to.equal("hello");
 });
 
-it("Shift+Enter always inserts a newline and never submits, even with submit-on-enter true", async () => {
+it("Shift+Enter always inserts a newline and never submits, even with Enter-to-send on", async () => {
   const el = (await fixture(
     html`<lr-chat-composer></lr-chat-composer>`
   )) as LyraChatComposer;
@@ -215,12 +213,12 @@ it("Shift+Enter always inserts a newline and never submits, even with submit-on-
   expect(ev.defaultPrevented).to.be.false;
 });
 
-it("never submits on Enter while submit-on-enter is false, leaving the default newline behavior alone", async () => {
+it("never submits on Enter while without-enter-submit is set, leaving the default newline behavior alone", async () => {
   const el = (await fixture(
-    html`<lr-chat-composer .submitOnEnter=${false}></lr-chat-composer>`
+    html`<lr-chat-composer without-enter-submit></lr-chat-composer>`
   )) as LyraChatComposer;
-  expect(el.submitOnEnter, "sanity-check the property actually ended up false")
-    .to.be.false;
+  expect(el.withoutEnterSubmit, "sanity-check the property actually ended up true")
+    .to.be.true;
   const ta = textareaOf(el);
 
   let submitted = false;
@@ -232,27 +230,56 @@ it("never submits on Enter while submit-on-enter is false, leaving the default n
   expect(ev.defaultPrevented).to.be.false;
 });
 
-it('parses the plain-HTML attribute string submit-on-enter="false", not just a .submitOnEnter property binding', async () => {
-  // trueDefaultBooleanConverter's fromAttribute checks the literal string rather than Lit's
-  // default presence-based Boolean converter, which can never distinguish an omitted attribute
-  // from one explicitly written as the literal string "false" -- both would otherwise map to the
-  // property's own `true` default.
-  const el = (await fixture(
-    html`<lr-chat-composer submit-on-enter="false"></lr-chat-composer>`
-  )) as LyraChatComposer;
-  expect(el.submitOnEnter).to.be.false;
-  const ta = textareaOf(el);
+describe("deprecated submit-on-enter alias", () => {
+  const usage = { tag: "lr-chat-composer", kind: "property", name: "submitOnEnter" } as const;
 
-  let submitted = false;
-  el.addEventListener("lr-submit", () => (submitted = true));
-  const ev = enterKeydown();
-  ta.dispatchEvent(ev);
-  await el.updateComplete;
-  expect(
-    submitted,
-    'submit-on-enter="false" as a plain attribute must actually disable Enter-to-send'
-  ).to.be.false;
-  expect(ev.defaultPrevented).to.be.false;
+  it('submit-on-enter="false" equals without-enter-submit and warns once', async () => {
+    let el!: LyraChatComposer;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(
+        html`<lr-chat-composer submit-on-enter="false"></lr-chat-composer>`
+      )) as LyraChatComposer;
+      await fixture(html`<lr-chat-composer submit-on-enter="false"></lr-chat-composer>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-chat-composer:property:submitOnEnter",
+    ]);
+    expect(el.withoutEnterSubmit).to.be.true;
+    expect(el.submitOnEnter).to.be.false;
+    const ta = textareaOf(el);
+
+    let submitted = false;
+    el.addEventListener("lr-submit", () => (submitted = true));
+    const ev = enterKeydown();
+    ta.dispatchEvent(ev);
+    await el.updateComplete;
+    expect(
+      submitted,
+      'submit-on-enter="false" as a plain attribute must actually disable Enter-to-send'
+    ).to.be.false;
+    expect(ev.defaultPrevented).to.be.false;
+  });
+
+  it("forwards a property write, syncs back from the canonical, and lets the last write win", async () => {
+    let el!: LyraChatComposer;
+    let both!: LyraChatComposer;
+    await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+      el.submitOnEnter = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-chat-composer without-enter-submit submit-on-enter></lr-chat-composer>`
+      )) as LyraChatComposer;
+    });
+    expect(el.withoutEnterSubmit).to.be.true;
+    expect(el.hasAttribute("without-enter-submit")).to.be.true;
+    el.withoutEnterSubmit = false;
+    await el.updateComplete;
+    expect(el.submitOnEnter).to.be.true;
+    expect(el.hasAttribute("submit-on-enter")).to.be.false;
+    expect(both.withoutEnterSubmit, "the later submit-on-enter attribute wins").to.be.false;
+    expect(both.submitOnEnter).to.be.true;
+  });
 });
 
 it("never treats an IME composition Enter as a submit trigger (isComposing)", async () => {
@@ -418,22 +445,22 @@ it('defaults to English "Send message"/"Stop generating" when no strings overrid
   );
 });
 
-it("stoppable defaults to true, preserving the existing Stop-button behavior", async () => {
+it("without-stop defaults to false, preserving the existing Stop-button behavior", async () => {
   const el = (await fixture(
     html`<lr-chat-composer status="streaming"></lr-chat-composer>`
   )) as LyraChatComposer;
-  expect(el.stoppable).to.be.true;
+  expect(el.withoutStop).to.be.false;
   expect(actionButtonOf(el)!.disabled).to.be.false;
   expect(actionButtonOf(el)!.getAttribute("aria-label")).to.equal(
     "Stop generating"
   );
 });
 
-it("stoppable=false renders a disabled Send button instead of Stop while busy, and does not fire lr-stop", async () => {
+it("without-stop renders a disabled Send button instead of Stop while busy, and does not fire lr-stop", async () => {
   const el = (await fixture(
     html`<lr-chat-composer
       status="streaming"
-      .stoppable=${false}
+      without-stop
     ></lr-chat-composer>`
   )) as LyraChatComposer;
   const button = actionButtonOf(el)!;
@@ -447,17 +474,24 @@ it("stoppable=false renders a disabled Send button instead of Stop while busy, a
   expect(stopped).to.be.false;
 });
 
-it('parses the plain-HTML attribute string stoppable="false", not just a .stoppable property binding', async () => {
-  const el = (await fixture(
-    html`<lr-chat-composer
-      status="streaming"
-      stoppable="false"
-    ></lr-chat-composer>`
-  )) as LyraChatComposer;
+it('keeps the deprecated stoppable="false" alias equal to without-stop, warning once', async () => {
+  let el!: LyraChatComposer;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-chat-composer", kind: "property", name: "stoppable" }],
+    async () => {
+      el = (await fixture(
+        html`<lr-chat-composer
+          status="streaming"
+          stoppable="false"
+        ></lr-chat-composer>`
+      )) as LyraChatComposer;
+    }
+  );
+  expect(warnings).to.have.lengthOf(1);
   expect(
-    el.stoppable,
+    el.withoutStop,
     'stoppable="false" as a plain attribute must actually disable it'
-  ).to.be.false;
+  ).to.be.true;
   const button = actionButtonOf(el)!;
   expect(button.getAttribute("aria-label")).to.equal("Send message");
   expect(button.disabled).to.be.true;
@@ -2013,10 +2047,10 @@ describe('card chrome theming hooks', () => {
   const base = (el: LyraChatComposer) =>
     el.shadowRoot!.querySelector("[part='base']") as HTMLElement;
 
-  it('repaints the card through --lr-chat-composer-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-chat-composer-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-chat-composer
-        style="--lr-chat-composer-background: rgb(1, 2, 3); --lr-chat-composer-border-color: rgb(4, 5, 6); --lr-chat-composer-radius: 11px"
+        style="--lr-chat-composer-bg: rgb(1, 2, 3); --lr-chat-composer-border-color: rgb(4, 5, 6); --lr-chat-composer-radius: 11px"
       ></lr-chat-composer>
     `)) as LyraChatComposer;
     const chrome = getComputedStyle(base(el));
@@ -2029,7 +2063,7 @@ describe('card chrome theming hooks', () => {
     const control = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
     const tokened = (await fixture(html`
       <lr-chat-composer
-        style="--lr-chat-composer-background: var(--lr-color-surface); --lr-chat-composer-border-color: var(--lr-color-border); --lr-chat-composer-radius: var(--lr-radius)"
+        style="--lr-chat-composer-bg: var(--lr-color-surface); --lr-chat-composer-border-color: var(--lr-color-border); --lr-chat-composer-radius: var(--lr-radius)"
       ></lr-chat-composer>
     `)) as LyraChatComposer;
     const unset = getComputedStyle(base(control));
@@ -2038,6 +2072,19 @@ describe('card chrome theming hooks', () => {
     expect(unset.borderTopColor).to.equal(explicit.borderTopColor);
     expect(unset.borderTopLeftRadius).to.equal(explicit.borderTopLeftRadius);
     expect(unset.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('still repaints the card through the deprecated --lr-chat-composer-background alias, below -bg', async () => {
+    const alias = (await fixture(html`
+      <lr-chat-composer style="--lr-chat-composer-background: rgb(1, 2, 3)"></lr-chat-composer>
+    `)) as LyraChatComposer;
+    expect(getComputedStyle(base(alias)).backgroundColor).to.equal('rgb(1, 2, 3)');
+    const both = (await fixture(html`
+      <lr-chat-composer
+        style="--lr-chat-composer-background: rgb(1, 2, 3); --lr-chat-composer-bg: rgb(7, 8, 9)"
+      ></lr-chat-composer>
+    `)) as LyraChatComposer;
+    expect(getComputedStyle(base(both)).backgroundColor).to.equal('rgb(7, 8, 9)');
   });
 
   it('resizes the card through --lr-chat-composer-padding/-gap', async () => {

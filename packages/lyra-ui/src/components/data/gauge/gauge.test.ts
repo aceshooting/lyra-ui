@@ -3,6 +3,7 @@ import './gauge.js';
 import type { LyraGauge, LyraGaugeThreshold } from './gauge.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function fillStroke(el: LyraGauge): Promise<string> {
   await el.updateComplete;
@@ -928,23 +929,23 @@ describe('linear caption sizing scales with the host font, not the document root
   });
 });
 
-describe('showValue', () => {
+describe('withoutValue', () => {
   for (const shape of ['radial', 'ring', 'linear'] as const) {
-    it(`renders the value caption by default in ${shape} mode, unchanged from before showValue existed`, async () => {
+    it(`renders the value caption by default in ${shape} mode`, async () => {
       const el = (await fixture(
         html`<lr-gauge shape=${shape} value="42" max="100"></lr-gauge>`,
       )) as LyraGauge;
-      expect(el.showValue, `${shape} readback`).to.equal(true);
+      expect(el.withoutValue, `${shape} readback`).to.equal(false);
       const valueEl = el.shadowRoot!.querySelector('[part="value"]');
       expect(valueEl != null, `${shape} value caption exists`).to.equal(true);
       expect(valueEl!.textContent, `${shape} value caption text`).to.equal('42');
     });
 
-    it(`omits the value caption in ${shape} mode when show-value is set to false, leaving the label caption alone`, async () => {
+    it(`omits the value caption in ${shape} mode with without-value, leaving the label caption alone`, async () => {
       const el = (await fixture(
-        html`<lr-gauge shape=${shape} value="42" max="100" label="CPU" show-value="false"></lr-gauge>`,
+        html`<lr-gauge shape=${shape} value="42" max="100" label="CPU" without-value></lr-gauge>`,
       )) as LyraGauge;
-      expect(el.showValue, `${shape} readback`).to.equal(false);
+      expect(el.withoutValue, `${shape} readback`).to.equal(true);
       const valueEl = el.shadowRoot!.querySelector('[part="value"]');
       const labelEl = el.shadowRoot!.querySelector('[part="label"]');
       expect(valueEl == null, `${shape} value caption is omitted`).to.equal(true);
@@ -953,9 +954,9 @@ describe('showValue', () => {
     });
   }
 
-  it('accepts a .showValue = false property binding the same way the show-value attribute does', async () => {
+  it('accepts a .withoutValue = true property binding the same way the without-value attribute does', async () => {
     const el = (await fixture(
-      html`<lr-gauge .showValue=${false} value="10" max="100"></lr-gauge>`,
+      html`<lr-gauge .withoutValue=${true} value="10" max="100"></lr-gauge>`,
     )) as LyraGauge;
     expect(el.shadowRoot!.querySelector('[part="value"]') == null).to.equal(true);
   });
@@ -965,7 +966,7 @@ describe('showValue', () => {
       html`<lr-gauge value="72" min="0" max="100" value-text="72%" label="CPU"></lr-gauge>`,
     )) as LyraGauge;
     const hidden = (await fixture(
-      html`<lr-gauge value="72" min="0" max="100" value-text="72%" label="CPU" show-value="false"></lr-gauge>`,
+      html`<lr-gauge value="72" min="0" max="100" value-text="72%" label="CPU" without-value></lr-gauge>`,
     )) as LyraGauge;
     for (const attr of [
       'role',
@@ -980,7 +981,7 @@ describe('showValue', () => {
     expect(hidden.getAttribute('role')).to.equal('meter');
   });
 
-  it('is accessible with show-value set to false and a populated label', async () => {
+  it('is accessible with without-value and a populated label', async () => {
     const el = (await fixture(html`
       <lr-gauge
         shape="linear"
@@ -988,11 +989,93 @@ describe('showValue', () => {
         max="100"
         label="CPU"
         value-text="72%"
-        show-value="false"
+        without-value
       ></lr-gauge>
     `)) as LyraGauge;
-    expect(el.showValue).to.equal(false);
+    expect(el.withoutValue).to.equal(true);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('deprecated show-value alias', () => {
+  const SHOW_VALUE: readonly DeprecatedUsage[] = [{ tag: 'lr-gauge', kind: 'property', name: 'showValue' }];
+  const captions = (el: LyraGauge): number => el.shadowRoot!.querySelectorAll('[part="value"]').length;
+
+  it('treats show-value="false" exactly like without-value and warns once, naming without-value', async () => {
+    const canonical = await fixture<LyraGauge>(
+      html`<lr-gauge value="42" max="100" label="CPU" without-value></lr-gauge>`,
+    );
+    let aliased!: LyraGauge;
+    const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
+      aliased = await fixture<LyraGauge>(
+        html`<lr-gauge value="42" max="100" label="CPU" show-value="false"></lr-gauge>`,
+      );
+      const second = await fixture<LyraGauge>(html`<lr-gauge show-value="false"></lr-gauge>`);
+      await second.updateComplete;
+    });
+    expect(captions(aliased)).to.equal(0);
+    expect(captions(aliased)).to.equal(captions(canonical));
+    expect(aliased.withoutValue).to.be.true;
+    expect(aliased.showValue).to.be.false;
+    expect(aliased.getAttribute('aria-valuetext')).to.equal(canonical.getAttribute('aria-valuetext'));
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-gauge:property:showValue']);
+    expect(warnings[0]!.message).to.contain('without-value');
+  });
+
+  it('never warns for without-value or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
+      const el = await fixture<LyraGauge>(html`<lr-gauge value="1" max="2"></lr-gauge>`);
+      expect(el.showValue).to.be.true;
+      el.withoutValue = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('forwards alias writes, restores the caption when the alias attribute is removed, and yields to without-value', async () => {
+    await captureDeprecationWarnings(SHOW_VALUE, async () => {
+      const el = await fixture<LyraGauge>(html`<lr-gauge value="42" max="100"></lr-gauge>`);
+      el.showValue = false;
+      await el.updateComplete;
+      expect(captions(el)).to.equal(0);
+      el.showValue = true;
+      await el.updateComplete;
+      expect(captions(el)).to.equal(1);
+
+      const attr = await fixture<LyraGauge>(html`<lr-gauge value="42" max="100" show-value="false"></lr-gauge>`);
+      attr.removeAttribute('show-value');
+      await attr.updateComplete;
+      expect(captions(attr)).to.equal(1);
+
+      const both = await fixture<LyraGauge>(
+        html`<lr-gauge value="42" max="100" show-value without-value></lr-gauge>`,
+      );
+      expect(captions(both)).to.equal(0);
+    });
+  });
+
+  it('syncs the alias back from without-value and lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(SHOW_VALUE, async () => {
+      const canonicalLast = await fixture<LyraGauge>(
+        html`<lr-gauge value="42" max="100" show-value="false" without-value></lr-gauge>`,
+      );
+      canonicalLast.removeAttribute('without-value');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.showValue).to.be.true;
+      expect(captions(canonicalLast)).to.equal(1);
+
+      const aliasLast = await fixture<LyraGauge>(
+        html`<lr-gauge value="42" max="100" without-value show-value="false"></lr-gauge>`,
+      );
+      aliasLast.showValue = true;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withoutValue).to.be.false;
+      expect(captions(aliasLast)).to.equal(1);
+      aliasLast.withoutValue = true;
+      await aliasLast.updateComplete;
+      expect(aliasLast.showValue).to.be.false;
+      expect(captions(aliasLast)).to.equal(0);
+    });
   });
 });
 

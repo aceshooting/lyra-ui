@@ -61,7 +61,7 @@ export const Python: Story = {
 };
 
 export const ExpandedFrames: Story = {
-  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false}></lr-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} expand-internal></lr-stack-trace>`,
 };
 
 export const UnparseableFallback: Story = {
@@ -70,7 +70,7 @@ export const UnparseableFallback: Story = {
 
 export const UnsafeLocations: Story = {
   name: 'Unsafe locations remain raw',
-  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${unsafeLocationTrace} .collapseInternal=${false}></lr-stack-trace>`,
+  render: () => html`<lr-stack-trace style="max-width:40rem" .trace=${unsafeLocationTrace} expand-internal></lr-stack-trace>`,
   parameters: {
     docs: {
       description: {
@@ -82,7 +82,7 @@ export const UnsafeLocations: Story = {
 
 export const MaxHeight: Story = {
   render: () =>
-    html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} .collapseInternal=${false} max-height="6rem"></lr-stack-trace>`,
+    html`<lr-stack-trace style="max-width:40rem" .trace=${jsTrace} expand-internal max-height="6rem"></lr-stack-trace>`,
 };
 
 export const Narrow320: Story = {
@@ -104,18 +104,18 @@ export const ScopedStateColors: Story = {
 };
 
 export const Compact: Story = {
-  name: 'compact (dense error row)',
+  name: 'size="s" (dense error row)',
   render: () => html`
     <div style="max-width:40rem; display:grid; gap:0.75rem;">
       <lr-stack-trace .trace=${jsTrace}></lr-stack-trace>
-      <lr-stack-trace compact .trace=${jsTrace}></lr-stack-trace>
+      <lr-stack-trace size="s" .trace=${jsTrace}></lr-stack-trace>
     </div>
   `,
   parameters: {
     docs: {
       description: {
         story:
-          '`compact` tightens the root padding and between-group spacing for dense contexts. It is a density knob only — the card border, radius and background stay; reach for `frame="plain"` to drop the chrome.',
+          '`size="s"` tightens the root padding and between-group spacing for dense contexts. It is a density knob only — the card border, radius and background stay; reach for `frame="plain"` to drop the chrome.',
       },
     },
   },

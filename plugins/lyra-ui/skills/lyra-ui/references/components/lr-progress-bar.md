@@ -7,7 +7,8 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `with-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -19,11 +20,12 @@
 A determinate or indeterminate progress bar with an independently visible label and optional
 formatted percentage.
 
-**Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
-`label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
-retained Lyra compatibility spelling for this component. It is not a library-wide attribute:
-spinner, rating, and tooltip expose their explicit host name through `aria-label`. Host
-`aria-label` has highest precedence here too. Also
+**Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `withValue` (`with-value`),
+and `label` (mapped accessible-name property), plus `accessibleLabel` (property only) — Lyra's own
+explicit name, read after `label`. In markup, name the bar with the host `aria-label`, which has
+the highest precedence. Deprecated aliases: `show-value`/`showValue` (use `with-value`; removed in 23.0.0) and
+`accessible-label` (use `aria-label`; removed in 23.0.0) — the latter still sets
+`accessibleLabel`, so a host `aria-label` wins over it. Also
 `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
 `0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
@@ -33,7 +35,7 @@ upstream `--track-height`/`--height` aliases) still wins over every tier.
 
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
-label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.
+label overrides it; `with-value` controls only whether the locale-formatted percentage is appended.
 Live label mutations and reassignment stay synchronized through nested forwarding slots. Hidden,
 inert, CSS-hidden and `aria-hidden` branches do not name the role; a visible descendant can restore
 text suppressed only by an ancestor's `visibility:hidden|collapse`. Host `aria-label` precedence is

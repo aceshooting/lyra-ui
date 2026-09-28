@@ -45,11 +45,7 @@ export const LiveHeadingLevel: Story = {
 };
 
 export const NoFocusButton: Story = {
-  // `showFocusButton` defaults to `true` -- a boolean-attribute binding (`?show-focus-button=...`)
-  // only ever toggles the attribute's *presence*, and removing an attribute that was never present
-  // fires no attributeChangedCallback, so it can never clear a true-defaulting property back to
-  // false. A property binding is the only form that actually works here.
-  render: () => html`<lr-entity-card .entity=${entity} .types=${types()} .showFocusButton=${false}></lr-entity-card>`,
+  render: () => html`<lr-entity-card .entity=${entity} .types=${types()} without-focus-button></lr-entity-card>`,
 };
 
 export const Narrow: Story = {
@@ -57,11 +53,11 @@ export const Narrow: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:28rem;">
       <lr-entity-card .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>
-      <lr-entity-card compact .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>
+      <lr-entity-card size="s" .entity=${entity} .types=${types()} community-label="Nobel laureates"></lr-entity-card>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-entity-card
           frame="plain"
@@ -80,7 +76,7 @@ export const RestingBackgroundToken: Story = {
     docs: {
       description: {
         story:
-          '`--lr-entity-card-bg` is the resting companion to the `compact` tier\'s existing padding/gap levers, so a themed dossier list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
+          '`--lr-entity-card-bg` is the resting companion to the dense `size` tier\'s existing padding/gap levers, so a themed dossier list no longer needs a `::part(base)` rule or an app-wide `--lr-color-surface` change. `frame="plain"` still drops the fill entirely.',
       },
     },
   },

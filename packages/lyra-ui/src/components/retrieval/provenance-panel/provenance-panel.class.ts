@@ -94,8 +94,10 @@ export interface LyraProvenancePanelEventMap
  *   `detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`.
  * @event lr-chunk-open - Surfaced unchanged from an embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
- * @event lr-expand - Surfaced unchanged from an embedded chunk inspector.
+ * @event lr-chunk-toggle - Surfaced unchanged from an embedded chunk inspector.
  *   `detail: { chunkId, expanded }`.
+ * @event lr-expand - Deprecated alias of `lr-chunk-toggle`, surfaced unchanged from an embedded
+ *   chunk inspector right after it. `detail: { chunkId, expanded }`. Removal not before 23.0.0.
  * @csspart base - The root wrapper.
  * @csspart section - One section's wrapper.
  * @csspart header - A section's disclosure `<button>`.
@@ -291,7 +293,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
             ${communities.map(
               (c) =>
                 html`<lr-community-card
-                  compact
+                  size="s"
                   .community=${c}
                 ></lr-community-card>`
             )}
@@ -302,7 +304,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'provenanceChunks',
           chunks.length,
           html`<lr-chunk-inspector
-            compact
+            size="s"
             .chunks=${chunks}
             .thresholds=${this.thresholds}
           ></lr-chunk-inspector>`

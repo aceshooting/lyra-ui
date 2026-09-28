@@ -600,7 +600,7 @@ describe('shadcn look preset', () => {
     for (const mode of MODES) {
       setLyraTheme({ mode, accent: null, tokens: null });
       const card = await fixture<LyraSourceCard>(html`
-        <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+        <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
           <span slot="excerpt">Revenue grew 12% year over year.</span>
         </lr-source-card>
       `);

@@ -8,6 +8,10 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 // every key they incidentally touch (chunkInspectorLabel, sourcePageSuffix, chunkScore,
 // scoreTierHigh, showMore) instead of tripping the partial-catalog fallback warning.
 import '../../../translations/ar.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -15,13 +19,13 @@ const chunks: LyraChunk[] = [
   { id: 'c3', text: 'Unrelated background text about the periodic table.', score: 0.2, sourceId: 's2' },
 ];
 
-it('defaults to empty chunks, default thresholds, sort="score", virtualizeAt=50, compact=false', async () => {
+it('defaults to empty chunks, default thresholds, sort="score", virtualizeAt=50, size="m"', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   expect(el.chunks).to.deep.equal([]);
   expect(el.thresholds).to.deep.equal({ high: 0.75, medium: 0.5 });
   expect(el.sort).to.equal('score');
   expect(el.virtualizeAt).to.equal(50);
-  expect(el.compact).to.be.false;
+  expect(el.size).to.equal('m');
 });
 
 it('sorts descending by score by default', async () => {
@@ -121,7 +125,7 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
   el.chunks = chunks;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
-  const listener = oneEvent(el, 'lr-expand');
+  const listener = oneEvent(el, 'lr-chunk-toggle');
   toggle.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ chunkId: chunks[0]!.id, expanded: true });
@@ -133,8 +137,8 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
   expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded')).to.equal('true');
 });
 
-it('compact rows have no text preview and no expand toggle', async () => {
-  const el = (await fixture(html`<lr-chunk-inspector compact></lr-chunk-inspector>`)) as LyraChunkInspector;
+it('size="s" rows have no text preview and no expand toggle', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector size="s"></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="text"]')) == null).to.be.true;
@@ -165,7 +169,7 @@ it('hands the virtual list a stable items array and key function across unrelate
   expect(list.items === firstItems, 'the sorted items array keeps its identity').to.equal(true);
   expect(list.keyFunction === firstKeyFunction, 'the key function keeps its identity').to.equal(true);
 
-  el.compact = true;
+  el.size = 's';
   await el.updateComplete;
   expect(list.items === firstItems).to.equal(true);
   expect(list.keyFunction === firstKeyFunction).to.equal(true);
@@ -593,4 +597,126 @@ it('formats finite numeric page locators with the effective locale while retaini
   expect(titles).to.deep.equal([`Report — p. ${numericPage}`, 'Appendix — p. 3']);
   expect(names[0]).to.include(`Report — p. ${numericPage}`);
   expect(names[1]).to.include('Appendix — p. 3');
+});
+
+describe('lr-chunk-inspector deprecated lr-expand alias', () => {
+  it('fires lr-chunk-toggle, then the lr-expand alias with its own equal detail, in both directions', async () => {
+    const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
+    const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
+    const details = new Set<unknown>();
+    for (const type of ['lr-chunk-toggle', 'lr-expand']) {
+      el.addEventListener(type, (event) => {
+        const custom = event as CustomEvent;
+        seen.push({ type, detail: { ...custom.detail }, cancelable: custom.cancelable });
+        details.add(custom.detail);
+      });
+    }
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    toggle.click();
+    await el.updateComplete;
+    toggle.click();
+    await el.updateComplete;
+    const id = chunks[0]!.id;
+    expect(seen).to.deep.equal([
+      { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: true }, cancelable: false },
+      { type: 'lr-expand', detail: { chunkId: id, expanded: true }, cancelable: false },
+      { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: false }, cancelable: false },
+      { type: 'lr-expand', detail: { chunkId: id, expanded: false }, cancelable: false },
+    ]);
+    expect(details.size, 'each event carries its own detail object').to.equal(4);
+  });
+
+  it('never warns for the non-cancelable alias', async () => {
+    const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
+    el.addEventListener('lr-expand', () => {});
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-chunk-inspector', kind: 'event', name: 'lr-expand' }],
+      async () => {
+        (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+        await el.updateComplete;
+      }
+    );
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-chunk-inspector size and the deprecated compact alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-chunk-inspector', kind: 'property', name: 'compact' }];
+  const observe = (el: LyraChunkInspector): string =>
+    ['text', 'toggle', 'open-button']
+      .map((part) => el.shadowRoot!.querySelectorAll(`[part~="${part}"]`).length)
+      .join('|');
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraChunkInspector>(markup);
+
+  it('renders dense rows for size="s" without a deprecation warning', async () => {
+    let dense = '';
+    let regular = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      dense = observe(await mount(html`<lr-chunk-inspector size="s" .chunks=${chunks}></lr-chunk-inspector>`));
+      regular = observe(await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`));
+    });
+    expect(dense).to.equal('0|0|3');
+    expect(regular).to.equal('3|3|3');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-chunk-inspector size="s" .chunks=${chunks}></lr-chunk-inspector>`));
+      alias = observe(await mount(html`<lr-chunk-inspector compact .chunks=${chunks}></lr-chunk-inspector>`));
+      const el = await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.getAttribute('size'), el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, 's', true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-chunk-inspector:property:compact',
+    ]);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('restores size="m" when compact is cleared or removed', async () => {
+    let regular = '';
+    let cleared = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`));
+      const el = await mount(html`<lr-chunk-inspector compact .chunks=${chunks}></lr-chunk-inspector>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      el.compact = true;
+      await el.updateComplete;
+      el.removeAttribute('compact');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(cleared).to.equal(regular);
+    expect(removed).to.equal(regular);
+  });
+
+  it('lets the last authored spelling win when markup carries both', async () => {
+    const sizes: string[] = [];
+    await captureDeprecationWarnings(ALIAS, async () => {
+      for (const markup of [
+        html`<lr-chunk-inspector size="m" compact></lr-chunk-inspector>`,
+        html`<lr-chunk-inspector compact size="m"></lr-chunk-inspector>`,
+      ]) {
+        sizes.push((await mount(markup)).size);
+      }
+    });
+    expect(sizes).to.deep.equal(['s', 'm']);
+  });
 });

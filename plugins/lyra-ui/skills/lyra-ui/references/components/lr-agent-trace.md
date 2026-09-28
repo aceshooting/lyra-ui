@@ -7,7 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showBars` / `show-bars` since `21.1.0`; use property `without-bars`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showCost` / `show-cost` since `21.1.0`; use property `with-cost`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showTokens` / `show-tokens` since `21.1.0`; use property `with-tokens`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,11 +40,12 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 - `label?: string` — forwarded to the composed `lr-trace-tree`. Omission leaves that tree's own
   `label` unset so it localizes its own default; any supplied string (including `''`) is
   forwarded verbatim
-- `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
-  `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
-  9.0.0 to match the positive polarity of its two siblings above — default inverted so the
-  rendered starting state is unchanged: `el.hideBars = true` becomes `el.showBars = false`) — all
-  forwarded verbatim
+- `withTokens: boolean = false` (attribute `with-tokens`), `withCost: boolean = false` (attribute
+  `with-cost`) and `withoutBars: boolean = false` (attribute `without-bars`) — forwarded verbatim to
+  the composed `<lr-trace-tree>`'s own `with-tokens`/`with-cost`/`without-bars`. Deprecated aliases:
+  `show-tokens`/`showTokens` (use `with-tokens`), `show-cost`/`showCost` (use `with-cost`) and
+  `show-bars`/`showBars` (use `without-bars`; inverted, so `show-bars="false"` equals
+  `without-bars`), each removed in 23.0.0
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`), `lr-span-toggle` (`detail: { spanId: string;
 expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:

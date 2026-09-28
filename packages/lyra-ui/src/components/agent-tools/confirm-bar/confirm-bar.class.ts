@@ -1,8 +1,9 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraVariant, type LyraSize } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   deferComposedFocusRepair,
   focusFirstAvailable,
@@ -10,6 +11,7 @@ import {
   repairComposedFocus,
 } from '../../../internal/focus-navigation.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
@@ -51,7 +53,7 @@ export type ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElemen
 
 /**
  * The ExtendableEvent-style resolver carried by `lr-approve`/`lr-deny`'s detail. Calling it during
- * the dispatch holds the bar in its `pending` presentation until the promise settles: a resolution
+ * the dispatch holds the bar in its `pendingAction` presentation until the promise settles: a resolution
  * finalizes the decision, a rejection restores the undecided state. Calling it more than once (from
  * one listener or several) waits for all of them.
  */
@@ -61,6 +63,12 @@ export interface LyraConfirmBarEventMap {
   'lr-approve': CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>;
   'lr-deny': CustomEvent<{ waitUntil: ConfirmBarWaitUntil }>;
   'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
+}
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -125,15 +133,18 @@ function deniedIcon(): SVGTemplateResult {
  * (`src/internal/overlay-manager.ts`) that real overlays use, so it must not swallow Escape intended
  * for an unrelated enclosing dialog or popover. Neither property traps focus or locks scrolling.
  *
- * No argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve
+ * No argument editing (escalate to `<lr-tool-approval-dialog>` without `readonly` when edit-before-approve
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
  *
- * Density and chrome are two knobs, not one: `compact` tightens the bar into a single dense inline
+ * Density and chrome are two knobs, not one: `size="s"` tightens the bar into a single dense inline
  * row and `frame="plain"` removes the card border/radius/background/padding, exactly as they do on
  * `<lr-agent-run>`, `<lr-commit-card>`, `<lr-result-card>`, `<lr-task-list>`, `<lr-terminal>` and
- * `<lr-thinking-panel>`. Before 9.0.0 `compact` alone did both; a bar that relied on that now
- * wants `compact frame="plain"`.
+ * `<lr-thinking-panel>`. Before 9.0.0 the density knob alone did both; a bar that relied on that
+ * now wants `size="s" frame="plain"`.
+ *
+ * The heading labels the `role="group"` and is not a document heading by default; set
+ * `heading-level` from `1`–`6` to expose it to heading navigation.
  *
  * Deny/Approve are `<lr-button>`s. Deny is `variant="neutral" appearance="outlined"` and Approve is
  * `variant="brand"` (`"danger"` under `variant="danger"`) at lr-button's default `appearance="accent"`,
@@ -146,15 +157,15 @@ function deniedIcon(): SVGTemplateResult {
  *
  * Async decisions have two entry points, and the declarative one is preferred. `lr-approve`/
  * `lr-deny`'s detail carries `waitUntil(promise)`, ExtendableEvent-style: calling it during the
- * dispatch puts the bar into `pending` (showing `loading` on the activated button and `disabled` on
+ * dispatch puts the bar into `pendingAction` (showing `loading` on the activated button and `disabled` on
  * the other) and the promise's settlement finalizes the decision or bounces it back for a retry, so
  * the component owns the whole state machine and no listener has to cast its `currentTarget`, write
- * `pending`, and remember to await `updateComplete` before unmounting. Several `waitUntil()` calls
+ * `pendingAction`, and remember to await `updateComplete` before unmounting. Several `waitUntil()` calls
  * from several listeners are awaited together. The imperative path it replaces still works and is
- * unchanged: `preventDefault()` alone sets `pending` to the action being persisted until the host
- * finalizes by setting `.decision` or bounces back by clearing `.pending` to `null`. A listener that
- * instead resolves the decision itself synchronously (setting `.decision` or `.pending` directly
- * during the dispatch) wins outright over both -- `decide()` only applies its own `pending`
+ * unchanged: `preventDefault()` alone sets `pendingAction` to the action being persisted until the host
+ * finalizes by setting `.decision` or bounces back by clearing `.pendingAction` to `null`. A listener that
+ * instead resolves the decision itself synchronously (setting `.decision` or `.pendingAction` directly
+ * during the dispatch) wins outright over both -- `decide()` only applies its own `pendingAction`
  * bookkeeping, `waitUntil()`'s included, when the listener left both untouched, because `emit()` is
  * synchronous and a write that lands during it would otherwise be silently clobbered.
  *
@@ -164,7 +175,7 @@ function deniedIcon(): SVGTemplateResult {
  * whether the announcement has already happened.
  *
  * The host-writable `disabled` independently blocks both Deny and Approve and makes `decide()` a
- * no-op, without discarding any in-flight `decision`/`pending` state.
+ * no-op, without discarding any in-flight `decision`/`pendingAction` state.
  *
  * @customElement lr-confirm-bar
  * @slot - Supplementary body content between the heading and the actions (e.g. a `lr-diff-view` of
@@ -173,12 +184,12 @@ function deniedIcon(): SVGTemplateResult {
  *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
  * @event lr-approve - `detail: { args, waitUntil }` — `args` is the `args` prop as-is (no editing in
  *   the bar), matching `lr-tool-approval-dialog`'s own `args` detail. Cancelable: a listener calling
- *   `preventDefault()` sets `pending` to `'approve'` instead of finalizing synchronously; set
- *   `.decision` (or clear `.pending` back to `null`) once your async work settles. `waitUntil(promise)`
+ *   `preventDefault()` sets `pendingAction` to `'approve'` instead of finalizing synchronously; set
+ *   `.decision` (or clear `.pendingAction` back to `null`) once your async work settles. `waitUntil(promise)`
  *   does the same thing declaratively and needs no `preventDefault()`: the bar stays pending until
  *   the promise settles, then finalizes on resolution or bounces back on rejection.
  * @event lr-deny - `detail: { waitUntil }`, the same resolver `lr-approve` carries and no other data,
- *   matching the dialog's detail-free `lr-deny`. Cancelable, same `pending` mechanism as `lr-approve`.
+ *   matching the dialog's detail-free `lr-deny`. Cancelable, same `pendingAction` mechanism as `lr-approve`.
  * @event lr-decision-settled - `detail: { decision }`. Emitted after the decided `[part="status"]`
  *   has rendered and its live-region announcement has been made, on every path that reaches a
  *   decision, including a host writing `.decision` directly. Non-cancelable: the decision is already
@@ -198,7 +209,7 @@ function deniedIcon(): SVGTemplateResult {
  * @csspart deny-button-start - Forwarded from the internal Deny `<lr-button>`'s own `start` part.
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
  * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
- *   part, present only while `pending` is `'deny'`.
+ *   part, present only while `pendingAction` is `'deny'`.
  * @csspart approve-button - The built-in Approve `<lr-button>`. Named identically to the dialog's
  *   part.
  * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
@@ -209,15 +220,15 @@ function deniedIcon(): SVGTemplateResult {
  *   part.
  * @csspart approve-button-end - Forwarded from the internal Approve `<lr-button>`'s own `end` part.
  * @csspart approve-button-spinner - Forwarded from the internal Approve `<lr-button>`'s own
- *   `spinner` part, present only while `pending` is `'approve'`.
+ *   `spinner` part, present only while `pendingAction` is `'approve'`.
  * @csspart status - The decided-state text. Always present in the DOM (`tabindex="-1"`) so focus has
  *   a stable, synchronous landing spot on activation.
  * @cssprop [--lr-confirm-bar-bg=var(--lr-color-surface)] - Resting background of `[part='base']`.
  * `frame="plain"` still paints transparent.
  * @cssprop [--lr-confirm-bar-compact-padding=var(--lr-space-s)] - Padding of `[part='base']` while
- * `compact`. Accepts any padding shorthand. Overridden entirely by `frame="plain"`.
+ * `size` is `s` or smaller. Accepts any padding shorthand. Overridden entirely by `frame="plain"`.
  * @cssprop [--lr-confirm-bar-compact-gap=var(--lr-space-s)] - Gap between the row's items while
- * `compact`.
+ * `size` is `s` or smaller.
  * @cssprop [--lr-confirm-bar-approved-color=var(--lr-color-success)] - `[part='status']` text/icon
  * color once `decision` is `'approved'`.
  * @cssprop [--lr-confirm-bar-denied-color=var(--lr-color-danger)] - `[part='status']` text/icon
@@ -255,25 +266,38 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    pending: 'pendingAction',
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   /** Drives the default heading through the existing dialog keys. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
   /** Free-form heading override for non-tool proposals. Wins over `toolName` when set. */
   @property() heading = '';
 
+  /** Semantic level of `[part="heading"]`. The default `none` keeps it a plain label of the
+   *  `role="group"`; `1`–`6` also exposes it to heading navigation at that level. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
+
   /** Shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when defined. */
   @property({ attribute: false }) args: unknown = undefined;
 
-  // `decision`/`pending` are accessor-backed rather than plain fields so `decide()` can tell "a
-  // synchronous listener wrote here" apart from "nothing wrote here" -- see `dispatchWriteGuard`
+  // `decision`/`pendingAction` are accessor-backed rather than plain fields so `decide()` can tell
+  // "a synchronous listener wrote here" apart from "nothing wrote here" -- see `dispatchWriteGuard`
   // below. Comparing before/after *values* cannot make that distinction: the guard in `decide()`
-  // only reaches its check once both are already `null`, so a listener that writes `pending = null`
-  // right back (bouncing out to an out-of-band resolution) is value-identical to a listener that
+  // only reaches its check once both are already `null`, so a listener that writes
+  // `pendingAction = null` right back (bouncing out to an out-of-band resolution) is value-identical to a listener that
   // touched nothing at all.
   private _decision: ConfirmBarDecision = null;
   private _pending: ApprovalAction | null = null;
+  /** Backing store of the deprecated `pending` alias, kept in step with `_pending` by
+   *  `deprecatedAliases`. Its setter marks the same write guard, so a listener still using the old
+   *  name is detected even when it writes back the value already there. */
+  private _pendingAlias: ApprovalAction | null = null;
 
-  /** Marked on every write to `decision`/`pending`, from any source. `decide()` opens it
+  /** Marked on every write to `decision`/`pendingAction`, from any source. `decide()` opens it
    *  immediately before dispatching `lr-approve`/`lr-deny` and reads it back afterward: since the
    *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
    *  marked it in between. */
@@ -294,23 +318,51 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Which action is awaiting host resolution, while an lr-approve/lr-deny listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or set `decision` to finalize. */
-  @property({ reflect: true })
-  get pending(): ApprovalAction | null { return this._pending; }
-  set pending(value: ApprovalAction | null) {
+  @property({ attribute: 'pending-action', reflect: true })
+  get pendingAction(): ApprovalAction | null { return this._pending; }
+  set pendingAction(value: ApprovalAction | null) {
     const previous = this._pending;
     this._pending = value;
+    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.requestUpdate('pendingAction', previous);
+  }
+
+  /** Which action is awaiting host resolution, while an lr-approve/lr-deny listener has called
+   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
+   *  on failure, so the user can retry), or set `decision` to finalize.
+   *  @deprecated Use `pending-action`; removal not before 23.0.0. */
+  @property({ reflect: true })
+  get pending(): ApprovalAction | null { return this._pendingAlias; }
+  set pending(value: ApprovalAction | null) {
+    const previous = this._pendingAlias;
+    this._pendingAlias = value;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pending', previous);
   }
 
   /** Disables both Deny and Approve and makes `decide()` a no-op, without discarding any
-   *  in-flight `decision`/`pending` state. Distinct from `pending`: `pending` marks one specific
-   *  action as awaiting the host while the other stays interactive, while `disabled` blocks both
-   *  regardless of `pending`. Reflects as an attribute. */
+   *  in-flight `decision`/`pendingAction` state. Distinct from `pendingAction`, which marks one
+   *  specific action as awaiting the host while the other stays interactive, while `disabled`
+   *  blocks both regardless of `pendingAction`. Reflects as an attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Token-mapped emphasis for destructive proposals. */
   @property({ reflect: true }) variant: ConfirmBarVariant = 'neutral';
+
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) collapses the bar from a
+   * stacked `display: block` card to a single tightly-padded inline row, for a confirmation that has
+   * to live inside an existing container -- a table cell, a card's action row, a toolbar. The host
+   * becomes `inline-flex`, and the narrow-allocation `@container` treatment is switched off (a dense
+   * bar is *expected* to be narrow, so stretching the buttons to fill would be exactly wrong). `m`
+   * (the default) and larger keep the stacked card. Purely a density/layout knob -- same convention
+   * as `<lr-agent-run>`'s `size`: the border, corner radius and background stay, so use
+   * `frame="plain"` to drop the chrome. Retune the density through
+   * `--lr-confirm-bar-compact-padding`/`-gap`. Everything else -- the event shapes, the
+   * focus-to-`[part='status']`-before-unmount contract, `role="group"` and its heading label --
+   * is unchanged.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Collapses the bar from a stacked `display: block` card to a single tightly-padded inline row,
    *  for a confirmation that has to live inside an existing container -- a table cell, a card's
@@ -321,14 +373,15 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  `frame="plain"` to drop the chrome. Retune the density through
    *  `--lr-confirm-bar-compact-padding`/`-gap`. Everything else -- the event shapes, the
    *  focus-to-`[part='status']`-before-unmount contract, `role="group"` and its heading label --
-   *  is unchanged. */
+   *  is unchanged.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
    *  corner radius, so a bar nested inside a host container that already draws a border (a table
-   *  cell, an `<lr-result-card>` action row) doesn't double it. `plain` wins over `compact` when
-   *  both are set -- there is no padding left to tighten. The Deny/Approve `<lr-button>`s keep
+   *  cell, an `<lr-result-card>` action row) doesn't double it. `plain` wins over the dense `size`
+   *  tier when both are set -- there is no padding left to tighten. The Deny/Approve `<lr-button>`s keep
    *  their own border/background either way, so a chrome-less bar still has a visible interactive
    *  affordance. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
@@ -344,7 +397,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   /** Opt-in: maps Escape on `[part="base"]` to the same outcome as clicking Deny. See the class
    *  doc for why this is scoped to this element's own base rather than `document`. A no-op while
-   *  `disabled`, already decided, or `pending`, exactly like clicking Deny itself. Defaults to
+   *  `disabled`, already decided, or `pendingAction`, exactly like clicking Deny itself. Defaults to
    *  `false` -- an unlabelled Escape denying a proposal is a real behavior change a host must
    *  choose explicitly. */
   @property({ type: Boolean, reflect: true, attribute: 'escape-denies' }) escapeDenies = false;
@@ -389,10 +442,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       changed.has('decision') &&
       changed.get('decision') !== undefined &&
       this.decision != null &&
-      this.pending != null
+      this.pendingAction != null
     ) {
       this.handOffDecidedFocus();
-      this.pending = null;
+      this.pendingAction = null;
     }
   }
 
@@ -432,20 +485,20 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** `escape-denies`'s implementation, bound to `[part="base"]` -- see the class doc for why this
    *  is not routed through `activateOverlay()`. Stops propagation only when Escape actually denied
    *  something (mirroring `<lr-memory-panel>`'s own `onConfirmKeyDown`): `decide()` is a no-op
-   *  while `disabled`, already decided, or `pending`, and swallowing Escape in that case would
+   *  while `disabled`, already decided, or `pendingAction`, and swallowing Escape in that case would
    *  refuse to close an unrelated enclosing dialog for no reason. */
   private onBaseKeyDown = (event: KeyboardEvent): void => {
     if (!this.escapeDenies || event.key !== 'Escape') return;
     const decisionBefore = this.decision;
-    const pendingBefore = this.pending;
+    const pendingBefore = this.pendingAction;
     this.decide('denied');
-    if (this.decision !== decisionBefore || this.pending !== pendingBefore) {
+    if (this.decision !== decisionBefore || this.pendingAction !== pendingBefore) {
       event.stopPropagation();
     }
   };
 
   private decide(next: 'approved' | 'denied'): void {
-    if (this.disabled || this.decision != null || this.pending != null) return;
+    if (this.disabled || this.decision != null || this.pendingAction != null) return;
     // ExtendableEvent's own rule, for the same reason: `waitUntil()` extends *this dispatch*, so it
     // is only meaningful while listeners are running. A reference captured and called later cannot
     // retroactively reopen a decision that already finalized, and silently pretending otherwise
@@ -468,11 +521,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     };
     // The guard above proves both are null right up to this point -- but `emit()` below dispatches
     // synchronously, so a listener can still write either one from inside it (e.g. it calls
-    // preventDefault() and resolves the decision itself out of band, or bounces `pending` back to
+    // preventDefault() and resolves the decision itself out of band, or bounces `pendingAction` back to
     // null immediately). A before/after *value* comparison can't detect that last case -- both are
-    // already null, so a listener writing `pending = null` reads identically to a listener that
+    // already null, so a listener writing `pendingAction = null` reads identically to a listener that
     // touched nothing. `dispatchWriteGuard` tracks the write itself, not its value: opened here,
-    // then marked by the `decision`/`pending` setters if a listener assigns either one during the
+    // then marked by the `decision`/`pendingAction` setters if a listener assigns either one during the
     // synchronous `emit()` below. Only when it stays untouched did the listener leave both alone,
     // and the built-in "awaiting the host" pending state applies; otherwise it would silently
     // clobber whatever the listener just did. `waitUntil()` composes with that rule rather than
@@ -492,7 +545,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // just-activated button makes `lr-button`'s internal native `<button>` genuinely `disabled`,
       // and a browser blurs a focused element the instant it becomes disabled. Without moving
       // focus first, a keyboard user who activated Approve/Deny would be silently dropped to
-      // <body> for the whole duration of the host's async work. Ordered before the `pending` write
+      // <body> for the whole duration of the host's async work. Ordered before the `pendingAction` write
       // so the button is still focusable when focus leaves it. `[part="status"]` and not
       // `returnFocusTo`: the decision is not settled yet, so this is not the return journey.
       this.statusEl?.focus();
@@ -504,7 +557,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         for (const deferral of deferrals) void deferral.catch(() => undefined);
         return;
       }
-      this.pending = approvalAction(next);
+      this.pendingAction = approvalAction(next);
       if (deferrals.length > 0) this.awaitDeferredDecision(Promise.all(deferrals), next);
       return;
     }
@@ -519,7 +572,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /**
    * The settlement half of `waitUntil()`. Every write it performs is re-checked against the state
    * it left behind rather than applied blind: the promise settles in a later task, and by then the
-   * host may have finalized the decision out of band, bounced `pending` itself, or started a whole
+   * host may have finalized the decision out of band, bounced `pendingAction` itself, or started a whole
    * new decision. `generation` covers that last case, which the property checks alone cannot -- a
    * second pending decision for the same action is state-identical to the first.
    */
@@ -528,16 +581,16 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     this.deferralGeneration += 1;
     const generation = this.deferralGeneration;
     const stillOurs = (): boolean =>
-      generation === this.deferralGeneration && this.decision == null && this.pending === action;
+      generation === this.deferralGeneration && this.decision == null && this.pendingAction === action;
     void promise.then(
       () => {
-        // `willUpdate()` owns the rest: it clears `pending` and performs the decided-state focus
+        // `willUpdate()` owns the rest: it clears `pendingAction` and performs the decided-state focus
         // handoff for every externally-finalized decision, this one included.
         if (stillOurs()) this.decision = next;
       },
       () => {
         if (!stillOurs()) return;
-        this.pending = null;
+        this.pendingAction = null;
         this.returnFocusAfterBounce(action);
       },
     );
@@ -553,7 +606,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    */
   private returnFocusAfterBounce(action: ApprovalAction): void {
     void this.updateComplete.then(() => {
-      if (!this.isConnected || this.decision != null || this.pending != null) return;
+      if (!this.isConnected || this.decision != null || this.pendingAction != null) return;
       repairComposedFocus(this, () =>
         this.renderRoot.querySelector<HTMLElement>(`[part="${action}-button"]`),
       );
@@ -634,6 +687,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   override render(): TemplateResult {
     const decided = this.decision != null;
     const hostLabel = hostAriaLabel(this);
+    const headingLevel = resolveHeadingLevel(this.headingLevel ?? 'none');
     return html`
       <div
         part="base"
@@ -642,7 +696,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         aria-labelledby=${hostLabel === null ? this.headingId : nothing}
         @keydown=${this.onBaseKeyDown}
       >
-        <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
+        <div
+          part="heading"
+          id=${this.headingId}
+          role=${headingLevel ? 'heading' : nothing}
+          aria-level=${headingLevel ?? nothing}
+        >${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>
         ${this.args !== undefined
           ? html`<lr-details part="args" summary=${this.localize('toolApprovalArgsLabel')}
@@ -670,8 +729,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   variant="neutral"
                   appearance="outlined"
                   type="button"
-                  ?loading=${this.pending === 'deny'}
-                  ?disabled=${this.disabled || this.pending === 'approve'}
+                  ?loading=${this.pendingAction === 'deny'}
+                  ?disabled=${this.disabled || this.pendingAction === 'approve'}
                   exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
                   @click=${() => this.decide('denied')}
                 >${this.localize('deny')}</lr-button>
@@ -679,8 +738,8 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
                   part="approve-button"
                   variant=${this.variant === 'danger' ? 'danger' : 'brand'}
                   type="button"
-                  ?loading=${this.pending === 'approve'}
-                  ?disabled=${this.disabled || this.pending === 'deny'}
+                  ?loading=${this.pendingAction === 'approve'}
+                  ?disabled=${this.disabled || this.pendingAction === 'deny'}
                   exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
                   @click=${() => this.decide('approved')}
                 >${this.localize('approve')}</lr-button>

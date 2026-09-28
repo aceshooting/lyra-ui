@@ -5,6 +5,7 @@ import { styles } from './mutation-observer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -67,6 +68,10 @@ export interface LyraMutationObserverEventMap {
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    characterData: 'charData',
+    subtree: ['withoutSubtree', invertAlias, invertAlias],
+  };
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-mutation',
@@ -103,6 +108,14 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
    * @deprecated Use `char-data` (`charData`); removal not before 23.0.0.
    */
   @property({ type: Boolean, attribute: 'character-data', reflect: true }) characterData = false;
+  /** Observes only the slotted elements themselves, not their descendants (the native
+   *  `subtree: false` option). */
+  @property({ type: Boolean, attribute: 'without-subtree' }) withoutSubtree = false;
+  /**
+   * Observes the slotted elements' descendants too (the native `subtree` option).
+   *
+   * @deprecated Use `without-subtree`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) subtree = true;
   @property({ attribute: false }) attributeFilter: string[] = [];
 
@@ -147,9 +160,6 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
         'attr="*" (or nothing with attr/attributeFilter)'
       );
     }
-    if (changed.has('characterData') && this.characterData === true) {
-      warnDeprecatedUsage(this, 'property', 'characterData', 'char-data');
-    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -163,8 +173,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
         'charData',
         'charDataOldValue',
         'observeAttributes',
-        'characterData',
-        'subtree',
+        'withoutSubtree',
         'attributeFilter',
       ].some((key) => changed.has(key))
     ) {
@@ -209,12 +218,11 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     const charData = this.charData === true;
     const charDataOldValue = this.charDataOldValue === true;
     const observeAttributes = this.observeAttributes === true;
-    const characterData = this.characterData === true;
-    const subtree = this.subtree === true;
+    const subtree = this.withoutSubtree !== true;
     const attributeFilter = attr === null ? normalizedAttributeFilter(this.attributeFilter) : Object.freeze([]);
     const observesAttributes =
       mappedAttributes || attrOldValue || observeAttributes || attributeFilter.length > 0;
-    const observesCharacterData = charData || charDataOldValue || characterData;
+    const observesCharacterData = charData || charDataOldValue;
     if (disabled || !this.isConnected || !MutationObserverCtor) return;
     let targets: Element[];
     try {

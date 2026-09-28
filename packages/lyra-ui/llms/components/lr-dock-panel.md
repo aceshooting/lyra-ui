@@ -7,7 +7,8 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `edge` / `edge` since `21.1.0`; use property `placement`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecated property** `resizable` / `resizable` since `21.1.0`; use property `without-resize (the inverse: resizable="false" becomes without-resize)`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,9 +30,10 @@ docked case.
 
 **Properties:**
 
-- `edge: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
+- `placement: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
-  direction); `top`/`bottom` are block-direction and unaffected by RTL.
+  direction); `top`/`bottom` are block-direction and unaffected by RTL. Deprecated alias: `edge`
+  (use `placement`; removed in 23.0.0). Both reflect; the last write wins.
 - `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
@@ -41,11 +43,10 @@ docked case.
   separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
-- `resizable: boolean = true` (reflected) — when `false`, no drag handle renders at all and the panel
-  is a fixed size. Its string-aware converter accepts `resizable="false"` as false despite the
-  true default. A Lit property binding (`.resizable=${false}`) also disables it; a false
-  boolean-attribute binding (`?resizable=${false}`) only removes the attribute and cannot override
-  a true-defaulting property.
+- `withoutResize: boolean = false` (reflected, attribute `without-resize`) — when set, no drag handle
+  renders at all and the panel is a fixed size. Deprecated alias: `resizable` (its inverse, so
+  `resizable="false"` equals `without-resize`; use `without-resize`; removed in 23.0.0). Both
+  reflect; the last write wins.
 
 **Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
 the then-current resize detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
@@ -56,7 +57,8 @@ renders at the `280px` default, and `event.detail.size` reads `undefined`.
 
 **Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
 `LyraDockPanelResizeDetail = { extent: string }`, readonly
-`LyraDockPanelCollapseChangeDetail = { collapsed: boolean }`, and `LyraDockPanelEventMap`.
+`LyraDockPanelCollapseChangeDetail = { expanded: boolean, collapsed: boolean }` (the `collapsed`
+key is deprecated and removed in 23.0.0; `expanded` is its inverse), and `LyraDockPanelEventMap`.
 The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
 private adapter over the library's canonical CSS-length resolver, with container/viewport units
 resolved in the host's owner realm.
@@ -76,11 +78,12 @@ resolved in the host's owner realm.
   after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
-- `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
-  collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
-  consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
-collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
-  directly). Both details are fresh readonly/frozen snapshots.
+- `lr-collapse-request` (cancelable; `detail: { expanded, collapsed }` is the state proposed by the
+  built-in collapse toggle — `expanded` is the proposed state and the deprecated `collapsed` key its
+  inverse. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a consumer assigns
+  `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: { expanded, collapsed }` is
+  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
+  details are fresh readonly/frozen snapshots.
 
 The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
 feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.
@@ -89,7 +92,7 @@ Type imports likewise move from `DockPanel*` to `LyraDockPanel*`.
 **Slots:** default — the panel's own content.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
-`handle` (the draggable resize edge; only rendered when `resizable` and not `collapsed`),
+`handle` (the draggable resize edge; only rendered when not `without-resize` and not `collapsed`),
 `collapse-toggle` (only rendered when `collapsible`)
 
 **Themeable custom properties:** `--lr-dock-panel-collapsed-size` (default
@@ -114,7 +117,7 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
 
 ```html
 <div style="position: relative; block-size: 100vh;">
-  <lr-dock-panel edge="end" extent="320px" min-extent="200px" max-extent="480px" collapsible>
+  <lr-dock-panel placement="end" extent="320px" min-extent="200px" max-extent="480px" collapsible>
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
   </lr-dock-panel>
 </div>
@@ -122,7 +125,7 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
   const panel = document.querySelector("lr-dock-panel");
   panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
   panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
-  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.collapsed));
+  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.expanded));
 </script>
 ```
 
@@ -144,13 +147,13 @@ reconciliation emits neither resize event and preserves an in-range authored rel
 - Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
   reconcile atomically. A later container grow does not silently restore an extent that was clamped
   during shrink.
-- `handle` only renders while `resizable && !collapsed`; `collapse-toggle` only renders while
-  `collapsible` — a panel with both `false` renders neither control, just fixed-size slotted content.
-  `resizable` and `collapsed` interact: dragging is disabled whenever `collapsed` is `true`, even if
-  `resizable` is also `true`.
+- `handle` only renders while `!withoutResize && !collapsed`; `collapse-toggle` only renders while
+  `collapsible` — a panel with `without-resize` and without `collapsible` renders neither control,
+  just fixed-size slotted content. Dragging is also disabled whenever `collapsed` is `true`, even
+  without `without-resize`.
 - The collapse-toggle's chevron rotates to point toward the panel's pinned edge when expanded (the
   direction clicking it will shrink toward) and away from it when collapsed — this is folded through
-  both `edge` and, for `start`/`end`, current RTL-ness, so the same markup visually flips correctly
+  both `placement` and, for `start`/`end`, current RTL-ness, so the same markup visually flips correctly
   under `dir="rtl"` with no extra author work.
 
 ---

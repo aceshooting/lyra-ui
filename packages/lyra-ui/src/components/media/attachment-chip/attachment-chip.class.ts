@@ -19,6 +19,14 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './attachment-chip.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
+import {
+  normalizeReflectedOptionalSize,
+  normalizeSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -46,6 +54,13 @@ export interface LyraAttachmentPreviewRequestDetail
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
+
+/** Whether a `size` selects the compact density (`s` and the steps below it). */
+function isCompactSize(size: LyraSize | undefined): boolean {
+  if (size === undefined) return false;
+  const step = normalizeSize(size);
+  return step === '2xs' || step === 'xs' || step === 's';
+}
 const ICON_STROKE_WIDTH = '1.75';
 
 // Same shape as `<lr-chat-message>`'s local `retryIcon()` -- duplicated
@@ -126,7 +141,7 @@ export interface LyraAttachmentChipEventMap {
  * exposes no slots.
  *
  * @customElement lr-attachment-chip
- * @event lr-remove - The user activated the remove (×) button. `detail: { attachmentId }`. Only rendered while `removable`.
+ * @event lr-remove - The user activated the remove (×) button. `detail: { attachmentId }`. Not rendered while `without-remove-button` is set.
  * @event lr-retry - The user activated the retry button. `detail: { attachmentId }`. Only rendered while `status="error"`.
  * @event lr-preview-request - Notification that the preview action was activated. `detail: { attachmentId, name, mimeType, src }`. Not cancelable: the chip never registers or owns a viewer/overlay, so there is nothing local to gate behind `.preventDefault()`; consumers compose the desired preview surface entirely on their own.
  * @csspart base - The chip's root container.
@@ -142,8 +157,10 @@ export interface LyraAttachmentChipEventMap {
  *   `progress` while `status="uploading"` and `progress` is unset/0; the adjacent status text
  *   carries the visible wording, and upload ticks never enter a live region.
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
- * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is available.
- * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
+ * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is
+ * available unless `without-preview` is set.
+ * @csspart remove-button - The remove (×) affordance, rendered unless `without-remove-button` is
+ * set.
  * @cssprop [--lr-attachment-chip-spinner-duration=var(--lr-transition-ambient)] - Duration and
  * easing of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion.
  * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
@@ -154,19 +171,20 @@ export interface LyraAttachmentChipEventMap {
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border-subtle)] - Chip border color. Every
  * non-`pending` `status` changes its private default to `transparent`.
  * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
- * while `compact`, rethemeable independently of `--lr-icon-button-size`. Retry, preview, and
- * remove actions retain that shared token's minimum hit-area floor.
+ * at the compact density (`size="s"` and below), rethemeable independently of
+ * `--lr-icon-button-size`. Retry, preview, and remove actions retain that shared token's minimum
+ * hit-area floor.
  * @cssprop [--lr-attachment-chip-compact-font-size=var(--lr-font-size-xs)] - Font size of
- * `[part="base"]` while `compact`.
+ * `[part="base"]` at the compact density.
  * @cssprop [--lr-attachment-chip-compact-gap=var(--lr-size-0-25rem)] - Gap between the chip's parts
- * while `compact`.
+ * at the compact density.
  * @cssprop [--lr-attachment-chip-padding=var(--lr-space-xs) var(--lr-space-s)] - Padding of
- * `[part="base"]` while `compact` is unset.
+ * `[part="base"]` at the default density.
  * @cssprop [--lr-attachment-chip-compact-padding=var(--lr-size-0-125rem) var(--lr-space-xs)] -
- * Padding of `[part="base"]` while `compact`.
+ * Padding of `[part="base"]` at the compact density.
  * @cssprop [--lr-attachment-chip-compact-thumbnail-only-padding=var(--lr-size-0-125rem)] - Padding
- * of `[part="base"]` while `compact` and `thumbnail-only` together actually hide `[part="meta"]`
- * (an image-mime attachment only — see `thumbnailOnly`). Reduced from
+ * of `[part="base"]` while the compact density and `thumbnail-only` together actually hide
+ * `[part="meta"]` (an image-mime attachment only — see `thumbnailOnly`). Reduced from
  * `--lr-attachment-chip-compact-padding` since the lone thumbnail no longer needs inline padding
  * sized for a text row.
  * @status stable
@@ -203,6 +221,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    previewable: ['withoutPreview', invertAlias, invertAlias],
+    removable: ['withoutRemoveButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : undefined), (value) => isCompactSize(value as LyraSize | undefined)],
+  };
 
   /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
    *  When set, `name`/`bytes`/`mime-type`/the image thumbnail are all derived
@@ -213,7 +236,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property() name = '';
 
   /** File size as a raw byte count, used only while `file` is unset. Named for what it holds
-   *  rather than `size`, which everywhere else in this library names a size *tier*
+   *  rather than `size`, which in this library (this component included) names a size *tier*
    *  (`small`/`medium`/`large`, `xs`...`xl`). `0` is a known empty file and renders `0 B`; only
    *  omission means unknown. Non-finite/negative inputs are treated as unknown. */
   private _bytes?: number;
@@ -249,7 +272,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    *  A real `File` takes precedence and is previewed through a temporary blob URL. */
   @property({ attribute: 'preview-src' }) previewSrc = '';
 
-  /** Shows the preview action when a `file` or `preview-src` is available. */
+  /** Hides the preview action, which otherwise renders whenever a `file` or `preview-src` is
+   *  available. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-preview' })
+  withoutPreview = false;
+
+  /** Shows the preview action when a `file` or `preview-src` is available.
+   *  @deprecated Use `without-preview` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -266,7 +295,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    *  (see `hasNumericProgress`); an oversized value clamps to 100 (see `clampedProgress`). */
   @property({ type: Number }) progress = 0;
 
-  /** Shows the remove (×) button. */
+  /** Hides the remove (×) button, which otherwise renders. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-remove-button' })
+  withoutRemoveButton = false;
+
+  /** Shows the remove (×) button.
+   *  @deprecated Use `without-remove-button` (inverted); removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -274,17 +308,45 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   })
   removable = true;
 
+  private _size?: LyraSize;
+  /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
+   *  or `small`/`medium`/`large`. `s` and the steps below it select the compact density: a
+   *  smaller, borderless pill instead of the default bordered chip, for an icon-only-adjacent
+   *  attachment affordance (e.g. a composer's pending-attachment tray) without hand-tuning several
+   *  `::part()` custom properties individually. `m` and the steps above it keep the default
+   *  density. Opt-in: with no size the chip renders exactly as before. Unsupported values
+   *  normalize to the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    // Only a foreign (unsupported) raw attribute is repaired in place; a supported one is left for
+    // reflection, so a write synced from the deprecated `compact` while the element upgrades never
+    // overwrites a `size` attribute that has not been processed yet.
+    const raw = this.getAttribute('size');
+    const normalized =
+      raw !== null && optionalSizeConverter.normalize(raw) !== undefined
+        ? optionalSizeConverter.normalize(next)
+        : normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
   /** Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy
    *  chip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.
    *  a composer's pending-attachment tray) without hand-tuning several `::part()` custom
-   *  properties individually. `false` (the default) is visually identical to today. */
+   *  properties individually. `false` (the default) is visually identical to today.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
-  /** When both this and `compact` are set, hides `[part=meta]` (the filename/size text) entirely
-   *  for an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a
+  /** At the compact density (`size="s"` and below), hides `[part=meta]` (the filename/size text)
+   *  entirely for an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a
    *  thumbnail-only density purely through props, with no consumer-side CSS. Has no effect for a
-   *  non-image chip (there is no thumbnail to fall back to showing on its own) or when `compact` is
-   *  unset. `false` (the default) reproduces today's exact output. */
+   *  non-image chip (there is no thumbnail to fall back to showing on its own) or at the default
+   *  density. `false` (the default) reproduces today's exact output. */
   @property({ type: Boolean, reflect: true, attribute: 'thumbnail-only' })
   thumbnailOnly = false;
 
@@ -362,6 +424,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private get clampedProgress(): number {
     return finiteRange(this.progress, 0, 0, 100);
+  }
+
+  /** The compact density: `size` `s` and below. Mirrors the stylesheet's selectors exactly. */
+  private get compactDensity(): boolean {
+    return isCompactSize(this.size);
   }
 
   private get effectiveStatus(): LyraAttachmentUploadStatus {
@@ -449,7 +516,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     if (
       this.isConnected &&
       this.file &&
-      (this.file.type.startsWith('image/') || this.previewable)
+      (this.file.type.startsWith('image/') || !this.withoutPreview)
     )
       this.ensureObjectUrl(this.file);
     else if (this.objectUrlFile) this.revokeObjectUrl();
@@ -569,7 +636,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
         >
         <span
           part="meta"
-          ?hidden=${this.compact &&
+          ?hidden=${this.compactDensity &&
           this.thumbnailOnly &&
           this.effectiveMimeType.startsWith('image/')}
         >
@@ -606,7 +673,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
               ${retryIcon()}
             </button>`
           : nothing}
-        ${this.previewable && this.effectivePreviewSrc
+        ${!this.withoutPreview && this.effectivePreviewSrc
           ? html`<button
               part="preview-button"
               type="button"
@@ -620,7 +687,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
               ${expandIcon()}
             </button>`
           : nothing}
-        ${this.removable
+        ${!this.withoutRemoveButton
           ? html`<button
               part="remove-button"
               type="button"

@@ -3,6 +3,7 @@ import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
@@ -26,12 +27,12 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-it('defaults to entries=[], follow=true, show-timestamps=false, max-rendered-entries=500', async () => {
+it('defaults to entries=[], follow=true, with-timestamps=false, max-rendered-entries=500', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   expect(el.entries).to.deep.equal([]);
   expect(el.follow).to.be.true;
   expect(el.hasAttribute('follow')).to.be.true;
-  expect(el.showTimestamps).to.be.false;
+  expect(el.withTimestamps).to.be.false;
   expect(el.maxRenderedEntries).to.equal(500);
 });
 
@@ -118,7 +119,7 @@ it('styles direct and interim token-list entry parts, including reduced motion',
       </div>
     `)) as HTMLDivElement;
     const el = surface.querySelector('lr-transcript-feed') as LyraTranscriptFeed;
-    el.showTimestamps = true;
+    el.withTimestamps = true;
     el.entries = [
       { id: 'final', speaker: 'You', text: 'Final caption', timestamp: Date.UTC(2026, 0, 1) },
       { id: 'interim', speaker: 'Agent', text: 'Interim caption', timestamp: Date.UTC(2026, 0, 1), interim: true },
@@ -172,7 +173,7 @@ it('keeps fully visible interim text, speaker, and timestamp at WCAG contrast in
       </div>
     `)) as HTMLDivElement;
     const el = surface.querySelector('lr-transcript-feed') as LyraTranscriptFeed;
-    el.showTimestamps = true;
+    el.withTimestamps = true;
     el.entries = [{ id: 'interim', speaker: 'Agent', text: 'Interim caption', timestamp: Date.UTC(2026, 0, 1), interim: true }];
     await el.updateComplete;
 
@@ -245,7 +246,7 @@ it('distinguishes an omitted label from an explicit empty override on the log re
 
 describe('timestamps', () => {
   it('renders the built-in short-time format when no formatTimestamp is supplied', async () => {
-    const el = (await fixture(html`<lr-transcript-feed show-timestamps locale="en"></lr-transcript-feed>`)) as LyraTranscriptFeed;
+    const el = (await fixture(html`<lr-transcript-feed with-timestamps locale="en"></lr-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: Date.UTC(2026, 0, 1, 12, 34) }];
     await el.updateComplete;
     const rendered = el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent!;
@@ -254,21 +255,66 @@ describe('timestamps', () => {
     );
   });
 
-  it('hides timestamps by default and shows them (via formatTimestamp when supplied) when show-timestamps is set', async () => {
+  it('hides timestamps by default and shows them (via formatTimestamp when supplied) when with-timestamps is set', async () => {
     const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
     el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="timestamp"]')) === null).to.be.true;
 
-    el.showTimestamps = true;
+    el.withTimestamps = true;
     el.formatTimestamp = (date) => `t=${date.getTime()}`;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
   });
 
+  it('keeps the deprecated show-timestamps alias working, warning once', async () => {
+    let el!: LyraTranscriptFeed;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-transcript-feed', kind: 'property', name: 'showTimestamps' }],
+      async () => {
+        el = (await fixture(html`<lr-transcript-feed show-timestamps></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        el.showTimestamps = false;
+        el.showTimestamps = true;
+        el.formatTimestamp = (date) => `t=${date.getTime()}`;
+        el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
+        await el.updateComplete;
+      },
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      'lyra-deprecated:lr-transcript-feed:property:showTimestamps',
+    ]);
+    expect(el.withTimestamps).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
+  });
+
+  it('syncs show-timestamps back from with-timestamps and lets the last write win', async () => {
+    let el!: LyraTranscriptFeed;
+    let both!: LyraTranscriptFeed;
+    let reversed!: LyraTranscriptFeed;
+    await captureDeprecationWarnings(
+      [{ tag: 'lr-transcript-feed', kind: 'property', name: 'showTimestamps' }],
+      async () => {
+        el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        both = (await fixture(
+          html`<lr-transcript-feed show-timestamps with-timestamps></lr-transcript-feed>`,
+        )) as LyraTranscriptFeed;
+        both.withTimestamps = false;
+        await both.updateComplete;
+        reversed = (await fixture(html`<lr-transcript-feed with-timestamps></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        reversed.showTimestamps = false;
+        await reversed.updateComplete;
+      },
+    );
+    el.withTimestamps = true;
+    await el.updateComplete;
+    expect(el.showTimestamps).to.be.true;
+    expect(both.showTimestamps, 'the later canonical write wins').to.be.false;
+    expect(reversed.withTimestamps, 'the later alias write wins').to.be.false;
+  });
+
   it('omits non-finite and out-of-TimeClip timestamps without dropping transcript entries', async () => {
     const el = (await fixture(
-      html`<lr-transcript-feed show-timestamps></lr-transcript-feed>`,
+      html`<lr-transcript-feed with-timestamps></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
     el.entries = [
       { id: 'valid', text: 'valid timestamp', timestamp: Date.UTC(2026, 0, 1, 12, 34) },
@@ -542,7 +588,7 @@ it('contains long final and interim captions in an exact 320px RTL allocation', 
       <lr-transcript-feed
         follow="false"
         style="inline-size:100%;block-size:100%"
-        show-timestamps
+        with-timestamps
         .entries=${[
           { id: 'final', speaker: long, text: long, timestamp: Date.now() - 20_000 },
           { id: 'interim', speaker: long, text: long, timestamp: Date.now() - 10_000, interim: true },

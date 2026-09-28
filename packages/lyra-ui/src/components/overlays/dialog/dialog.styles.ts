@@ -28,7 +28,10 @@ export const styles = css`
        defined here, so it introduces no loop. */
     --_lr-dialog-close-background-active: color-mix(
       in oklab,
-      var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+      var(
+        --lr-icon-button-bg-hover,
+        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     --_lr-dialog-close-color: var(--lr-color-text-quiet);

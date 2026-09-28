@@ -659,7 +659,7 @@ describe('lr-video public contract', () => {
 
     const wrapper = await fixture<HTMLElement>(html`
       <div
-        style="--lr-video-poster-play-button-hover-border-color: rgb(17, 18, 19); --lr-video-poster-play-button-hover-background: rgb(20, 21, 22)"
+        style="--lr-video-poster-play-button-hover-border-color: rgb(17, 18, 19); --lr-video-poster-play-button-hover-bg: rgb(20, 21, 22)"
       >
         <lr-video poster="https://example.test/poster.jpg"></lr-video>
       </div>
@@ -675,6 +675,29 @@ describe('lr-video public contract', () => {
       await hover(themedButton);
       expect(getComputedStyle(themedButton).borderColor).to.equal('rgb(17, 18, 19)');
       expect(getComputedStyle(themedButton).backgroundColor).to.equal('rgb(20, 21, 22)');
+    } finally {
+      await resetMouse();
+    }
+
+    // The deprecated -background spelling still themes the hover, below the canonical -bg.
+    const aliasWrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-video-poster-play-button-hover-background: rgb(30, 31, 32)">
+        <lr-video poster="https://example.test/poster.jpg"></lr-video>
+        <lr-video
+          poster="https://example.test/poster.jpg"
+          style="--lr-video-poster-play-button-hover-bg: rgb(40, 41, 42)"
+        ></lr-video>
+      </div>
+    `);
+    const [aliasButton, bothButton] = [...aliasWrapper.querySelectorAll<LyraVideo>('lr-video')].map(
+      (video) => video.shadowRoot!.querySelector<HTMLElement>('[part="poster-play-button"]')!,
+    );
+    try {
+      await resetMouse();
+      await hover(aliasButton!);
+      expect(getComputedStyle(aliasButton!).backgroundColor).to.equal('rgb(30, 31, 32)');
+      await hover(bothButton!);
+      expect(getComputedStyle(bothButton!).backgroundColor).to.equal('rgb(40, 41, 42)');
     } finally {
       await resetMouse();
     }

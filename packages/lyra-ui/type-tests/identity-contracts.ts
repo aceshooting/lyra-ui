@@ -136,10 +136,11 @@ threadList.activeConversationId = 'conversation-a';
 threadList.activeId = 'conversation-a';
 const groupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = {
   groupId: 'today',
+  expanded: false,
   collapsed: true,
 };
 // @ts-expect-error group toggle identity uses groupId.
-const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { id: 'today', collapsed: true };
+const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { id: 'today', expanded: false, collapsed: true };
 
 const stageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { stageId: 'retrieve' };
 // @ts-expect-error stage selection detail uses stageId.
@@ -158,7 +159,7 @@ const chunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = {
 };
 // @ts-expect-error chunk activation detail uses chunkId.
 const legacyChunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = { id: 'chunk-a', sourceId: 'document-a' };
-const chunkExpand: LyraChunkInspectorEventMap['lr-expand']['detail'] = {
+const chunkExpand: LyraChunkInspectorEventMap['lr-chunk-toggle']['detail'] = {
   chunkId: 'chunk-a',
   expanded: true,
 };
@@ -172,7 +173,7 @@ const memoryRemove: LyraMemoryPanelEventMap['lr-remove']['detail'] = {
   memoryId: 'memory-a',
   scope: 'long-term',
 };
-const memoryExpand: LyraMemoryPanelEventMap['lr-expand']['detail'] = {
+const memoryExpand: LyraMemoryPanelEventMap['lr-memory-toggle']['detail'] = {
   memoryId: 'memory-a',
   scope: 'long-term',
   expanded: true,

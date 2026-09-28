@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import type { LyraSize } from '../../../internal/variants.js';
@@ -42,11 +43,11 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInC
 
 
 /**
- * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
+ * `true`-defaulting boolean attribute converter for the deprecated `preview`. Lit's built-in `type: Boolean`
  * converter is presence-based -- the attribute's mere presence (regardless of its string value)
  * maps to `true`, so a plain-markup consumer writing the literal `preview="false"` would actually
  * get `true` (this property's default) -- the same bug class `spellcheckConverter` above and
- * `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
+ * `<lr-checkpoint>`'s deprecated `restorable`/`confirmRestore` alias converters document and fix.
  */
 
 /** A catalog row: a selectable TTS voice. */
@@ -343,6 +344,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    preview: ['withoutPreview', invertAlias, invertAlias],
+  };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -387,7 +391,17 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
    *  navigation, selection/copy, previews, form submission, reset, and programmatic writes. */
   @property({ type: Boolean, reflect: true }) readonly: boolean = false;
-  /** Whether to render preview affordances at all. */
+  /** Renders no preview affordances at all: neither the standalone preview toggle nor the per-row
+   *  preview icons. */
+  @property({ type: Boolean, attribute: 'without-preview', reflect: true }) withoutPreview = false;
+
+  /**
+   * Deprecated inverted alias of `without-preview` (`withoutPreview`): `preview="false"` equals
+   * `without-preview`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-preview`; removal not before 23.0.0.
+   */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) preview = true;
   /** Visible label text. The `label` slot appends custom label content to the same native label. */
   @property() label = '';
@@ -628,7 +642,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       this.catalogPicker.reconcileRows(activeValue, false);
       this.reconcilePreviewVisibility(this.open, rows);
     }
-    if (changed.has('preview') && !this.preview) this.stopInternalPreview();
+    if (changed.has('withoutPreview') && this.withoutPreview) this.stopInternalPreview();
   }
 
   override disconnectedCallback(): void {
@@ -1146,7 +1160,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
           ${meta ? html`<span part="option-meta">${meta}</span>` : nothing}
         </span>
         ${entry.synthetic ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>` : nothing}
-        ${this.preview && entry.previewUrl
+        ${!this.withoutPreview && entry.previewUrl
           ? html`<span
               part="option-preview"
               tabindex="-1"
@@ -1198,7 +1212,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
 
   private renderPreviewButton(): TemplateResult {
-    if (!this.preview) return html``;
+    if (this.withoutPreview) return html``;
     const candidate = this.previewCandidateId;
     const playing = this.previewingId !== null && this.previewingId === candidate;
     return html`

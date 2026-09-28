@@ -7,9 +7,11 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated css-property** `--lr-callout-background` since `21.1.0`; use css-property `--lr-callout-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 8 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,9 +42,11 @@ property and rich-slot heading wrapper at that semantic level, invalid untyped v
 carries when it first mounts; see the announcement paragraph that closes this section),
 `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
-semantic content and hides the host surface), and `accessibleLabel: string = ''`
-(`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
-has highest precedence by presence, including an explicitly empty value.
+semantic content and hides the host surface), and `accessibleLabel: string = ''` (property only;
+used only when the host has no `aria-label` attribute). In markup, name the callout with the host
+`aria-label`, which has highest precedence by presence, including an explicitly empty value.
+Deprecated alias: `accessible-label` (use `aria-label`; removed in 23.0.0) — it still sets
+`accessibleLabel`, so a host `aria-label` wins over it.
 
 Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
 unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
@@ -61,15 +65,16 @@ configured semantic heading wrapper), `icon`.
 **CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
 `message` (wrapper around the default slot), `close-button` (the close control, always
-at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button__control`,
+at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button-control`,
 `close-icon` (the visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
-target never does).
+target never does). Deprecated alias: `close-button__control` (use `close-button-control`; removed
+in 23.0.0), on the same node.
 
 As of 16.0.0 the close control is a composed `<lr-icon-button>`: `close-button` names that host —
 it still owns the grid placement, the accessible name and the click/focus API — while
-`close-button__control` is its own native `<button>`, where the background, radius, hover/press
+`close-button-control` is its own native `<button>`, where the background, radius, hover/press
 fill, focus ring and hit-area floor are painted. A rule that sets `background`, `border`,
-`padding` or `outline` through `::part(close-button)` must move to `::part(close-button__control)`
+`padding` or `outline` through `::part(close-button)` must move to `::part(close-button-control)`
 or, better, to the `--lr-icon-button-*` tokens, which reach it the same way they reach a standalone
 icon button. Layout-only rules (`margin`, `grid-column`, `order`, `display`) keep working on
 `close-button` untouched.
@@ -83,13 +88,13 @@ and padding.
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
 latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
-**Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`, and
+**Themeable custom properties:** `--lr-callout-bg`, `--lr-callout-color`, and
 `--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
@@ -97,10 +102,11 @@ same brand fallback when there is no surrounding context. Public callout hooks a
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
 as one set directly on the callout. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
-decoupled from `--lr-callout-background` (which every explicit `variant`, including `neutral`,
+decoupled from `--lr-callout-bg` (which every explicit `variant`, including `neutral`,
 retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
-panel background, and vice versa.
+panel background, and vice versa. Deprecated alias: `--lr-callout-background` (use `--lr-callout-bg`;
+removed in 23.0.0), read only as its fallback.
 
 Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
@@ -131,7 +137,7 @@ any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
 stay silent. Nested forwarding slots expose their flattened assigned text instead of fallback
 content, and later assignment plus assigned-node text/style/visibility mutations are observed.
 Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
-`aria-label` (or `accessible-label` fallback) prefixes visible update text as context, with an
+`aria-label` (or `accessibleLabel` fallback) prefixes visible update text as context, with an
 equality check preventing duplicate copy. The complete localized
 `calloutAnnouncementWithContext: '{context}: {content}'` message owns both fields, their order, and
 punctuation; override that key through `strings` rather than prejoining either field. An explicitly

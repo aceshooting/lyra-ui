@@ -17,9 +17,9 @@ export const styles = css`
     --_lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
     /* [part="tooltip"] is real DOM, so it consumes these var()s directly -- no getComputedStyle.
        Own tokens rather than bare --lr-color-surface/-text so a host can retheme just the heatmap
-       tooltip, as chart.ts does with --lr-chart-tooltip-bg/-text. */
+       tooltip, as chart.ts does with its own tooltip properties. */
     --_lr-heatmap-tooltip-bg: var(--lr-color-surface);
-    --_lr-heatmap-tooltip-text: var(--lr-color-text);
+    --_lr-heatmap-tooltip-color: var(--lr-color-text);
     /* Canvas-drawn focus ring on the keyboard-focused cell, resolved like the ramp above. Own
        token, defaulting to --lr-focus-ring-color, so it retunes apart from every other
        :focus-visible outline; [part="canvas"]:focus-visible below reuses it. */
@@ -170,7 +170,10 @@ export const styles = css`
     padding: var(--lr-size-2px) var(--lr-size-6px);
     border-radius: var(--lr-radius);
     background: var(--lr-heatmap-tooltip-bg, var(--_lr-heatmap-tooltip-bg));
-    color: var(--lr-heatmap-tooltip-text, var(--_lr-heatmap-tooltip-text));
+    color: var(
+      --lr-heatmap-tooltip-color,
+      var(--lr-heatmap-tooltip-text, var(--_lr-heatmap-tooltip-color))
+    );
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
     box-shadow: var(--lr-shadow-m);

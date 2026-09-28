@@ -216,7 +216,7 @@ export const styles = css`
   [part='viewport'][data-empty] .world {
     pointer-events: none;
   }
-  :host([locked]) [part='background'] {
+  :host([readonly]) [part='background'] {
     cursor: default;
   }
   :host([orientation='horizontal']:dir(rtl)) [part='viewport'] {

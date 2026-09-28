@@ -38,7 +38,7 @@ void iconLoadEvent;
 declare const include: LyraInclude;
 include.src = '/partial.html#summary';
 include.mode = 'same-origin';
-include.cache = false;
+include.withoutCache = true;
 const reload: Promise<void> = include.reload();
 const mode: LyraIncludeMode = include.mode;
 void [reload, mode];

@@ -134,7 +134,7 @@ export const FormattedValues: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      show-data-table
+      with-data-table
       .formatter=${({ value, surface }: { value: number; surface: string }) =>
         surface === 'legend' ? `$${value.toFixed(0)} total` : `$${value.toFixed(2)}`}
       .labels=${['Q1', 'Q2', 'Q3']}
@@ -241,7 +241,7 @@ export const ConfigDataAsEffectiveModel: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      show-data-table
+      with-data-table
       height="16rem"
       style="inline-size: 22rem; max-inline-size: 100%;"
       .labels=${['Ignored simplified label']}
@@ -286,7 +286,7 @@ export const Stacked: Story = {
         type="bar"
         stacked
         stack-totals
-        show-data-table
+        with-data-table
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
@@ -297,7 +297,7 @@ export const Stacked: Story = {
 };
 
 /**
- * The `--lr-chart-grid-color`/`-tick-color`/`-tick-font-size`/`-tooltip-bg`/`-tooltip-text`
+ * The `--lr-chart-grid-color`/`-tick-color`/`-tick-font-size`/`-tooltip-bg`/`-tooltip-color`
  * custom properties retheme Chart.js's canvas-drawn chrome. Chart.js can't
  * consume `var()` directly, so those values are resolved via
  * `getComputedStyle` once per draw. `--lr-chart-legend-color` styles the
@@ -318,7 +318,7 @@ export const ThemedTokens: Story = {
           --lr-chart-tick-font-size: var(--lr-font-size-sm);
           --lr-chart-legend-color: var(--lr-color-danger);
           --lr-chart-tooltip-bg: var(--lr-color-text);
-          --lr-chart-tooltip-text: var(--lr-color-surface);
+          --lr-chart-tooltip-color: var(--lr-color-surface);
         "
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
@@ -350,8 +350,8 @@ export const IndependentControlStateHooks: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      zoom
-      show-data-table
+      zoomable
+      with-data-table
       height="16rem"
       style="
         inline-size: 22rem;
@@ -408,7 +408,7 @@ export const PublicCssHooks: Story = {
 };
 
 /**
- * `lr-point-click` fires whenever a click lands on (or nearest,
+ * `lr-point-activate` fires whenever a click lands on (or nearest,
  * intersect-only) a data point/segment. The focused canvas exposes the same
  * points through Arrow/Home/End navigation and Enter/Space activation.
  * `refreshTheme()` forces a redraw so an out-of-band theme change (e.g. a
@@ -425,7 +425,7 @@ export const PointClickAndRefreshTheme: Story = {
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
-        @lr-point-click=${(e: CustomEvent) => console.log('lr-point-click', e.detail)}
+        @lr-point-activate=${(e: CustomEvent) => console.log('lr-point-activate', e.detail)}
       ></lr-chart>
       <button
         type="button"
@@ -469,7 +469,7 @@ export const DataTableDisclosure: Story = {
     docs: {
       description: {
         story:
-          '`show-data-table` is all-or-nothing: the accessible table is either permanently screen-reader-only or permanently visible. `data-table-toggle` adds a disclosure button so a sighted reader can pull up the numbers behind the chart on demand. The table stays in the DOM either way, so assistive technology never loses it, and `show-data-table` becomes the initial state rather than the whole behavior.',
+          '`with-data-table` is all-or-nothing: the accessible table is either permanently screen-reader-only or permanently visible. `data-table-toggle` adds a disclosure button so a sighted reader can pull up the numbers behind the chart on demand. The table stays in the DOM either way, so assistive technology never loses it, and `with-data-table` becomes the initial state rather than the whole behavior.',
       },
     },
   },
@@ -503,7 +503,7 @@ export const AnnotationsCanary: Story = {
         type="line"
         height="16rem"
         without-animation
-        show-data-table
+        with-data-table
         .labels=${['Baseline', 'Warning', 'Elevated', 'Breach']}
         .datasets=${annotationCanarySeries}
         .annotations=${annotationCanaryAnnotations}

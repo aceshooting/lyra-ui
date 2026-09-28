@@ -7,9 +7,15 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-highlight-layer-accent-background` since `21.1.0`; use css-property `--lr-highlight-layer-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-highlight-layer-danger-background` since `21.1.0`; use css-property `--lr-highlight-layer-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-highlight-layer-flash-background` since `21.1.0`; use css-property `--lr-highlight-layer-flash-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-highlight-layer-neutral-background` since `21.1.0`; use css-property `--lr-highlight-layer-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-highlight-layer-success-background` since `21.1.0`; use css-property `--lr-highlight-layer-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-highlight-layer-warning-background` since `21.1.0`; use css-property `--lr-highlight-layer-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `interactive` / `interactive` since `21.1.0`; use property `without-interaction`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,12 +29,14 @@ positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
 to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
-(attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
-activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
-dimensions are nonnegative; an item with a missing/non-array `rects` collection and each invalid
-rectangle are omitted from paint, focus, and activation. When
-`interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
-controls. If every rectangle is invalid, no shadow subtree is rendered.
+(attribute `active-highlight-id`), and `withoutInteraction: boolean = false` (attribute
+`without-interaction`, reflected) — turns off click/keyboard activation. A rectangle is eligible
+only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative; an item
+with a missing/non-array `rects` collection and each invalid rectangle are omitted from paint, focus,
+and activation. With `without-interaction`, the base is `aria-hidden` pure paint with no group role,
+accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
+Deprecated alias: `interactive` (use `without-interaction`; `interactive="false"` equals
+`without-interaction`; it no longer reflects; removed in 23.0.0).
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).
@@ -44,11 +52,14 @@ individual targets are replaced by `highlight-actions` (a non-overlapping action
 one `highlight-action` button per rendered highlight.
 
 **Themeable custom properties:**
-`--lr-highlight-layer-accent-background`, `--lr-highlight-layer-accent-outline`,
-`--lr-highlight-layer-success-background`, `--lr-highlight-layer-success-outline`,
-`--lr-highlight-layer-warning-background`, `--lr-highlight-layer-warning-outline`,
-`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-danger-outline`,
-`--lr-highlight-layer-neutral-background`, and `--lr-highlight-layer-neutral-outline` control each
+`--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,
+`--lr-highlight-layer-success-bg`, `--lr-highlight-layer-success-outline`,
+`--lr-highlight-layer-warning-bg`, `--lr-highlight-layer-warning-outline`,
+`--lr-highlight-layer-danger-bg`, `--lr-highlight-layer-danger-outline`,
+`--lr-highlight-layer-neutral-bg`, and `--lr-highlight-layer-neutral-outline` control each
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
-`--lr-highlight-layer-flash-background` controls the temporary flash state (default
-`--lr-color-brand`).
+`--lr-highlight-layer-flash-bg` controls the temporary flash state (default
+`--lr-color-brand`). Deprecated aliases: `--lr-highlight-layer-accent-background`,
+`--lr-highlight-layer-success-background`, `--lr-highlight-layer-warning-background`,
+`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-neutral-background` and
+`--lr-highlight-layer-flash-background` (use the matching `-bg` names; removed in 23.0.0).

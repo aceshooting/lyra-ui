@@ -2,15 +2,15 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './json-viewer.js';
 import type { LyraJsonViewer } from './json-viewer.js';
 
-it('renders safely after search removal, preserves null and empty readback, and accepts a later query', async () => {
-  const viewer = await fixture<LyraJsonViewer>(html`<lr-json-viewer .data=${['needle', 'other']} search="needle"></lr-json-viewer>`);
-  viewer.removeAttribute('search');
+it('renders safely after query removal, preserves null and empty readback, and accepts a later query', async () => {
+  const viewer = await fixture<LyraJsonViewer>(html`<lr-json-viewer .data=${['needle', 'other']} query="needle"></lr-json-viewer>`);
+  viewer.removeAttribute('query');
   await viewer.updateComplete;
-  expect(viewer.search).to.equal(null);
+  expect(viewer.query).to.equal(null);
   expect(viewer.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
-  viewer.setAttribute('search', '');
+  viewer.setAttribute('query', '');
   await viewer.updateComplete;
-  expect(viewer.search).to.equal('');
+  expect(viewer.query).to.equal('');
   expect(await viewer.runSearch('needle')).to.equal(1);
 });
 

@@ -176,11 +176,11 @@ export const ClickTrigger: Story = {
   },
   render: () => html`
     <div style="display: flex; gap: 2rem;">
-      <lr-tooltip trigger="click" show-delay="0" arrow>
+      <lr-tooltip trigger="click" show-delay="0">
         Click again to dismiss.
         <button slot="trigger">Click me</button>
       </lr-tooltip>
-      <lr-tooltip trigger="hover focus" show-delay="0" hide-delay="600" arrow arrow-placement="center">
+      <lr-tooltip trigger="hover focus" show-delay="0" hide-delay="600" arrow-placement="center">
         Lingers for 600ms after you leave.
         <button slot="trigger">Hover me</button>
       </lr-tooltip>
@@ -211,7 +211,7 @@ export const ManualLifecycle: Story = {
       >
         hide()
       </button>
-      <lr-tooltip trigger="manual" arrow>
+      <lr-tooltip trigger="manual">
         Driven only from script.
         <span slot="trigger">Anchor</span>
       </lr-tooltip>

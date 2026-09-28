@@ -75,31 +75,16 @@ export const OverAMinute: Story = {
     ></lr-generation-metrics>`,
 };
 
-/**
- * `showStop` demonstrated here via a `.showStop` property binding rather
- * than a `show-stop="false"` attribute string, matching this repo's
- * established convention for this exact class of bug (see
- * `<lr-line-chart>`'s `WithoutBeginAtZero` story): a boolean property that
- * defaults to `true` needs more than Lit's presence-based `type: Boolean`
- * attribute handling to ever be turned off via a plain attribute string --
- * the attribute's mere *presence*, not its string value, is what that
- * default handling reads, so `show-stop="false"` would otherwise still
- * render the button. `showStop` also has its own string-aware converter
- * (see this component's source) so `show-stop="false"` works correctly too,
- * for a plain-HTML/non-Lit consumer with no way to write a property
- * binding -- but the `.showStop` binding shown here is the form guaranteed
- * to work for *any* boolean property, converter or not, so it stays the
- * convention for this story.
- */
+/** `without-stop` hides the built-in Stop button, for a host that renders its own cancel control. */
 export const NoStopButton: Story = {
-  name: 'No stop button (show-stop off)',
+  name: 'No stop button (without-stop)',
   render: () => html`
     <lr-generation-metrics
       status="running"
       started-at=${Date.now() - 4200}
       token-count="88"
       tokens-per-second="21"
-      .showStop=${false}
+      without-stop
     ></lr-generation-metrics>
   `,
 };

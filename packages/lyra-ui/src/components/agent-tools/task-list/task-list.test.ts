@@ -4,6 +4,7 @@ import type { LyraTaskList, TaskItem } from './task-list.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-task-list', 'appearance');
@@ -19,14 +20,14 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
-it('defaults to items=[], a localized Tasks label, expanded=true, collapsible=true', async () => {
+it('defaults to items=[], a localized Tasks heading, collapsed=false, withoutCollapse=false', async () => {
   const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
   expect(el.items).to.deep.equal([]);
-  expect(el.label).to.be.undefined;
+  expect(el.heading).to.be.undefined;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Tasks');
-  expect(el.expanded).to.be.true;
-  expect(el.hasAttribute('expanded')).to.be.true;
-  expect(el.collapsible).to.be.true;
+  expect(el.collapsed).to.be.false;
+  expect(el.hasAttribute('collapsed')).to.be.false;
+  expect(el.withoutCollapse).to.be.false;
   const heading = el.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
   expect(heading.getAttribute('aria-level')).to.equal('3');
 });
@@ -194,7 +195,7 @@ it('formats the completed-of-total summary with the effective locale', async () 
   expect(summary).to.include(number.format(3));
 });
 
-it('toggles expanded and fires lr-toggle on header click when collapsible', async () => {
+it('toggles collapsed and fires lr-toggle on header click', async () => {
   const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
   expect(header.tagName).to.equal('BUTTON');
@@ -203,7 +204,8 @@ it('toggles expanded and fires lr-toggle on header click when collapsible', asyn
   header.click();
   let event = await firing;
   await el.updateComplete;
-  expect(el.expanded).to.be.false;
+  expect(el.collapsed).to.be.true;
+  expect(el.hasAttribute('collapsed')).to.be.true;
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: false });
   expect(header.getAttribute('aria-expanded')).to.equal('false');
   expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden).to.be.true;
@@ -212,13 +214,13 @@ it('toggles expanded and fires lr-toggle on header click when collapsible', asyn
   header.click();
   event = await firing;
   await el.updateComplete;
-  expect(el.expanded).to.be.true;
+  expect(el.collapsed).to.be.false;
   expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
 });
 
-it('renders a static, non-interactive heading (no button, no toggle) when collapsible=false', async () => {
+it('renders a static, non-interactive heading (no button, no toggle) when without-collapse is set', async () => {
   const el = (await fixture(
-    html`<lr-task-list .items=${items} .collapsible=${false}></lr-task-list>`,
+    html`<lr-task-list .items=${items} without-collapse></lr-task-list>`,
   )) as LyraTaskList;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
   expect(header.tagName).to.not.equal('BUTTON');
@@ -239,7 +241,7 @@ it('wraps either header shape in the configured heading level and supports the e
   expect(collapsibleHeading.querySelectorAll('button[part="header"]')).to.have.lengthOf(1);
 
   const staticList = (await fixture(
-    html`<lr-task-list heading-level="5" .collapsible=${false} .items=${items}></lr-task-list>`,
+    html`<lr-task-list heading-level="5" without-collapse .items=${items}></lr-task-list>`,
   )) as LyraTaskList;
   const staticHeading = staticList.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
   expect(staticHeading.getAttribute('aria-level')).to.equal('5');
@@ -256,14 +258,15 @@ it('wraps either header shape in the configured heading level and supports the e
   expect(invalid.shadowRoot!.querySelector('[role="heading"]')!.getAttribute('aria-level')).to.equal('3');
 });
 
-it('accepts collapsible="false" as a plain-HTML attribute string', async () => {
-  const el = (await fixture(html`<lr-task-list collapsible="false"></lr-task-list>`)) as LyraTaskList;
-  expect(el.collapsible).to.be.false;
+it('accepts without-collapse as a plain-HTML attribute', async () => {
+  const el = (await fixture(html`<lr-task-list without-collapse></lr-task-list>`)) as LyraTaskList;
+  expect(el.withoutCollapse).to.be.true;
 });
 
-it('accepts expanded="false" as a plain-HTML attribute string', async () => {
-  const el = (await fixture(html`<lr-task-list expanded="false"></lr-task-list>`)) as LyraTaskList;
-  expect(el.expanded).to.be.false;
+it('accepts collapsed as a plain-HTML attribute', async () => {
+  const el = (await fixture(html`<lr-task-list collapsed .items=${items}></lr-task-list>`)) as LyraTaskList;
+  expect(el.collapsed).to.be.true;
+  expect((el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden).to.be.true;
 });
 
 it('requests an opt-in controlled sibling reorder with Ctrl+ArrowDown', async () => {
@@ -487,7 +490,7 @@ it('honors a programmatic accessibleLabel binding on the owned task list', async
   expect(el.shadowRoot!.querySelector('[role="list"]')!.getAttribute('aria-label')).to.equal('Deployment tasks');
 });
 
-it('localizes the default "Tasks" label via .strings while a customized label renders as-is', async () => {
+it('localizes the default "Tasks" heading via .strings while a customized heading renders as-is', async () => {
   const localized = (await fixture(
     html`<lr-task-list .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
   )) as LyraTaskList;
@@ -495,39 +498,39 @@ it('localizes the default "Tasks" label via .strings while a customized label re
 
   const custom = (await fixture(
     html`<lr-task-list
-      label="Plan"
+      heading="Plan"
       .strings=${{ taskListLabel: 'Étapes' }}
     ></lr-task-list>`,
   )) as LyraTaskList;
   expect(custom.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Plan');
 
   const explicitEnglish = (await fixture(
-    html`<lr-task-list label="Tasks" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
+    html`<lr-task-list heading="Tasks" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
   )) as LyraTaskList;
   expect(explicitEnglish.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Tasks');
 
   const empty = (await fixture(
-    html`<lr-task-list label="" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
+    html`<lr-task-list heading="" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
   )) as LyraTaskList;
   expect(empty.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('');
 });
 
-describe('compact / frame escape hatches', () => {
-  it('defaults to compact=false, frame="card"', async () => {
+describe('size / frame escape hatches', () => {
+  it('defaults to size="m", frame="card"', async () => {
     const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
-    expect(el.compact).to.be.false;
+    expect(el.size).to.equal('m');
     expect(el.frame).to.equal('card');
     expect(el.hasAttribute('compact')).to.be.false;
   });
 
-  it('compact tightens header/body padding and body gap via dedicated cssprops, falling back to tuned defaults', async () => {
+  it('size="s" tightens header/body padding and body gap via dedicated cssprops, falling back to tuned defaults', async () => {
     const nonCompact = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const defaultHeaderPadding = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="header"]')!).padding;
     const defaultBodyPadding = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="body"]')!).padding;
     const defaultGap = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="body"]')!).gap;
 
-    const el = (await fixture(html`<lr-task-list .items=${items} compact></lr-task-list>`)) as LyraTaskList;
-    expect(el.hasAttribute('compact')).to.be.true;
+    const el = (await fixture(html`<lr-task-list .items=${items} size="s"></lr-task-list>`)) as LyraTaskList;
+    expect(el.getAttribute('size')).to.equal('s');
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     // Falls back to the tuned compact defaults, which are tighter than the non-compact padding/gap
@@ -544,11 +547,11 @@ describe('compact / frame escape hatches', () => {
     expect(getComputedStyle(body).gap).to.equal('6px');
   });
 
-  it('tightens the header gap under compact too, not just its padding, via its own retunable cssprop', async () => {
+  it('tightens the header gap under size="s" too, not just its padding, via its own retunable cssprop', async () => {
     const nonCompact = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const defaultHeaderGap = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="header"]')!).gap;
 
-    const el = (await fixture(html`<lr-task-list .items=${items} compact></lr-task-list>`)) as LyraTaskList;
+    const el = (await fixture(html`<lr-task-list .items=${items} size="s"></lr-task-list>`)) as LyraTaskList;
     const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
     expect(getComputedStyle(header).gap).to.not.equal(defaultHeaderGap);
 
@@ -556,10 +559,10 @@ describe('compact / frame escape hatches', () => {
     expect(getComputedStyle(header).gap).to.equal('7px');
   });
 
-  it('reduces compact header typography through a dedicated retunable cssprop', async () => {
+  it('reduces dense header typography through a dedicated retunable cssprop', async () => {
     const regular = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const regularHeader = regular.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
-    const compact = (await fixture(html`<lr-task-list compact .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const compact = (await fixture(html`<lr-task-list size="s" .items=${items}></lr-task-list>`)) as LyraTaskList;
     const compactHeader = compact.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
 
     expect(Number.parseFloat(getComputedStyle(compactHeader).fontSize)).to.be.lessThan(
@@ -652,7 +655,7 @@ it('is accessible expanded, with items, children, and detail text', async () => 
       children: [{ id: 'child-1', label: 'Update imports', status: 'success' }],
     },
   ];
-  const el = (await fixture(html`<lr-task-list .items=${withChildren} expanded></lr-task-list>`)) as LyraTaskList;
+  const el = (await fixture(html`<lr-task-list .items=${withChildren}></lr-task-list>`)) as LyraTaskList;
   await expect(el).to.be.accessible();
 });
 
@@ -661,7 +664,6 @@ it('contains unbroken public item labels/details in a 256px allocation', async (
   const el = (await fixture(html`
     <div style="inline-size:256px">
       <lr-task-list
-        expanded
         .items=${[{ id: 'long', label: long, detail: long, status: 'running' }]}
       ></lr-task-list>
     </div>
@@ -677,7 +679,6 @@ it('contains unbroken public item labels/details in a 256px allocation', async (
 it('exposes component-scoped status icon colors', async () => {
   const el = (await fixture(html`
     <lr-task-list
-      expanded
       style="
         --lr-task-list-running-color: rgb(1, 2, 3);
         --lr-task-list-success-color: rgb(4, 5, 6);
@@ -727,11 +728,11 @@ describe('card chrome theming hooks', () => {
   const part = (el: LyraTaskList, name: string) =>
     el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('repaints the card through --lr-task-list-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-task-list-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-task-list
         .items=${items}
-        style="--lr-task-list-background: rgb(1, 2, 3); --lr-task-list-border-color: rgb(4, 5, 6); --lr-task-list-radius: 11px"
+        style="--lr-task-list-bg: rgb(1, 2, 3); --lr-task-list-border-color: rgb(4, 5, 6); --lr-task-list-radius: 11px"
       ></lr-task-list>
     `)) as LyraTaskList;
     const chrome = getComputedStyle(part(el, 'base'));
@@ -746,7 +747,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-task-list
         .items=${items}
-        style="--lr-task-list-background: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border); --lr-task-list-radius: var(--lr-radius)"
+        style="--lr-task-list-bg: var(--lr-color-surface); --lr-task-list-border-color: var(--lr-color-border); --lr-task-list-radius: var(--lr-radius)"
       ></lr-task-list>
     `)) as LyraTaskList;
     const unset = getComputedStyle(part(control, 'base'));
@@ -823,4 +824,191 @@ describe('header text contrast at rest, hover and press', () => {
       }
     });
   }
+});
+
+describe('lr-task-list size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-task-list', kind: 'property', name: 'compact' }];
+  const density = (el: LyraTaskList): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, body: getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`));
+      dense = density(await fixture<LyraTaskList>(html`<lr-task-list size="s" .items=${items}></lr-task-list>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraTaskList>(html`<lr-task-list size="s" .items=${items}></lr-task-list>`));
+      const aliased = await fixture<LyraTaskList>(html`<lr-task-list compact .items=${items}></lr-task-list>`);
+      alias = density(aliased);
+      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-task-list:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraTaskList>(html`<lr-task-list compact size="l" .items=${items}></lr-task-list>`);
+      const compactLast = await fixture<LyraTaskList>(html`<lr-task-list size="l" compact .items=${items}></lr-task-list>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-task-list deprecated --lr-task-list-background alias', () => {
+  const fill = (el: LyraTaskList): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+
+  it('paints from --lr-task-list-bg, keeps honouring --lr-task-list-background as its fallback, and lets --lr-task-list-bg win', async () => {
+    const canonical = await fixture<LyraTaskList>(html`<lr-task-list .items=${items} style="--lr-task-list-bg: rgb(1, 2, 3)"></lr-task-list>`);
+    const alias = await fixture<LyraTaskList>(html`<lr-task-list .items=${items} style="--lr-task-list-background: rgb(1, 2, 3)"></lr-task-list>`);
+    const both = await fixture<LyraTaskList>(
+      html`<lr-task-list .items=${items} style="--lr-task-list-bg: rgb(4, 5, 6); --lr-task-list-background: rgb(1, 2, 3)"></lr-task-list>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-task-list deprecated expanded, collapsible and label aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-task-list', kind: 'property', name: 'expanded' },
+    { tag: 'lr-task-list', kind: 'property', name: 'collapsible' },
+    { tag: 'lr-task-list', kind: 'property', name: 'label' },
+  ];
+  const view = (el: LyraTaskList): string => {
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    return JSON.stringify({
+      hidden: (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden,
+      button: header.tagName === 'BUTTON',
+      label: el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim(),
+      rotated: getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') ?? header).transform,
+    });
+  };
+
+  it('treats expanded="false"/collapsible="false"/label exactly like collapsed/without-collapse/heading, warning once each', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      canonical = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed without-collapse heading="Plan"></lr-task-list>`));
+      const aliased = await fixture<LyraTaskList>(
+        html`<lr-task-list .items=${items} expanded="false" collapsible="false" label="Plan"></lr-task-list>`,
+      );
+      alias = view(aliased);
+      reads = [aliased.expanded, aliased.collapsible, aliased.label, aliased.collapsed, aliased.withoutCollapse, aliased.heading];
+      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
+      el.expanded = false;
+      el.collapsible = false;
+      el.label = 'Plan';
+      await el.updateComplete;
+      property = view(el);
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal([false, false, 'Plan', true, true, 'Plan']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-task-list:property:expanded',
+      'lyra-deprecated:lr-task-list:property:collapsible',
+      'lyra-deprecated:lr-task-list:property:label',
+    ]);
+  });
+
+  it('keeps a bare expanded/collapsible meaning the defaults, rotates the toggle the same way, and applies the last authored spelling', async () => {
+    let plain = '';
+    let bare = '';
+    let canonicalLast = '';
+    let canonical = '';
+    let aliasLast = '';
+    let aliasOnly = '';
+    await captureDeprecationWarnings(ALIASES, async () => {
+      plain = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`));
+      bare = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded collapsible></lr-task-list>`));
+      canonical = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed heading="B"></lr-task-list>`));
+      canonicalLast = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded collapsed label="A" heading="B"></lr-task-list>`));
+      aliasOnly = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} label="A"></lr-task-list>`));
+      aliasLast = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed expanded heading="B" label="A"></lr-task-list>`));
+    });
+    expect(bare).to.equal(plain);
+    expect(canonicalLast).to.equal(canonical);
+    expect(aliasLast).to.equal(aliasOnly);
+  });
+
+  it('syncs and reflects expanded, collapsible and label back from the canonical properties without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
+      reads.push(el.expanded, el.hasAttribute('expanded'), el.collapsible, el.label);
+      el.collapsed = true;
+      el.withoutCollapse = true;
+      el.heading = 'Plan';
+      await el.updateComplete;
+      reads.push(el.expanded, el.hasAttribute('expanded'), el.collapsible, el.label);
+      el.collapsed = false;
+      await el.updateComplete;
+      reads.push(el.expanded, el.hasAttribute('expanded'));
+    });
+    expect(reads).to.deep.equal([true, true, true, undefined, false, false, false, 'Plan', true, true]);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('toggles through the header while authored with the deprecated expanded="false", emitting the resulting state', async () => {
+    let detail: unknown = null;
+    let state: boolean[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded="false"></lr-task-list>`);
+      const firing = oneEvent(el, 'lr-toggle');
+      (el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement).click();
+      detail = (await firing).detail;
+      await el.updateComplete;
+      state = [el.collapsed, el.expanded];
+    });
+    expect(detail).to.deep.equal({ expanded: true });
+    expect(state).to.deep.equal([false, true]);
+  });
 });

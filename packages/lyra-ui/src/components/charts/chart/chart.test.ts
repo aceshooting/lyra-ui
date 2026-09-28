@@ -117,7 +117,7 @@ describe('bounded chart surface regressions', () => {
       { label: 'Revenue', data: [7] },
     ] as unknown as readonly LyraChartSeries[];
     const el = (await fixture(html`<lr-chart
-      show-data-table
+      with-data-table
       .labels=${['North']}
       .datasets=${datasets}
     ></lr-chart>`)) as LyraChart;
@@ -787,7 +787,7 @@ describe('bounded chart surface regressions', () => {
     expect((el as unknown as { buildConfig(): any }).buildConfig().data.labels).to.have.length(1_500);
   });
 
-  it('exposes renderChart and emits the normalized datum event before the compatibility event', () => {
+  it('exposes renderChart and emits the normalized datum event before the point event', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     let renders = 0;
     (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { renders += 1; };
@@ -797,7 +797,7 @@ describe('bounded chart surface regressions', () => {
       order.push('datum');
       detail = (event as CustomEvent).detail;
     });
-    el.addEventListener('lr-point-click', () => order.push('legacy'));
+    el.addEventListener('lr-point-activate', () => order.push('point'));
 
     el.renderChart();
     (el as unknown as { activateDatum(value: unknown): void }).activateDatum({
@@ -808,7 +808,7 @@ describe('bounded chart surface regressions', () => {
     });
 
     expect(renders).to.equal(1);
-    expect(order).to.deep.equal(['datum', 'legacy']);
+    expect(order).to.deep.equal(['datum', 'point']);
     expect(detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 2, kind: 'bar' });
   });
 
@@ -1823,7 +1823,7 @@ it('exposes a customizable accessible description and a data-table alternative',
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.label = 'Revenue history';
   el.description = 'Revenue rises from January through March.';
-  el.showDataTable = true;
+  el.withDataTable = true;
   el.labels = ['Jan', 'Feb', 'Mar'];
   el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
   await el.updateComplete;
@@ -1982,8 +1982,8 @@ it('renders independent hover and pressed theme hooks for each chart control sur
   const el = (await fixture(html`
     <lr-chart
       type="bar"
-      zoom
-      show-data-table
+      zoomable
+      with-data-table
       style="
         --lr-chart-legend-item-hover-bg: rgb(1, 2, 3);
         --lr-chart-legend-item-active-bg: rgb(4, 5, 6);
@@ -2120,7 +2120,7 @@ it('routes [part="canvas"]:hover’s rendered outline through scoped width and c
 
 it('actually inherits the surrounding font on a rendered reset-zoom-button, not just in the stylesheet source', async () => {
   const el = (await fixture(
-    html`<lr-chart zoom style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
+    html`<lr-chart zoomable style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
   )) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
@@ -2166,20 +2166,20 @@ it('deep-merges a nested `config.options` key without clobbering the rest of the
   expect(config.options.scales.x.type).to.equal('category');
 });
 
-it('clears beginAtZero from a plain HTML `begin-at-zero="false"` attribute, not just a .beginAtZero property binding', async () => {
+it('drops the zero baseline from a plain HTML `without-zero-baseline` attribute, not just a property binding', async () => {
   const el = (await fixture(
-    html`<lr-chart begin-at-zero="false" type="bar" .labels=${['A', 'B']} .datasets=${[{ label: 'x', data: [1, 2] }]}></lr-chart>`,
+    html`<lr-chart without-zero-baseline type="bar" .labels=${['A', 'B']} .datasets=${[{ label: 'x', data: [1, 2] }]}></lr-chart>`,
   )) as LyraChart;
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
-  expect(el.beginAtZero).to.be.false;
+  expect(el.withoutZeroBaseline).to.be.true;
   const config = (el as any).buildConfig();
   expect(config.options.scales.y.beginAtZero).to.equal(false);
 });
 
-it('still defaults beginAtZero to true with no attribute set', async () => {
+it('still keeps the zero baseline with no attribute set', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
-  expect(el.beginAtZero).to.be.true;
+  expect(el.withoutZeroBaseline).to.be.false;
 });
 
 it('gives a scatter chart a linear (not categorical) x scale', async () => {
@@ -2380,7 +2380,7 @@ it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => 
 it('registers the zoom plugin from a bare module with no `default` export, mirroring `loadDataLabelsPlugin`', async () => {
   // A direct `.default` read would ignore a valid named module shape. A bare (non-ESM-interop)
   // module shape with no `.default` at all would silently resolve
-  // `zoomPlugin` to `undefined`, leaving `zoom` inert instead of registering
+  // `zoomPlugin` to `undefined`, leaving `zoomable` inert instead of registering
   // it. `loadDataLabelsPlugin()` already handles this correctly via
   // `mod.default ?? mod`; `loadChartAndZoom()` must do the same.
   const fakeChart = await import('chart.js');
@@ -2393,7 +2393,7 @@ it('registers the zoom plugin from a bare module with no `default` export, mirro
   expect(result?.zoomPlugin).to.equal(bareZoomPlugin);
 });
 
-it('configures the zoom plugin only when `zoom` is true', async () => {
+it('configures the zoom plugin only when `zoomable` is true', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
@@ -2402,7 +2402,7 @@ it('configures the zoom plugin only when `zoom` is true', async () => {
   await waitUntil(() => (el as any).chart != null);
   expect((el as any).buildConfig().options.plugins.zoom).to.equal(undefined);
 
-  el.zoom = true;
+  el.zoomable = true;
   await el.updateComplete;
   const config = (el as any).buildConfig();
   expect(config.options.plugins.zoom.zoom.wheel.enabled).to.equal(true);
@@ -2412,7 +2412,7 @@ it('configures the zoom plugin only when `zoom` is true', async () => {
 it('keeps the core chart usable and renders a localized warning when an optional zoom peer is unavailable', async () => {
   const mod = await import('chart.js');
   const el = document.createElement('lr-chart') as LyraChart;
-  el.zoom = true;
+  el.zoomable = true;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   el.strings = { chartZoomUnavailable: 'Zoom add-on unavailable; chart remains usable.' };
@@ -2505,7 +2505,7 @@ it('keeps the core chart usable and announces a localized warning when the annot
 });
 
 it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
-  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart zoomable></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -2531,7 +2531,7 @@ it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete`
 });
 
 it('resets the zoomed flag (and hides the reset-zoom-button) when a type change rebuilds the Chart.js instance while zoomed', async () => {
-  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart zoomable></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -2629,7 +2629,7 @@ it('uses `height` as a private fallback without overwriting the public --lr-char
 it('renders the reset-zoom-button focus-visible outline from the focus-ring tokens', async () => {
   const el = (await fixture(html`
     <lr-chart
-      zoom
+      zoomable
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 3px;"
       .labels=${['A', 'B']}
       .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
@@ -2662,7 +2662,7 @@ it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set
   el.style.setProperty('--lr-chart-tick-color', 'rgb(4, 5, 6)');
   el.style.setProperty('--lr-chart-legend-color', 'rgb(7, 8, 9)');
   el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(10, 11, 12)');
-  el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
+  el.style.setProperty('--lr-chart-tooltip-color', 'rgb(13, 14, 15)');
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
@@ -2947,7 +2947,7 @@ it('coalesces a burst of theme attribute writes into a single redraw', async () 
   expect(refreshes).to.equal(1);
 });
 
-it('emits `lr-point-click` with the resolved point detail when the wired onClick handler fires', async () => {
+it('emits `lr-point-activate` with the resolved point detail when the wired onClick handler fires', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
@@ -2968,7 +2968,7 @@ it('emits `lr-point-click` with the resolved point detail when the wired onClick
   try {
     const onClick = (el as any).buildConfig().options.onClick;
     let event: CustomEvent | undefined;
-    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
+    el.addEventListener('lr-point-activate', (e) => (event = e as CustomEvent), { once: true });
     onClick({} as never, [], chart);
     expect(event!.detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 20 });
   } finally {
@@ -2995,7 +2995,7 @@ it('retains a safe scatter point id through pointer and keyboard activation', as
   chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 0 }];
   try {
     const details: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => {
+    el.addEventListener('lr-point-activate', (event) => {
       details.push((event as CustomEvent).detail);
     });
     (el as any).buildConfig().options.onClick({} as never, [], chart);
@@ -3016,7 +3016,7 @@ it('retains a safe scatter point id through pointer and keyboard activation', as
   }
 });
 
-it('does not emit `lr-point-click` when the click misses every point/segment', async () => {
+it('does not emit `lr-point-activate` when the click misses every point/segment', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
@@ -3030,7 +3030,7 @@ it('does not emit `lr-point-click` when the click misses every point/segment', a
   try {
     const onClick = (el as any).buildConfig().options.onClick;
     let fired = false;
-    el.addEventListener('lr-point-click', () => (fired = true), { once: true });
+    el.addEventListener('lr-point-activate', () => (fired = true), { once: true });
     onClick({} as never, [], chart);
     expect(fired).to.equal(false);
   } finally {
@@ -3206,7 +3206,7 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
   // dynamic import inside loadChartJsWithZoom() (real, un-mocked) can
   // possibly resolve — matching the `connectedCallback()` disconnect-guard
   // test above.
-  el.zoom = true;
+  el.zoomable = true;
   el.remove();
   await aTimeout(200);
 
@@ -3250,7 +3250,7 @@ it('defaults to English "Category"/"Point N" when no strings override is set', a
 });
 
 it('localizes the "Reset zoom" button text via this.localize()', async () => {
-  const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart zoomable></lr-chart>`)) as LyraChart;
   el.type = 'line';
   el.labels = ['Jan', 'Feb'];
   el.datasets = [{ label: 'Revenue', data: [1, 2] }];
@@ -3481,7 +3481,7 @@ it('skips drawing when the element disconnects after zoom starts loading but bef
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
-  el.zoom = true;
+  el.zoomable = true;
   // Let `updated()` actually run (and kick off `loadChartJsWithZoom().then(...)`) while still
   // connected -- unlike the "does not leak..." test above, which disconnects in the same
   // synchronous tick and never reaches that `.then()` registration at all.
@@ -3554,7 +3554,7 @@ it('does not emit when a resolved click carries an index with no backing data', 
   try {
     const onClick = (el as any).buildConfig().options.onClick;
     let pointClick = false;
-    el.addEventListener('lr-point-click', () => {
+    el.addEventListener('lr-point-activate', () => {
       pointClick = true;
     }, { once: true });
     onClick({} as never, [], chart);
@@ -3905,7 +3905,7 @@ it('maps a click on a row-sampled chart back to its original source row index/va
       }
       return originalHitTest.call(chart, event, mode, options, useFinalPosition);
     };
-    const eventPromise = oneEvent(el, 'lr-point-click');
+    const eventPromise = oneEvent(el, 'lr-point-activate');
     const rect = canvas.getBoundingClientRect();
     const area = chart.chartArea;
     canvas.dispatchEvent(new MouseEvent('click', {
@@ -4076,7 +4076,7 @@ describe('chart robustness regressions', () => {
     const canvas = el.shadowRoot!.querySelector('canvas')!;
     expect(canvas.getAttribute('tabindex')).to.equal('0');
     const details: unknown[] = [];
-    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    el.addEventListener('lr-point-activate', (event) => details.push((event as CustomEvent).detail));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
@@ -4084,7 +4084,7 @@ describe('chart robustness regressions', () => {
   });
 
   it('renders activation controls in the generated data table with the documented datum detail', async () => {
-    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart with-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['A'];
     el.datasets = [{ label: 'Revenue', data: [10] }];
     await el.updateComplete;
@@ -4093,7 +4093,7 @@ describe('chart robustness regressions', () => {
     const activation = el.shadowRoot!.querySelector('[part="data-table"] tbody button') as HTMLButtonElement;
     expect(activation?.textContent?.trim()).to.equal('10');
     let detail: unknown;
-    el.addEventListener('lr-point-click', (event) => (detail = (event as CustomEvent).detail), {
+    el.addEventListener('lr-point-activate', (event) => (detail = (event as CustomEvent).detail), {
       once: true,
     });
     activation.click();
@@ -4119,7 +4119,7 @@ describe('chart robustness regressions', () => {
 it('caps the generated table at 1,000 endpoint-preserving records and announces the sampling alternative', async () => {
     const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
     const el = (await fixture(html`<lr-chart
-      show-data-table
+      with-data-table
       .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
     ></lr-chart>`)) as LyraChart;
     el.labels = labels;
@@ -4165,7 +4165,7 @@ it('keeps initial sampling silent and announces only a later transition into sam
 });
 
 it('locale-formats generated table values, row ordinals, and summary counts', async () => {
-    const el = (await fixture(html`<lr-chart locale="ar-EG" show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart locale="ar-EG" with-data-table></lr-chart>`)) as LyraChart;
     el.labels = [];
     el.datasets = [{ label: 'Revenue', data: [1234.5] }];
     await el.updateComplete;
@@ -4182,7 +4182,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
 
   it('formats generated data-table cells through valueFormatter with table context', async () => {
     const contexts: string[] = [];
-    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart with-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['Q1'];
     el.datasets = [{ label: 'Revenue', data: [1234.5] }];
     el.valueFormatter = (value, context) => {
@@ -4220,7 +4220,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
         type="bar"
         stacked
         stack-totals
-        show-data-table
+        with-data-table
         .strings=${{ chartTotal: 'Gesamt' }}
       ></lr-chart>
     `)) as LyraChart;
@@ -4254,7 +4254,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
         type="line"
         stacked
         stack-totals
-        show-data-table
+        with-data-table
         y-label="Revenue"
         y2-label="Duration"
         .strings=${{ chartAxisTotal: '{axis} sum' }}
@@ -4291,7 +4291,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
   });
 
   it('does not add a total column when stackTotals is unset or the chart is not stacked', async () => {
-    const el = (await fixture(html`<lr-chart type="bar" show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart type="bar" with-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['Q1'];
     el.datasets = [
       { label: 'Product', data: [10] },
@@ -4751,7 +4751,7 @@ describe('tooltip title/footer formatters', () => {
 
 describe('effective chart contract', () => {
   it('uses explicit config.data for mutation, export, naming, summary, and the fallback table', async () => {
-    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart with-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['Simplified'];
     el.datasets = [{ label: 'Simplified series', data: [1] }];
     el.config = {
@@ -4785,7 +4785,7 @@ describe('effective chart contract', () => {
     );
 
     let detail: unknown;
-    el.addEventListener('lr-point-click', (event) => {
+    el.addEventListener('lr-point-activate', (event) => {
       detail = (event as CustomEvent).detail;
     }, { once: true });
     canvas.focus();
@@ -4823,7 +4823,7 @@ describe('effective chart contract', () => {
       { x: 10, y: 20, r: 7, label: 'North cluster' },
       { x: 30, y: 40, r: 9, label: 'South cluster' },
     ];
-    const el = (await fixture(html`<lr-chart type="bubble" show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart type="bubble" with-data-table></lr-chart>`)) as LyraChart;
     el.datasets = [{ label: 'Clusters', points }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
@@ -4863,7 +4863,7 @@ describe('effective chart contract', () => {
     expect(announcementTexts().at(-1)).to.contain('North cluster');
 
     let keyboardDetail: unknown;
-    el.addEventListener('lr-point-click', (event) => {
+    el.addEventListener('lr-point-activate', (event) => {
       keyboardDetail = (event as CustomEvent).detail;
     }, { once: true });
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -4879,7 +4879,7 @@ describe('effective chart contract', () => {
     chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 1 }];
     try {
       let detail: unknown;
-      el.addEventListener('lr-point-click', (event) => {
+      el.addEventListener('lr-point-activate', (event) => {
         detail = (event as CustomEvent).detail;
       }, { once: true });
       (el as any).buildConfig().options.onClick({} as never, [], chart);
@@ -4910,7 +4910,7 @@ describe('effective chart contract', () => {
   ]) {
     it(`localizes the whole ${localizedPointCase.name} point message across description, visible table, keyboard mirror, and announcement`, async () => {
       const el = (await fixture(html`
-        <lr-chart type=${localizedPointCase.type} show-data-table></lr-chart>
+        <lr-chart type=${localizedPointCase.type} with-data-table></lr-chart>
       `)) as LyraChart;
       el.datasets = [{ label: 'Points', points: [localizedPointCase.point] }];
       (el as unknown as { strings: Record<string, string> }).strings = {
@@ -4949,7 +4949,7 @@ describe('effective chart contract', () => {
   it('keeps a visible fallback table and a long wrapping legend in normal document flow', async () => {
     const wrapper = await fixture(html`
       <div style="inline-size: 256px">
-        <lr-chart show-data-table></lr-chart>
+        <lr-chart with-data-table></lr-chart>
         <div id="after">After chart</div>
       </div>
     `);
@@ -5004,7 +5004,7 @@ describe('effective chart contract', () => {
   });
 
   it('wraps long reset-zoom and error text without widening its allocation', async () => {
-    const el = (await fixture(html`<lr-chart zoom style="inline-size: 180px"></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart zoomable style="inline-size: 180px"></lr-chart>`)) as LyraChart;
     el.datasets = [{ label: 'Revenue', data: [1] }];
     el.strings = {
       resetZoom: 'A deliberately long translated reset zoom action that must wrap safely',
@@ -5205,7 +5205,7 @@ describe('appendData with an explicit config.data', () => {
   });
 
   it('renders an array config label as the exact semantic row header', async () => {
-    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart with-data-table></lr-chart>`)) as LyraChart;
     el.config = { data: { labels: [['Q1', '2026']], datasets: [{ label: 'R', data: [1] }] } };
     await ready(el);
     const rowHeader = el.shadowRoot!.querySelector<HTMLTableCellElement>(
@@ -5522,8 +5522,8 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
-    el.zoom = true;
-    await el.updateComplete; // updated() observes changed.has('zoom') and starts the on-demand load
+    el.zoomable = true;
+    await el.updateComplete; // updated() observes changed.has('zoomable') and starts the on-demand load
     el.remove(); // disconnect before loadChartJsWithZoom() resolves
     await aTimeout(200);
 
@@ -6501,7 +6501,7 @@ describe("formatter surfaces: export and spoken", () => {
 
   it('passes complete structured table and spoken metadata for scalar and bubble values', async () => {
     const contexts: Array<Record<string, unknown>> = [];
-    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    const el = (await fixture(html`<lr-chart with-data-table></lr-chart>`)) as LyraChart;
     el.labels = ['Q1'];
     el.datasets = [
       { label: 'Revenue', data: [7, 9] },
@@ -6589,7 +6589,7 @@ describe('data-table disclosure', () => {
     expect(toggleButton(collapsed) === null, 'opt-in only').to.be.true;
     expect(tableWrapper(collapsed).hasAttribute('data-visually-hidden')).to.be.true;
 
-    const shown = await chartWith(html`<lr-chart show-data-table></lr-chart>`);
+    const shown = await chartWith(html`<lr-chart with-data-table></lr-chart>`);
     expect(
       toggleButton(shown) === null,
       'still opt-in when the table is already visible',
@@ -6669,15 +6669,15 @@ describe('data-table disclosure', () => {
     expect(wrapper.getBoundingClientRect().height).to.be.greaterThan(1);
   });
 
-  it('starts expanded when show-data-table is set alongside the toggle', async () => {
-    const el = await chartWith(html`<lr-chart show-data-table data-table-toggle></lr-chart>`);
+  it('starts expanded when with-data-table is set alongside the toggle', async () => {
+    const el = await chartWith(html`<lr-chart with-data-table data-table-toggle></lr-chart>`);
 
     expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
     expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
   });
 
   it('keeps the disclosure immediately above the table when expansion makes the table visible', async () => {
-    const el = await chartWith(html`<lr-chart show-data-table data-table-toggle></lr-chart>`);
+    const el = await chartWith(html`<lr-chart with-data-table data-table-toggle></lr-chart>`);
     const buttonRect = toggleButton(el)!.getBoundingClientRect();
     const tableRect = tableWrapper(el).getBoundingClientRect();
 
@@ -6735,7 +6735,7 @@ describe('bounded chart fallback paths', () => {
     await waitUntil(() => (el as any).chart != null);
     (el as any).loading = false;
 
-    el.zoom = true;
+    el.zoomable = true;
     (el as any).chartJsModule = undefined;
     (el as any).loadZoomFeature = () =>
       Promise.resolve({ kind: 'feature-unavailable', mod });
@@ -7182,7 +7182,7 @@ it('controls complete cartesian axis visibility independently from grid lines', 
 });
 
 it('fills a compact plot while retaining accessible data, keyboard actions and explicit config overrides', async () => {
-  const el = await fixture<LyraChart>(html`<lr-chart type="bar" compact without-legend without-animation
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" size="s" without-legend without-animation
     height="64px" style="inline-size:320px" label="Monthly trips" lang="ar" dir="rtl"
     .labels=${['January', 'February']} .datasets=${[{ label: 'Trips', data: [4, 8] }]}
     .valueFormatter=${(value: number) => `Trips: ${value}`}></lr-chart>`);
@@ -7206,14 +7206,14 @@ it('fills a compact plot while retaining accessible data, keyboard actions and e
   await waitUntil(() => runtime()!.scales['x']!.height > 0, 'explicit axis display wins over compact');
   expect(runtime()!.chartArea.left).to.equal(2);
   el.config = undefined;
-  el.compact = false;
+  el.size = 'm';
   await el.updateComplete;
   await waitUntil(() => runtime()!.scales['y']!.width > 0, 'leaving compact restores ordinary axes');
   await expect(el).to.be.accessible();
 });
 
 it('keeps radial scale presentation unchanged when compact cartesian options are supplied', async () => {
-  const el = await fixture<LyraChart>(html`<lr-chart type="radar" compact axes="none" without-animation
+  const el = await fixture<LyraChart>(html`<lr-chart type="radar" size="s" axes="none" without-animation
     .labels=${['A', 'B', 'C']} .datasets=${[{ label: 'Score', data: [2, 4, 3] }]}></lr-chart>`);
   const runtime = () => (el as unknown as { chart?: import('chart.js').Chart }).chart;
   await waitUntil(() => !!runtime());
@@ -7222,7 +7222,7 @@ it('keeps radial scale presentation unchanged when compact cartesian options are
 });
 
 it('renders dense positive bars with configured controller borders and restores generated defaults', async () => {
-  const el = await fixture<LyraChart>(html`<lr-chart type="bar" compact without-legend without-animation height="48px"
+  const el = await fixture<LyraChart>(html`<lr-chart type="bar" size="s" without-legend without-animation height="48px"
     style="inline-size:340px;--border-color-1:transparent;--fill-color-1:rgb(30, 90, 160)"
     .labels=${Array.from({ length: 240 }, (_, index) => String(index))}
     .datasets=${[{ label: 'Monthly count', data: Array.from({ length: 240 }, (_, index) => index % 8 + 1) }]}
@@ -7611,7 +7611,7 @@ describe('bidi isolation of formatted labels', () => {
       dir="rtl"
       type="bar"
       legend-display="value"
-      show-data-table
+      with-data-table
       style="inline-size: 480px"
       .labels=${['9:00 AM', '10:00 AM']}
       .datasets=${[

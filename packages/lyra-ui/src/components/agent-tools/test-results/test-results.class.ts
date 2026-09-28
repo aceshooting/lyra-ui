@@ -7,6 +7,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
@@ -218,6 +219,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['suites']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    autoExpandFailures: ['withoutAutoExpandFailures', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-filter-change',
   ]);
@@ -236,13 +241,20 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   /** Explicit source-run lifecycle; only a same-id running -> complete transition announces. */
   @property({ attribute: 'run-state', reflect: true }) runState: TestRunState = 'idle';
 
+  /** Keeps a failed test's detail collapsed until the user expands it, instead of auto-expanding
+   *  it. A row the user has manually toggled always keeps its own explicit state regardless of this
+   *  flag. */
+  @property({ type: Boolean, attribute: 'without-auto-expand-failures' })
+  withoutAutoExpandFailures = false;
+
   /** Whether a failed test's detail auto-expands. A row the user has manually toggled always
-   *  keeps its own explicit state regardless of this flag. */
+   *  keeps its own explicit state regardless of this flag.
+   *  @deprecated Use `without-auto-expand-failures`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'auto-expand-failures', converter: trueDefaultBooleanConverter })
   autoExpandFailures = true;
 
   /** Explicit per-row expand/collapse overrides, keyed by suite+test identity. Absence defers to
-   *  `autoExpandFailures`. */
+   *  `without-auto-expand-failures`. */
   @state() private manualExpanded = new Map<string, boolean>();
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
@@ -432,7 +444,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private isExpanded(suiteId: string, test: TestCaseResult): boolean {
     const manual = this.manualExpanded.get(this.testKey(suiteId, test.id));
     if (manual !== undefined) return manual;
-    return this.autoExpandFailures && test.status === 'failed';
+    return !this.withoutAutoExpandFailures && test.status === 'failed';
   }
 
   private toggleFilter(status: TestStatus): void {

@@ -7,9 +7,11 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
+- **Deprecated part** `menu-trigger__control` since `21.1.0`; use part `::part(menu-trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated part** `trigger__control` since `21.1.0`; use part `::part(trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,8 +40,10 @@ capability as a row.
 - `multiple: boolean = true` (reflected) — forwarded to the hidden file input's own `multiple`
   attribute.
 - `disabled: boolean = false` (reflected)
-- `accessibleLabel?: string` (attribute `accessible-label`) — overrides either trigger shape's
-  localized accessible-name fallback. A host `aria-label`, including explicit empty, wins.
+- `accessibleLabel?: string` (attribute `accessible-label`, deprecated) — overrides either trigger shape's localized
+  accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the
+  trigger with the host `aria-label`. The `accessible-label` attribute spelling is deprecated (use
+  `aria-label`; removed in 23.0.0) — it still sets `accessibleLabel`, so a host `aria-label` wins over it.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 - `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
@@ -72,9 +76,10 @@ contained inside the trigger. Only the attachment events listed above cross the 
 `capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-dropdown`'s
 `trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
-`trigger__control` / `menu-trigger__control` (each trigger's own native `<button>` — as of 16.0.0
+`trigger-control` / `menu-trigger-control` (each trigger's own native `<button>` — as of 16.0.0
 both triggers are composed `<lr-icon-button>`s, so `trigger`/`menu-trigger` name those hosts and the
-painted surface sits one boundary deeper),
+painted surface sits one boundary deeper; deprecated aliases on the same nodes: `trigger__control`
+and `menu-trigger__control`, removed in 23.0.0),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
@@ -83,7 +88,7 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the

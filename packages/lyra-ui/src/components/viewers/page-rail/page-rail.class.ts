@@ -1,10 +1,17 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  type ComplexAttributeConverter,
+  type PropertyValues,
+  type TemplateResult,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 import type {
@@ -24,6 +31,19 @@ import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pag
 const DIGIT_BUFFER_MS = 500;
 const MAX_PAGE_COUNT = 100_000;
 const DEFAULT_ALLOCATION_WIDTH = 320;
+const DEFAULT_THUMB_WIDTH = 96;
+
+/** `thumb-width`: a value `Number()` reads as a number parses exactly as the former number-only
+ *  attribute did; any other value stays the authored CSS length string. */
+const THUMB_WIDTH_CONVERTER: ComplexAttributeConverter<number | string> = {
+  fromAttribute: (value) => {
+    // A removed attribute writes `null` back, exactly as the number-only conversion did; `null` is
+    // outside the declared type but every read treats it as unset.
+    if (value === null) return value as unknown as number;
+    const number = Number(value);
+    return Number.isNaN(number) ? value : number;
+  },
+};
 
 /** Lifecycle state shared by page-addressed viewers and `<lr-page-rail>`. */
 export type LyraPageViewerStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -154,8 +174,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this._highlights = snapshotLyraHighlights(value);
     this.requestUpdate('highlights', previous);
   }
-  /** Thumbnail CSS-px width, clamped to the container (320px-safe). */
-  @property({ type: Number, attribute: 'thumb-width' }) thumbWidth = 96;
+  /** Thumbnail width, clamped to the container (320px-safe): a number of CSS pixels, or a CSS
+   *  length (`px`, `rem`, `em`, `vw`, `vh`, or `%` of the rail's width) resolved to pixels when a
+   *  thumbnail renders -- `rem` against the document root, `em` against this element. A numeric
+   *  attribute value parses to a number; an unresolvable value falls back to the default. */
+  @property({ attribute: 'thumb-width', converter: THUMB_WIDTH_CONVERTER })
+  thumbWidth: number | string = 96;
   /** Overrides the computed accessible name. */
   @property() label = '';
 
@@ -389,14 +413,13 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     return finiteInteger(this.page, 1, 1, Math.max(1, count));
   }
 
-  /** `thumbWidth` normalized to a finite, non-negative CSS px width before it reaches
-   *  `renderPageThumbnail()`'s `{ width }` option -- an invalid attribute value would otherwise ask
-   *  a wired viewer to rasterize a `NaN`/negative-width thumbnail. */
+  /** `thumbWidth` resolved to CSS pixels and normalized to a finite, non-negative width before it
+   *  reaches `renderPageThumbnail()`'s `{ width }` option -- an invalid attribute value would
+   *  otherwise ask a wired viewer to rasterize a `NaN`/negative-width thumbnail. */
   private get safeThumbWidth(): number {
-    return Math.min(
-      finiteRange(this.thumbWidth, 96, 0),
-      finiteRange(this.allocationWidth, DEFAULT_ALLOCATION_WIDTH, 0),
-    );
+    const allocation = finiteRange(this.allocationWidth, DEFAULT_ALLOCATION_WIDTH, 0);
+    const thumbWidth = resolveCssLength(this.thumbWidth, { host: this, percentBase: allocation });
+    return Math.min(finiteRange(thumbWidth ?? Number.NaN, DEFAULT_THUMB_WIDTH, 0), allocation);
   }
 
   private effectivePageCount(): number {

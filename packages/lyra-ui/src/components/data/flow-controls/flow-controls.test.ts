@@ -4,13 +4,14 @@ import '../flow-canvas/flow-canvas.js';
 import './flow-controls.js';
 import type { LyraFlowControls } from './flow-controls.js';
 import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const nodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }];
 
-it('defaults to orientation vertical, hideLock false, empty for', async () => {
+it('defaults to orientation vertical, withoutLock false, empty for', async () => {
   const el = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
   expect(el.orientation).to.equal('vertical');
-  expect(el.hideLock).to.be.false;
+  expect(el.withoutLock).to.be.false;
   expect(el.for).to.equal('');
 });
 
@@ -55,7 +56,7 @@ it('zoom-in/zoom-out call the resolved canvas methods and fit calls fit()', asyn
   expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
 });
 
-it('disables viewport controls and preserves the viewport while the canvas is locked', async () => {
+it('disables viewport controls and preserves the viewport while the canvas is readonly', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-controls slot="bottom-start"></lr-flow-controls>
@@ -64,7 +65,7 @@ it('disables viewport controls and preserves the viewport while the canvas is lo
   wrapper.nodes = nodes;
   await wrapper.updateComplete;
   wrapper.setViewport({ x: 23, y: 17, zoom: 1 });
-  wrapper.locked = true;
+  wrapper.readonly = true;
   await wrapper.updateComplete;
   await new Promise((resolve) => requestAnimationFrame(resolve));
   const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
@@ -114,7 +115,7 @@ it('uses the canvas effective sorted zoom bounds instead of disabling from raw s
   expect(wrapper.viewport.zoom).to.be.greaterThan(before);
 });
 
-it('the lock button toggles the canvas locked attribute and mirrors aria-pressed both ways', async () => {
+it('the lock button toggles the canvas readonly attribute and mirrors aria-pressed both ways', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>
   `)) as LyraFlowCanvas;
@@ -125,14 +126,15 @@ it('the lock button toggles the canvas locked attribute and mirrors aria-pressed
   const lockButton = controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
   expect(lockButton.getAttribute('aria-pressed')).to.equal('false');
   lockButton.click();
-  expect(wrapper.locked).to.be.true;
+  expect(wrapper.readonly).to.be.true;
   await wrapper.updateComplete;
+  expect(wrapper.hasAttribute('readonly')).to.be.true;
   await new Promise((r) => requestAnimationFrame(r));
   await controls.updateComplete;
   expect(lockButton.getAttribute('aria-pressed')).to.equal('true');
 
   // An externally-set lock (not via this button) stays in sync too.
-  wrapper.locked = false;
+  wrapper.readonly = false;
   await wrapper.updateComplete;
   await new Promise((r) => requestAnimationFrame(r));
   await controls.updateComplete;
@@ -151,7 +153,7 @@ describe('--lr-flow-controls-lock-active-color', () => {
     const canvas = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
     const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
     canvas.nodes = nodes;
-    canvas.locked = true;
+    canvas.readonly = true;
     await canvas.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await controls.updateComplete;
@@ -182,9 +184,74 @@ describe('--lr-flow-controls-lock-active-color', () => {
   });
 });
 
-it('hide-lock omits the lock button entirely', async () => {
-  const el = (await fixture(html`<lr-flow-controls hide-lock></lr-flow-controls>`)) as LyraFlowControls;
+it('without-lock omits the lock button entirely', async () => {
+  const el = (await fixture(html`<lr-flow-controls without-lock></lr-flow-controls>`)) as LyraFlowControls;
+  expect(el.withoutLock).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="lock"]')) == null).to.be.true;
+});
+
+describe('deprecated hide-lock alias', () => {
+  const HIDE_LOCK: readonly DeprecatedUsage[] = [
+    { tag: 'lr-flow-controls', kind: 'property', name: 'hideLock' },
+  ];
+
+  it('still omits the lock button and warns once, naming without-lock', async () => {
+    let lockCount = -1;
+    let el!: LyraFlowControls;
+    const warnings = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      el = await fixture<LyraFlowControls>(html`<lr-flow-controls hide-lock></lr-flow-controls>`);
+      const second = await fixture<LyraFlowControls>(html`<lr-flow-controls hide-lock></lr-flow-controls>`);
+      await second.updateComplete;
+      lockCount = el.shadowRoot!.querySelectorAll('[part="lock"]').length;
+    });
+    expect(lockCount).to.equal(0);
+    expect(el.withoutLock).to.be.true;
+    expect(el.hideLock).to.be.true;
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-flow-controls:property:hideLock',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-lock');
+  });
+
+  it('forwards property writes and never warns for the canonical name', async () => {
+    let el!: LyraFlowControls;
+    const canonical = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      el = await fixture<LyraFlowControls>(html`<lr-flow-controls without-lock></lr-flow-controls>`);
+    });
+    expect(canonical).to.deep.equal([]);
+    const warnings = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      const aliased = await fixture<LyraFlowControls>(html`<lr-flow-controls></lr-flow-controls>`);
+      aliased.hideLock = true;
+      await aliased.updateComplete;
+      expect(aliased.withoutLock).to.be.true;
+      expect(aliased.shadowRoot!.querySelector('[part=\"lock\"]') == null).to.be.true;
+    });
+    expect(warnings).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('[part=\"lock\"]') == null).to.be.true;
+  });
+
+  it('syncs the alias back from without-lock and lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      const aliasLast = await fixture<LyraFlowControls>(
+        html`<lr-flow-controls without-lock hide-lock></lr-flow-controls>`,
+      );
+      aliasLast.removeAttribute('hide-lock');
+      await aliasLast.updateComplete;
+      expect(aliasLast.withoutLock).to.be.false;
+      expect(aliasLast.shadowRoot!.querySelectorAll('[part="lock"]').length).to.equal(1);
+
+      const canonicalLast = await fixture<LyraFlowControls>(
+        html`<lr-flow-controls hide-lock without-lock></lr-flow-controls>`,
+      );
+      canonicalLast.withoutLock = false;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.hideLock).to.be.false;
+      expect(canonicalLast.shadowRoot!.querySelectorAll('[part="lock"]').length).to.equal(1);
+      canonicalLast.withoutLock = true;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.hideLock).to.be.true;
+    });
+  });
 });
 
 it('the default slot appends extra host buttons to the cluster', async () => {
@@ -285,7 +352,7 @@ it('adopts a same-id replacement canvas and unsubscribes from the removed target
   replacement.id = 'wf';
   replacement.nodes = nodes;
   replacement.maxZoom = 4;
-  replacement.locked = true;
+  replacement.readonly = true;
   root.prepend(replacement);
   await replacement.updateComplete;
   const lock = controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
@@ -293,7 +360,7 @@ it('adopts a same-id replacement canvas and unsubscribes from the removed target
     () => lock.getAttribute('aria-pressed') === 'true',
     'the controls did not adopt the locked replacement canvas',
   );
-  replacement.locked = false;
+  replacement.readonly = false;
   await replacement.updateComplete;
   await waitUntil(() => lock.getAttribute('aria-pressed') === 'false');
   const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
@@ -346,7 +413,10 @@ it('recreates its shared target observer in the adopted owner realm', async () =
         this.relevant = true;
         rootObservations += 1;
       }
-      if (target === canvas && options?.attributeFilter?.includes('locked')) {
+      if (
+        target === canvas &&
+        (options?.attributeFilter?.includes('locked') || options?.attributeFilter?.includes('readonly'))
+      ) {
         this.relevant = true;
         lockObservations += 1;
       }

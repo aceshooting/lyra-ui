@@ -65,7 +65,7 @@ export const LocalizedFailureDetailControl: Story = {
   render: () => html`
     <lr-test-results
       style="max-width:32rem"
-      .autoExpandFailures=${false}
+      without-auto-expand-failures
       .suites=${mixedSuites}
       .strings=${{
         accessibleLabelSeparator: ' / ',
@@ -102,7 +102,7 @@ export const SuiteScopedDetails: Story = {
     return html`
       <lr-test-results
         style="max-width:32rem"
-        .autoExpandFailures=${false}
+        without-auto-expand-failures
         .suites=${[
           { id: 'unit', name: 'Unit', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
           { id: 'integration', name: 'Integration', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },

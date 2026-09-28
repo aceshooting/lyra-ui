@@ -24,11 +24,11 @@ export const styles = css`
   [part~='claim-selected'] {
     border-color: var(--lr-color-brand);
   }
-  /* Density escape -- same convention as lr-source-card's and lr-entity-card's compact. The tuned
-     values sit in inline var() fallbacks, not a :host declaration (re-declared by every instance,
+  /* Density escape -- same convention as lr-source-card's and lr-entity-card's dense size tier. The
+     tuned values sit in inline var() fallbacks, not a :host declaration (re-declared by every instance,
      shadowing ancestor values), so a list retunes every claim at once from outside; the fallbacks
      are the pre-existing values scaled down one step, so an unset claim renders unchanged. */
-  :host([compact]) [part='claim-trigger'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='claim-trigger'] {
     padding: var(--lr-claim-evidence-compact-padding, var(--lr-space-xs));
     gap: var(--lr-claim-evidence-compact-gap, var(--lr-space-xs));
   }

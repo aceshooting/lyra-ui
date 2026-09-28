@@ -1,6 +1,10 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import "./knowledge-base-admin.js";
 import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 describe("lr-knowledge-base-admin", () => {
   it("keeps an explicitly empty label distinct from an omitted one", async () => {
@@ -107,7 +111,7 @@ describe("lr-knowledge-base-admin", () => {
     await el.updateComplete;
     expect(el.activeTab).to.equal('sources');
 
-    el.hideIngestion = true;
+    el.withoutIngestion = true;
     await el.updateComplete;
     const onlyTab = el.shadowRoot!.querySelector<HTMLButtonElement>('[role="tab"]')!;
     const wrapped = new KeyboardEvent('keydown', {
@@ -182,7 +186,7 @@ describe("lr-knowledge-base-admin", () => {
     await el.updateComplete;
     expect(details).to.deep.equal([]);
 
-    el.hideIngestion = true;
+    el.withoutIngestion = true;
     await el.updateComplete;
     expect(details).to.deep.equal([{ tab: "sources" }]);
     details.length = 0;
@@ -359,7 +363,7 @@ describe("lr-knowledge-base-admin", () => {
 
     const details: Array<{ tab: string }> = [];
     el.addEventListener("lr-tab-change", (event) => details.push(event.detail));
-    el.hideIngestion = true;
+    el.withoutIngestion = true;
     await el.updateComplete;
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => resolve())
@@ -491,7 +495,7 @@ describe("lr-knowledge-base-admin activation event", () => {
     el.addEventListener("lr-activate", () => activateCount++);
     el.addEventListener("lr-tab-change", () => changeCount++);
 
-    el.hideIngestion = true;
+    el.withoutIngestion = true;
     await el.updateComplete;
     expect(el.activeTab, "normalization moved it back").to.equal("sources");
     expect(changeCount, "and reported that move").to.equal(1);
@@ -507,5 +511,63 @@ describe("lr-knowledge-base-admin activation event", () => {
       activateCount,
       "a host writing `activeTab` is not a user activation"
     ).to.equal(0);
+  });
+});
+
+describe("lr-knowledge-base-admin deprecated hide-ingestion alias", () => {
+  const ALIAS: DeprecatedUsage[] = [
+    { tag: "lr-knowledge-base-admin", kind: "property", name: "hideIngestion" },
+  ];
+  const tabs = (el: LyraKnowledgeBaseAdmin): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent!.trim());
+
+  it("hides the ingestion tab through without-ingestion without a deprecation warning", async () => {
+    let canonical: string[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = tabs(
+        await fixture<LyraKnowledgeBaseAdmin>(
+          html`<lr-knowledge-base-admin without-ingestion></lr-knowledge-base-admin>`
+        )
+      );
+    });
+    expect(canonical).to.have.length(1);
+    expect(warnings).to.have.length(0);
+  });
+
+  it("keeps hide-ingestion working with the same result, warning once", async () => {
+    let canonical: string[] = [];
+    let alias: string[] = [];
+    let property: string[] = [];
+    let readback: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = tabs(
+        await fixture<LyraKnowledgeBaseAdmin>(
+          html`<lr-knowledge-base-admin without-ingestion></lr-knowledge-base-admin>`
+        )
+      );
+      alias = tabs(
+        await fixture<LyraKnowledgeBaseAdmin>(
+          html`<lr-knowledge-base-admin hide-ingestion></lr-knowledge-base-admin>`
+        )
+      );
+      const el = await fixture<LyraKnowledgeBaseAdmin>(
+        html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
+      );
+      el.hideIngestion = true;
+      await el.updateComplete;
+      property = tabs(el);
+      readback = [el.withoutIngestion, el.hideIngestion, el.hasAttribute("hide-ingestion")];
+      // The canonical property syncs back into the alias.
+      el.withoutIngestion = false;
+      await el.updateComplete;
+      readback.push(el.hideIngestion);
+    });
+    expect(alias).to.deep.equal(canonical);
+    expect(property).to.deep.equal(canonical);
+    expect(readback).to.deep.equal([true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-knowledge-base-admin:property:hideIngestion",
+    ]);
+    expect(warnings[0]!.message).to.contain("without-ingestion");
   });
 });

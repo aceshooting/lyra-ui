@@ -3,6 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { isRtl } from '../../../internal/rtl.js';
 import '../../media/file-icon/file-icon.class.js';
@@ -85,8 +86,8 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
  * `selectedSourceIds` directly; that assignment is normalized silently.
  * @csspart base - The root wrapper.
- * @csspart search - The built-in filter `lr-input`, only rendered when `searchable`.
- * @csspart select-all - The header select-all row, only rendered when `showSelectAll`.
+ * @csspart search - The built-in filter `lr-input`, omitted while `withoutSearch` is set.
+ * @csspart select-all - The header select-all row, omitted while `withoutSelectAll` is set.
  * @csspart select-all-control - The shared `lr-checkbox` that owns select-all semantics.
  * @csspart summary - The "{selected} of {total} selected" text.
  * @csspart tree - The `role="tree"` container.
@@ -157,6 +158,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showSelectAll: ['withoutSelectAll', invertAlias, invertAlias],
+    searchable: ['withoutSearch', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-sources-change',
   ]);
@@ -166,7 +171,15 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
    * its own copy on toggle *then* emits; reassign to control. */
   @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
-  /** Whether the header exposes one control for selecting or clearing every visible leaf source. */
+  /** Omits the header control that otherwise selects or clears every visible leaf source. */
+  @property({ type: Boolean, attribute: 'without-select-all' })
+  withoutSelectAll = false;
+  /** Omits the built-in source filter. Toggling retains the query and selection, while keeping a
+   *  visible tree entry available whenever rows remain. */
+  @property({ type: Boolean, attribute: 'without-search' })
+  withoutSearch = false;
+  /** Whether the header exposes one control for selecting or clearing every visible leaf source.
+   *  @deprecated Use `without-select-all`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-select-all',
@@ -174,7 +187,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   })
   showSelectAll = true;
   /** Whether the built-in source filter is rendered. Toggling retains the query and selection,
-   *  while keeping a visible tree entry available whenever rows remain. */
+   *  while keeping a visible tree entry available whenever rows remain.
+   *  @deprecated Use `without-search`; removal not before 23.0.0. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter })
   searchable = true;
 
@@ -378,7 +392,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   private isFiltering(): boolean {
-    return this.searchable && this.query.trim().length > 0;
+    return !this.withoutSearch && this.query.trim().length > 0;
   }
 
   private visibleRows(): SourceRow[] {
@@ -436,7 +450,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       !changed.has('sources') &&
       !changed.has('query') &&
       !changed.has('expandedIds') &&
-      !changed.has('searchable')
+      !changed.has('withoutSearch')
     )
       return;
 
@@ -462,7 +476,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       this.pendingFocusIndex =
         nextIndex >= 0
           ? nextIndex
-          : this.sourceEntries.length === 0 || !this.searchable
+          : this.sourceEntries.length === 0 || this.withoutSearch
           ? 'base'
           : 'search';
     }
@@ -717,7 +731,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
     return html`
       <div part="base" tabindex="-1">
-        ${this.searchable
+        ${!this.withoutSearch
           ? html`<lr-input
               part="search"
               .size=${this.size ?? 'm'}
@@ -729,7 +743,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               }}
             ></lr-input>`
           : nothing}
-        ${this.showSelectAll
+        ${!this.withoutSelectAll
           ? html`<div part="select-all">
               <lr-checkbox
                 part="select-all-control"

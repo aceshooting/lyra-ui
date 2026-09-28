@@ -10,7 +10,7 @@ describe('disclosure header paint', () => {
       const content = kind === 'thinking'
         ? html`<lr-thinking-panel expanded>Reasoning</lr-thinking-panel>`
         : kind === 'tasks'
-          ? html`<lr-task-list expanded></lr-task-list>`
+          ? html`<lr-task-list></lr-task-list>`
           : html`<lr-source-list expanded><span>Source</span></lr-source-list>`;
       const wrapper = await fixture<HTMLDivElement>(html`<div>${content}</div>`);
       const host = wrapper.firstElementChild as HTMLElement;

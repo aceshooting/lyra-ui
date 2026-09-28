@@ -9,7 +9,7 @@ describe('resize request continuation', () => {
     for (const interaction of ['keyboard', 'pointer'] as const) {
       it(`preserves listener state when ${interaction} resize revokes ${revoke}`, async () => {
         const el = await fixture<LyraAppRail>(html`
-          <lr-app-rail force-mode="full" resizable rail-width-px="240"
+          <lr-app-rail force-mode="full" resizable rail-width="240"
             style="block-size: 16rem; --lr-transition-fast: 0ms;"></lr-app-rail>
         `);
         const resizer = el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
@@ -21,7 +21,7 @@ describe('resize request continuation', () => {
           if (revoke === 'resizable') el.resizable = false;
           else if (revoke === 'mode') el.forceMode = 'icon-only';
           else el.remove();
-          el.railWidthPx = 300;
+          el.railWidth = 300;
         });
         try {
           if (interaction === 'keyboard') {
@@ -39,7 +39,7 @@ describe('resize request continuation', () => {
           await el.updateComplete;
           await settlePointer();
           expect(requests).to.equal(1);
-          expect(el.railWidthPx).to.equal(300);
+          expect(el.railWidth).to.equal(300);
           expect(commits).to.equal(0);
           expect(el.dragging).to.equal(false);
         } finally {
@@ -52,18 +52,18 @@ describe('resize request continuation', () => {
   for (const veto of [false, true]) {
     it(`keeps a width-only listener assignment ${veto ? 'when explicitly vetoed' : 'subject to normal acceptance'}`, async () => {
       const el = await fixture<LyraAppRail>(html`
-        <lr-app-rail force-mode="full" resizable rail-width-px="240"></lr-app-rail>
+        <lr-app-rail force-mode="full" resizable rail-width="240"></lr-app-rail>
       `);
       const commits: number[] = [];
       el.addEventListener('lr-rail-resize', (event) => commits.push((event as CustomEvent<{ widthPx: number }>).detail.widthPx));
       el.addEventListener('lr-rail-resize-request', (event) => {
-        el.railWidthPx = 300;
+        el.railWidth = 300;
         if (veto) event.preventDefault();
       });
       el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!.focus();
       await sendKeys({ press: 'ArrowRight' });
       await el.updateComplete;
-      expect(el.railWidthPx).to.equal(veto ? 300 : 248);
+      expect(el.railWidth).to.equal(veto ? 300 : 248);
       expect(commits).to.deep.equal(veto ? [] : [248]);
     });
   }

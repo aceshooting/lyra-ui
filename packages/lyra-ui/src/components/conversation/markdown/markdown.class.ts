@@ -32,6 +32,7 @@ import {
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
 import { styles } from './markdown.styles.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -54,7 +55,8 @@ const katexState = createMarkdownKatexState();
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by `gfm` and `highlightCode`. */
+ *  `fromAttribute` checks the literal string instead. Shared by the deprecated `gfm` and
+ *  `highlightCode` aliases. */
 
 export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -119,7 +121,7 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * characters inside code are rendered as authored, not neutralized.
  *
  * Fenced code blocks are syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
- * uses (`highlightCode`, default `true` — a pure upgrade gated by whether `shiki` is installed at
+ * uses (on unless `without-syntax-highlighting` — a pure upgrade gated by whether `shiki` is installed at
  * all, not a separate opt-in). `languages` supplies explicit grammars while the full loader
  * remains the fallback. The very first render of any content is always plain
  * (identical to today's output); highlighting arrives as an asynchronous upgrade one render later,
@@ -268,6 +270,11 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    gfm: ['withoutGfm', invertAlias, invertAlias],
+    highlightCode: ['withoutSyntaxHighlighting', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
 
   private static readonly variant = createMarkdownVariantContext(
     'lr-markdown',
@@ -312,7 +319,15 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   @property({ attribute: 'html-mode' }) override htmlMode: MarkdownHtmlMode =
     'sanitize';
 
-  /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
+  /** Disables GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
+  @property({ type: Boolean, attribute: 'without-gfm' }) override withoutGfm = false;
+
+  /**
+   * Deprecated inverted alias of `without-gfm` (`withoutGfm`): `gfm="false"` equals `without-gfm`,
+   * and removing it restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-gfm`; removal not before 23.0.0.
+   */
   @property({ converter: trueDefaultBooleanConverter }) override gfm = true;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
@@ -361,18 +376,29 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
-  /** Deprecated compatibility spelling of `code-block-header`: either property enables the header.
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins.
    * Setting it logs a one-time development warning.
    * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' })
   override codeBlockChrome = false;
 
-  /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lr-code-block>`
-   *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
-   *  is available -- a pure upgrade, not a behavior change gated on opt-in, since it's itself gated
-   *  transparently by whether `shiki` is installed at all (an app that never installs it sees
-   *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
-   *  installed. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
+  /** Turns off syntax highlighting of fenced code blocks, keeping plain output even when `shiki`
+   *  is installed. Unset (the default), every fenced block is upgraded from plain `<pre><code>`
+   *  via the same optional `shiki` peer `<lr-code-block>` uses once the peer is available -- a pure
+   *  upgrade, not a behavior change gated on opt-in, since it's itself gated transparently by
+   *  whether `shiki` is installed at all (an app that never installs it sees byte-identical output
+   *  to today). Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
+  @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
+  override withoutSyntaxHighlighting = false;
+
+  /**
+   * Deprecated inverted alias of `without-syntax-highlighting` (`withoutSyntaxHighlighting`):
+   * `highlight-code="false"` equals `without-syntax-highlighting`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-syntax-highlighting`; removal not before 23.0.0.
+   */
   @property({
     attribute: 'highlight-code',
     converter: trueDefaultBooleanConverter,

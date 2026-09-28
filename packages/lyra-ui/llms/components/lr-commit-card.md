@@ -7,9 +7,11 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-commit-card-background` since `21.1.0`; use css-property `--lr-commit-card-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -32,15 +34,20 @@ display, total arithmetic, localization, and accessible summaries. `path` is the
 empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesExpanded:
 boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
 default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
-`el.filesExpanded = false`), and `copyable: boolean = true` (reflected).
-`compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
-row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
-so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
+`el.filesExpanded = false`), and `withoutCopyButton: boolean = false` (attribute
+`without-copy-button`, reflected) — hides the hash copy button. Deprecated alias: `copyable` (use
+`without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+`without-copy-button`.
+`size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+`xs`/`2xs`) tightens `[part="base"]` padding for a commit rendered as a row in a list or PR
+timeline, same convention as `<lr-agent-run>`'s own `size`; the border stays, so pair it with
+`frame="plain"` to drop the chrome entirely. Deprecated alias: `compact` (use `size="s"`; removed in
+23.0.0). `frame: LyraFrame = 'card'` (reflected)
 — container treatment, in the library-wide `frame` vocabulary (`'card' | 'plain'`), the same
 property `<lr-agent-run>`/`<lr-card>` carry: `'card'` keeps the bordered, padded box, `'plain'`
 removes the border, padding, and corner radius so a commit nested in a host list that already draws
-its own row chrome doesn't double it; `plain` wins over `compact` when both are set. The exported
-alias `CommitCardAppearance` is retained as a name for the same union.
+its own row chrome doesn't double it; `plain` wins over the dense `size` tier when both are set. The
+exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
@@ -52,7 +59,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
-`file-additions`, `file-deletions`, `copy-button`, and `actions`.
+`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`), and
+`actions`.
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
@@ -63,8 +71,9 @@ message keys, so one `registerLyraLocale()` registration (or one `.strings` over
 badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
+`[part="base"]` padding while `size` is `s` or smaller. `--lr-commit-card-border-color` (default
 `var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
-card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
+card's border and corner radius, and `--lr-commit-card-bg` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
-you opt in. `frame="plain"` still removes the border and radius.
+you opt in. `frame="plain"` still removes the border and radius. Deprecated alias:
+`--lr-commit-card-background` (use `--lr-commit-card-bg`; removed in 23.0.0).

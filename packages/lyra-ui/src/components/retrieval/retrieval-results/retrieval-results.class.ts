@@ -3,6 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   firstByRetrievalIdentity,
   canonicalIdentityList,
@@ -37,7 +38,7 @@ import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYR
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as one deterministic
  *  canonical `RetrievalChunk` record per id. This event contract is independent of the visible
- *  `dedupe` projection: duplicate rows never duplicate derived selection records. */
+ *  `without-dedupe` projection: duplicate rows never duplicate derived selection records. */
 export interface RetrievalResultsSelectDetail {
   chunkIds: string[];
   chunks: RetrievalChunk[];
@@ -91,10 +92,10 @@ function safeScore(score: number): number {
  *
  * **Composition, not reinvention.** Each rendered row wraps exactly one chunk in an internal
  * `<lr-chunk-inspector>` (fed a single-element `chunks` array), reusing its score bar/tier
- * coloring, title+page rendering, expandable text, and `compact` mode verbatim -- this component
- * never hand-rolls chunk-card markup. `metadata` (arbitrary `Record<string, unknown>`, which no
- * existing primitive renders) is the one genuinely new bit of presentation here, shown as a plain
- * key/value list in `expanded` presentation only. Large result sets are windowed through an
+ * coloring, title+page rendering, expandable text, and dense `size="s"` rows verbatim -- this
+ * component never hand-rolls chunk-card markup. `metadata` (arbitrary `Record<string, unknown>`,
+ * which no existing primitive renders) is the one genuinely new bit of presentation here, shown as
+ * a plain key/value list in `expanded` presentation only. Large result sets are windowed through an
  * internal `<lr-virtual-list>`, exactly like `<lr-thread-list>`'s own data-mode rendering -- each
  * row's rendered content therefore lives inside `<lr-virtual-list>`'s own shadow root, not this
  * component's, whenever virtualization is active (see that component's own doc for why).
@@ -107,9 +108,9 @@ function safeScore(score: number): number {
  * accept the update as-is or override it before the next render.
  *
  * **Identity.** Blank chunk ids and later duplicates are always omitted first-wins before sorting,
- * grouping, selection, rendering, or events. The `dedupe` switch is retained for compatibility but
- * cannot reintroduce ambiguous duplicate identities. **Grouping** (`grouping="source"`) buckets the
- * canonical, score-sorted list by `source.id`, each bucket
+ * grouping, selection, rendering, or events. The `without-dedupe` switch is retained for
+ * compatibility but cannot reintroduce ambiguous duplicate identities. **Grouping**
+ * (`grouping="source"`) buckets the canonical, score-sorted list by `source.id`, each bucket
  * ordered by its own best-scoring chunk first, and always renders through the internal
  * `<lr-virtual-list>` (regardless of `virtualize-at`) so group headers have a single rendering path
  * — `<lr-thread-list>`'s own date-bucket grouping takes the identical approach.
@@ -151,7 +152,7 @@ function safeScore(score: number): number {
  * either way).
  * @csspart group-header - Exported from the internal `<lr-virtual-list>`'s `group` part —
  * grouped/virtualized mode only.
- * @csspart select - The per-row `<lr-checkbox>`, omitted entirely when `selectable` is false.
+ * @csspart select - The per-row `<lr-checkbox>`, omitted entirely while `withoutSelection` is set.
  * @csspart row-body - The wrapper around a row's `<lr-chunk-inspector>` plus its optional
  * metadata list; carries `data-selected` while that row is selected.
  * @csspart row-body-selected - Additional part on a selected `row-body`. State is exposed as a
@@ -207,6 +208,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    selectable: ['withoutSelection', invertAlias, invertAlias],
+    dedupe: ['withoutDedupe', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
     'lr-chunk-open',
@@ -220,7 +225,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  never renders a checked row. */
   @property({ attribute: false }) selectedChunkIds: readonly string[] = [];
 
-  /** Shows a per-row `<lr-checkbox>`. */
+  /** Omits the per-row `<lr-checkbox>`. */
+  @property({ type: Boolean, attribute: 'without-selection', reflect: true })
+  withoutSelection = false;
+  /** Shows a per-row `<lr-checkbox>`.
+   *  @deprecated Use `without-selection`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -228,7 +237,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   })
   selectable = true;
 
-  /** Retained for compatibility. Identity is always nonblank and first-wins even when false. */
+  /** Retained for compatibility. Identity is always nonblank and first-wins even when set. */
+  @property({ type: Boolean, attribute: 'without-dedupe', reflect: true })
+  withoutDedupe = false;
+  /** Retained for compatibility. Identity is always nonblank and first-wins even when false.
+   *  @deprecated Use `without-dedupe`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -330,7 +343,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private wasEmptyPresented = false;
   // Memoizes `computeProcessedChunks()` (identity + sort + group) for the current render cycle.
   // `willUpdate()` refreshes it exactly once whenever an input it actually depends on (`chunks`,
-  // `dedupe`, `sort`, `grouping`) changed, so `updated()` and `render()` each read the same
+  // `withoutDedupe`, `sort`, `grouping`) changed, so `updated()` and `render()` each read the same
   // already-computed result instead of independently repeating the full identity/sort/group work.
   private processedChunksCache?: {
     chunks: readonly RetrievalChunk[];
@@ -414,7 +427,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (
       this.processedChunksCache === undefined ||
       changed.has('chunks') ||
-      changed.has('dedupe') ||
+      changed.has('withoutDedupe') ||
       changed.has('sort') ||
       changed.has('grouping') ||
       changed.has('groupBy') ||
@@ -449,14 +462,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     }
     if (
       !changed.has('chunks') &&
-      !changed.has('dedupe') &&
+      !changed.has('withoutDedupe') &&
       !changed.has('sort') &&
       !changed.has('grouping') &&
       !changed.has('groupBy') &&
       !changed.has('groupLabel') &&
       !changed.has('groupOrder') &&
       !changed.has('presentation') &&
-      !changed.has('selectable') &&
+      !changed.has('withoutSelection') &&
       !changed.has('virtualizeAt') &&
       !changed.has('loading') &&
       !changed.has('errorText')
@@ -747,7 +760,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const selected = this.selectedChunkIds.includes(chunk.id);
     const rowLabel = chunk.source.name || this.localize('untitledSource');
     return html`
-      ${this.selectable
+      ${!this.withoutSelection
         ? html`<lr-checkbox
             part="select"
             data-chunk-id=${chunk.id}
@@ -774,7 +787,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           exportparts="chunk:chunk, chunk-current:chunk-current, score:chunk-score, score-current:chunk-score-current, score-bar:chunk-score-bar, score-fill:chunk-score-fill, score-fill-success:chunk-score-fill-success, score-fill-warning:chunk-score-fill-warning, score-fill-danger:chunk-score-fill-danger, open-button:chunk-open-button, title:chunk-title, text:chunk-text, text-clamped:chunk-text-clamped, toggle:chunk-toggle"
           .chunks=${[toLyraChunk(chunk)]}
           .thresholds=${this.thresholds}
-          ?compact=${this.presentation === 'compact'}
+          size=${this.presentation === 'compact' ? 's' : 'm'}
           .activeChunkId=${this.activeChunkId}
           label=${rowLabel}
           @lr-chunk-open=${(

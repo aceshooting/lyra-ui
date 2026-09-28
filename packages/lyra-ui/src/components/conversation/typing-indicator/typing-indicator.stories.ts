@@ -63,7 +63,7 @@ export const RetimedDots: Story = {
   render: () => html`
     <lr-typing-indicator
       label="Generating quickly…"
-      style="--lr-transition-ambient: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms;"
+      style="--lr-transition-ambient: 900ms ease-in-out; --lr-typing-indicator-dot-stagger-1: 300ms; --lr-typing-indicator-dot-stagger-2: 600ms;"
     ></lr-typing-indicator>
   `,
 };

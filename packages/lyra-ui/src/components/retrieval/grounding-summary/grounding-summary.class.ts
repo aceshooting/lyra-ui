@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -467,6 +468,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showClaims: ['withoutClaims', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-claim-select',
@@ -499,7 +503,11 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
    *  does an explicitly empty `label`. */
   @property() label?: string;
 
-  /** Renders `assessment.claims` through `<lr-claim-evidence>` when available. */
+  /** Omits the `assessment.claims` detail that otherwise renders through `<lr-claim-evidence>`. */
+  @property({ type: Boolean, attribute: 'without-claims', reflect: true })
+  withoutClaims = false;
+  /** Renders `assessment.claims` through `<lr-claim-evidence>` when available.
+   *  @deprecated Use `without-claims`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-claims',
@@ -512,6 +520,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
    *  heading text without exposing it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level' })
   headingLevel: LyraHeadingLevel = '3';
+
 
   private readonly canonicalAssessmentBySource = new WeakMap<
     object,
@@ -726,7 +735,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
               </div>
             `
           : nothing}
-        ${this.showClaims && claims.length
+        ${!this.withoutClaims && claims.length
           ? html`
               <lr-claim-evidence
                 part="claims"

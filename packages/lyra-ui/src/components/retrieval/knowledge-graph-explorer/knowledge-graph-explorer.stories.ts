@@ -1,7 +1,7 @@
 import { html } from "lit";
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "./knowledge-graph-explorer.js";
-import type { LyraGraphLink, LyraGraphNode } from "../graph/graph.class.js";
+import type { LyraGraphEdge, LyraGraphNode } from "../graph/graph.class.js";
 import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 
 const meta: Meta = {
@@ -25,7 +25,7 @@ const nodes: LyraGraphNode[] = [
   { id: "radium", label: "Radium", type: "element" },
 ];
 
-const links: LyraGraphLink[] = [
+const links: LyraGraphEdge[] = [
   { source: "marie", target: "pierre", label: "married_to" },
   { source: "marie", target: "sorbonne", label: "worked_at" },
   { source: "marie", target: "polonium", label: "discovered" },
@@ -37,7 +37,7 @@ export const Default: Story = {
   render: () => html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .nodeTypes=${nodeTypes}
       .entityDetails=${{
         marie: {
@@ -63,7 +63,7 @@ export const SelectionChanges: Story = {
     return html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         style="height: 32rem;"
         @lr-selection-change=${handleSelectionChange}
@@ -78,7 +78,7 @@ export const WithPinsAndPath: Story = {
   render: () => html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .nodeTypes=${nodeTypes}
       .pinnedNodeIds=${["marie", "radium"]}
       .path=${[
@@ -95,7 +95,7 @@ export const CanvasRenderer: Story = {
   render: () => html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .nodeTypes=${nodeTypes}
       renderer="canvas"
       style="height: 32rem;"
@@ -111,7 +111,7 @@ export const Empty: Story = {
 };
 
 /**
- * `search-query` is presettable, so a host can deep-link straight into a filtered view (restoring a
+ * `query` is presettable, so a host can deep-link straight into a filtered view (restoring a
  * query from a URL, say). `lr-search-change` reports every later edit the user makes in the toolbar
  * search box, so the same host can write it back out.
  */
@@ -127,9 +127,9 @@ export const PresetSearchQuery: Story = {
     };
     return html`
       <lr-knowledge-graph-explorer
-        search-query="curie"
+        query="curie"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         style="height: 32rem;"
         @lr-search-change=${handleSearchChange}
@@ -144,7 +144,7 @@ export const Narrow: Story = {
     <div style="max-width: 320px;">
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         style="height: 28rem;"
       ></lr-knowledge-graph-explorer>
@@ -156,7 +156,7 @@ export const HoverHighlight: Story = {
   render: () => html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .nodeTypes=${nodeTypes}
       highlight="hover"
       style="height: 32rem;"
@@ -181,7 +181,7 @@ export const ContainerFit: Story = {
       <lr-knowledge-graph-explorer
         fit-to="container"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         style="block-size: 100%"
       ></lr-knowledge-graph-explorer>
@@ -201,17 +201,17 @@ export const NamedByAccessibleLabel: Story = {
   name: 'Machine ids named by accessibleLabel',
   render: () => html`
     <lr-knowledge-graph-explorer
-      search-query="curie"
+      query="curie"
       node-labels="none"
       .nodes=${[
         { id: 'people/fr/1867-0007', accessibleLabel: 'Marie Curie', type: 'person' },
         { id: 'people/fr/1859-0015', accessibleLabel: 'Pierre Curie', type: 'person' },
         { id: 'elements/z084', accessibleLabel: 'Polonium', type: 'element' },
       ] satisfies LyraGraphNode[]}
-      .links=${[
+      .edges=${[
         { source: 'people/fr/1867-0007', target: 'people/fr/1859-0015', label: 'married_to' },
         { source: 'people/fr/1867-0007', target: 'elements/z084', label: 'discovered' },
-      ] satisfies LyraGraphLink[]}
+      ] satisfies LyraGraphEdge[]}
       .nodeTypes=${nodeTypes}
       style="height: 32rem;"
     ></lr-knowledge-graph-explorer>

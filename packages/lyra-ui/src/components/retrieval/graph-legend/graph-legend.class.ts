@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
@@ -86,7 +87,8 @@ const FALLBACK_PALETTE = [
  *   after an accepted toggle has assigned and announced it.
  * @csspart base - The legend wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
- * @csspart item - One row per type — a `<button>` when `interactive`, a plain `<div>` otherwise.
+ * @csspart item - One row per type — a `<button>`, or a plain `<div>` while `withoutInteraction` is
+ *   set.
  * @csspart swatch - The type's shape glyph.
  * @csspart label - The type's label text.
  * @csspart count - The optional per-type count.
@@ -121,6 +123,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     styles,
     srOnly,
   ];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    interactive: ['withoutInteraction', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-visibility-change-request',
     'lr-before-visibility-change',
@@ -134,7 +139,11 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   /** Currently-hidden type ids. The legend toggles its own copy on activation *then* emits; a host
    *  may also treat this as controlled by reassigning it after each event. */
   @property({ attribute: false }) hiddenTypes: readonly string[] = [];
-  /** `false` renders a read-only legend (no buttons, no toggling). */
+  /** Renders a read-only legend (no buttons, no toggling). */
+  @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
+  withoutInteraction = false;
+  /** `false` renders a read-only legend (no buttons, no toggling).
+   *  @deprecated Use `without-interaction`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     reflect: true,
@@ -145,6 +154,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
    *  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
    *  empty on the group. */
   @property() label = '';
+
 
   @state() private liveText = '';
   /** The documented part remains a shadow-DOM text mirror only; announcements use this shared
@@ -195,7 +205,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   private toggle(type: LyraNodeTypeStyle): void {
-    if (!this.interactive) return;
+    if (this.withoutInteraction) return;
     const hiddenTypes = canonicalIdentityList(this.hiddenTypes);
     const wasVisible = this.isVisible(type.id);
     const next = wasVisible
@@ -282,7 +292,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
                 >`
               : nothing}
           `;
-          return this.interactive
+          return !this.withoutInteraction
             ? html`<button
                 part="item"
                 type="button"

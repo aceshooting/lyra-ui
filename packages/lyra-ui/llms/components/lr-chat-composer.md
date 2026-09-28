@@ -7,9 +7,11 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-chat-composer-background` since `21.1.0`; use css-property `--lr-chat-composer-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `stoppable` / `stoppable` since `21.1.0`; use property `without-stop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `submitOnEnter` / `submit-on-enter` since `21.1.0`; use property `without-enter-submit`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,13 +57,16 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   stretching the action buttons across the row's full height would otherwise look wrong. Layout
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
-- `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
-  always inserts a newline instead of submitting
+- `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
+  Enter always inserts a newline instead of submitting. Deprecated alias: `submit-on-enter`/
+  `submitOnEnter` (use `without-enter-submit`; removed in 23.0.0) — inverted, so
+  `submit-on-enter="false"` equals `without-enter-submit`
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
   validation gate; while idle, disables the built-in Send button and suppresses Enter/click
   submission without disabling the textarea or a busy-state Stop action
-- `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
-  instead of exposing a Stop action
+- `withoutStop: boolean = false` (reflected, attribute `without-stop`) — when set, busy states keep
+  a disabled Send button instead of exposing a Stop action. Deprecated alias: `stoppable` (use
+  `without-stop`; removed in 23.0.0) — inverted, so `stoppable="false"` equals `without-stop`
 - `readOnly: boolean = false` (attribute `readonly`, reflected) — native read-only editing state;
   intrinsic required/length constraints are barred while set
 - `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
@@ -92,7 +97,7 @@ validity and recomputes the current intrinsic constraints.
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-change` (`detail: { value }`) — paired with the native `change` event
-- `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
+- `lr-submit` (`detail: { value }`) — fired by Enter (unless `without-enter-submit`) or the built-in
   button while `status="idle"` and `submitDisabled` is false. `detail.value` is always the exact, untrimmed current value;
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
@@ -114,8 +119,9 @@ rendered above the input row).
 treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
 `[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
 button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
-user-bubble background pair documents). `--lr-chat-composer-background` (default
-`var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
+user-bubble background pair documents). `--lr-chat-composer-bg` (default
+`var(--lr-color-surface)`; deprecated alias: `--lr-chat-composer-background`, use
+`--lr-chat-composer-bg`, removed in 23.0.0), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
 `--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
 composer docked into a themed panel can match it, with no `::part(base)` override. `--lr-chat-composer-padding`
 (default `var(--lr-space-s)`) and `--lr-chat-composer-gap` (default `var(--lr-space-xs)`) retune
@@ -160,8 +166,8 @@ also re-runs this fit (one animation frame later, to avoid a `ResizeObserver`-lo
 whenever the textarea's own _width_ changes — a sidebar collapsing, a responsive breakpoint, a
 window resize — even though `value`/`min-rows`/`max-rows` never did, since the same text now wraps
 across a different number of lines. Enter-to-send only fires while
-`submit-on-enter` is `true` (the default): plain Enter submits and prevents the default newline;
-Shift+Enter always inserts a newline regardless of `submit-on-enter`; an IME composition step
+`without-enter-submit` is unset (the default): plain Enter submits and prevents the default newline;
+Shift+Enter always inserts a newline regardless of `without-enter-submit`; an IME composition step
 (checked via `isComposing`, with `keyCode === 229` as a defense-in-depth fallback for browsers that
 report `isComposing` inconsistently) is never treated as a submit trigger; and while `status` isn't
 `"idle"`, Enter is left alone to insert a newline instead of resubmitting — the textarea itself is

@@ -4,6 +4,10 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './source-picker.js';
 import type { LyraSourcePicker, LyraSourceEntry } from './source-picker.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 type CheckboxElement = HTMLElement & {
   checked: boolean;
@@ -34,14 +38,14 @@ const sources: LyraSourceEntry[] = [
   { id: 'doc3', label: 'notes.txt', mimeType: 'text/plain' },
 ];
 
-it('defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=true, omitted label', async () => {
+it('defaults to empty sources/selectedSourceIds, withoutSelectAll=false, withoutSearch=false, omitted label', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
   expect(el.sources).to.deep.equal([]);
   expect(el.selectedSourceIds).to.deep.equal([]);
-  expect(el.showSelectAll).to.be.true;
-  expect(el.searchable).to.be.true;
+  expect(el.withoutSelectAll).to.be.false;
+  expect(el.withoutSearch).to.be.false;
   expect(el.label).to.equal(undefined);
 });
 
@@ -937,35 +941,31 @@ it('moves real DOM focus to the visible survivor when filtering removes the focu
   ).to.have.length(1);
 });
 
-it('searchable=false omits the built-in filter input', async () => {
+it('withoutSearch omits the built-in filter input', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
-  el.searchable = false;
+  el.withoutSearch = true;
   el.sources = sources;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="search"]').length).to.equal(0);
 });
 
-it('searchable="false" set as a plain HTML attribute (not a property binding) also omits the filter input', async () => {
-  // Unlike the `.searchable = false` property-assignment test above, this proves the *attribute*
-  // form actually clears the `true` default too -- the gap a stock `type: Boolean` converter
-  // can't close, since removing an attribute that was never present fires no
-  // `attributeChangedCallback`.
+it('without-search set as a plain HTML attribute (not a property binding) also omits the filter input', async () => {
   const el = (await fixture(
-    html`<lr-source-picker searchable="false"></lr-source-picker>`
+    html`<lr-source-picker without-search></lr-source-picker>`
   )) as LyraSourcePicker;
-  expect(el.searchable).to.be.false;
+  expect(el.withoutSearch).to.be.true;
   el.sources = sources;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="search"]').length).to.equal(0);
 });
 
-it('showSelectAll=false omits the select-all header row', async () => {
+it('withoutSelectAll omits the select-all header row', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
-  el.showSelectAll = false;
+  el.withoutSelectAll = true;
   el.sources = sources;
   await el.updateComplete;
   expect(
@@ -973,11 +973,11 @@ it('showSelectAll=false omits the select-all header row', async () => {
   ).to.equal(0);
 });
 
-it('show-select-all="false" set as a plain HTML attribute (not a property binding) also omits the select-all row', async () => {
+it('without-select-all set as a plain HTML attribute (not a property binding) also omits the select-all row', async () => {
   const el = (await fixture(
-    html`<lr-source-picker show-select-all="false"></lr-source-picker>`
+    html`<lr-source-picker without-select-all></lr-source-picker>`
   )) as LyraSourcePicker;
-  expect(el.showSelectAll).to.be.false;
+  expect(el.withoutSelectAll).to.be.true;
   el.sources = sources;
   await el.updateComplete;
   expect(
@@ -1623,5 +1623,161 @@ describe('select-all checkbox containment', () => {
     expect(changes).to.equal(0);
     expect(el.selectedSourceIds).to.deep.equal([]);
     expect(selectAll.checked).to.equal(false);
+  });
+});
+
+describe('lr-source-picker deprecated show-select-all alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-picker', kind: 'property', name: 'showSelectAll' }];
+  const observe = (el: LyraSourcePicker): string => String(el.shadowRoot!.querySelectorAll('[part="select-all"]').length);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourcePicker>(markup);
+
+  it('applies without-select-all without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-select-all></lr-source-picker>`));
+      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-select-all="false" equal to without-select-all, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-select-all></lr-source-picker>`));
+      alias = observe(await mount(html`<lr-source-picker .sources=${sources} show-select-all="false"></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`);
+      el.showSelectAll = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutSelectAll, el.showSelectAll, el.hasAttribute('show-select-all')];
+      // The canonical property syncs back into the alias.
+      el.withoutSelectAll = false;
+      await el.updateComplete;
+      readback.push(el.showSelectAll, el.hasAttribute('show-select-all'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-picker:property:showSelectAll',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-select-all');
+  });
+
+  it('restores the default when show-select-all is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources} show-select-all="false"></lr-source-picker>`);
+      el.showSelectAll = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showSelectAll = false;
+      await el.updateComplete;
+      el.removeAttribute('show-select-all');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-select-all></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources} show-select-all without-select-all></lr-source-picker>`);
+      expect(el.withoutSelectAll).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-source-picker .sources=${sources} without-select-all show-select-all></lr-source-picker>`);
+      expect(reversed.withoutSelectAll, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
+  });
+});
+
+describe('lr-source-picker deprecated searchable alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-picker', kind: 'property', name: 'searchable' }];
+  const observe = (el: LyraSourcePicker): string => String(el.shadowRoot!.querySelectorAll('[part="search"]').length);
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourcePicker>(markup);
+
+  it('applies without-search without a deprecation warning', async () => {
+    let canonical = '';
+    let plain = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-search></lr-source-picker>`));
+      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
+    });
+    expect(canonical).to.not.equal(plain);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps searchable="false" equal to without-search, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-search></lr-source-picker>`));
+      alias = observe(await mount(html`<lr-source-picker .sources=${sources} searchable="false"></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`);
+      el.searchable = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutSearch, el.searchable, el.hasAttribute('searchable')];
+      // The canonical property syncs back into the alias.
+      el.withoutSearch = false;
+      await el.updateComplete;
+      readback.push(el.searchable, el.hasAttribute('searchable'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-picker:property:searchable',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-search');
+  });
+
+  it('restores the default when searchable is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-source-picker .sources=${sources}></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources} searchable="false"></lr-source-picker>`);
+      el.searchable = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.searchable = false;
+      await el.updateComplete;
+      el.removeAttribute('searchable');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-picker .sources=${sources} without-search></lr-source-picker>`));
+      const el = await mount(html`<lr-source-picker .sources=${sources} searchable without-search></lr-source-picker>`);
+      expect(el.withoutSearch).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-source-picker .sources=${sources} without-search searchable></lr-source-picker>`);
+      expect(reversed.withoutSearch, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
   });
 });

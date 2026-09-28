@@ -47,14 +47,14 @@ export const Default: Story = {
 
 export const CollapsedDepth: Story = {
   render: () => html`
-    <lr-json-viewer .data=${sample} collapsed-depth="1" style="max-width: 32rem;"></lr-json-viewer>
+    <lr-json-viewer .data=${sample} expand-depth="1" style="max-width: 32rem;"></lr-json-viewer>
   `,
 };
 
 export const CollapsedImmediately: Story = {
-  name: 'collapsed-depth="0" (top-level starts collapsed)',
+  name: 'expand-depth="0" (top-level starts collapsed)',
   render: () => html`
-    <lr-json-viewer .data=${sample} collapsed-depth="0" style="max-width: 32rem;"></lr-json-viewer>
+    <lr-json-viewer .data=${sample} expand-depth="0" style="max-width: 32rem;"></lr-json-viewer>
   `,
 };
 
@@ -71,7 +71,7 @@ export const Copyable: Story = {
 
 export const Search: Story = {
   render: () => html`
-    <lr-json-viewer .data=${sample} search="storm" collapsed-depth="1" style="max-width: 32rem;"></lr-json-viewer>
+    <lr-json-viewer .data=${sample} query="storm" expand-depth="1" style="max-width: 32rem;"></lr-json-viewer>
   `,
 };
 
@@ -134,10 +134,10 @@ export const Narrow320: Story = {
 
 
 export const BackwardSearch: Story = {
-  parameters: { docs: { description: { story: 'First Previous selects the last match. Subsequent navigation wraps and reveals only the selected result’s ancestors. Removing search clears matches.' } } },
+  parameters: { docs: { description: { story: 'First Previous selects the last match. Subsequent navigation wraps and reveals only the selected result’s ancestors. Removing query clears matches.' } } },
   render: () => html`
     <div>
-      <lr-json-viewer .data=${{ first: 'needle first', middle: 'needle middle', last: 'needle last' }} search="needle"></lr-json-viewer>
+      <lr-json-viewer .data=${{ first: 'needle first', middle: 'needle middle', last: 'needle last' }} query="needle"></lr-json-viewer>
       <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!
         .querySelector<LyraJsonViewer>('lr-json-viewer')!.searchPrevious()}>Previous match</button>
     </div>

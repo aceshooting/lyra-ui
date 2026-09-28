@@ -278,15 +278,28 @@ export const styles = css`
   :host([prose]) [part='unit'] {
     display: none;
   }
-  :host([compact]) [part='base'] {
+  /* The compact density: size s and the steps below it. The deprecated compact alias sets size s
+     once upgraded; its own selector only covers server-rendered markup before hydration, while no
+     size is authored (a :where() qualifier, adding no specificity). One :host([x]) selector per
+     spelling keeps every branch at the specificity the ordering below relies on, so
+     frame='plain' and the horizontal column-gap win by source order. */
+  :host([compact]:where(:not([size]))) [part='base'],
+  :host([size='2xs']) [part='base'],
+  :host([size='xs']) [part='base'],
+  :host([size='s']) [part='base'],
+  :host([size='small']) [part='base'] {
     padding: var(--lr-stat-padding, var(--lr-space-s));
     gap: var(--lr-stat-gap, var(--lr-size-0-125rem));
   }
-  :host([compact]) .linked-content {
+  :host([compact]:where(:not([size]))) .linked-content,
+  :host([size='2xs']) .linked-content,
+  :host([size='xs']) .linked-content,
+  :host([size='s']) .linked-content,
+  :host([size='small']) .linked-content {
     padding: var(--lr-stat-padding, var(--lr-space-s));
     gap: var(--lr-stat-gap, var(--lr-size-0-125rem));
   }
-  /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
+  /* MUST stay after the compact density: both are :host([x]) [part='base'], equal specificity, so
      source order alone decides the padding when a stat is both, and plain ("no chrome at all")
      wins. block-size: 100% is dropped deliberately -- filling an arbitrarily tall parent is card
      behavior; a chrome-less stat sits at content height so it drops inline in prose or a toolbar.

@@ -81,12 +81,12 @@ export const LongContentTruncates: Story = {
 };
 
 export const Compact: Story = {
-  name: 'compact (density)',
+  name: 'size="s" (density)',
   parameters: {
     docs: {
       description: {
         story:
-          'Tightens `[part="base"]`\'s padding and gap and collapses `[part="content"]`\'s inter-line gap — retune either through `--lr-conversation-item-compact-padding`/`--lr-conversation-item-compact-gap` on the row or any ancestor. It deliberately leaves the rename button at the shared `--lr-icon-button-size` target floor, so a row with a rename affordance still floors at roughly that height; a row with `renamable=false` and no `actions` collapses much further.',
+          'Tightens `[part="base"]`\'s padding and gap and collapses `[part="content"]`\'s inter-line gap — retune either through `--lr-conversation-item-compact-padding`/`--lr-conversation-item-compact-gap` on the row or any ancestor. It deliberately leaves the rename button at the shared `--lr-icon-button-size` target floor, so a row with a rename affordance still floors at roughly that height; a row with `without-rename` and no `actions` collapses much further.',
       },
     },
   },
@@ -105,25 +105,25 @@ export const Compact: Story = {
           .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
         ></lr-conversation-item>
       </nav>
-      <nav aria-label="Conversations (compact)" style="display:flex;flex-direction:column;width:20rem;">
+      <nav aria-label="Conversations (dense)" style="display:flex;flex-direction:column;width:20rem;">
         <lr-conversation-item
-          compact
+          size="s"
           label="Nightly build failure"
           excerpt="The lint step hit a type error in chart.ts."
           .timestamp=${new Date()}
           active
         ></lr-conversation-item>
         <lr-conversation-item
-          compact
+          size="s"
           label="Deploy hotfix to staging"
           excerpt="Done — the fix is live."
           .timestamp=${new Date(Date.now() - 3 * 60 * 60 * 1000)}
         ></lr-conversation-item>
         <lr-conversation-item
-          compact
-          .renamable=${false}
+          size="s"
+          without-rename
           label="Read-only session (no rename affordance)"
-          excerpt="Nothing floors this row's height, so compact tightens it the most."
+          excerpt="Nothing floors this row's height, so the dense size tightens it the most."
           .timestamp=${new Date(Date.now() - 26 * 60 * 60 * 1000)}
         ></lr-conversation-item>
       </nav>
@@ -132,14 +132,14 @@ export const Compact: Story = {
 };
 
 export const NotEditable: Story = {
-  name: 'renamable=false (no rename affordance)',
+  name: 'without-rename (no rename affordance)',
   render: () => html`
     <nav aria-label="Conversations" style="max-width: 22rem;">
       <lr-conversation-item
         label="Shared conversation (read-only)"
         excerpt="Rename is unavailable for sessions this consumer doesn't own."
         .timestamp=${new Date()}
-        .renamable=${false}
+        without-rename
       ></lr-conversation-item>
     </nav>
   `,

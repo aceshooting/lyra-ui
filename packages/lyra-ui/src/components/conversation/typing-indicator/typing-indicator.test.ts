@@ -377,25 +377,25 @@ describe('ambient transition token', () => {
 });
 
 describe('dedicated duration token', () => {
-  it('defaults --lr-typing-duration through the --lr-transition-ambient alias to 1.8s (unset regression)', async () => {
+  it('defaults --lr-typing-indicator-duration through the --lr-transition-ambient alias to 1.8s (unset regression)', async () => {
     const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
     expect(getComputedStyle(dots[0]!).animationDuration).to.equal('1.8s');
   });
 
-  it('honors a --lr-typing-duration override on the host for every variant', async () => {
+  it('honors a --lr-typing-indicator-duration override on the host for every variant', async () => {
     const dots = (await fixture(
-      html`<lr-typing-indicator shape="dots" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="dots" style="--lr-typing-indicator-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(dots.shadowRoot!.querySelector('[part="dot"]')!).animationDuration).to.equal('0.9s');
 
     const pulse = (await fixture(
-      html`<lr-typing-indicator shape="pulse" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="pulse" style="--lr-typing-indicator-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(pulse.shadowRoot!.querySelector('[part="pulse"]')!).animationDuration).to.equal('0.9s');
 
     const cursor = (await fixture(
-      html`<lr-typing-indicator shape="cursor" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+      html`<lr-typing-indicator shape="cursor" style="--lr-typing-indicator-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     expect(getComputedStyle(cursor.shadowRoot!.querySelector('[part="cursor"]')!).animationDuration).to.equal('0.9s');
   });
@@ -414,7 +414,7 @@ describe('dedicated duration token', () => {
       const el = (await fixture(
         html`<lr-typing-indicator
           shape="dots"
-          style="--lr-typing-duration: 0.9s ease-in-out;"
+          style="--lr-typing-indicator-duration: 0.9s ease-in-out;"
         ></lr-typing-indicator>`,
       )) as LyraTypingIndicator;
       const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
@@ -430,6 +430,38 @@ describe('dedicated duration token', () => {
   });
 });
 
+describe('deprecated custom-property aliases', () => {
+  it('still honors the un-namespaced --lr-typing-* spellings', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator
+        shape="dots"
+        style="--lr-typing-duration: 0.9s ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 500ms; --lr-typing-dot-size: 13px; --lr-typing-gap: 7px;"
+      ></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const dots = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="dot"]');
+    expect(getComputedStyle(dots[0]!).animationDuration).to.equal('0.9s');
+    expect(getComputedStyle(dots[1]!).animationDelay).to.equal('0.3s');
+    expect(getComputedStyle(dots[2]!).animationDelay).to.equal('0.5s');
+    expect(getComputedStyle(dots[0]!).inlineSize).to.equal('13px');
+    expect(getComputedStyle(base).columnGap).to.equal('7px');
+  });
+
+  it('lets the namespaced names win over their deprecated aliases', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator
+        shape="dots"
+        style="--lr-typing-dot-size: 13px; --lr-typing-indicator-dot-size: 11px; --lr-typing-gap: 7px; --lr-typing-indicator-gap: 5px; --lr-typing-duration: 3s ease-in-out; --lr-typing-indicator-duration: 0.9s ease-in-out;"
+      ></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
+    expect(getComputedStyle(dot).inlineSize).to.equal('11px');
+    expect(getComputedStyle(base).columnGap).to.equal('5px');
+    expect(getComputedStyle(dot).animationDuration).to.equal('0.9s');
+  });
+});
+
 describe('themeable stagger delays', () => {
   it('defaults dot stagger delays to 600ms/1200ms', async () => {
     const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
@@ -438,11 +470,11 @@ describe('themeable stagger delays', () => {
     expect(getComputedStyle(dots[2]!).animationDelay).to.equal('1.2s');
   });
 
-  it('honors --lr-typing-dot-stagger-1/-2 overrides', async () => {
+  it('honors --lr-typing-indicator-dot-stagger-1/-2 overrides', async () => {
     const el = (await fixture(
       html`<lr-typing-indicator
         shape="dots"
-        style="--lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms;"
+        style="--lr-typing-indicator-dot-stagger-1: 300ms; --lr-typing-indicator-dot-stagger-2: 600ms;"
       ></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');

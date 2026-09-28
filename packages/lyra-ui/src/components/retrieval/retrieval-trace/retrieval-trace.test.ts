@@ -431,7 +431,7 @@ describe("lr-retrieval-trace", () => {
     expect(text!.textContent).to.equal("best hiking trails near Seattle");
   });
 
-  it("renders chunk evidence via a compact lr-chunk-inspector, preserving source metadata and locators", async () => {
+  it("renders chunk evidence via a size=\"s\" lr-chunk-inspector, preserving source metadata and locators", async () => {
     const el = (await fixture(
       html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`
     )) as LyraRetrievalTrace;
@@ -446,7 +446,7 @@ describe("lr-retrieval-trace", () => {
       '[data-id="retrieve"] lr-chunk-inspector'
     ) as LyraChunkInspector;
     expect(inspector).to.exist;
-    expect(inspector.hasAttribute("compact")).to.be.true;
+    expect(inspector.getAttribute("size")).to.equal("s");
     expect(inspector.chunks).to.deep.equal([
       {
         id: "c1",
@@ -914,21 +914,31 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     '[data-id="retrieve"] lr-chunk-inspector',
   ) as LyraChunkInspector;
   let leaked = 0;
+  el.addEventListener('lr-chunk-toggle', () => leaked++);
   el.addEventListener('lr-expand', () => leaked++);
-  const correlated = oneEvent(el, 'lr-stage-chunk-action');
+  const actions: unknown[] = [];
+  el.addEventListener('lr-stage-chunk-action', (event) =>
+    actions.push((event as CustomEvent).detail)
+  );
 
-  inspector.dispatchEvent(new CustomEvent('lr-expand', {
-    detail: { chunkId: 'c2', expanded: true },
-    bubbles: true,
-    composed: true,
-  }));
+  // The inspector fires its canonical lr-chunk-toggle and then the deprecated lr-expand alias;
+  // only the canonical event is correlated, and neither escapes the trace.
+  for (const type of ['lr-chunk-toggle', 'lr-expand']) {
+    inspector.dispatchEvent(new CustomEvent(type, {
+      detail: { chunkId: 'c2', expanded: true },
+      bubbles: true,
+      composed: true,
+    }));
+  }
 
-  expect((await correlated).detail).to.deep.equal({
-    stageId: 'retrieve',
-    action: 'expand',
-    chunkId: 'c2',
-    expanded: true,
-  });
+  expect(actions).to.deep.equal([
+    {
+      stageId: 'retrieve',
+      action: 'expand',
+      chunkId: 'c2',
+      expanded: true,
+    },
+  ]);
   expect(leaked).to.equal(0);
 });
 

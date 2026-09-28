@@ -5,6 +5,13 @@ import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-u
 import type { FlowHandle } from '../flow-canvas/flow-types.js';
 import { normalizeFlowStatus, snapshotFlowHandles } from '../flow-canvas/flow-model.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -14,6 +21,10 @@ import { styles } from './flow-node.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** The sizes that select the compact density, which the deprecated `compact` alias reads back. */
+const COMPACT_SIZES: ReadonlySet<unknown> = new Set(['2xs', 'xs', 's', 'small']);
+const isCompactSize = (size: unknown): boolean => COMPACT_SIZES.has(size);
 
 const DEFAULT_INPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'in' })]);
 const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'out' })]);
@@ -38,7 +49,8 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  * @csspart card - The bordered, filled node card.
  * @csspart header - The built-in header row (omitted when the `header` slot has content).
  * @csspart icon - The wrapper around the `icon` slot.
- * @csspart heading - The heading text.
+ * @csspart heading - The heading text. Exposed as a heading only while `heading-level` names a
+ *   level.
  * @csspart status - The visible status chip (status is never color-only).
  * @csspart progress - The determinate progress bar.
  * @csspart body - The default-slot body wrapper.
@@ -47,12 +59,12 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  * @csspart handle-input - An input handle dot (also carries the shared `handle` part).
  * @csspart handle-output - An output handle dot (also carries the shared `handle` part).
  * @cssprop [--lr-flow-node-min-inline-size=calc(var(--lr-size-10rem) + var(--lr-size-1rem))] - Minimum card inline size.
- * @cssprop [--lr-flow-node-compact-padding=var(--lr-space-xs)] - `[part="card"]` padding while
- *   `compact`.
+ * @cssprop [--lr-flow-node-compact-padding=var(--lr-space-xs)] - `[part="card"]` padding at the
+ *   compact density (`size="s"` and below).
  * @cssprop [--lr-flow-node-compact-gap=var(--lr-space-2xs)] - Gap between `[part="card"]`'s rows
- *   while `compact`.
+ *   at the compact density.
  * @cssprop [--lr-flow-node-compact-header-gap=var(--lr-space-2xs)] - Gap between `[part="header"]`'s
- *   icon slot and heading while `compact`.
+ *   icon slot and heading at the compact density.
  * @cssprop [--lr-flow-node-selected-outline-color=var(--lr-color-brand)] - Outline color of the
  *   card while `selected`. The outline stays independent from execution-state border and glow.
  * @cssprop [--lr-flow-node-running-border=var(--lr-color-brand)] - Border color of the card while
@@ -95,6 +107,9 @@ export class LyraFlowNode extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (compact) => (compact ? 's' : undefined), isCompactSize],
+  };
 
   /** This card's identity inside `lr-flow-canvas`, matched against a `nodes` entry's `id`. It
    *  reflects because the canvas adopts light-DOM children by reading the `node-id` *attribute*: a
@@ -107,6 +122,10 @@ export class LyraFlowNode extends LyraElement {
   @property({ attribute: 'data-node-type', reflect: true, converter: omittedEmptyStringConverter })
   flowType = '';
   @property() heading = '';
+  /** Semantic level of the visible `heading`. `none` (the default) keeps it plain text, as cards
+   *  inside a canvas usually are; `1`-`6` expose it as a heading at that level, for a standalone
+   *  card in a document outline. Invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = 'none';
   private _status: LyraToolStatus | null = null;
   /** Canonical tool lifecycle status. Invalid runtime/attribute values normalize to null. */
   @property({ reflect: true })
@@ -123,11 +142,33 @@ export class LyraFlowNode extends LyraElement {
   @property({ attribute: 'status-detail' }) statusDetail = '';
   @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
   @property({ type: Boolean, reflect: true }) selected = false;
-  /** Tighter card padding and row gap, including the header's own icon-to-heading gap, for the
-   *  dense canvases and palette previews these cards usually render in -- same convention as
-   *  `lr-source-card`'s `compact`. Defaults to `false`, i.e. the full card padding. Purely a
-   *  density knob: the border, background and shadow stay, as do the `selected` and
-   *  `status="running"` treatments. */
+  private _size?: LyraSize;
+  /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
+   *  or `small`/`medium`/`large`. `s` and the steps below it select the compact density: tighter
+   *  card padding and row gap, including the header's own icon-to-heading gap, for the dense
+   *  canvases and palette previews these cards usually render in. `m` and the steps above it keep
+   *  the full card padding. Purely a density knob: the border, background and shadow stay, as do
+   *  the `selected` and `status="running"` treatments. Opt-in: with no size the card renders
+   *  exactly as before. Unsupported values normalize to the omitted state and remove the
+   *  attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+  /**
+   * Deprecated spelling of the compact density: `compact` sets `size="s"`, clearing it removes
+   * the size, and any `size` at or below `s` reads back as `compact`. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `size="s"`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true }) compact = false;
   private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
   /** Frozen snapshot of at most the first 10,000 input handles. Reassign to update. */
@@ -297,13 +338,20 @@ export class LyraFlowNode extends LyraElement {
 
   override render(): TemplateResult {
     const clampedProgress = this.safeProgress;
+    // A removed `heading-level` attribute arrives as null; it restores the plain-text default
+    // rather than falling through to the invalid-value level.
+    const headingLevel = this.heading ? resolveHeadingLevel(this.headingLevel ?? 'none') : undefined;
     return html`<div part="base">
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onSlotChange}></slot>
         <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.renderSlotPresence(this.hasIconSlot))}>
           <slot name="icon" part="icon" @slotchange=${this.onSlotChange}></slot>
-          <span part="heading">${this.heading}</span>
+          <span
+            part="heading"
+            role=${headingLevel ? 'heading' : nothing}
+            aria-level=${headingLevel ?? nothing}
+          >${this.heading}</span>
         </div>
         ${this.status
           ? html`<div part="status" data-status=${this.status}>

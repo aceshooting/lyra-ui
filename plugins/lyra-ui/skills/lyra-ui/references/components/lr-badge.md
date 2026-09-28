@@ -151,8 +151,9 @@ expands to exactly one timing function), `--lr-badge-pulse-color` (default
 
 _`lr-tag`'s own two_ (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
 retuning the tag's corner retunes the remove button's with it) and
-`--lr-tag-remove-hover-background` (default `color-mix(in srgb, currentColor 16%, transparent)` —
-the remove button's `:hover` fill).
+`--lr-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)` —
+the remove button's `:hover` fill). Deprecated alias: `--lr-tag-remove-hover-background` (use
+`--lr-tag-remove-hover-bg`; removed in 23.0.0), read only as its fallback.
 
 **Known gotchas:**
 

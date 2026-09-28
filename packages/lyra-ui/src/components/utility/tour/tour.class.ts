@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
@@ -24,6 +24,9 @@ import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numb
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { styles } from './tour.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
@@ -40,6 +43,20 @@ const MAX_TARGET_SELECTOR_LENGTH = 8_192;
 const MAX_HEADING_LENGTH = 4_096;
 const MAX_CONTENT_LENGTH = 65_536;
 const MAX_STEP_SPOTLIGHT_PADDING = 10_000;
+/** A CSS `<number>` followed by one of the length units the spotlight padding resolves live. */
+const SPOTLIGHT_PADDING_LENGTH = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|vw|vh)$/i;
+
+/** `spotlight-padding`: a value carrying a `px`, `rem`, `em`, `vw` or `vh` unit stays the authored
+ *  CSS length, resolved to pixels whenever the spotlight is painted; any other value parses with
+ *  `Number()`, exactly as the pixel-only attribute always has (a removed attribute is `null`). */
+const spotlightPaddingConverter: ComplexAttributeConverter<number | string> = {
+  fromAttribute: (value) => {
+    if (value === null) return value as unknown as number;
+    const trimmed = value.trim();
+    return SPOTLIGHT_PADDING_LENGTH.test(trimmed) ? trimmed : Number(value);
+  },
+};
+
 const TOUR_PLACEMENTS = new Set<Placement>([
   'top',
   'top-start',
@@ -119,6 +136,16 @@ export type LyraTourEndReason =
 
 export interface LyraTourEventMap {
   'lr-tour-start': CustomEvent<{ readonly index: number }>;
+  /** Cancelable proposal to move to another step, fired before `activeIndex` changes. */
+  'lr-tour-step-change-request': CustomEvent<{
+    readonly index: number;
+    readonly previousIndex: number;
+    readonly step: Readonly<LyraTourStep>;
+    readonly via: 'next' | 'back' | 'goto';
+  }>;
+  /** @deprecated Use `lr-tour-step-change-request`; removal not before 23.0.0. Fired unchanged
+   *  right after it from the same navigation, with an equal detail; either event's
+   *  `preventDefault()` keeps the current step. */
   'lr-tour-step-change': CustomEvent<{
     readonly index: number;
     readonly previousIndex: number;
@@ -313,15 +340,21 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   only. When real content is assigned, it's shown instead of `step.content`; when empty,
  *   `step.content` renders as plain text. Not scoped per step by this component itself -- a
  *   consumer that needs different rich content per step swaps the slotted children (or listens
- *   for `lr-tour-step-change` and re-renders them) itself, the same "consumer owns slotted
+ *   for `lr-tour-step-change-request` and re-renders them) itself, the same "consumer owns slotted
  *   content" pattern `lr-dialog`'s default slot already uses.
  * @event lr-tour-start - Fired by `start()`. `detail: { index }`. Not cancelable.
- * @event lr-tour-step-change - Fired by `next()`/`back()`/`goToStep()` before `activeIndex`
- *   changes. `detail: { index, previousIndex, step, via }`. Cancelable -- a listener calling
- *   `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a real
- *   action (e.g. an onboarding step demonstrating "click this button" shouldn't let Next silently
- *   skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
- *   `lr-slide-change`.
+ * @event lr-tour-step-change-request - Fired by `next()`/`back()`/`goToStep()` before
+ *   `activeIndex` changes. `detail: { index, previousIndex, step, via }`. Cancelable -- a listener
+ *   calling `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a
+ *   real action (e.g. an onboarding step demonstrating "click this button" shouldn't let Next
+ *   silently skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
+ *   `lr-slide-change`. Fires before `lr-tour-step-change`, from the same navigation; either event
+ *   may veto.
+ * @event lr-tour-step-change - Deprecated alias of `lr-tour-step-change-request`, kept firing
+ *   unchanged right after it with an equal `detail: { index, previousIndex, step, via }`.
+ *   Cancelable -- either event may veto, and a veto through this alias logs a one-time development
+ *   warning. Like the canonical event, a deliberate departure from `lr-carousel`'s non-cancelable
+ *   `lr-slide-change`. Removal not before 23.0.0.
  * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
  *   `'completed'`). `detail: LyraTourEndReason`. Conditionally cancelable: every ordinary end can be
  *   vetoed, while `'unmount'` cannot because the element is already being removed -- mirrors
@@ -376,6 +409,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showProgress: ['withoutProgress', invertAlias, invertAlias],
+  };
 
   static override properties = {
     steps: { attribute: false, noAccessor: true },
@@ -416,16 +452,27 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  prop exactly (can legitimately be negative for overlap). */
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
 
-  /** Tour-level default extra px between a target's own box and the spotlight cutout/ring,
-   *  overridable per step via `LyraTourStep.spotlightPadding`. Non-negative. */
-  @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = DEFAULT_SPOTLIGHT_PADDING;
+  /** Tour-level default extra space between a target's own box and the spotlight cutout/ring,
+   *  overridable per step via `LyraTourStep.spotlightPadding`: a number of CSS pixels, or a CSS
+   *  length in `px`, `rem`, `em`, `vw` or `vh` resolved to pixels whenever the spotlight is painted
+   *  (`rem` against the root font size, `em` against this element's own). Any other value uses
+   *  the 4px default. Non-negative. */
+  @property({ converter: spotlightPaddingConverter, attribute: 'spotlight-padding' })
+  spotlightPadding: number | string = DEFAULT_SPOTLIGHT_PADDING;
 
   /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching
    *  `lr-dialog`/`lr-lightbox`'s `lightDismiss`: a guided tour's backdrop click doing nothing by
    *  default avoids losing onboarding progress to a stray click. Set it to opt in. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
-  /** Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer. */
+  /** Omits the built-in "Step X of Y" progress indicator (dots + text) from the footer. */
+  @property({ type: Boolean, attribute: 'without-progress' }) withoutProgress = false;
+
+  /**
+   * Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer.
+   *
+   * @deprecated Use `without-progress`; removal not before 23.0.0.
+   */
   @property({
     type: Boolean,
     attribute: 'show-progress',
@@ -587,7 +634,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   /** Advances to the next step. On the last step, ends the tour instead (`end('completed')`) --
    *  the built-in Next/Done button calls this same method, so a custom control wired to `next()`
-   *  behaves identically to the built-in one. Cancelable via `lr-tour-step-change` (or
+   *  behaves identically to the built-in one. Cancelable via `lr-tour-step-change-request` (or
    *  `lr-tour-end` when it triggers completion). */
   next(): void {
     const total = this.steps.length;
@@ -637,12 +684,22 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const previousIndex = this.activeIndex;
     const step = this.steps[index];
     if (!step) return;
-    const event = this.emit(
+    const request = this.emit(
+      'lr-tour-step-change-request',
+      Object.freeze({ index, previousIndex, step, via }),
+      { cancelable: true },
+    );
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit(
       'lr-tour-step-change',
       Object.freeze({ index, previousIndex, step, via }),
       { cancelable: true },
     );
-    if (event.defaultPrevented) return;
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-tour-step-change', 'lr-tour-step-change-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.activeIndex = index;
   }
 
@@ -718,15 +775,25 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
 
-    const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);
     const interactive = !!step.interactiveTarget;
     if (interactive) {
       this.interactiveKeyboardTarget = target;
       this.interactiveKeyboardDocument = target.ownerDocument;
       this.interactiveKeyboardDocument.addEventListener('keydown', this.onInteractiveScopeKeyDown, true);
     }
-    this.spotlightCleanup = trackRect(target, (rect) => this.paintSpotlight(rect, padding, interactive));
+    this.spotlightCleanup = trackRect(target, (rect) =>
+      this.paintSpotlight(rect, this.spotlightPaddingPx(step), interactive),
+    );
     return this.placeCleanup;
+  }
+
+  /** The step's spotlight padding in pixels. Resolved on every paint, so a `rem`/`em` length
+   *  follows a live root or host font-size change. */
+  private spotlightPaddingPx(step: LyraTourStep): number {
+    const value: unknown = step.spotlightPadding ?? this.spotlightPadding;
+    const px =
+      typeof value === 'string' ? (resolveCssLength(value, { host: this }) ?? Number.NaN) : (value as number);
+    return finiteRange(px, DEFAULT_SPOTLIGHT_PADDING, 0);
   }
 
   private focusAfterPlacement(placement: DeferredOperationHandle | undefined): void {
@@ -966,7 +1033,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     });
     const panelName = authoredName === null ? fallbackName : suppliedName;
     const hasBodyContent = this.hasSlotContent || !!step.content;
-    const describedBy = [hasBodyContent ? this.bodyId : '', this.showProgress ? this.progressTextId : '']
+    const describedBy = [hasBodyContent ? this.bodyId : '', this.withoutProgress ? '' : this.progressTextId]
       .filter((id) => id.length > 0)
       .join(' ');
 
@@ -1007,7 +1074,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
             <div id=${this.bodyId} part="body">
               <slot @slotchange=${this.onDefaultSlotChange}></slot>${this.hasSlotContent ? nothing : step.content ?? ''}
             </div>
-            ${this.showProgress
+            ${!this.withoutProgress
               ? html`
                   <div part="progress">
                     <span part="progress-text" id=${this.progressTextId}>

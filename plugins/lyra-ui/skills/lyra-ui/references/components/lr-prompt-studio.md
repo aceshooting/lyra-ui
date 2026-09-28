@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated event** `lr-message-reorder` since `21.1.0`; use event `addEventListener('lr-message-reorder-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,7 +38,8 @@ identity before rendering, editing, focus, selection, and events;
 runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
-label when unset;
+label when unset; `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
+level (`none` keeps the visual heading text without heading semantics);
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
 emits a cancelable request, so a host can veto it while persisting the proposed order and later
@@ -58,9 +59,11 @@ readonly PromptStudioMessage[]; variables?: readonly PromptStudioVariable[]; cre
 **Events:** cancelable `lr-change` (`{ messages, variables }`, the complete proposed next state,
 fired before it is applied — prevent it to keep the current state unchanged), `lr-run`, `lr-save`
 (both carry complete messages/variables); `lr-version-select` (`{ version }`); and cancelable
-`lr-message-reorder` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
-updates the component and emits `lr-change`. Prevent `lr-message-reorder` to keep the current
-order; the listener may persist `detail.messages` and assign it back when ready. Plus `focus` and
+`lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
+updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
+current order; the listener may persist `detail.messages` and assign it back when ready. Deprecated
+alias: `lr-message-reorder` (use `lr-message-reorder-request`; removed in 23.0.0) — still fired right
+after it with an equal detail, and either event may veto. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow

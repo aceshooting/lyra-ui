@@ -908,8 +908,8 @@ it('allows selected and issue states to be rethemed independently', async () => 
   const el = (await fixture(html`
     <lr-json-schema-viewer
       style="
-        --lr-schema-viewer-selected-border: rgb(1, 2, 3);
-        --lr-schema-viewer-error-border: rgb(4, 5, 6);
+        --lr-json-schema-viewer-selected-border: rgb(1, 2, 3);
+        --lr-json-schema-viewer-error-border: rgb(4, 5, 6);
       "
       selected-path="/properties/query"
       .schema=${schema}
@@ -935,4 +935,66 @@ it('uses break-word, not anywhere, on name/description/issue text', async () => 
   await el.updateComplete;
   const name = el.shadowRoot!.querySelector('[part="name"]') as HTMLElement;
   expect(getComputedStyle(name).overflowWrap).to.equal('break-word');
+});
+
+describe('lr-json-schema-viewer namespaced custom properties and their deprecated --lr-schema-viewer-* aliases', () => {
+  const deep = {
+    type: 'object',
+    properties: {
+      a: { type: 'object', properties: { b: { type: 'object', properties: { c: { type: 'string' } } } } },
+    },
+  };
+  const colourCases = [
+    { name: 'selected-border', selector: '[part~="node-selected"]', read: 'borderInlineStartColor' },
+    { name: 'error-border', selector: '[part="issue"][data-severity="error"]', read: 'borderInlineStartColor' },
+    { name: 'error-bg', selector: '[part="issue"][data-severity="error"]', read: 'backgroundColor' },
+    { name: 'warning-border', selector: '[part="issue"][data-severity="warning"]', read: 'borderInlineStartColor' },
+    { name: 'warning-bg', selector: '[part="issue"][data-severity="warning"]', read: 'backgroundColor' },
+    { name: 'info-border', selector: '[part="issue"][data-severity="info"]', read: 'borderInlineStartColor' },
+    { name: 'info-bg', selector: '[part="issue"][data-severity="info"]', read: 'backgroundColor' },
+  ] as const;
+  const issues: SchemaValidationIssue[] = [
+    { path: '/properties/query', message: 'Error', severity: 'error' },
+    { path: '/properties/query', message: 'Warning', severity: 'warning' },
+    { path: '/properties/query', message: 'Info', severity: 'info' },
+  ];
+
+  async function paint(style: string): Promise<LyraJsonSchemaViewer> {
+    return fixture<LyraJsonSchemaViewer>(html`
+      <lr-json-schema-viewer
+        style=${style}
+        selected-path="/properties/query"
+        .schema=${schema}
+        .issues=${issues}
+      ></lr-json-schema-viewer>
+    `);
+  }
+
+  for (const { name, selector, read } of colourCases) {
+    it(`reads --lr-json-schema-viewer-${name}, falls back to --lr-schema-viewer-${name}, and lets the canonical name win`, async () => {
+      const value = (el: LyraJsonSchemaViewer): string =>
+        getComputedStyle(el.shadowRoot!.querySelector(selector) as HTMLElement)[read];
+      const canonical = await paint(`--lr-json-schema-viewer-${name}: rgb(1, 2, 3)`);
+      const alias = await paint(`--lr-schema-viewer-${name}: rgb(1, 2, 3)`);
+      const both = await paint(`--lr-json-schema-viewer-${name}: rgb(4, 5, 6); --lr-schema-viewer-${name}: rgb(1, 2, 3)`);
+      expect(value(canonical)).to.equal('rgb(1, 2, 3)');
+      expect(value(alias)).to.equal('rgb(1, 2, 3)');
+      expect(value(both)).to.equal('rgb(4, 5, 6)');
+    });
+  }
+
+  it('reads --lr-json-schema-viewer-max-indent, falls back to --lr-schema-viewer-max-indent, and lets the canonical name win', async () => {
+    const indent = (el: LyraJsonSchemaViewer): string => {
+      const nodes = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="node"] > [part="node-trigger"]'));
+      return getComputedStyle(nodes[nodes.length - 1]!).marginInlineStart;
+    };
+    const mount = (style: string) =>
+      fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer style=${style} .schema=${deep}></lr-json-schema-viewer>`);
+    const canonical = await mount('--lr-json-schema-viewer-max-indent: 3px');
+    const alias = await mount('--lr-schema-viewer-max-indent: 3px');
+    const both = await mount('--lr-json-schema-viewer-max-indent: 5px; --lr-schema-viewer-max-indent: 3px');
+    expect(indent(canonical)).to.equal('3px');
+    expect(indent(alias)).to.equal('3px');
+    expect(indent(both)).to.equal('5px');
+  });
 });

@@ -20,6 +20,7 @@ import { styles } from "./code-block.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 type Internals = {
   highlighter?: ShikiHighlighter | null;
@@ -97,7 +98,7 @@ before(async () => {
   }
 });
 
-it("defaults to no language/filename, collapsible=false, collapsed=false, copyable=true, no max-height", async () => {
+it("defaults to no language/filename, collapsible=false, collapsed=false, withoutCopyButton=false, no max-height", async () => {
   const el = (await fixture(
     html`<lr-code-block></lr-code-block>`
   )) as LyraCodeBlock;
@@ -106,7 +107,7 @@ it("defaults to no language/filename, collapsible=false, collapsed=false, copyab
   expect(el.filename).to.equal("");
   expect(el.collapsible).to.be.false;
   expect(el.collapsed).to.be.false;
-  expect(el.copyable).to.be.true;
+  expect(el.withoutCopyButton).to.be.false;
   expect(el.maxHeight).to.equal("");
   expect(el.lineNumbers).to.be.false;
 });
@@ -125,25 +126,107 @@ it("reads the theme-level scrollbar hook on the body scrollport, defaulting to a
   expect(computed.scrollbarGutter).to.equal("stable");
 });
 
-it("uses the shared copyable presence-reflection matrix", async () => {
+it("reflects without-copy-button and hides the copy control", async () => {
   const el = (await fixture(
-    html`<lr-code-block></lr-code-block>`
+    html`<lr-code-block .code=${jsSample}></lr-code-block>`
   )) as LyraCodeBlock;
-  expect(el.copyable).to.be.true;
-  expect(el.getAttribute("copyable")).to.equal("");
+  expect(el.hasAttribute("without-copy-button")).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
 
-  el.copyable = false;
+  el.withoutCopyButton = true;
   await el.updateComplete;
-  expect(el.hasAttribute("copyable")).to.be.false;
+  expect(el.hasAttribute("without-copy-button")).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
 
-  el.copyable = true;
+  el.removeAttribute("without-copy-button");
   await el.updateComplete;
-  expect(el.getAttribute("copyable")).to.equal("");
+  expect(el.withoutCopyButton).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
+});
 
-  el.setAttribute("copyable", "false");
-  await el.updateComplete;
-  expect(el.copyable).to.be.false;
-  expect(el.getAttribute("copyable")).to.equal("false");
+describe("deprecated copyable alias", () => {
+  const usage = { tag: "lr-code-block", kind: "property", name: "copyable" } as const;
+
+  it('copyable="false" equals without-copy-button and warns once', async () => {
+    let el!: LyraCodeBlock;
+    let other!: LyraCodeBlock;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(
+        html`<lr-code-block copyable="false" .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+      other = (await fixture(
+        html`<lr-code-block copyable="false" .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-code-block:property:copyable",
+    ]);
+    const canonical = (await fixture(
+      html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    for (const host of [el, other, canonical]) {
+      expect(host.withoutCopyButton).to.be.true;
+      expect(host.copyable).to.be.false;
+      expect(host.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+    }
+  });
+
+  it("the property alias forwards both ways and removing the attribute restores the default", async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    expect(el.copyable).to.be.true;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el.copyable = false;
+      await el.updateComplete;
+      expect(el.withoutCopyButton).to.be.true;
+      expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+      el.setAttribute("copyable", "false");
+      el.removeAttribute("copyable");
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.withoutCopyButton).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
+  });
+
+  it("lets the last write win when both spellings are authored", async () => {
+    let canonicalLast!: LyraCodeBlock;
+    let aliasLast!: LyraCodeBlock;
+    await captureDeprecationWarnings([usage], async () => {
+      canonicalLast = (await fixture(
+        html`<lr-code-block copyable without-copy-button .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+      aliasLast = (await fixture(
+        html`<lr-code-block without-copy-button copyable .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+    });
+    expect(canonicalLast.withoutCopyButton).to.be.true;
+    expect(canonicalLast.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+    expect(aliasLast.withoutCopyButton).to.be.false;
+    expect(aliasLast.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
+  });
+
+  it("syncs the alias back from the canonical property", async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    el.withoutCopyButton = true;
+    await el.updateComplete;
+    expect(el.copyable).to.be.false;
+    expect(el.hasAttribute("copyable"), "the alias keeps its presence reflection").to.be.false;
+    el.withoutCopyButton = false;
+    await el.updateComplete;
+    expect(el.copyable).to.be.true;
+    expect(el.getAttribute("copyable")).to.equal("");
+  });
+
+  it("never warns for the canonical attribute", async () => {
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      await fixture(html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`);
+    });
+    expect(warnings).to.have.lengthOf(0);
+  });
 });
 
 it("renders optional line numbers for plain code without changing the copied source", async () => {
@@ -167,7 +250,7 @@ it("renders optional line numbers for plain code without changing the copied sou
 it("preserves every ordinary multiline source character when line numbers are off", async () => {
   const source = "first\n\nthird\n";
   const el = (await fixture(
-    html`<lr-code-block .copyable=${false} .code=${source}></lr-code-block>`
+    html`<lr-code-block without-copy-button .code=${source}></lr-code-block>`
   )) as LyraCodeBlock;
   const code = el.shadowRoot!.querySelector('[part="code"]')!;
   expect(code.textContent).to.equal(source);
@@ -276,14 +359,14 @@ it("retints the language badge from --lr-code-block-language-bg/-color", async (
 
 it("renders no header at all when there is nothing to put in it", async () => {
   const el = (await fixture(
-    html`<lr-code-block .copyable=${false} .code=${jsSample}></lr-code-block>`
+    html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`
   )) as LyraCodeBlock;
   expect(el.shadowRoot!.querySelector('[part="header"]') == null).to.be.true;
 });
 
 it("gives compact header controls the shared minimum hit area", async () => {
   const el = (await fixture(
-    html`<lr-code-block collapsible copyable .code=${jsSample}></lr-code-block>`
+    html`<lr-code-block collapsible .code=${jsSample}></lr-code-block>`
   )) as LyraCodeBlock;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   const copy = el.shadowRoot!.querySelector(
@@ -1013,31 +1096,16 @@ describe("copy button", () => {
     }
   });
 
-  it("does not render a copy button when copyable is false", async () => {
+  it("does not render a copy button while without-copy-button is set", async () => {
     const el = (await fixture(
       html`<lr-code-block
-        .copyable=${false}
+        without-copy-button
         .code=${jsSample}
         filename="x.ts"
       ></lr-code-block>`
     )) as LyraCodeBlock;
     expect(el.shadowRoot!.querySelector('[part~="copy-button"]') == null).to.be
       .true;
-  });
-
-  it('honors a plain copyable="false" attribute (not just a .copyable=${false} property binding)', async () => {
-    const el = (await fixture(
-      html`<lr-code-block
-        copyable="false"
-        .code=${jsSample}
-        filename="x.ts"
-      ></lr-code-block>`
-    )) as LyraCodeBlock;
-    expect(el.copyable).to.be.false;
-    expect(el.hasAttribute("copyable")).to.be.false;
-    expect(
-      el.shadowRoot!.querySelectorAll('[part~="copy-button"]')
-    ).to.have.lengthOf(0);
   });
 });
 
@@ -1106,14 +1174,14 @@ describe("collapsible / collapsed", () => {
     let event = await firing;
     await el.updateComplete;
     expect(el.collapsed).to.be.true;
-    expect((event as CustomEvent).detail).to.deep.equal({ collapsed: true });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: false, collapsed: true });
 
     firing = oneEvent(el, "lr-toggle");
     toggle.click();
     event = await firing;
     await el.updateComplete;
     expect(el.collapsed).to.be.false;
-    expect((event as CustomEvent).detail).to.deep.equal({ collapsed: false });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: true, collapsed: false });
   });
 
   it("emits a cancelable request and preserves state when collapse is vetoed", async () => {
@@ -1125,11 +1193,11 @@ describe("collapsible / collapsed", () => {
     el.addEventListener("lr-toggle-request", (event) => event.preventDefault());
     const requested = oneEvent(el, "lr-toggle-request");
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-    const event = (await requested) as CustomEvent<{ collapsed: boolean }>;
+    const event = (await requested) as CustomEvent<{ expanded: boolean; collapsed: boolean }>;
     await el.updateComplete;
     expect(event.cancelable).to.be.true;
     expect(event.defaultPrevented).to.be.true;
-    expect(event.detail).to.deep.equal({ collapsed: true });
+    expect(event.detail).to.deep.equal({ expanded: false, collapsed: true });
     expect(el.collapsed).to.be.false;
     expect(commits).to.equal(0);
   });
@@ -1148,7 +1216,7 @@ it("applies max-height as a CSS custom property on the body", async () => {
 it("honors an inherited max-height hook without the max-height attribute", async () => {
   const wrapper = (await fixture(html`
     <div style="--lr-code-block-max-height: 41px">
-      <lr-code-block .copyable=${false} .code=${"a\nb\nc\nd"}></lr-code-block>
+      <lr-code-block without-copy-button .code=${"a\nb\nc\nd"}></lr-code-block>
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector("lr-code-block") as LyraCodeBlock;

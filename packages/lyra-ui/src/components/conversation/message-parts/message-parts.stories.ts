@@ -113,7 +113,7 @@ export const ThemeableStateColors: Story = {
         --lr-message-parts-streaming-color: var(--lr-color-success);
         --lr-message-parts-audio-transcript-color: var(--lr-color-warning);
         --lr-message-parts-error-border-color: var(--lr-color-danger);
-        --lr-message-parts-error-background: var(--lr-color-warning-quiet);
+        --lr-message-parts-error-bg: var(--lr-color-warning-quiet);
         --lr-message-parts-error-color: var(--lr-color-danger);
       "
     >
@@ -306,7 +306,7 @@ export const MarkdownCodeHeaders: Story = {
 };
 
 export const ProgressiveMarkdown: Story = {
-  render: () => html`<lr-message-parts content-mode="markdown" show-reasoning streaming-render="progressive" code-block-header
+  render: () => html`<lr-message-parts content-mode="markdown" streaming-render="progressive" code-block-header
     .parts=${[
       { id: 'reasoning-progressive', type: 'reasoning', state: 'streaming', text: '# Approach\n\nA settled explanation.\n\nConsidering the next step' },
       { id: 'text-progressive', type: 'text', state: 'streaming', text: '# Answer\n\nA **formatted result**.\n\nThe answer continues' },

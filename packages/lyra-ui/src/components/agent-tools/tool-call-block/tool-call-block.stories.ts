@@ -36,7 +36,7 @@ export const Statuses: Story = {
       <lr-tool-call-block name="web_search" status="pending"></lr-tool-call-block>
       <lr-tool-call-block name="web_search" status="running" .args=${{ query: 'lyra' }}></lr-tool-call-block>
       <lr-tool-call-block name="web_search" status="success" duration-ms="820" .result=${{ hits: 3 }}></lr-tool-call-block>
-      <lr-tool-call-block name="run_python" status="error" duration-ms="300" error="Request timed out"></lr-tool-call-block>
+      <lr-tool-call-block name="run_python" status="error" duration-ms="300" error-text="Request timed out"></lr-tool-call-block>
       <lr-tool-call-block name="delete_file" status="denied"></lr-tool-call-block>
       <lr-tool-call-block name="read_file" status="incomplete" .args=${{ path: 'notes.md' }}></lr-tool-call-block>
     </div>
@@ -66,7 +66,7 @@ export const ExpandedWithError: Story = {
     status="error"
     expanded
     .args=${{ table: 'orders', limit: 100 }}
-    error="Upstream closed the connection after 40 rows"
+    error-text="Upstream closed the connection after 40 rows"
     .result=${{ rows: 40 }}
   ></lr-tool-call-block>`,
 };

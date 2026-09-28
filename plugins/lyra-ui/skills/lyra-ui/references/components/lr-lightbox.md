@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showCounter` / `show-counter` since `21.1.0`; use property `without-counter`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,11 +34,11 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
-- `showCounter: boolean = true` (attribute `show-counter`, **not reflected**) — shows the visible
-  `[part="counter"]`. `show-counter="false"` clears it from plain HTML (the attribute is parsed by
-  literal string, not by presence, so a true-defaulting boolean can actually be turned off), and a
-  `.showCounter=${false}` property binding does the same. Nothing is ever written back to the
-  attribute — no stylesheet or selector keys off `[show-counter]`.
+- `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
+  visible `[part="counter"]`; the polite position announcement stays active. Nothing is ever
+  written back to the attribute — no stylesheet or selector keys off it. Deprecated alias:
+  `show-counter` (`showCounter`; use `without-counter`, which `show-counter="false"` equals;
+  removing it restores the default; removed in 23.0.0).
   Spoken position updates remain active when the counter is hidden: the shadow
   `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
   shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor
@@ -84,7 +84,7 @@ Total"), `live-region` (an `aria-hidden` shadow text mirror; each post-mount `in
 including a consumer-driven one, appends the localized position to the document's shared
 `[data-lr-live-region="polite"]` sink; initial mount and reconnect are silent), `actions` (wrapper,
 `hidden` when nothing is slotted),
-`close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
+`close-button` (always rendered — unlike `<lr-dialog>`'s, which `without-close-button` removes), `stage`, `frame` (the
 embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its

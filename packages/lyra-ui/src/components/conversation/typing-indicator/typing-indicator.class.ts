@@ -84,19 +84,31 @@ export type TypingIndicatorLabelPlacement = 'none' | 'after';
  * @csspart pulse - The single pulsing dot in the `pulse` shape.
  * @csspart cursor - The blinking bar in the `cursor` shape.
  * @csspart label - The visible label (`aria-hidden`), rendered only while `label-placement="after"`.
- * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots` and
- * `pulse` variants. The `size` property supplies compact and roomy tier overrides.
- * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant. The
- * `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-indicator-dot-size=var(--lr-space-s)] - Diameter of each dot in the `dots`
+ * and `pulse` variants. The `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-dot-size=var(--lr-space-s)] - Deprecated alias of `--lr-typing-indicator-dot-size`; removal not
+ * before 23.0.0.
+ * @cssprop [--lr-typing-indicator-gap=var(--lr-space-xs)] - Gap between dots in the `dots` variant.
+ * The `size` property supplies compact and roomy tier overrides.
+ * @cssprop [--lr-typing-gap=var(--lr-space-xs)] - Deprecated alias of `--lr-typing-indicator-gap`; removal not before
+ * 23.0.0.
  * @cssprop [--lr-inline-cursor-width=var(--lr-size-0-125rem)] - Shared inline-cursor width. The
  * `size` property supplies compact and roomy tier fallbacks.
  * @cssprop [--lr-inline-cursor-height=var(--lr-size-1em)] - Shared inline-cursor height.
- * @cssprop [--lr-typing-duration=var(--lr-transition-ambient)] - Animation duration and timing
- * function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the
+ * @cssprop [--lr-typing-indicator-duration=var(--lr-transition-ambient)] - Animation duration and
+ * timing function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the
  * shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming
  * just this component doesn't affect other ambient-looping components in the library.
- * @cssprop [--lr-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
- * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
+ * @cssprop [--lr-typing-duration=var(--lr-transition-ambient)] - Deprecated alias of `--lr-typing-indicator-duration`; removal not
+ * before 23.0.0.
+ * @cssprop [--lr-typing-indicator-dot-stagger-1=600ms] - Delay for the second dot in the dots
+ * variant.
+ * @cssprop [--lr-typing-dot-stagger-1=600ms] - Deprecated alias of `--lr-typing-indicator-dot-stagger-1`;
+ * removal not before 23.0.0.
+ * @cssprop [--lr-typing-indicator-dot-stagger-2=1200ms] - Delay for the third dot in the dots
+ * variant.
+ * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Deprecated alias of `--lr-typing-indicator-dot-stagger-2`;
+ * removal not before 23.0.0.
  * @status stable
  * @since 4.0.0
  */

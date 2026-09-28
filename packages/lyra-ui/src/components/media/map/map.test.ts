@@ -14,6 +14,8 @@ import {
   LyraMap as LyraMapElement,
   type LyraMapBounds,
   type LyraMapInstance,
+  type LyraMapLegendPanelToggleDetail,
+  type LyraMapLegendToggleDetail,
   type LyraMapMarker,
   type LyraMapMarkerActivationDetail,
   type LyraMapStyleSpecification,
@@ -24,6 +26,10 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 // Registers the real 'ar'/'fr' catalogs so the lang="ar"/"fr-FR" tests below -- which exercise
 // RTL layout containment and localized-ownership plumbing, not string-catalog completeness --
@@ -1733,11 +1739,11 @@ it('floors an interactive legend toggle at the shared icon-button hit area', asy
   expect(rect.width).to.be.at.least(floor - 0.5);
 });
 
-it('emits one cancelable lr-map-legend-toggle proposal per legend activation', async () => {
+it('emits one cancelable lr-map-legend-toggle-request proposal per legend activation', async () => {
   const el = await interactiveLegendMap();
   const button = legendToggles(el)[1]!;
 
-  const hidePromise = oneEvent(el, 'lr-map-legend-toggle');
+  const hidePromise = oneEvent(el, 'lr-map-legend-toggle-request');
   button.click();
   const hide = await hidePromise;
   expect(hide.bubbles).to.be.true;
@@ -1746,7 +1752,7 @@ it('emits one cancelable lr-map-legend-toggle proposal per legend activation', a
   expect(hide.detail).to.deep.equal({ value: 'work', visible: false, hiddenCategories: ['work'] });
   await el.updateComplete;
 
-  const showPromise = oneEvent(el, 'lr-map-legend-toggle');
+  const showPromise = oneEvent(el, 'lr-map-legend-toggle-request');
   legendToggles(el)[1]!.click();
   const show = await showPromise;
   expect(show.detail).to.deep.equal({ value: 'work', visible: true, hiddenCategories: [] });
@@ -1754,10 +1760,10 @@ it('emits one cancelable lr-map-legend-toggle proposal per legend activation', a
   expect(el.hiddenCategories).to.deep.equal([]);
 });
 
-it('lets a lr-map-legend-toggle listener veto the visibility change outright', async () => {
+it('lets a lr-map-legend-toggle-request listener veto the visibility change outright', async () => {
   const el = await interactiveLegendMap();
   const announcementsBefore = politeAnnouncements().length;
-  el.addEventListener('lr-map-legend-toggle', (event) => {
+  el.addEventListener('lr-map-legend-toggle-request', (event) => {
     event.preventDefault();
   });
 
@@ -1770,9 +1776,9 @@ it('lets a lr-map-legend-toggle listener veto the visibility change outright', a
   expect(politeAnnouncements().length).to.equal(announcementsBefore);
 });
 
-it('freezes the lr-map-legend-toggle detail and its proposed hidden set', async () => {
+it('freezes the lr-map-legend-toggle-request detail and its proposed hidden set', async () => {
   const el = await interactiveLegendMap();
-  const received = oneEvent(el, 'lr-map-legend-toggle');
+  const received = oneEvent(el, 'lr-map-legend-toggle-request');
   legendToggles(el)[0]!.click();
   const event = await received;
   await el.updateComplete;
@@ -1788,7 +1794,7 @@ it('freezes the lr-map-legend-toggle detail and its proposed hidden set', async 
 it('emits nothing for a programmatic hiddenCategories assignment', async () => {
   const el = await interactiveLegendMap();
   let emitted = 0;
-  el.addEventListener('lr-map-legend-toggle', () => {
+  el.addEventListener('lr-map-legend-toggle-request', () => {
     emitted += 1;
   });
 
@@ -1913,13 +1919,81 @@ it('toggles a focused checkbox legend row with Enter and Space', async () => {
   expect(legendCheckboxes(el)[0]!.getAttribute('aria-checked')).to.equal('true');
 });
 
-it('lets a lr-map-legend-toggle listener veto a checkbox row activation outright', async () => {
+describe('deprecated lr-map-legend-toggle alias', () => {
+  const ALIAS: readonly DeprecatedUsage[] = [
+    { tag: 'lr-map', kind: 'event', name: 'lr-map-legend-toggle' },
+  ];
+
+  it('fires right after lr-map-legend-toggle-request with its own equal, cancelable detail', async () => {
+    const el = await interactiveLegendMap();
+    const seen: { name: string; cancelable: boolean; detail: LyraMapLegendToggleDetail }[] = [];
+    for (const name of ['lr-map-legend-toggle-request', 'lr-map-legend-toggle']) {
+      el.addEventListener(name, (event) => {
+        const { detail } = event as CustomEvent<LyraMapLegendToggleDetail>;
+        seen.push({ name, cancelable: event.cancelable, detail });
+      });
+    }
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      legendToggles(el)[1]!.click();
+      await el.updateComplete;
+    });
+
+    expect(seen.map(({ name }) => name)).to.deep.equal([
+      'lr-map-legend-toggle-request',
+      'lr-map-legend-toggle',
+    ]);
+    expect(seen.every(({ cancelable }) => cancelable)).to.be.true;
+    expect(seen[1]!.detail).to.deep.equal(seen[0]!.detail);
+    expect(seen[1]!.detail === seen[0]!.detail, 'each event carries its own detail').to.be.false;
+    expect(el.hiddenCategories).to.deep.equal(['work']);
+    expect(warnings, 'observing the alias is not a deprecated use').to.have.length(0);
+  });
+
+  it('still lets a listener bound only to the alias veto, and warns once', async () => {
+    const el = await interactiveLegendMap();
+    const announcementsBefore = politeAnnouncements().length;
+    el.addEventListener('lr-map-legend-toggle', (event) => event.preventDefault());
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      legendToggles(el)[0]!.click();
+      await el.updateComplete;
+      legendToggles(el)[0]!.click();
+      await el.updateComplete;
+    });
+
+    expect(el.hiddenCategories).to.deep.equal([]);
+    expect(legendToggles(el)[0]!.getAttribute('aria-pressed')).to.equal('true');
+    expect(politeAnnouncements().length).to.equal(announcementsBefore);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-map:event:lr-map-legend-toggle',
+    ]);
+    expect(warnings[0]!.message).to.contain('lr-map-legend-toggle-request');
+  });
+
+  it('does not warn when the canonical request alone vetoes', async () => {
+    const el = await interactiveLegendMap();
+    let aliasPrevented: boolean | undefined;
+    el.addEventListener('lr-map-legend-toggle-request', (event) => event.preventDefault());
+    el.addEventListener('lr-map-legend-toggle', (event) => {
+      aliasPrevented = event.defaultPrevented;
+    });
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      legendToggles(el)[0]!.click();
+      await el.updateComplete;
+    });
+
+    expect(aliasPrevented, 'the alias still fires, with its own undecided default').to.equal(false);
+    expect(el.hiddenCategories).to.deep.equal([]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+it('lets a lr-map-legend-toggle-request listener veto a checkbox row activation outright', async () => {
   const el = (await fixture(
     html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
-  el.addEventListener('lr-map-legend-toggle', (event) => {
+  el.addEventListener('lr-map-legend-toggle-request', (event) => {
     event.preventDefault();
   });
 
@@ -6169,7 +6243,7 @@ describe('dataLayers clustering and heatmap', () => {
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ point: CATEGORY_POINT });
     await el.updateComplete;
-    el.addEventListener('lr-map-legend-toggle', (event) => {
+    el.addEventListener('lr-map-legend-toggle-request', (event) => {
       event.preventDefault();
     });
 
@@ -7040,7 +7114,7 @@ describe('collapsible legend panel', () => {
     const el = await collapsibleMap();
     const proposals: boolean[] = [];
     let cancelable = false;
-    el.addEventListener('lr-map-legend-panel-toggle', (event) => {
+    el.addEventListener('lr-map-legend-panel-toggle-request', (event) => {
       cancelable = event.cancelable;
       proposals.push((event as CustomEvent<{ readonly open: boolean }>).detail.open);
       event.preventDefault();
@@ -7057,10 +7131,59 @@ describe('collapsible legend panel', () => {
     expect(el.shadowRoot!.querySelectorAll('.legend-row').length).to.equal(2);
   });
 
+  describe('deprecated lr-map-legend-panel-toggle alias', () => {
+    const ALIAS: readonly DeprecatedUsage[] = [
+      { tag: 'lr-map', kind: 'event', name: 'lr-map-legend-panel-toggle' },
+    ];
+
+    it('fires right after lr-map-legend-panel-toggle-request with an equal detail', async () => {
+      const el = await collapsibleMap();
+      const seen: { name: string; cancelable: boolean; detail: LyraMapLegendPanelToggleDetail }[] = [];
+      for (const name of ['lr-map-legend-panel-toggle-request', 'lr-map-legend-panel-toggle']) {
+        el.addEventListener(name, (event) => {
+          const { detail } = event as CustomEvent<LyraMapLegendPanelToggleDetail>;
+          seen.push({ name, cancelable: event.cancelable, detail });
+        });
+      }
+      const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+        disclosure(el)!.click();
+        await el.updateComplete;
+      });
+
+      expect(seen.map(({ name }) => name)).to.deep.equal([
+        'lr-map-legend-panel-toggle-request',
+        'lr-map-legend-panel-toggle',
+      ]);
+      expect(seen.every(({ cancelable }) => cancelable)).to.be.true;
+      expect(seen[0]!.detail).to.deep.equal({ open: false });
+      expect(seen[1]!.detail).to.deep.equal({ open: false });
+      expect(el.legendOpen).to.be.false;
+      expect(warnings).to.have.length(0);
+    });
+
+    it('still lets a listener bound only to the alias veto, and warns once', async () => {
+      const el = await collapsibleMap();
+      el.addEventListener('lr-map-legend-panel-toggle', (event) => event.preventDefault());
+      const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+        disclosure(el)!.click();
+        await el.updateComplete;
+        disclosure(el)!.click();
+        await el.updateComplete;
+      });
+
+      expect(el.legendOpen, 'the alias veto writes nothing').to.be.true;
+      expect(disclosure(el)!.getAttribute('aria-expanded')).to.equal('true');
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        'lyra-deprecated:lr-map:event:lr-map-legend-panel-toggle',
+      ]);
+      expect(warnings[0]!.message).to.contain('lr-map-legend-panel-toggle-request');
+    });
+  });
+
   it('reconciles a programmatic legendOpen assignment without emitting', async () => {
     const el = await collapsibleMap();
     let emitted = 0;
-    el.addEventListener('lr-map-legend-panel-toggle', () => {
+    el.addEventListener('lr-map-legend-panel-toggle-request', () => {
       emitted += 1;
     });
 

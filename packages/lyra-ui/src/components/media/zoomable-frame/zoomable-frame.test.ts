@@ -296,7 +296,7 @@ describe('zoom controls and interaction', () => {
     const defaultBackground = getComputedStyle(defaultButton).backgroundColor;
 
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="--lr-zoomable-frame-control-hover-background: rgb(29, 30, 31)">
+      <div style="--lr-zoomable-frame-control-hover-bg: rgb(29, 30, 31)">
         <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
       </div>
     `);
@@ -342,11 +342,40 @@ describe('zoom controls and interaction', () => {
     }
   });
 
+  it('still honors the deprecated --lr-zoomable-frame-control-hover-background alias, below the canonical -bg', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-zoomable-frame-control-hover-background: rgb(39, 40, 41)">
+        <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+        <lr-zoomable-frame
+          .srcdoc=${INLINE_DOCUMENT}
+          style="--lr-zoomable-frame-control-hover-bg: rgb(49, 50, 51)"
+        ></lr-zoomable-frame>
+      </div>
+    `);
+    const [aliasButton, bothButton] = [
+      ...wrapper.querySelectorAll<LyraZoomableFrame>('lr-zoomable-frame'),
+    ].map((frame) => frame.shadowRoot!.querySelector<HTMLElement>('[part="zoom-in-button"]')!);
+    try {
+      await hoverUntilMatched(aliasButton!, 'the alias-themed zoom-in button never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(aliasButton!).backgroundColor === 'rgb(39, 40, 41)',
+        'the deprecated alias did not paint the hover background',
+      );
+      await hoverUntilMatched(bothButton!, 'the canonically themed zoom-in button never reported :hover');
+      await waitUntil(
+        () => getComputedStyle(bothButton!).backgroundColor === 'rgb(49, 50, 51)',
+        'the canonical -bg did not win over the deprecated alias',
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('keeps a bound-disabled zoom control visually inert on hover and press', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame
         zoom="0.25"
-        style="--lr-zoomable-frame-control-hover-background:rgb(1,2,3)"
+        style="--lr-zoomable-frame-control-hover-bg:rgb(1,2,3)"
       ></lr-zoomable-frame>
     `);
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-out-button"]')!;

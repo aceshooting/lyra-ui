@@ -79,7 +79,7 @@ describe('lite-chart forced-colors encodings', () => {
     window.matchMedia = forcedColorsMatchMedia(originalMatchMedia);
     try {
       const el = await mount(
-        html`<lr-lite-chart type="bar" legend style="inline-size: 640px"></lr-lite-chart>`,
+        html`<lr-lite-chart type="bar" with-legend style="inline-size: 640px"></lr-lite-chart>`,
       );
       el.labels = ['Q1', 'Q2'];
       el.datasets = eightSeries();
@@ -128,7 +128,7 @@ describe('lite-chart forced-colors encodings', () => {
     // skip rather than fail there, matching src/forced-colors-intrinsic.test.ts.
     if (!CSS.supports('forced-color-adjust', 'none')) this.skip();
     const el = await mount(
-      html`<lr-lite-chart type="bar" legend y-label="Value" style="inline-size: 640px"></lr-lite-chart>`,
+      html`<lr-lite-chart type="bar" with-legend y-label="Value" style="inline-size: 640px"></lr-lite-chart>`,
     );
     el.labels = ['Q1', 'Q2'];
     el.datasets = eightSeries();
@@ -149,7 +149,7 @@ describe('lite-chart forced-colors encodings', () => {
 
   it('leaves solid fills, no patterns, and no legend encoding when forced colors are inactive', async () => {
     const el = await mount(
-      html`<lr-lite-chart type="bar" legend style="inline-size: 640px"></lr-lite-chart>`,
+      html`<lr-lite-chart type="bar" with-legend style="inline-size: 640px"></lr-lite-chart>`,
     );
     el.labels = ['Q1', 'Q2'];
     el.datasets = eightSeries();

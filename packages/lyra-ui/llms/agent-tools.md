@@ -8,9 +8,9 @@ renders empty instead of silently falling back.
 with the default inverted (`filesExpanded = false`) so the rendered starting state is unchanged;
 update `el.filesCollapsed = true` to `el.filesExpanded = false` (and vice versa).
 
-`<lr-agent-trace>`: `hideBars`/`hide-bars` renamed to `showBars`/`show-bars` (default `true`),
-matching the positive-polarity `showTokens`/`showCost` on the same element; update
-`el.hideBars = true` to `el.showBars = false` (and vice versa).
+`<lr-agent-trace>`: the duration-bar toggle changed polarity in 9.0.0. Its current spelling is
+`withoutBars`/`without-bars` (default `false`), so a bar is hidden with `el.withoutBars = true`
+(see that section).
 
 `<lr-evaluation-run>` is renamed to `<lr-eval-run>` (class `LyraEvaluationRun` → `LyraEvalRun`).
 Every `Evaluation*`-prefixed exported type is renamed to `Eval*` (`EvaluationContentFormat` →
@@ -26,7 +26,8 @@ only the tag/class/type names moved.
 `<lr-schema-viewer>` is renamed to `<lr-json-schema-viewer>` (class `LyraSchemaViewer` →
 `LyraJsonSchemaViewer`, event map `LyraSchemaViewerEventMap` → `LyraJsonSchemaViewerEventMap`),
 freeing the generic name for a future non-JSON schema viewer. `JsonSchemaNode`/`SchemaValidationIssue`
-and the `--lr-schema-viewer-*` CSS custom properties are unchanged.
+kept their names; its CSS custom properties now live in the `--lr-json-schema-viewer-*` namespace
+(see that section).
 
 Security fix (non-breaking): `<lr-mcp-app>`'s `postMessage` call to its sandboxed frame now always
 uses the correctly computed target origin instead of an inverted check that previously fell through
@@ -435,9 +436,11 @@ reason string so every dismissal path funnels through the same event.
 `lightDismiss`). This name is not dialog-scoped: nesting this dialog inside a consumer's own
 `<lr-dialog>` means that dialog's `lr-close` listener also observes this event — see
 `<lr-dialog>`'s `lr-close` section (in `overlays.md`) for the full list of emitters and the
-target-filtering guard. `lr-maximize-change` (`detail:
-{ readonly maximized: boolean }`, the new `maximized` state) fired when the header's
-maximize/restore toggle is clicked.
+target-filtering guard. `lr-maximize-change-request` (cancelable, `detail:
+{ readonly maximized: boolean }`, the would-be new `maximized` state) fired when the header's
+maximize/restore toggle is clicked, before `maximized` changes; `preventDefault()` vetoes the toggle.
+Deprecated alias: `lr-maximize-change` (use `lr-maximize-change-request`; removed in 23.0.0) —
+still fired right after it with an equal detail, and either event may veto.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
@@ -474,7 +477,7 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
   dialog.querySelector("lr-json-viewer").data = result;
   dialog.open = true;
   dialog.addEventListener("lr-close", () => (dialog.open = false));
-  dialog.addEventListener("lr-maximize-change", (e) =>
+  dialog.addEventListener("lr-maximize-change-request", (e) =>
     console.log("maximized:", e.detail.maximized)
   );
 </script>
@@ -709,14 +712,15 @@ plain text) — this component has no dependency on either.
 - `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
   catalog). Any supplied string is an explicit override and renders verbatim, including
   `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
-- `compact: boolean = false` (reflected) — tightens the header/body padding, the header's internal
-  gap, and the header/body font size for dense transcript rows. This is only a density control: its
-  card border and surface remain, so use `frame="plain"` when surrounding message chrome already
-  supplies them.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header/body padding, the header's internal gap, and the header/body font
+  size for dense transcript rows; `m` and larger keep the regular density. This is only a density
+  control: its card border and surface remain, so use `frame="plain"` when surrounding message
+  chrome already supplies them. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
   (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
   border, background, and corner radius so a nested panel does not double an existing frame;
-  it retains the header/body divider and the active regular or compact padding. The exported
+  it retains the header/body divider and the active regular or dense padding. The exported
   `ThinkingPanelAppearance` alias names this same union.
 - `expanded: boolean = false` (reflected) — starts collapsed, matching `<lr-source-list>`'s
   default.
@@ -760,18 +764,19 @@ exposed as a component property since it's a pure layout knob, not something a t
 on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
 pending duration/toggle accent without changing the shared brand token;
 `--lr-thinking-panel-compact-header-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) —
-`[part="header"]` padding while `compact`; `--lr-thinking-panel-compact-header-gap` (default
-`var(--lr-space-2xs)`) — gap between the toggle, label, and duration while `compact`; and
+`[part="header"]` padding while `size` is `s` or smaller; `--lr-thinking-panel-compact-header-gap`
+(default `var(--lr-space-2xs)`) — gap between the toggle, label, and duration at that size; and
 `--lr-thinking-panel-compact-header-font-size` (default `var(--lr-font-size-sm)`) — font size of
-`[part="header"]` while `compact`; and
+`[part="header"]` at that size; and
 `--lr-thinking-panel-compact-body-padding` (default `var(--lr-space-s)`) — `[part="body"]`
-padding while `compact`; and `--lr-thinking-panel-compact-body-font-size` (default
-`var(--lr-font-size-sm)`) — font size of `[part="body"]` while `compact`.
-`--lr-thinking-panel-background` (default `var(--lr-color-surface)`),
+padding at that size; and `--lr-thinking-panel-compact-body-font-size` (default
+`var(--lr-font-size-sm)`) — font size of `[part="body"]` at that size.
+`--lr-thinking-panel-bg` (default `var(--lr-color-surface)`),
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
+`frame="plain"` keeps. Deprecated alias: `--lr-thinking-panel-background` (use
+`--lr-thinking-panel-bg`; removed in 23.0.0). The mouse-hover preview on `[part="body"]` mentioned above has its own
 four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (default
 `var(--lr-focus-ring-width)`), `--lr-thinking-panel-body-hover-outline-style` (default `solid`),
 `--lr-thinking-panel-body-hover-outline-color` (default `var(--lr-color-border)`, set to
@@ -797,7 +802,7 @@ paint. Plus shared
 </lr-thinking-panel>
 
 <div class="message-frame">
-  <lr-thinking-panel compact frame="plain" expanded>
+  <lr-thinking-panel size="s" frame="plain" expanded>
     Reasoning nested inside message chrome without a second card frame.
   </lr-thinking-panel>
 </div>
@@ -866,12 +871,17 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
 **Properties:**
 
 - `trace: string = ''` — the raw stack trace text to parse and render.
-- `collapseInternal: boolean = true` (attribute: `collapse-internal`) — folds runs of internal
-  frames behind a toggle.
+- `expandInternal: boolean = false` (attribute: `expand-internal`, reflected) — shows runs of
+  internal frames inline instead of folding them behind a count-labeled toggle. Deprecated alias:
+  `collapse-internal`/`collapseInternal` (use `expand-internal`; removed in 23.0.0) — inverted, so
+  `collapse-internal="false"` equals `expand-internal`
 - `internalPatterns: readonly (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS` (attribute: false) —
   clone-owned, bounded, frozen file-path substrings/`RegExp`s that mark a frame as internal.
   Reassign a new array after changing the matcher sequence.
-- `copyable: boolean = true` — shows a copy-to-clipboard button for the raw trace text.
+- `withoutCopyButton: boolean = false` (attribute: `without-copy-button`, reflected) — hides the
+  copy-to-clipboard button for the raw trace text. Deprecated alias: `copyable` (use
+  `without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+  `without-copy-button`
 - `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
   internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)
   grows with content.
@@ -880,13 +890,15 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
   the border, background, padding and corner radius, so a trace nested inside an
   `lr-result-card`/`lr-agent-run` — which already draws a border — doesn't double the frame. The
   `max-height` scroll cap and the copy/frame affordances are unaffected either way, and `'plain'`
-  wins over `compact` when both are set. The exported alias `StackTraceAppearance` is retained as a
-  name for the same union.
-- `compact: boolean = false` (reflected) — tighter root padding and between-group spacing for dense
-  contexts (a trace as a row in an error list, a side panel), the same density convention
-  `lr-agent-run`, `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and
-  `lr-thinking-panel` already pair with `frame`. Purely density: the border, corner radius and
-  background stay, so reach for `frame="plain"` to drop the chrome. Added in 9.0.0.
+  wins over the dense `size` tier when both are set. The exported alias `StackTraceAppearance` is
+  retained as a name for the same union.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and between-group spacing for dense contexts (a trace as a
+  row in an error list, a side panel), the same density convention `lr-agent-run`,
+  `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel` already
+  pair with `frame`; `m` and larger keep the full padding. Purely density: the border, corner radius
+  and background stay, so reach for `frame="plain"` to drop the chrome. Deprecated alias: `compact`
+  (use `size="s"`; removed in 23.0.0)
 
 **Events:**
 
@@ -903,13 +915,13 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper; respects `max-height`, tightens its padding under
-`compact`, and drops its card chrome under `frame="plain"`), `message` (the leading error
+`size="s"`, and drops its card chrome under `frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
 frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
 unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
 `file:line:col` text), `internal-toggle` (the collapse/expand toggle for a run of internal frames),
-`limit` (the resource-ceiling status when additional frames are omitted), `raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
-while `copyable`).
+`limit` (the resource-ceiling status when additional frames are omitted), `raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (not rendered
+while `without-copy-button`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
 `--lr-stack-trace-font` (default `var(--lr-font-mono)`),
@@ -917,13 +929,14 @@ while `copyable`).
 foreground, `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
 hover/focus, internal-toggle, and copy-button-hover accent, plus the two density hooks
 `--lr-stack-trace-compact-padding` (default `var(--lr-space-2xs)`, `[part="base"]` padding while
-`compact`, overridden entirely by `frame="plain"`) and `--lr-stack-trace-compact-gap` (default
-`var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s while
-`compact`). The scoped color hooks avoid changing
-the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-background` (default
+`size` is `s` or smaller, overridden entirely by `frame="plain"`) and `--lr-stack-trace-compact-gap`
+(default `var(--lr-space-2xs)`, the space below `[part="message"]` and between `[part="group"]`s at
+that size). The scoped color hooks avoid changing
+the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-bg` (default
 `var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
-`::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
+`::part(base)` override; `frame="plain"` still removes all three outright. Deprecated alias:
+`--lr-stack-trace-background` (use `--lr-stack-trace-bg`; removed in 23.0.0). Plus shared tokens
 `--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
@@ -1002,25 +1015,26 @@ renders at the start of the action row, before Deny/Edit/Approve.
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
   `<lr-json-viewer>` read-only, or stringified into a `<textarea>` while editing
-- `editable: boolean = true` (reflected) — whether an "Edit" affordance is offered at all (assign
-  `false` via a PROPERTY binding, e.g. `.editable=${false}` — a `?editable=${false}`
-  boolean-attribute binding cannot override a true default). When `false`, `args` is always shown
-  read-only and can never be changed before approval.
+- `readonly: boolean = false` (reflected) — withholds the "Edit" affordance: `args` is always shown
+  read-only and can never be changed before approval. Deprecated alias: `editable` (use `readonly`;
+  removed in 23.0.0) — inverted, so `editable="false"` equals `readonly`.
 - `spellcheck: boolean = false`, `autocapitalize: string = 'off'`,
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
   `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
-  `pending: 'approve' | 'deny' | null = null` (reflected) — which decision is awaiting host
-  resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
-  now-cancelable event; the pending button shows `loading`, the other is `disabled` (Approve is
-  also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
-  Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
-  `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
-  state; `pending` also resets to `null` every time the dialog re-opens. If that same listener
-  resolves the decision itself synchronously (calling `close('approve'|'deny')` or setting
-  `.pending` directly before returning), that wins outright: the component's own built-in `pending`
-  bookkeeping only applies when the listener left both `.pending` and `.open` untouched.
+- `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected) — which
+  decision is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called
+  `preventDefault()` on the now-cancelable event; the pending button shows `loading`, the other is
+  `disabled` (Approve is also still `disabled` while an in-progress edit is invalid JSON,
+  independent of `pendingAction`). Escape and an enabled backdrop dismissal are suppressed while
+  `pendingAction` is set. Finalize by calling `close('approve'|'deny')`, or clear `.pendingAction`
+  back to `null` to bounce back to the undecided state; `pendingAction` also resets to `null` every
+  time the dialog re-opens. If that same listener resolves the decision itself synchronously
+  (calling `close('approve'|'deny')` or setting `.pendingAction` directly before returning), that
+  wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the
+  listener left both `.pendingAction` and `.open` untouched. Deprecated alias: `pending` (use
+  `pending-action`; removed in 23.0.0).
 
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
@@ -1028,11 +1042,11 @@ and return focus to whatever had it before opening; all are no-ops when already 
 
 **Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
-Cancelable: a listener calling `preventDefault()` sets `pending` to `'approve'` instead of
+Cancelable: a listener calling `preventDefault()` sets `pendingAction` to `'approve'` instead of
 closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-deny` (no detail —
 `this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
-default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
-`pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
+default, `event.detail` is `null`, not `undefined`. Cancelable, same `pendingAction` mechanism,
+setting `pendingAction` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
 backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
 dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` listener also observes
@@ -1045,8 +1059,8 @@ the `lr-approve`/`lr-deny` event *names*, so the generated `HTMLElementEventMap[
 union of both details and only the confirm bar's arm has the field: a listener bound to the shared
 name (`document.addEventListener('lr-approve', ...)`) must narrow on `event.target` before reaching
 for it, while one bound through `LyraConfirmBarEventMap`/`LyraToolApprovalDialogEventMap` already
-sees the right detail. Hold a decision open here with `preventDefault()` + `pending`, then finalize
-with `close('approve'|'deny')` or bounce back by clearing `.pending`.
+sees the right detail. Hold a decision open here with `preventDefault()` + `pendingAction`, then
+finalize with `close('approve'|'deny')` or bounce back by clearing `.pendingAction`.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
@@ -1090,7 +1104,7 @@ package, not an optional peer.
 </script>
 ```
 
-While `editable`, an Edit button swaps the read-only `<lr-json-viewer>` for a plain `<textarea>`
+Unless `readonly` is set, an Edit button swaps the read-only `<lr-json-viewer>` for a plain `<textarea>`
 pre-filled with `JSON.stringify(args, null, 2)`. Every keystroke re-validates with `JSON.parse` — the
 Approve button is `disabled` for as long as the current textarea content fails to parse, so a
 malformed edit can never be silently approved as either the broken text or a stale copy of the
@@ -1120,10 +1134,8 @@ shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
 
-- `editable` defaults to `true` and reflects — see the property note above about overriding it with a
-  property binding, not a boolean-attribute binding.
 - `lr-deny` has no detail payload: its `event.detail` is `null`, not `undefined`.
-- a consumer flipping `editable` off while an edit is already in progress automatically exits edit mode
+- a consumer turning `readonly` on while an edit is already in progress automatically exits edit mode
   and discards the draft, so an unreachable "Cancel" affordance is never left stranded on screen.
 - reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
   instance) resumes its shared overlay registration and re-acquires the ref-counted scroll lock
@@ -1145,9 +1157,10 @@ shared composed-tree focus traversal used by the other modal families.
 - Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
   `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above. While `pending` is set, Escape and an
-  enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending decision leaves the
-  dialog open until it clears `.pending` or calls `close()` directly itself.
+  its own async work is in flight — see `pendingAction` above. While `pendingAction` is set, Escape
+  and an enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending
+  decision leaves the dialog open until it clears `.pendingAction` or calls `close()` directly
+  itself.
 
 ---
 
@@ -1417,17 +1430,21 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 
 - `heading: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
-- `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
-  rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
-  `compact`. Purely a density knob: the border and background stay, so use `frame="plain"`
-  instead to drop the chrome entirely. When both are set, plain leaves compact padding and gaps
-  intact.
+- `headingLevel: LyraHeadingLevel = 'none'` (attribute `heading-level`) — semantic level of
+  `[part="heading"]`. The default `none` keeps it a plain label; `1`–`6` also exposes it to heading
+  navigation at that level (`role="heading"` with `aria-level`).
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header/body padding for dense contexts (a card rendered as a row in a
+  transcript or result list), same convention as `<lr-agent-run>`'s own `size`; `m` and larger keep
+  the full padding. Purely a density knob: the border and background stay, so use `frame="plain"`
+  instead to drop the chrome entirely. When both are set, plain leaves the dense padding and gaps
+  intact. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
   (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
   radius, so a card nested inside a host frame that already draws a border (e.g.
-  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
-  padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
+  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; the
+  dense `size` tier's padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
   retained as a name for the same union.
 - `withActions: boolean = false` (attribute `with-actions`, reflected) — explicit first-render
   presence hint for the `actions` slot. Client-only markup normally does not need it because the
@@ -1449,19 +1466,20 @@ default tooltip, scoped to just this element rather than the whole card), `actio
 whenever the slot has no assigned content), `body`.
 
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
-`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
+`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `size` is `s` or smaller;
 `--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
-`[part="header"]`'s heading and actions while `compact`, one step tighter than the uncompacted
+`[part="header"]`'s heading and actions at that size, one step tighter than the regular
 `--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
-`[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
-`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
-than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
-not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
-`--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
+`[part="body"]` padding at that size; `--lr-result-card-compact-body-gap` (default
+`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children at that size, one step tighter
+than the regular `--lr-space-xs`. The two gap knobs mean the dense tier tightens interior spacing,
+not only the padding box — a dense card no longer keeps full-size gaps inside a shrunken frame.
+`--lr-result-card-bg` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
 (default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
-`frame="plain"` still drops the outer chrome and that divider.
+`frame="plain"` still drops the outer chrome and that divider. Deprecated alias:
+`--lr-result-card-background` (use `--lr-result-card-bg`; removed in 23.0.0).
 Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
 `--lr-color-surface`/`-text`, `--lr-radius`.
 
@@ -1551,11 +1569,12 @@ internal vote-announcement live region).
 
 **Themeable custom properties:** `--lr-compare-panel-max-height` (default `var(--lr-size-24rem)`) —
 cap on each pane's scroll region before it scrolls internally;
-`--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-compare-panel-selected-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
 `--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`), and
 `--lr-compare-panel-selected-font-weight` (default `var(--lr-font-weight-semibold)`) style the
-selected vote button without changing shared brand tokens.
+selected vote button without changing shared brand tokens. Deprecated alias:
+`--lr-compare-panel-selected-background` (use `--lr-compare-panel-selected-bg`; removed in 23.0.0).
 
 ## `lr-span-waterfall`
 
@@ -1584,7 +1603,9 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
-window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
+window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
+`label: string = ''`. Deprecated alias: `hide-axis`/`hideAxis` (use `without-axis`; removed in
+23.0.0).
 
 The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
@@ -1595,7 +1616,7 @@ exports.
 **Events:** `lr-span-select` — `detail: { spanId: string }`, a bar/row was activated (click, Enter,
 Space).
 
-**CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,
+**CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
@@ -1649,16 +1670,22 @@ top-level task and direct child must additionally have a globally unique `id`; d
 visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
-moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
-in the built-in English catalog); any supplied value is an explicit verbatim override, including
-`'Tasks'` under a non-English `.strings` catalog and `''`. `headingLevel: LyraHeadingLevel = '3'`
+moves or an announcement is made. `heading?: string` — the visible section title; omission
+localizes `taskListLabel` (`'Tasks'` in the built-in English catalog); any supplied value is an
+explicit verbatim override, including `'Tasks'` under a non-English `.strings` catalog and `''`.
+Deprecated alias: `label` (use `heading`; removed in 23.0.0). `headingLevel: LyraHeadingLevel = '3'`
 (attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
 level around either its disclosure button or static content, invalid untyped values retain level 3,
-and `none` is the explicit visual-only opt-out — `expanded: boolean = true` (reflected), and
-`collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
+and `none` is the explicit visual-only opt-out. `collapsed: boolean = false` (reflected) — hides the
+body; the list starts shown. Deprecated alias: `expanded` (use `collapsed`; removed in 23.0.0) —
+inverted, so `expanded="false"` equals `collapsed`. `withoutCollapse: boolean = false` (attribute
+`without-collapse`) — renders the header as a static heading with no toggle; `collapsed` can still
+be set programmatically. Deprecated alias: `collapsible` (use `without-collapse`; removed in 23.0.0)
+— inverted, so `collapsible="false"` equals `without-collapse`. `size: LyraSize = 'm'` (reflected)
+— density on the shared size scale: `s` (and the smaller `xs`/`2xs`) tightens header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
-convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
-and background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
+convention as `<lr-agent-run>`'s `size`; purely a density knob, the border and background stay.
+Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
 library-wide `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border,
 background, and corner radius so a list embedded in a container that already draws a border (an
 agent-run panel, a message bubble) doesn't double it. The exported alias `TaskListAppearance` is
@@ -1675,10 +1702,10 @@ nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
 
-**CSS parts:** `base`, `header` (a `<button>` when `collapsible`, plain content otherwise, within
-the configured semantic heading), `label`,
+**CSS parts:** `base`, `header` (a `<button>` unless `without-collapse` is set, plain content
+otherwise, within the configured semantic heading), `label` (the `heading` text),
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
-indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
+indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
 `item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
 valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
@@ -1686,25 +1713,26 @@ nested `role="list"` wrapper around a top-level item's children).
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
 icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
-`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `size` is `s` or smaller;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
-label/summary/toggle while `compact`, one step tighter than the header's uncompacted
-`--lr-space-xs`, so `compact` tightens the header's _interior_ spacing and not just its padding;
+label/summary/toggle at that size, one step tighter than the header's regular
+`--lr-space-xs`, so the dense tier tightens the header's _interior_ spacing and not just its padding;
 `--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
-font size while `compact`, completing the compact header's typography alongside its padding and
+font size at that size, completing the dense header's typography alongside its padding and
 gap;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
-rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
-var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
+rows at that size; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding at that size;
 `--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
 `--lr-task-list-success-color` (default `var(--lr-color-success)`), and
 `--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
-status icons without changing shared status tokens. `--lr-task-list-background` (default
+status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps.
+`frame="plain"` keeps. Deprecated alias: `--lr-task-list-background` (use `--lr-task-list-bg`;
+removed in 23.0.0).
 
 ## `lr-terminal`
 
@@ -1713,7 +1741,7 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
-Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. With `wrap`, the scrollport follows the page direction.
+Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
 clears output and preserves the normal `null` property readback.
@@ -1722,22 +1750,28 @@ clears output and preserves the normal `null` property readback.
 codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
 `content` source, preserving commit order with same-turn `write()`/`clear()` calls.
 `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
-(reflected) — stick-to-bottom, `wrap: boolean = true` (reflected), `copyable: boolean = true`
-(reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
+(reflected) — stick-to-bottom, `withoutWrap: boolean = false` (attribute `without-wrap`, reflected)
+— keeps each line on one horizontally scrollable row instead of soft-wrapping it,
+`withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) and
+`downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). Empty/blank highlight ids
 and later duplicates are omitted before painting, focus ownership, active lookup, and activation
 events. A non-empty host `aria-label` is forwarded to the nested `role="log"`; an absent or explicit
 empty value uses the localized terminal-purpose fallback, so the actionable log remains named.
-`compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
-rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
-convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
-background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
+Deprecated aliases: `wrap` (use `without-wrap`; removed in 23.0.0) and `copyable` (use
+`without-copy-button`; removed in 23.0.0) — both inverted, so `wrap="false"` equals `without-wrap`
+and `copyable="false"` equals `without-copy-button`.
+`size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+`xs`/`2xs`) tightens `[part="toolbar"]`'s padding and gap and each rendered line's inline padding
+for a terminal embedded in an already-padded transcript row, the same convention `<lr-task-list>`
+and `<lr-thinking-panel>` use; purely a density knob, the card border and background stay.
+Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
 `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border, corner radius,
 and raised surface so a terminal nested inside a container that already draws a border (an agent-run
 panel, a message bubble) doesn't double it, while keeping the toolbar/log divider and whichever
-regular or compact padding applies. `anchorKinds:
+regular or dense padding applies. `anchorKinds:
 LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
@@ -1803,9 +1837,9 @@ ordinary rendered lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-
 `--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
 `highlights[]` entry of the matching `tone`. `--lr-terminal-compact-toolbar-padding` (default
 `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-terminal-compact-toolbar-gap` (default
-`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `compact`, and
-`--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each rendered
-line's inline padding while `compact` — all three sit behind inline `var()` fallbacks, so a
+`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `size` is `s` or
+smaller, and `--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each
+rendered line's inline padding at that size — all three sit behind inline `var()` fallbacks, so a
 transcript can retune every nested terminal at once without restating the rules. Each highlight
 background is decoupled from the identical shared token it
 falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)
@@ -1877,9 +1911,12 @@ under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy 
 as a root rather than being dropped. Duration bars scale to the whole trace, measured before the
 shared 500-span cap is applied, so a truncated tail never stretches the surviving bars across their
 tracks. `activeSpanId: string | null = null`
-(attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
-`show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
-`show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+(attribute `active-span-id`), `label?: string`, `withTokens: boolean = false` (attribute
+`with-tokens`, reflected) — surfaces `tokensIn`/`tokensOut`, `withCost: boolean = false` (attribute
+`with-cost`, reflected) — surfaces `costText`, and `withoutBars: boolean = false` (attribute
+`without-bars`, reflected) — suppresses the inline duration bar. Deprecated aliases:
+`show-tokens`/`showTokens` (use `with-tokens`), `show-cost`/`showCost` (use `with-cost`) and
+`hide-bars`/`hideBars` (use `without-bars`); each is removed in 23.0.0.
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
@@ -1898,8 +1935,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
-`showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
-`duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
+`with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
+`duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
 `bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
 `live-region`.
 
@@ -1975,16 +2012,19 @@ catalog), while any supplied string is a verbatim override, including `'Activity
 non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
 plain and virtualized rendering paths while `label` remains the visible header text. Host
 `aria-labelledby` and `aria-describedby` likewise reach that semantic list in both rendering paths —
-`showTimestamps: boolean = false` (attribute `show-timestamps`),
+`withTimestamps: boolean = false` (attribute `with-timestamps`) — adds a trailing `<time>` per
+entry (deprecated alias: `show-timestamps`/`showTimestamps`, use `with-timestamps`; removed in
+23.0.0),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
 identically whether or not the feed is currently virtualized; replaces the plain text **inside**
 the persistent `[part="entry-text"]` wrapper rather than removing that part, and `virtualizeAt: number = 199` (attribute
-`virtualize-at`). `compact: boolean = false` (reflected) — tighter header and entry-row padding and
-gap for dense transcript contexts, the same density-only convention `<lr-confirm-bar>`'s and
-`<lr-thinking-panel>`'s own `compact` establish: the outer border and surface stay, so pair it
-with `frame="plain"` to remove card chrome. Retune it through
+`virtualize-at`). `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and
+the smaller `xs`/`2xs`) tightens the header and entry-row padding and gap for dense transcript
+contexts, the same density-only convention `<lr-confirm-bar>`'s and `<lr-thinking-panel>`'s own
+`size` establish: the outer border and surface stay, so pair it with `frame="plain"` to remove card
+chrome. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). Retune it through
 `--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`,
 `--lr-activity-feed-compact-entry-padding`, and `--lr-activity-feed-compact-entry-gap`.
 `frame: LyraFrame = 'card'` (reflected) — `'card' |
@@ -2002,32 +2042,33 @@ outer card goes.
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
 `variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and
-`entry-timestamp` (only while `showTimestamps` and a valid `timestamp` is set). Every entry-level
+`entry-timestamp` (only while `with-timestamps` and a valid `timestamp` is set). Every entry-level
 part is reachable in both rendering paths, virtualized or not.
 
 **Themeable custom properties:** `--lr-activity-feed-max-height` (default `16rem`) — cap on how
 tall the expanded body grows before it scrolls internally; and
 `--lr-activity-feed-live-status-color` (default `var(--lr-color-brand)`) — background color of
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
-The `compact` density is retunable through four properties: `--lr-activity-feed-compact-header-padding`
+The dense `size` tier is retunable through four properties: `--lr-activity-feed-compact-header-padding`
 (default `var(--lr-space-2xs) var(--lr-space-s)`) and `--lr-activity-feed-compact-header-gap`
-(default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `compact`, and
+(default `var(--lr-space-2xs)`) both scoped to `[part="header"]` while `size` is `s` or smaller, and
 `--lr-activity-feed-compact-entry-padding` (default `var(--lr-space-2xs) var(--lr-space-s)`) and
 `--lr-activity-feed-compact-entry-gap` (default `var(--lr-space-2xs)`) both scoped to
-`[part="entry"]` while `compact`. All four are inline `var()` fallbacks at their point
+`[part="entry"]` at that size. All four are inline `var()` fallbacks at their point
 of use, so any can be set on the element or on an ancestor, same as `lr-confirm-bar`'s and
-`lr-thinking-panel`'s own compact tokens. `renderText`'s returned content is otherwise unreachable
+`lr-thinking-panel`'s own dense-tier tokens. `renderText`'s returned content is otherwise unreachable
 by selector from outside the shadow root it renders into (the plain or the internal
 `<lr-virtual-list>`'s), so a returned anchor specifically is given
 `--lr-activity-feed-entry-text-link-color` (default `var(--lr-color-brand)`), mirroring
 `lr-table`'s identical `cell(row)`-anchor hook; set it to `revert` for the UA default link color.
 The card chrome itself is retunable the same way:
-`--lr-activity-feed-background` (default `var(--lr-color-surface)`) fills `[part="base"]`,
+`--lr-activity-feed-bg` (default `var(--lr-color-surface)`) fills `[part="base"]`,
 `--lr-activity-feed-border-color` (default `var(--lr-color-border-subtle)`) colors both its border and the
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
-hooks tune the card presentation rather than reinstating chrome you asked to drop.
+hooks tune the card presentation rather than reinstating chrome you asked to drop. Deprecated alias:
+`--lr-activity-feed-background` (use `--lr-activity-feed-bg`; removed in 23.0.0).
 
 **Known gotchas:**
 
@@ -2036,7 +2077,7 @@ hooks tune the card presentation rather than reinstating chrome you asked to dro
   `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
   `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry
   and the dot for DOM queries.
-- `compact`/`frame` render byte-identically to the pre-existing default when unset — neither
+- `size`/`frame` render byte-identically to the pre-existing default when unset — neither
   property changes anything about the plain-card presentation.
 - A `renderText`-returned anchor is the only descendant markup given a default styling hook
   (`--lr-activity-feed-entry-text-link-color`); other rich descendants (`<code>`, `<em>`, custom
@@ -2065,15 +2106,20 @@ display, total arithmetic, localization, and accessible summaries. `path` is the
 empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesExpanded:
 boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
 default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
-`el.filesExpanded = false`), and `copyable: boolean = true` (reflected).
-`compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
-row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
-so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
+`el.filesExpanded = false`), and `withoutCopyButton: boolean = false` (attribute
+`without-copy-button`, reflected) — hides the hash copy button. Deprecated alias: `copyable` (use
+`without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+`without-copy-button`.
+`size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+`xs`/`2xs`) tightens `[part="base"]` padding for a commit rendered as a row in a list or PR
+timeline, same convention as `<lr-agent-run>`'s own `size`; the border stays, so pair it with
+`frame="plain"` to drop the chrome entirely. Deprecated alias: `compact` (use `size="s"`; removed in
+23.0.0). `frame: LyraFrame = 'card'` (reflected)
 — container treatment, in the library-wide `frame` vocabulary (`'card' | 'plain'`), the same
 property `<lr-agent-run>`/`<lr-card>` carry: `'card'` keeps the bordered, padded box, `'plain'`
 removes the border, padding, and corner radius so a commit nested in a host list that already draws
-its own row chrome doesn't double it; `plain` wins over `compact` when both are set. The exported
-alias `CommitCardAppearance` is retained as a name for the same union.
+its own row chrome doesn't double it; `plain` wins over the dense `size` tier when both are set. The
+exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
@@ -2085,7 +2131,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
-`file-additions`, `file-deletions`, `copy-button`, and `actions`.
+`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`), and
+`actions`.
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
@@ -2096,11 +2143,12 @@ message keys, so one `registerLyraLocale()` registration (or one `.strings` over
 badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
-`[part="base"]` padding while `compact`. `--lr-commit-card-border-color` (default
+`[part="base"]` padding while `size` is `s` or smaller. `--lr-commit-card-border-color` (default
 `var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
-card's border and corner radius, and `--lr-commit-card-background` (default `transparent`) gives it
+card's border and corner radius, and `--lr-commit-card-bg` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
-you opt in. `frame="plain"` still removes the border and radius.
+you opt in. `frame="plain"` still removes the border and radius. Deprecated alias:
+`--lr-commit-card-background` (use `--lr-commit-card-bg`; removed in 23.0.0).
 
 ## `lr-test-results`
 
@@ -2116,8 +2164,11 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 'skipped' | 'running'` (all three exported here). `statusFilter: readonly TestStatus[] =
 []` (attribute: false) — empty shows every status. `runId: string | null = null` (attribute
 `run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
-reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
-(attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
+reflected) exposes its lifecycle. `withoutAutoExpandFailures: boolean = false`
+(attribute `without-auto-expand-failures`) keeps failed rows collapsed until the user expands them.
+Deprecated alias: `auto-expand-failures`/`autoExpandFailures` (use `without-auto-expand-failures`;
+removed in 23.0.0) —
+inverted, so `auto-expand-failures="false"` equals `without-auto-expand-failures`. A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
 test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
 first-wins identity. Foreign runtime statuses normalize
@@ -2194,7 +2245,10 @@ leaves that handoff landing on `[part="status"]` exactly as it always has.
 
 **Properties:** `toolName: string = ''` (attribute `tool-name`) — drives the default heading through
 the existing `toolApprovalHeading`/`toolApprovalGenericTool` dialog keys. `heading: string = ''` —
-free-form heading override for non-tool proposals; wins over `toolName`. `args: unknown = undefined`
+free-form heading override for non-tool proposals; wins over `toolName`. `headingLevel:
+LyraHeadingLevel = 'none'` (attribute `heading-level`) — the heading labels the `role="group"` and
+is not a document heading by default; `1`–`6` also expose it to heading navigation at that level.
+`args: unknown = undefined`
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically and
@@ -2202,32 +2256,34 @@ emits no `lr-approve`/`lr-deny` of its own; `lr-decision-settled` still fires, b
 really did render). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
 genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
 it, so the two can never drift): a confirmation is either routine or destructive, and
-`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `compact: boolean = false`
-(reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
-inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
-action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
-treatment is switched off — a compact bar is _expected_ to be narrow, so stretching the buttons to
-fill would be exactly wrong. It is a density knob only: the border, corner radius and background
-stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. `size: LyraSize = 'm'`
+(reflected) — density on the shared size scale: `s` (and the smaller `xs`/`2xs`) collapses the bar
+from a stacked `display: block` card into a single tightly-padded inline row, for a confirmation
+that has to live inside an existing container: a table cell, a card's action row, a toolbar. The
+host becomes `inline-flex`, and the narrow-allocation `@container` treatment is switched off — a
+dense bar is _expected_ to be narrow, so stretching the buttons to fill would be exactly wrong. It
+is a density knob only: the border, corner radius and background stay. Deprecated alias: `compact`
+(use `size="s"`; removed in 23.0.0). Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
 event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
 heading label. `frame: LyraFrame = 'card'` (reflected) — `'card' | 'plain'`, imported from the
 library's shared container-frame vocabulary and behaving exactly as it does on `lr-agent-run`,
 `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel`:
 `'plain'` removes the border, background, padding and corner radius so a bar nested inside a
-container that already draws a border doesn't double it, and wins over `compact` when both are set.
-Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
-`compact frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
-`pending: ApprovalAction | null = null` (reflected) — which action is awaiting host
-resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
-now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
-to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
+container that already draws a border doesn't double it, and wins over the dense `size` tier when
+both are set. Before 9.0.0 the density knob alone did both jobs; a bar that relied on that now needs
+`size="s" frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
+`pendingAction: ApprovalAction | null = null` (attribute `pending-action`, reflected) — which action
+is awaiting host resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on
+the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
+`.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
+state. Deprecated alias: `pending` (use `pending-action`; removed in 23.0.0).
 `waitUntil(promise)` in the event detail is the declarative form of that same state machine and
-needs no `preventDefault()`: the bar sets `pending` itself, and the promise's settlement finalizes
-`decision` or clears `pending` and returns focus to the control that can retry.
+needs no `preventDefault()`: the bar sets `pendingAction` itself, and the promise's settlement
+finalizes `decision` or clears `pendingAction` and returns focus to the control that can retry.
 `disabled: boolean = false` (reflected) — disables both Deny and Approve and makes activating either
-a no-op, without discarding any in-flight `decision`/`pending` state. Distinct from `pending`:
-`pending` marks one specific action as awaiting the host while the other stays interactive;
-`disabled` blocks both regardless of `pending`. `autofocus: boolean = false` (reflected) — opt-in
+a no-op, without discarding any in-flight `decision`/`pendingAction` state. Distinct from
+`pendingAction`, which marks one specific action as awaiting the host while the other stays
+interactive; `disabled` blocks both regardless of `pendingAction`. `autofocus: boolean = false` (reflected) — opt-in
 focus-on-mount: moves focus into the bar after its own first render, once this element and (when
 present) the Deny `<lr-button>` have both completed it. Named after the native global attribute it
 stands in for, since the platform's own `autofocus` algorithm only fires for an element already in
@@ -2235,7 +2291,7 @@ the document when it finishes parsing, never for one a host swaps in afterward �
 use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
 hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
 `escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
-A no-op while `disabled`, already decided, or `pending`, exactly like clicking Deny itself, and
+A no-op while `disabled`, already decided, or `pendingAction` is set, exactly like clicking Deny itself, and
 never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
 still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar
 is inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
@@ -2252,7 +2308,7 @@ and moves focus there if it has since appeared and nothing else has claimed focu
 this is what makes the swap-a-trigger-for-this-bar case actually work, rather than only working when
 the host happens to re-create its control before the decision lands. A plain element value is
 resolved once, synchronously, and never retried: it names something that either already exists or
-never will. It applies to every path that reaches a decision, a `pending` decision finalized
+never will. It applies to every path that reaches a decision, a pending decision finalized
 externally included. A named target that is missing, detached, `inert`, or otherwise refuses focus
 falls back to `[part="status"]` rather than to `<body>` — an `inert` element refuses `focus()`
 silently. Left unset, the handoff is byte-identical to the shipped one. The pending state is
@@ -2268,14 +2324,14 @@ same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
-listener holds the bar in its `pending` presentation — `loading` on the activated control,
+listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,
 `disabled` on the other — until the promise settles: a resolution finalizes `decision`, a rejection
 restores the undecided state and returns focus to the control that can retry. Several `waitUntil()`
 calls, from one listener or from several, are awaited together. Calling it after its own dispatch
 has finished does nothing (and warns in dev mode); the promise it receives may settle whenever it
 likes. It needs no `preventDefault()`, and the imperative path it replaces — `preventDefault()`,
-then writing `pending` and later `decision` by hand — still works unchanged. A listener that
-resolves the decision itself synchronously, by writing `decision` or `pending` during the dispatch,
+then writing `pendingAction` and later `decision` by hand — still works unchanged. A listener that
+resolves the decision itself synchronously, by writing `decision` or `pendingAction` during the dispatch,
 wins outright over both: the bar applies no bookkeeping of its own, `waitUntil()`'s included.
 
 `waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve`/
@@ -2306,23 +2362,22 @@ landing spot).
 
 **Themeable custom properties:** `--lr-confirm-bar-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the default tier every approval prompt renders at, and the
-companion to the `compact` density levers below; `frame="plain"` still drops the fill entirely.
-The `compact` density is retunable through two further properties, both
-scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (default
+companion to the dense-tier levers below; `frame="plain"` still drops the fill entirely.
+The dense `size` tier is retunable through two further properties, both
+scoped to `[part="base"]` while `size` is `s` or smaller: `--lr-confirm-bar-compact-padding` (default
 `var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
 `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
 are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
-be set on the element _or on any ancestor_, which is what makes "tighten every compact confirm bar
-in this panel" a one-rule change on the panel. The chrome-removing
-`--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
-`--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
-behavior: chrome is now `frame`'s job, so keep the default `frame="card"` (and restyle via
-`::part(base)`) instead of re-chroming a chrome-less compact bar.
+be set on the element _or on any ancestor_, which is what makes "tighten every dense confirm bar
+in this panel" a one-rule change on the panel. The dense tier's former chrome-removing border,
+fill and radius properties were removed in 9.0.0 along with its chrome behavior: chrome is now
+`frame`'s job, so keep the default `frame="card"` (and restyle via `::part(base)`) instead of
+re-chroming a chrome-less dense bar.
 
 Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
 `var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —
 `[part="status"]`'s text/icon color under `:host([decision='approved'])` and
-`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the compact set.
+`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the dense-tier set.
 They exist because `::part(status)[decision]` is invalid CSS, so recoloring just this component's
 decided state previously meant re-pointing the library-wide `--lr-color-success`/`-danger` tokens and
 repainting everything else that reads them.
@@ -2343,13 +2398,13 @@ repainting everything else that reads them.
   `<lr-button>` host, where those declarations either do nothing or must be re-expressed through
   `lr-button`'s own parts/custom properties.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above. If that same listener resolves the
-  decision itself synchronously (setting `.decision` or `.pending` directly before returning), that
-  wins outright: the component's own built-in `pending` bookkeeping only applies when the listener
+  its own async work is in flight — see `pendingAction` above. If that same listener resolves the
+  decision itself synchronously (setting `.decision` or `.pendingAction` directly before returning),
+  that wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the listener
   left both untouched, so a listener finalizing out of band is never silently clobbered back into
   the built-in loading/disabled presentation.
 - `disabled` blocks both Deny and Approve and makes activating either a no-op — see `disabled`
-  above. It is independent of, and composes with, `pending`.
+  above. It is independent of, and composes with, `pendingAction`.
 - `autofocus`/`escape-denies` are both opt-in and default to `false`; neither changes any
   existing bar's behavior unless a host sets it. `escape-denies` is intentionally *not* routed
   through the shared overlay Escape manager (`src/internal/overlay-manager.ts`) — this component
@@ -2368,7 +2423,7 @@ repainting everything else that reads them.
 ```
 
 An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
-`preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
+`preventDefault()` and sets `.decision` (or clears `.pendingAction`) once it resolves:
 
 ```ts
 bar.addEventListener("lr-approve", (e) => {
@@ -2378,7 +2433,7 @@ bar.addEventListener("lr-approve", (e) => {
       bar.decision = "approved";
     })
     .catch(() => {
-      bar.pending = null;
+      bar.pendingAction = null;
     }); // bounce back, retry
 });
 ```
@@ -2399,7 +2454,7 @@ bar.addEventListener("lr-approve", (e) => {
       bar.decision = "approved"; // the host's own state clear can happen before or after this
     })
     .catch(() => {
-      bar.pending = null;
+      bar.pendingAction = null;
     });
 });
 ```
@@ -2424,8 +2479,11 @@ string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering. `controls:
-boolean = true` — render the built-in take-over/stop buttons.
+letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
+`withoutControls: boolean = false` (attribute `without-controls`, reflected) — hides the built-in
+take-over/stop buttons, for a read-only viewer; the `actions` slot still renders. Deprecated alias:
+`controls` (use `without-controls`; removed in 23.0.0) — inverted, so `controls="false"` equals
+`without-controls`.
 
 **Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing
 the `frame-src` image. `actions` — extra toolbar controls.
@@ -2435,7 +2493,8 @@ the `frame-src` image. `actions` — extra toolbar controls.
 session, no detail.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
-`controller-badge`, `actions`, `take-over-button`, `stop-button`, `viewport`, `frame` (the
+`controller-badge`, `actions`, `take-over-button` and `stop-button` (neither rendered while
+`without-controls`), `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 
@@ -2458,7 +2517,9 @@ viewport's aspect ratio.
 
 **Additional API surface:**
 
-- `--lr-browser-frame-controller-background` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-browser-frame-controller-bg` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+  Deprecated alias: `--lr-browser-frame-controller-background` (use
+  `--lr-browser-frame-controller-bg`; removed in 23.0.0).
 - `--lr-browser-frame-controller-color` — Controller badge text color. Default: `var(--lr-color-brand)`.
 - `--lr-browser-frame-ping-click-color` — Click-ping border color. Default: `var(--lr-color-brand)`.
 - `--lr-browser-frame-ping-type-color` — Type-ping border color. Default: `var(--lr-color-success)`.
@@ -2587,20 +2648,23 @@ value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/c
 The collection and status-map properties above are bounded frozen snapshots. Mutating a previously
 assigned array or record has no effect; create and reassign a new value after changes.
 
-- `showCancel: boolean = true` (attribute `show-cancel`) / `showRetry: boolean = true` (attribute
-  `show-retry`) — whether the built-in buttons may render at all, still gated by the run's own
-  status. Both use a `true`-defaulting string converter, so plain-HTML `show-cancel="false"` works; a
-  `?show-cancel=${false}` boolean-attribute binding starting from absent markup does not
-- `compact: boolean = false` (reflected) — tighter root padding and header/body gap for dense
-  contexts (a run rendered as a row in a list, or in a side panel); same convention as `lr-empty`'s
-  `compact`. Purely a density knob: the border and background stay, so reach for
-  `frame="plain"` instead when the goal is to drop the chrome entirely
+- `withoutCancel: boolean = false` (attribute `without-cancel`) / `withoutRetry: boolean = false`
+  (attribute `without-retry`) — suppress the built-in buttons, which otherwise render while the
+  run's own status allows them (a read-only viewer sets both). Deprecated aliases:
+  `show-cancel`/`showCancel` (use `without-cancel`) and `show-retry`/`showRetry` (use
+  `without-retry`), both removed in 23.0.0 — inverted, so `show-cancel="false"` equals
+  `without-cancel`
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+  `xs`/`2xs`) tightens the root padding and header/body gap for dense contexts (a run rendered as a
+  row in a list, or in a side panel); `m` and larger keep the full padding. Purely a density knob:
+  the border and background stay, so reach for `frame="plain"` instead when the goal is to drop the
+  chrome entirely. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-card>` and every other card-shaped
   component carries. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
   border, background, padding and corner radius, so a run nested inside a host container that
-  already draws a border doesn't double it. `plain` wins over `compact` when both are set — there is
-  no padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
+  already draws a border doesn't double it. `plain` wins over the dense `size` tier when both are set
+  — there is no padding left to tighten. The built-in Cancel/Retry buttons draw their own border and background
   and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
   name for the same union
 
@@ -2622,14 +2686,15 @@ this component's own retry counter, reset when `run.id` changes).
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
 current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
-padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
-is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so either can be set on the element _or on any
-ancestor_ — one rule on a run list retunes every compact run inside it.
-`--lr-agent-run-background` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
+padding, and the gap between its header and body, while `size` is `s` or smaller; both are ignored
+at `m` and larger. Like the other density/state properties in this family they are inline `var()`
+fallbacks at their point of use rather than `:host` declarations, so either can be set on the element
+_or on any ancestor_ — one rule on a run list retunes every dense run inside it.
+`--lr-agent-run-bg` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
 (default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
-three outright.
+three outright. Deprecated alias: `--lr-agent-run-background` (use `--lr-agent-run-bg`; removed in
+23.0.0).
 
 **Additional API surface:**
 
@@ -2662,11 +2727,12 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 - `label?: string` — forwarded to the composed `lr-trace-tree`. Omission leaves that tree's own
   `label` unset so it localizes its own default; any supplied string (including `''`) is
   forwarded verbatim
-- `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
-  `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
-  9.0.0 to match the positive polarity of its two siblings above — default inverted so the
-  rendered starting state is unchanged: `el.hideBars = true` becomes `el.showBars = false`) — all
-  forwarded verbatim
+- `withTokens: boolean = false` (attribute `with-tokens`), `withCost: boolean = false` (attribute
+  `with-cost`) and `withoutBars: boolean = false` (attribute `without-bars`) — forwarded verbatim to
+  the composed `<lr-trace-tree>`'s own `with-tokens`/`with-cost`/`without-bars`. Deprecated aliases:
+  `show-tokens`/`showTokens` (use `with-tokens`), `show-cost`/`showCost` (use `with-cost`) and
+  `show-bars`/`showBars` (use `without-bars`; inverted, so `show-bars="false"` equals
+  `without-bars`), each removed in 23.0.0
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`), `lr-span-toggle` (`detail: { spanId: string;
 expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
@@ -2982,10 +3048,10 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   copy of `args` handed to the approval dialog. While `needsApproval` is `true` and `approved` is
   still `undefined`, activating the entry's chip opens the shared approval dialog instead of merely
   firing the chip's own selection event
-- `approvalEditable: boolean = true` (attribute `approval-editable`, reflected) — forwarded to the
-  shared approval dialog's `editable`: whether a reviewer may edit an entry's arguments before
-  approving. Uses a `true`-defaulting string converter, so plain-HTML `approval-editable="false"`
-  works
+- `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
+  shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
+  Deprecated alias: `approval-editable`/`approvalEditable` (use `approval-readonly`; removed in
+  23.0.0) — inverted, so `approval-editable="false"` equals `approval-readonly`
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` rendering of each entry's `startedAt`
 - `pendingApproval: ToolTimelineApprovalPending = null` (read-only) — `'approve'` or `'deny'` while
@@ -3082,7 +3148,10 @@ AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accept
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
 `metricId: string | null = null`; `label?: string` — omission localizes the heading while an
-explicit empty string renders no heading/name; `showChart: boolean = true`; `chartHeight: string =
+explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
+`without-chart`, reflected) suppresses the metric trend chart (deprecated alias:
+`show-chart`/`showChart`, use `without-chart`; removed in 23.0.0 — inverted, so `show-chart="false"`
+equals `without-chart`); `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
@@ -3097,7 +3166,9 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Additional API surface:**
 
 - `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
-- `--lr-agent-eval-dashboard-active-background` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-agent-eval-dashboard-active-bg` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
+  Deprecated alias: `--lr-agent-eval-dashboard-active-background` (use
+  `--lr-agent-eval-dashboard-active-bg`; removed in 23.0.0).
 
 ## `lr-approval-queue`
 
@@ -3107,7 +3178,9 @@ It never executes tools or persists decisions.
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
 `selectedInvocationId: string | null = null` (attribute `selected-invocation-id`);
-`open: boolean = false`; `editable: boolean = true`; `label?: string` — omission localizes the
+`open: boolean = false`; `readonly: boolean = false` withholds argument editing in the nested
+approval dialog (deprecated alias: `editable`, use `readonly`; removed in 23.0.0 — inverted, so
+`editable="false"` equals `readonly`); `label?: string` — omission localizes the
 heading while an explicit empty string renders no heading/name. Later duplicate request
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
@@ -3153,8 +3226,10 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
   arrays accept HTTP(S) origins only. The resource and nested CSP arrays are clone-owned, bounded,
   and frozen; reassign a new resource record after changes. Permissions are optional booleans for
   camera, microphone, geolocation, clipboard read, and clipboard write.
-- `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
-  frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
+- `height: number | string = 320`, `maxHeight: number | string = 800` (attribute `max-height`) —
+  requested and maximum frame heights: a number of pixels, or a CSS length in `px`, `rem`, `em`,
+  `vw` or `vh` (resolved when set; a numeric attribute stays a number). Runtime values and resize
+  requests clamp to 120–10,000 pixels; an unresolvable length uses the default.
 - `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
   host `aria-label` stays on the custom-element host as its overall name instead of being cloned
   inward. The iframe title uses `label`, then resource title, then the localized fallback; an
@@ -3242,7 +3317,8 @@ identity before rendering, editing, focus, selection, and events;
 runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
-label when unset;
+label when unset; `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
+level (`none` keeps the visual heading text without heading semantics);
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
 emits a cancelable request, so a host can veto it while persisting the proposed order and later
@@ -3262,9 +3338,11 @@ readonly PromptStudioMessage[]; variables?: readonly PromptStudioVariable[]; cre
 **Events:** cancelable `lr-change` (`{ messages, variables }`, the complete proposed next state,
 fired before it is applied — prevent it to keep the current state unchanged), `lr-run`, `lr-save`
 (both carry complete messages/variables); `lr-version-select` (`{ version }`); and cancelable
-`lr-message-reorder` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
-updates the component and emits `lr-change`. Prevent `lr-message-reorder` to keep the current
-order; the listener may persist `detail.messages` and assign it back when ready. Plus `focus` and
+`lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
+updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
+current order; the listener may persist `detail.messages` and assign it back when ready. Deprecated
+alias: `lr-message-reorder` (use `lr-message-reorder-request`; removed in 23.0.0) — still fired right
+after it with an equal detail, and either event may veto. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow
@@ -3326,17 +3404,21 @@ issue cap.
 
 `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
-`--lr-schema-viewer-info-border` (default `var(--lr-color-brand)`) and `--lr-schema-viewer-info-bg`
-(default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
+`--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
+`--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
 library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
 to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 
-**Themeable custom properties:** `--lr-schema-viewer-max-indent` (default `var(--lr-size-12rem)`)
-caps visual nesting indentation while preserving complete JSON Pointer paths;
-`--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see above); otherwise shared tokens
-only.
+**Themeable custom properties:** `--lr-json-schema-viewer-max-indent` (default
+`var(--lr-size-12rem)`) caps visual nesting indentation while preserving complete JSON Pointer paths;
+`--lr-json-schema-viewer-info-border`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
+tokens only. Deprecated aliases: every `--lr-schema-viewer-*` custom property — `--lr-schema-viewer-max-indent`,
+`--lr-schema-viewer-selected-border`, `--lr-schema-viewer-error-border`, `--lr-schema-viewer-error-bg`,
+`--lr-schema-viewer-warning-border`, `--lr-schema-viewer-warning-bg`, `--lr-schema-viewer-info-border`
+and `--lr-schema-viewer-info-bg` (use the same name under `--lr-json-schema-viewer-*`; removed in
+23.0.0).
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
 `issue-limit` show their respective truncation as ordinary, non-live status text. When `selectedPath`
@@ -3355,11 +3437,11 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
-- `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
-- `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
-- `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
-- `--lr-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-json-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
 
 ## `lr-subagent-panel`
 
@@ -3370,11 +3452,12 @@ parents remain renderable instead of recursing forever.
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
 `selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
 accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
-localizes the default while any supplied string, including `''`, renders verbatim; `compact: boolean
-= false` (reflected) — tighter run-row padding/gaps and smaller task/model text, the same density
-convention `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal` already pair with
-`frame`; purely a density knob, since each run's own border stays, so reach for `frame="plain"` to
-drop the chrome entirely; `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
+localizes the default while any supplied string, including `''`, renders verbatim; `size: LyraSize
+= 'm'` (reflected) — density on the shared size scale: `s` (and the smaller `xs`/`2xs`) tightens
+run-row padding/gaps and shrinks the task/model text, the same density convention
+`lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal` already pair with `frame`; purely a
+density knob, since each run's own border stays, so reach for `frame="plain"` to drop the chrome
+entirely (deprecated alias: `compact`, use `size="s"`; removed in 23.0.0); `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
 row, in the library-wide `frame` vocabulary (`'card' | 'plain'`). `'card'` keeps each run's own
 border/radius; `'plain'` drops it, for a transcript or message-bubble context that already draws its
 own border around a nested `<lr-subagent-panel>` and would otherwise double it.
@@ -3413,21 +3496,23 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 - `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
-- `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `compact`.
-  Default: `var(--lr-space-2xs) var(--lr-space-s)`.
+- `--lr-subagent-panel-compact-trigger-padding` — `[part="run-trigger"]` padding while `size` is
+  `s` or smaller. Default: `var(--lr-space-2xs) var(--lr-space-s)`.
 - `--lr-subagent-panel-compact-trigger-gap` — Gap between `[part="run-trigger"]`'s
-  label/status/task/model/progress while `compact`. Default: `var(--lr-space-2xs)`.
-- `--lr-subagent-panel-compact-font-size` — `[part="task"]`/`[part="model"]` font size while
-  `compact`. Default: `var(--lr-font-size-2xs)`.
-- `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding while
-  `compact`. Default: `var(--lr-space-2xs)`.
-- `--lr-subagent-panel-background` — Resting fill of each run row's trigger and action buttons.
-  Hover and press follow `--lr-subagent-panel-hover-background`, so retune both together.
-  Default: `var(--lr-color-surface)`.
-- `--lr-subagent-panel-hover-background` — Hovered fill of each run row's trigger and action
+  label/status/task/model/progress at that size. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-compact-font-size` — `[part="task"]`/`[part="model"]` font size at that
+  size. Default: `var(--lr-font-size-2xs)`.
+- `--lr-subagent-panel-compact-action-padding` — `[part="cancel"]`/`[part="retry"]` padding at that
+  size. Default: `var(--lr-space-2xs)`.
+- `--lr-subagent-panel-bg` — Resting fill of each run row's trigger and action buttons.
+  Hover and press follow `--lr-subagent-panel-hover-bg`, so retune both together.
+  Default: `var(--lr-color-surface)`. Deprecated alias: `--lr-subagent-panel-background` (use
+  `--lr-subagent-panel-bg`; removed in 23.0.0).
+- `--lr-subagent-panel-hover-bg` — Hovered fill of each run row's trigger and action
   buttons. The pressed fill is this value mixed a further `--lr-color-mix-active` toward
   `--lr-color-mix-partner`, so retuning hover carries the press with it.
-  Default: `var(--lr-color-surface-raised)`.
+  Default: `var(--lr-color-surface-raised)`. Deprecated alias: `--lr-subagent-panel-hover-background`
+  (use `--lr-subagent-panel-hover-bg`; removed in 23.0.0).
 - `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
   still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
@@ -4044,7 +4129,8 @@ progress, and `No data` only for a terminal status.
   to `0`. Formatted in the effective locale (`820ms`, `1.5s`)
 - `args: unknown` (property only) — call arguments; the identity is kept and never snapshotted
 - `result: unknown` (property only) — call result; `undefined` means no result yet
-- `error?: string` — a non-empty string renders the error section (caller text, verbatim)
+- `errorText?: string` (attribute `error-text`) — a non-empty string renders the error section
+  (caller text, verbatim). Deprecated alias: `error` (use `error-text`; removed in 23.0.0)
 - `redactedFields: readonly string[] = []` (property only) — dotted paths within
   `args`/`result`/`error` to mask with the localized `Value hidden` placeholder. A bare
   `'args'`/`'result'`/`'error'` masks the whole branch, arrays are walked by index
@@ -4082,7 +4168,8 @@ set), `duration` (only while finite), `body` (the disclosed region), `args`, `ar
 
 **Themeable custom properties:**
 
-- `--lr-tool-call-block-background` (default `var(--lr-color-surface)`) — card fill
+- `--lr-tool-call-block-bg` (default `var(--lr-color-surface)`) — card fill. Deprecated alias:
+  `--lr-tool-call-block-background` (use `--lr-tool-call-block-bg`; removed in 23.0.0)
 - `--lr-tool-call-block-border-color` (default `var(--lr-color-border)`) — card edge and
   header/body divider
 - `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius

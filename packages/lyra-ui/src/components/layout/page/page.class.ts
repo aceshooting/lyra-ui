@@ -13,6 +13,7 @@ import {
 } from '../../../internal/aria-ownership.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -46,6 +47,10 @@ interface CustomToggleOwnership {
 }
 
 export interface LyraPageEventMap {
+  /** Cancelable proposed `navOpen` state; `preventDefault()` leaves `navOpen` unchanged. */
+  'lr-nav-toggle-request': CustomEvent<{ open: boolean }>;
+  /** @deprecated Use `lr-nav-toggle-request`; removal not before 23.0.0. Fired right after it from
+   *  the same proposal, with an equal detail; either event's `preventDefault()` vetoes it. */
   'lr-nav-toggle': CustomEvent<{ open: boolean }>;
 }
 
@@ -79,10 +84,11 @@ export interface LyraPageEventMap {
  * focus, the default navigation toggle, then the main landmark, receive it instead. The return is
  * attempted as the drawer closes and, when that attempt could not reach the opening control (a host
  * commonly hides its menu button while the drawer is open and re-shows it from its own render in
- * response to `lr-nav-toggle`), again once the close's update has completed and one animation frame
- * has passed. That second pass only acts while focus is still inside the closed drawer, on the
- * fallback the first attempt chose, or lost to `<body>` -- focus moved elsewhere in the meantime is
- * never taken back -- and it follows the same order. A reopen, or a disconnect, abandons it.
+ * response to `lr-nav-toggle-request`), again once the close's update has completed and one
+ * animation frame has passed. That second pass only acts while focus is still inside the closed
+ * drawer, on the fallback the first attempt chose, or lost to `<body>` -- focus moved elsewhere in
+ * the meantime is never taken back -- and it follows the same order. A reopen, or a disconnect,
+ * abandons it.
  *
  * @customElement lr-page
  * @attr {string} disable-sticky - Whitespace-separated Page regions whose sticky positioning is
@@ -105,10 +111,14 @@ export interface LyraPageEventMap {
  * @slot skip-to-content - Replaces the localized skip-link text as inert visual content; its
  *   descriptive text names the outer skip link.
  * @slot subheader - A secondary header row.
- * @event lr-nav-toggle - A cancelable proposed `navOpen` state from `showNavigation()`,
+ * @event lr-nav-toggle-request - A cancelable proposed `navOpen` state from `showNavigation()`,
  *   `hideNavigation()`, `toggleNavigation()`, or a built-in dismissal (backdrop click, Escape, the
  *   default navigation-toggle button). Call `preventDefault()` to leave `navOpen` unchanged.
- *   `detail: { open }`.
+ *   `detail: { open }`. Fires before `lr-nav-toggle`, from the same proposal; either event may
+ *   veto.
+ * @event lr-nav-toggle - Deprecated cancelable alias of `lr-nav-toggle-request`, kept firing
+ *   unchanged right after it with an equal `detail: { open }`; either event may veto, and a veto
+ *   through this alias logs a one-time development warning. Removal not before 23.0.0.
  * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
  * @csspart banner - Wrapper for the `banner` slot.
  * @csspart base - Compatibility name for the root Page wrapper; use `page`.
@@ -647,16 +657,20 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.mainElement?.scrollIntoView({ block: 'start' });
   };
 
-  /** Emits the cancelable lr-nav-toggle proposal before touching navOpen; a defaultPrevented
-   *  request leaves it unchanged. Shared by every mutation path -- showNavigation(),
-   *  hideNavigation(), toggleNavigation(), and the built-in drawer dismissals that call them. */
+  /** Emits the cancelable lr-nav-toggle-request proposal (then its deprecated lr-nav-toggle alias)
+   *  before touching navOpen; a defaultPrevented request leaves it unchanged. Shared by every
+   *  mutation path -- showNavigation(), hideNavigation(), toggleNavigation(), and the built-in
+   *  drawer dismissals that call them. */
   private requestNavOpen(next: boolean): void {
     if (this.navOpen === next) return;
-    if (
-      this.emit('lr-nav-toggle', { open: next }, { cancelable: true })
-        .defaultPrevented
-    )
-      return;
+    const request = this.emit('lr-nav-toggle-request', { open: next }, { cancelable: true });
+    // Deprecated alias -- dispatched unconditionally with its own equal detail, so a listener bound
+    // only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-nav-toggle', { open: next }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-nav-toggle', 'lr-nav-toggle-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.navOpen = next;
   }
 

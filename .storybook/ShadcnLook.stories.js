@@ -97,7 +97,7 @@ function panel(mode, label) {
       <lr-lite-chart
         type="bar"
         height="10rem"
-        legend
+        with-legend
         data-table-toggle
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
@@ -106,7 +106,7 @@ function panel(mode, label) {
         Deploys look healthy: three services restarted cleanly.
       </lr-chat-message>
       <lr-tool-call-block name="search_web" status="success" duration-ms="820"></lr-tool-call-block>
-      <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+      <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
         <span slot="excerpt">Revenue grew 12% year over year.</span>
       </lr-source-card>
       <lr-media-card

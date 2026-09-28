@@ -87,7 +87,7 @@ it('redraws its derived labels and counts when values change after initializatio
   expect((el as any).chart.data.datasets[0].data).to.deep.equal([3, 1]);
 });
 
-it('visually hides the fallback data table via the sr-only sheet when show-data-table is off', async () => {
+it('visually hides the fallback data table via the sr-only sheet when with-data-table is off', async () => {
   const el = (await fixture(html`<lr-histogram></lr-histogram>`)) as LyraHistogram;
   el.values = [1, 2, 3];
   await el.updateComplete;
@@ -106,7 +106,7 @@ it('visually hides the fallback data table via the sr-only sheet when show-data-
   expect(computed.overflow).to.equal('hidden');
   expect(computed.margin).to.equal('-1px');
 
-  el.showDataTable = true;
+  el.withDataTable = true;
   await el.updateComplete;
   expect(table.classList.contains('sr-only')).to.be.false;
 });

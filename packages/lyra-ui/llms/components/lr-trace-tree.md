@@ -7,7 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `hideBars` / `hide-bars` since `21.1.0`; use property `without-bars`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showCost` / `show-cost` since `21.1.0`; use property `with-cost`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showTokens` / `show-tokens` since `21.1.0`; use property `with-tokens`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,9 +31,12 @@ under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy 
 as a root rather than being dropped. Duration bars scale to the whole trace, measured before the
 shared 500-span cap is applied, so a truncated tail never stretches the surviving bars across their
 tracks. `activeSpanId: string | null = null`
-(attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
-`show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
-`show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+(attribute `active-span-id`), `label?: string`, `withTokens: boolean = false` (attribute
+`with-tokens`, reflected) — surfaces `tokensIn`/`tokensOut`, `withCost: boolean = false` (attribute
+`with-cost`, reflected) — surfaces `costText`, and `withoutBars: boolean = false` (attribute
+`without-bars`, reflected) — suppresses the inline duration bar. Deprecated aliases:
+`show-tokens`/`showTokens` (use `with-tokens`), `show-cost`/`showCost` (use `with-cost`) and
+`hide-bars`/`hideBars` (use `without-bars`); each is removed in 23.0.0.
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
@@ -50,8 +55,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
-`showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
-`duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
+`with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
+`duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
 `bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
 `live-region`.
 

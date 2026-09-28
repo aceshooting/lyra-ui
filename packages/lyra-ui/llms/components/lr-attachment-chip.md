@@ -7,7 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `previewable` / `previewable` since `21.1.0`; use property `without-preview`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `removable` / `removable` since `21.1.0`; use property `without-remove-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -48,21 +50,33 @@ coalesce into one update.
   exists for a non-image file)
 - `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download when
   `file` is unset; a real `File` takes precedence and uses a temporary blob URL
-- `previewable: boolean = true` (reflected) — shows the preview action whenever a `file` or
-  `preview-src` is available
+- `withoutPreview: boolean = false` (reflected, attribute `without-preview`) — hides the preview
+  action, which otherwise renders whenever a `file` or `preview-src` is available. Deprecated alias:
+  `previewable` (use `without-preview`, which `previewable="false"` equals; removing `previewable`
+  restores the default; removed in 23.0.0). The alias still reflects (`previewable="false"`); the two
+  stay in sync and the last write wins.
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
 'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
   `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
-- `removable: boolean = true` (reflected) — shows the remove (×) button
-- `compact: boolean = false` (reflected) — renders a smaller, borderless pill presentation instead of
-  the default bordered/chrome-heavy chip, e.g. for a composer's pending-attachment tray. `false` (the
-  default) is visually identical to the standard chip.
-- `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — when both this and
-  `compact` are set, hides `[part='meta']` (the filename/size text) entirely for an image-mime
-  attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
-  unset. `false` (the default) reproduces the chip's exact existing output. While it actually hides
+- `withoutRemoveButton: boolean = false` (reflected, attribute `without-remove-button`) — hides the
+  remove (×) button, which otherwise renders. Deprecated alias: `removable` (use
+  `without-remove-button`, which `removable="false"` equals; removing `removable` restores the
+  default; removed in 23.0.0). The alias still reflects (`removable="false"`); the two stay in sync
+  and the last write wins.
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density — a smaller, borderless pill instead of the default bordered chip, e.g. for a
+  composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset
+  renders exactly as before. An unsupported value normalizes to unset and removes the attribute.
+  Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it still renders exactly like
+  `size="s"` and keeps reflecting `compact`; the two stay in sync (a `size` of `s` or below reads
+  back as `compact`) and the last write wins.
+- `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — at the compact density,
+  hides `[part='meta']` (the filename/size text) entirely for an image-mime attachment, leaving only
+  the thumbnail. Has no effect for a non-image chip, or at the default density. `false` (the
+  default) reproduces the chip's exact existing output. While it actually hides
   `[part='meta']`, `[part='base']` also switches to a reduced, symmetric padding sized for a lone
   thumbnail instead of the compact text row's padding — see
   `--lr-attachment-chip-compact-thumbnail-only-padding` below.
@@ -83,10 +97,10 @@ coalesce into one update.
   localized default (`'Untitled file'` in English)
 
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
-`lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,
-and a numeric byte count answering to the same property name is a collision a consumer only
-discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays omitted
-and the `size` part renders nothing.
+`lr-file-icon`'s). In this library `size` names a tier on the shared size ladder, and a numeric byte
+count answering to the same property name is a collision a consumer only discovers at runtime. A
+leftover `size="245000"` is not a byte count: it is an unsupported tier, so it normalizes to unset
+and is removed, `bytes` stays omitted and the `size` part renders nothing.
 
 The component identifies _which_ attachment an action event is about through `attachmentId`. Set
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
@@ -94,7 +108,8 @@ and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
 generated internal id is used as a last resort.
 
-**Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
+**Events:** `lr-remove` (`detail: { attachmentId }`; the button is not rendered while
+`without-remove-button` is set), `lr-retry`
 (`detail: { attachmentId }`, only rendered while `status="error"`), and
 `lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
 notification that the preview action was activated. **Breaking in 10.0.0:** this event was
@@ -129,24 +144,24 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border-subtle)`) — the trio's private defaults
-change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
+`--lr-attachment-chip-border` (default `var(--lr-color-border-subtle)`) — the trio's private
+defaults change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
 danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
 or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
-size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
-`var(--lr-transition-ambient)`) controls the indeterminate rotation's duration and easing and stops
-under reduced motion.
+size, and internal gap at the compact density (`size="s"` and below);
+`--lr-attachment-chip-spinner-duration` (default `var(--lr-transition-ambient)`) controls the
+indeterminate rotation's duration and easing and stops under reduced motion.
 `--lr-attachment-chip-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) and
 `--lr-attachment-chip-compact-padding` (default `var(--lr-size-0-125rem) var(--lr-space-xs)`) make
-`[part='base']`'s padding themeable in the resting and `compact` states respectively — both were
+`[part='base']`'s padding themeable at the default and compact densities respectively — both were
 previously hardcoded. `--lr-attachment-chip-compact-thumbnail-only-padding` (default
 `var(--lr-size-0-125rem)`, applied symmetrically to every side) governs `[part='base']`'s padding
-specifically while `compact` and `thumbnail-only` together actually hide `[part='meta']` for an
-image-mime attachment — reduced from the compact padding above, since the lone thumbnail no longer
-needs inline padding sized for a text row that isn't rendering. It has no effect for a non-image
-chip, where `[part='meta']` stays visible and the ordinary compact padding still applies.
+specifically while the compact density and `thumbnail-only` together actually hide `[part='meta']`
+for an image-mime attachment — reduced from the compact padding above, since the lone thumbnail no
+longer needs inline padding sized for a text row that isn't rendering. It has no effect for a
+non-image chip, where `[part='meta']` stays visible and the ordinary compact padding still applies.
 Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 `--lr-radius`, `--lr-color-text`, `--lr-color-danger`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-transition-base`, `--lr-focus-ring-width`,
@@ -192,7 +207,7 @@ an unknown size renders nothing instead of `"NaN B"`.
 The image thumbnail for a real `File` is a cached `URL.createObjectURL()` blob URL, allocated in
 `willUpdate()` — the update lifecycle, deliberately **never** from `render()`, so rendering stays a
 pure projection of already-prepared state and URL allocation never happens as a render side effect.
-It is created only when `file` is an image (or `previewable` is set), reused for as long as the same
+It is created only when `file` is an image (or `without-preview` is unset), reused for as long as the same
 `File` object stays assigned, and revoked when `file` changes to a different `File`, to a non-image,
 or to `undefined`, and again on disconnect. Because the same pass that allocates also revokes the
 previous entry, reassigning `file` several times before the next paint leaks nothing.

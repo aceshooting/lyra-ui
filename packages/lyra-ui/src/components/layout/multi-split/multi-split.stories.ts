@@ -43,7 +43,7 @@ function capMultiSplitResize(event: Event): void {
 function logMultiSplitToggle(event: Event): void {
   const toggle = event as CustomEvent<LyraMultiSplitToggleDetail>;
   console.info('lr-toggle', {
-    open: toggle.detail.open,
+    expanded: toggle.detail.expanded,
     cancelable: toggle.cancelable,
   });
 }

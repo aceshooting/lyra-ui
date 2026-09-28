@@ -13,6 +13,10 @@ import {
   resetMouse,
   sendMouse,
 } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 interface PageTestAccess {
   applyMeasuredInlineSize(width: number): void;
@@ -263,7 +267,7 @@ it('showNavigation(), hideNavigation(), and toggleNavigation() keep navOpen and 
 it('no-ops a redundant showNavigation()/hideNavigation() call that would not change navOpen, emitting no event', async () => {
   const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
   let events = 0;
-  page.addEventListener('lr-nav-toggle', () => events++);
+  page.addEventListener('lr-nav-toggle-request', () => events++);
 
   // navOpen already false: hideNavigation() must be a pure no-op.
   page.hideNavigation();
@@ -283,14 +287,14 @@ it('no-ops a redundant showNavigation()/hideNavigation() call that would not cha
   expect(events).to.equal(1);
 });
 
-it('emits a cancelable lr-nav-toggle before mutating navOpen, honoring a prevented request', async () => {
+it('emits a cancelable lr-nav-toggle-request before mutating navOpen, honoring a prevented request', async () => {
   const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
   const order: Array<{
     type: string;
     open: boolean;
     navOpenAtDispatch: boolean;
   }> = [];
-  page.addEventListener('lr-nav-toggle', (event) => {
+  page.addEventListener('lr-nav-toggle-request', (event) => {
     const detail = (event as CustomEvent<{ open: boolean }>).detail;
     order.push({
       type: event.type,
@@ -302,22 +306,91 @@ it('emits a cancelable lr-nav-toggle before mutating navOpen, honoring a prevent
 
   page.showNavigation();
   expect(order).to.deep.equal([
-    { type: 'lr-nav-toggle', open: true, navOpenAtDispatch: false },
+    { type: 'lr-nav-toggle-request', open: true, navOpenAtDispatch: false },
   ]);
   expect(page.navOpen).to.be.true;
 
   order.length = 0;
-  page.addEventListener('lr-nav-toggle', (event) => event.preventDefault(), {
+  page.addEventListener('lr-nav-toggle-request', (event) => event.preventDefault(), {
     once: true,
   });
   page.hideNavigation();
   expect(order).to.deep.equal([
-    { type: 'lr-nav-toggle', open: false, navOpenAtDispatch: true },
+    { type: 'lr-nav-toggle-request', open: false, navOpenAtDispatch: true },
   ]);
   expect(
     page.navOpen,
-    'a defaultPrevented lr-nav-toggle must not mutate navOpen'
+    'a defaultPrevented lr-nav-toggle-request must not mutate navOpen'
   ).to.be.true;
+});
+
+describe('lr-nav-toggle-request and its deprecated lr-nav-toggle alias', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-page', kind: 'event', name: 'lr-nav-toggle' },
+  ];
+
+  it('fires the canonical request first, then the alias, as separate equal cancelable details', async () => {
+    const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+    const seen: CustomEvent<{ open: boolean }>[] = [];
+    const record = (event: Event) => seen.push(event as CustomEvent<{ open: boolean }>);
+    page.addEventListener('lr-nav-toggle-request', record);
+    page.addEventListener('lr-nav-toggle', record);
+    page.showNavigation();
+    expect(seen.map((event) => event.type)).to.deep.equal([
+      'lr-nav-toggle-request',
+      'lr-nav-toggle',
+    ]);
+    expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
+      JSON.stringify({ open: true }),
+      JSON.stringify({ open: true }),
+    ]);
+    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
+    expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
+      [true, true, true],
+      [true, true, true],
+    ]);
+    expect(page.navOpen).to.be.true;
+  });
+
+  it('vetoes through the canonical request without a warning, while the alias still fires', async () => {
+    const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+    let aliasPrevented: boolean | undefined;
+    page.addEventListener('lr-nav-toggle-request', (event) => event.preventDefault());
+    page.addEventListener('lr-nav-toggle', (event) => {
+      aliasPrevented = event.defaultPrevented;
+    });
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => page.showNavigation());
+    expect(page.navOpen).to.be.false;
+    expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('still lets a listener on only the alias veto, and warns once naming lr-nav-toggle-request', async () => {
+    const results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+        page.addEventListener('lr-nav-toggle', (event) => event.preventDefault());
+        page.showNavigation();
+        results.push(page.navOpen);
+      }
+    });
+    expect(results).to.deep.equal([false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-page:event:lr-nav-toggle',
+    ]);
+    expect(warnings[0]!.message).to.contain('lr-nav-toggle-request');
+  });
+
+  it('does not warn when an alias listener only observes', async () => {
+    const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+    let observed = 0;
+    page.addEventListener('lr-nav-toggle', () => (observed += 1));
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => page.toggleNavigation());
+    expect(observed).to.equal(1);
+    expect(page.navOpen).to.be.true;
+    expect(warnings).to.have.length(0);
+  });
 });
 
 it('gives the default toggle an exact controls/expanded contract and supports its icon slot', async () => {
@@ -1941,7 +2014,7 @@ describe('mobile navigation focus return to a host-hidden trigger', () => {
   };
 
   /** A host that hides `trigger` while the drawer is open and re-shows it from its own render a
-   *  frame after `lr-nav-toggle` proposes the close -- a framework host whose render is scheduled
+   *  frame after `lr-nav-toggle-request` proposes the close -- a framework host whose render is scheduled
    *  rather than synchronous with the event. */
   function hideWhileOpen(
     page: LyraPage,
@@ -1959,8 +2032,8 @@ describe('mobile navigation focus return to a host-hidden trigger', () => {
         trigger.style.visibility = '';
       });
     };
-    page.addEventListener('lr-nav-toggle', listener);
-    return () => page.removeEventListener('lr-nav-toggle', listener);
+    page.addEventListener('lr-nav-toggle-request', listener);
+    return () => page.removeEventListener('lr-nav-toggle-request', listener);
   }
 
   it('returns focus to a slotted navigation toggle the host re-shows after Escape closes the drawer', async () => {

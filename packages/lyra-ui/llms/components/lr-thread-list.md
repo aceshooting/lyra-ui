@@ -7,9 +7,12 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-thread-list-excerpt-highlight-background` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-thread-list-excerpt-highlight-foreground` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `renamable` / `renamable` since `21.1.0`; use property `without-rename`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showArchived` / `show-archived` since `21.1.0`; use property `with-archived`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 42 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 42 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,8 +44,9 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
 'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; collapsed: boolean }` (the shared
-payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair). `LyraThreadList` and
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded: boolean; collapsed:
+boolean }` (the shared payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair;
+`collapsed` is the deprecated inverse of `expanded`, removed in 23.0.0). `LyraThreadList` and
 `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
@@ -91,14 +95,17 @@ self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
-data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
-= false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
-trailing group). `renamable: boolean = true` (reflected) — forwarded to each data-mode row's inline
-rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
-`lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
+data mode only: built-in icon buttons rendered into each row's `actions` slot. `withArchived: boolean
+= false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
+trailing group); deprecated alias: `show-archived`/`showArchived` (use `with-archived`; removed in
+23.0.0). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
+each data-mode row, turning its inline rename off; deprecated alias: `renamable` (use
+`without-rename`; removed in 23.0.0), inverted, so `renamable="false"` equals `without-rename`.
+`compact: boolean = false` (reflected) — data mode only: forwarded to each row
+`lr-conversation-item` as its dense `size="s"`, tightening every row's padding and gaps from one attribute
 (the density itself lives on the row item; retune it through
 `--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
-deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
+deliberate no-op — that mode renders host-supplied items as-is, so the host sets `size` on its own
 items there, the same division of responsibility slotted mode already has for every other row
 property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
@@ -155,7 +162,7 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 
 - `itemElement(conversationId)` — the rendered `lr-conversation-item` for one thread's
   `conversationId` (data mode) or one slotted item's own `conversation-id` (slotted mode), or
-  `null` when it is not currently rendered: filtered out by `showArchived`/search, windowed out of
+  `null` when it is not currently rendered: filtered out by `withArchived`/search, windowed out of
   the virtualized viewport, removed from `threads`, or never present
 
 `conversationId` is not a second identity scheme layered on top of the list — it is the same stable
@@ -178,10 +185,11 @@ including its retry button, while `error` is set.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle-request` (`detail: { groupId, collapsed }`, cancelable) — proposed before a
+`lr-group-toggle-request` (`detail: { groupId, expanded, collapsed }`, cancelable; `expanded` is
+the canonical key and the deprecated `collapsed` its inverse) — proposed before a
 custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
 `collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
-collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, collapsed }`) — the
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded, collapsed }`) — the
 change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
 `collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
@@ -239,8 +247,10 @@ lr-thread-list::part(row-actions) {
 ```
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
-`--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-foreground` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-background`, removed in 23.0.0),
+`--lr-thread-list-excerpt-highlight-color` (default `inherit`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-foreground`, removed in 23.0.0),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style

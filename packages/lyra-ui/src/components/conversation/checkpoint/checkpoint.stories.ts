@@ -30,13 +30,13 @@ export const Default: Story = {
 };
 
 export const NoConfirm: Story = {
-  name: 'confirmRestore="false" (fires immediately)',
+  name: 'without-restore-confirmation (fires immediately)',
   render: () => html`
     <lr-checkpoint
       style="max-width: 32rem;"
       checkpoint-id="ck_19"
       label="Snapshot before deploy"
-      confirm-restore="false"
+      without-restore-confirmation
     ></lr-checkpoint>
   `,
 };
@@ -48,9 +48,9 @@ export const Restoring: Story = {
 };
 
 export const ReadOnlyMarker: Story = {
-  name: 'restorable="false" (read-only marker)',
+  name: 'without-restore (read-only marker)',
   render: () => html`
-    <lr-checkpoint style="max-width: 32rem;" label="Currently restored point" restorable="false"></lr-checkpoint>
+    <lr-checkpoint style="max-width: 32rem;" label="Currently restored point" without-restore></lr-checkpoint>
   `,
 };
 

@@ -531,7 +531,7 @@ it('re-targets its shared sink with the canvas when adopted into another documen
   }
 });
 
-it('cannot pan the canvas through minimap keyboard controls while locked', async () => {
+it('cannot pan the canvas through minimap keyboard controls while it is readonly', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
@@ -543,7 +543,7 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as HTMLElement;
-  wrapper.locked = true;
+  wrapper.readonly = true;
   await wrapper.updateComplete;
   await new Promise((resolve) => requestAnimationFrame(resolve));
   await minimap.updateComplete;
@@ -562,11 +562,11 @@ it('cannot pan the canvas through minimap keyboard controls while locked', async
   expect(wrapper.viewport).to.deep.equal(before);
 });
 
-// `LyraFlowCanvas`'s own setViewport/zoomIn/zoomOut/fit already early-return when `locked` --
+// `LyraFlowCanvas`'s own setViewport/zoomIn/zoomOut/fit already early-return when `readonly` --
 // asserting only `wrapper.viewport` stays put would pass even if the minimap never checked
-// `locked` itself, because the canvas's own guard would still absorb the call. These tests stub
+// `readonly` itself, because the canvas's own guard would still absorb the call. These tests stub
 // out that canvas-side guard (so the calls would visibly go through if made) to prove the minimap
-// itself never makes the call while paired with a locked canvas: `FlowCanvasLike` callers must not
+// itself never makes the call while paired with a readonly canvas: `FlowCanvasLike` callers must not
 // rely solely on the far end being well-behaved.
 function stubUnguardedCanvasMethods(wrapper: LyraFlowCanvas): { setViewportCalls: number; zoomInCalls: number; zoomOutCalls: number } {
   const calls = { setViewportCalls: 0, zoomInCalls: 0, zoomOutCalls: 0 };
@@ -582,7 +582,7 @@ function stubUnguardedCanvasMethods(wrapper: LyraFlowCanvas): { setViewportCalls
   return calls;
 }
 
-it('cannot click-to-center a locked canvas through the minimap map', async () => {
+it('cannot click-to-center a readonly canvas through the minimap map', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
@@ -594,7 +594,7 @@ it('cannot click-to-center a locked canvas through the minimap map', async () =>
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
-  wrapper.locked = true;
+  wrapper.readonly = true;
   const calls = stubUnguardedCanvasMethods(wrapper);
 
   map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
@@ -602,7 +602,7 @@ it('cannot click-to-center a locked canvas through the minimap map', async () =>
   expect(calls.setViewportCalls).to.equal(0);
 });
 
-it('cannot zoom a locked canvas by wheeling over the minimap map', async () => {
+it('cannot zoom a readonly canvas by wheeling over the minimap map', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
@@ -614,7 +614,7 @@ it('cannot zoom a locked canvas by wheeling over the minimap map', async () => {
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
-  wrapper.locked = true;
+  wrapper.readonly = true;
   const calls = stubUnguardedCanvasMethods(wrapper);
 
   map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }));
@@ -623,7 +623,7 @@ it('cannot zoom a locked canvas by wheeling over the minimap map', async () => {
   expect(calls.zoomOutCalls).to.equal(0);
 });
 
-it('cannot drag the viewport rectangle to pan a locked canvas', async () => {
+it('cannot drag the viewport rectangle to pan a readonly canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
       <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
@@ -636,7 +636,7 @@ it('cannot drag the viewport rectangle to pan a locked canvas', async () => {
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
   (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
-  wrapper.locked = true;
+  wrapper.readonly = true;
   const calls = stubUnguardedCanvasMethods(wrapper);
 
   rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));

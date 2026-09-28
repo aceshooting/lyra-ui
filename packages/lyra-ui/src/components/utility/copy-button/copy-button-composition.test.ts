@@ -5,7 +5,7 @@ import './copy-button.js';
 import type { LyraCopyButton } from './copy-button.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-color: rgb(4, 5, 6); --lr-icon-button-radius: 11px;';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-color: rgb(4, 5, 6); --lr-icon-button-radius: 11px;';
 
 function control(el: LyraCopyButton): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
@@ -61,7 +61,9 @@ describe('lr-copy-button: composed lr-icon-button', () => {
       html`<lr-copy-button value="hello"></lr-copy-button>`
     )) as LyraCopyButton;
     await el.updateComplete;
-    expect(control(el).getAttribute('exportparts')).to.contain('button:base__control');
+    const exported = (control(el).getAttribute('exportparts') ?? '').split(',').map((entry) => entry.trim());
+    expect(exported).to.include('button:base-control');
+    expect(exported, 'the deprecated alias stays on the same node').to.include('button:base__control');
   });
 
   it('copies on Enter from the actually focused control', async () => {

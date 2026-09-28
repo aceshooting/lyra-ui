@@ -3,6 +3,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 installFormControlLabelSupport();
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -54,8 +55,8 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAUL
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
  *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
  *  matching this exact converter's repeated per-component convention elsewhere in this library.
- *  `showFlags` (the only property using this converter) doesn't set `reflect: true`, so there's
- *  no `toAttribute` half -- Lit only calls it when reflecting. */
+ *  `showFlags` (the only property using this converter) never reflects, so there's no
+ *  `toAttribute` half -- Lit only calls it when reflecting. */
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
  *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
@@ -69,7 +70,7 @@ export interface LyraLocaleEntry {
   /** ISO 3166-1 alpha-2 or alpha-3 country code (e.g. `'lb'` or `'lbn'`) overriding this row's `<lr-flag>` derivation
    *  -- when given, the row renders `<lr-flag country={country}>` instead of the default
    *  `<lr-flag language={tag}>`. Unset (the default) keeps today's tag-derived flag. Ignored
-   *  while `showFlags` is `false`. */
+   *  while `withoutFlags` is `true`. */
   readonly country?: string;
 }
 
@@ -208,12 +209,12 @@ export interface LyraLocalePickerEventMap {
  *   the accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (positioning anchor).
  * @csspart trigger-flag - The trigger's leading `<lr-flag>` for the current value (present only
- *   while `showFlags` is on and `triggerDisplay` is not `label`).
+ *   while `withoutFlags` is off and `triggerDisplay` is not `label`).
  * @csspart trigger-label - The current locale's label. Visually hidden in flag-only mode but
  *   retained as the trigger's accessible current-value description.
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
- * @csspart option-flag - The row's leading `<lr-flag>` (present only while `showFlags` is on).
+ * @csspart option-flag - The row's leading `<lr-flag>` (present only while `withoutFlags` is off).
  * @csspart option-label - An option row's label wrapper (native name + tag).
  * @csspart option-tag - An option row's secondary line — the raw BCP-47 tag. Rendered only while
  *   `optionDisplay` is `label-tag` (the default); `optionDisplay="label"` omits the element
@@ -295,6 +296,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showFlags: ['withoutFlags', invertAlias, invertAlias],
+  };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -324,15 +328,20 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.requestUpdate('locales', previous);
   }
 
+  /** Omits every `<lr-flag>` -- each row's leading flag and the trigger flag -- for text-only
+   *  rows. The composition recipe this component supersedes (`lr-popover` + `lr-flag`) already
+   *  pairs a locale switcher with flags by convention, so flags render unless this is set. */
+  @property({ type: Boolean, attribute: 'without-flags' }) withoutFlags = false;
   /** Each row's leading `<lr-flag>`. The composition recipe this component supersedes
    *  (`lr-popover` + `lr-flag`) already pairs a locale switcher with flags by convention --
-   *  defaulting to `true` keeps that continuity; set `false` for text-only rows. */
+   *  defaulting to `true` keeps that continuity; set `false` for text-only rows.
+   *  @deprecated Use `without-flags` (inverted); removal not before 23.0.0. */
   @property({ attribute: 'show-flags', type: Boolean, converter: trueDefaultBooleanConverter }) showFlags = true;
 
   /** Trigger content. The default flag-label preserves the label, optional flag and chevron.
    * Flag mode centers the flag in a square based on the trigger height, with a 24px minimum,
    * and keeps the current language accessible while hiding the visible label and chevron.
-   * Label mode omits only the trigger flag. showFlags=false always keeps the visible label.
+   * Label mode omits only the trigger flag. withoutFlags always keeps the visible label.
    * Option labels/endonyms and selection behavior are unchanged. */
   @property({ attribute: 'trigger-display', converter: declaredDefaultConverter('flag-label') })
   triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label';
@@ -1188,7 +1197,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         aria-selected=${selected ? 'true' : 'false'}
         ?data-active=${id === activeId}
       >
-        ${this.showFlags
+        ${!this.withoutFlags
           ? entry.country
             ? html`<lr-flag part="option-flag" country=${entry.country} fidelity="compact" aria-hidden="true" inert></lr-flag>`
             : html`<lr-flag part="option-flag" language=${entry.tag} fidelity="compact" aria-hidden="true" inert></lr-flag>`
@@ -1208,7 +1217,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const previewTag = this.previewTag;
     const previewEntry = this.entryFor(previewTag);
-    const flagOnly = this.triggerDisplay === 'flag' && this.showFlags;
+    const flagOnly = this.triggerDisplay === 'flag' && !this.withoutFlags;
     const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
     const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
@@ -1240,7 +1249,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           @focus=${this.onTriggerFocus}
           @blur=${this.onTriggerBlur}
         >
-          ${this.showFlags && this.triggerDisplay !== 'label'
+          ${!this.withoutFlags && this.triggerDisplay !== 'label'
             ? previewEntry?.country
               ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} fidelity="compact" aria-hidden="true" inert></lr-flag>`
               : html`<lr-flag part="trigger-flag" language=${previewTag} fidelity="compact" aria-hidden="true" inert></lr-flag>`

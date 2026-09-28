@@ -15,7 +15,7 @@ export const styles = css`
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
     --_lr-code-block-copy-bg-active: color-mix(
       in oklab,
-      var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)),
+      var(--lr-icon-button-bg-hover, var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     --_lr-code-block-copy-color: var(--lr-color-text-quiet);

@@ -21,19 +21,19 @@ export const styles = css`
   [part='metric']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='metric'][aria-pressed='true'] {
     border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));
-    background: var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet));
+    background: var(--lr-agent-eval-dashboard-active-bg, var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet)));
   }
   /* The selected chip's own hover step: plain [part='metric']:hover above is (0,2,0), exactly what
      [part='metric'][aria-pressed='true'] scores, and the pressed rule wins that tie on source
      order, leaving the selected chip dead under the pointer. :where() keeps the state qualifier out
      of the count, so this stays (0,2,0) and the ordering below still hands :active the press. Mixed
      from the pressed fill rather than the unselected hover fill, so retinting
-     --lr-agent-eval-dashboard-active-background keeps a hover step a tier deeper in that colour;
+     --lr-agent-eval-dashboard-active-bg keeps a hover step a tier deeper in that colour;
      matches lr-test-results' filter-toggle, the same chip shape in this family. */
   [part='metric']:where([aria-pressed='true']):hover {
     background: color-mix(
       in oklab,
-      var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet)),
+      var(--lr-agent-eval-dashboard-active-bg, var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
@@ -43,7 +43,7 @@ export const styles = css`
      companion: all three selectors are (0,2,0), so source order alone decides whether pressing an
      already-selected metric shows any feedback at all. */
   [part='metric']:where([aria-pressed='true']):active {
-    background: color-mix(in oklab, var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, var(--lr-agent-eval-dashboard-active-bg, var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='runs'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-xs); }
   [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border: 0; border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }

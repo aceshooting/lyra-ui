@@ -3,6 +3,17 @@ import type { LyraNumberInput } from './number-input.class.js';
 import './number-input.js';
 import './native-time-input.js';
 import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+import type { LyraNativeTimeInput } from './native-time-input.class.js';
+
+// The compatibility tests below deliberately use these deprecated aliases, which keep working
+// until their removal.
+expectDeprecatedUsage('lr-number-input', 'property', 'steppers');
+expectDeprecatedUsage('lr-native-time-input', 'property', 'noSpinButtons');
 
 type DescribedNativeInput = HTMLInputElement & {
   ariaDescribedByElements?: readonly Element[] | null;
@@ -170,7 +181,7 @@ describe('lr-number-input steppers', () => {
     const el = (await fixture(
       html`<lr-number-input value="4" min="0" max="10" step="2" label="Qty"></lr-number-input>`,
     )) as LyraNumberInput;
-    expect(el.steppers).to.be.true;
+    expect(el.withoutSteppers).to.be.false;
     expect(el.withoutSpinButtons).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part~="stepper-up"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part~="stepper-down"]').length).to.equal(1);
@@ -257,11 +268,11 @@ describe('lr-number-input steppers', () => {
     }
   });
 
-  it('renders no steppers when opted out with steppers="false", and restores the browser spin buttons with without-spin-buttons="false"', async () => {
+  it('renders no steppers when opted out with without-steppers, and restores the browser spin buttons with without-spin-buttons="false"', async () => {
     const el = (await fixture(
-      html`<lr-number-input steppers="false" without-spin-buttons="false" label="Qty"></lr-number-input>`,
+      html`<lr-number-input without-steppers without-spin-buttons="false" label="Qty"></lr-number-input>`,
     )) as LyraNumberInput;
-    expect(el.steppers).to.be.false;
+    expect(el.withoutSteppers).to.be.true;
     expect(el.withoutSpinButtons).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('[part~="stepper-up"]').length).to.equal(0);
     expect(getComputedStyle(el.shadowRoot!.querySelector('input') as HTMLInputElement).appearance).to.not.equal(
@@ -359,7 +370,7 @@ describe('lr-number-input steppers', () => {
     expect(el.hasAttribute('without-steppers')).to.be.false;
   });
 
-  it('keeps the legacy steppers alias and exposes shared mapped parts and icon slots', async () => {
+  it('exposes shared mapped parts and icon slots, and hides them with withoutSteppers', async () => {
     const el = (await fixture(html`
       <lr-number-input label="Qty">
         <span slot="decrement-icon">minus</span>
@@ -375,7 +386,7 @@ describe('lr-number-input steppers', () => {
     expect(decrement?.querySelector('slot')?.name).to.equal('decrement-icon');
     expect(increment?.querySelector('slot')?.name).to.equal('increment-icon');
 
-    el.steppers = false;
+    el.withoutSteppers = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part~="stepper"]').length).to.equal(0);
   });
@@ -407,4 +418,146 @@ it('rotates the shared chevron into a real up/down pair rather than shipping an 
   const down = el.shadowRoot!.querySelector('[part~="stepper-down"] svg') as SVGElement;
   expect(getComputedStyle(up).transform).to.equal('matrix(0, -1, 1, 0, 0, 0)');
   expect(getComputedStyle(down).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+});
+
+describe('lr-number-input deprecated steppers alias', () => {
+  const usage: readonly DeprecatedUsage[] = [{ tag: 'lr-number-input', kind: 'property', name: 'steppers' }];
+  const stepperCount = (el: LyraNumberInput) => el.shadowRoot!.querySelectorAll('[part~="stepper"]').length;
+
+  it('hides the steppers for steppers="false" exactly as without-steppers does, and warns once', async () => {
+    const canonical = (await fixture(
+      html`<lr-number-input without-steppers label="Qty"></lr-number-input>`,
+    )) as LyraNumberInput;
+    const aliased: LyraNumberInput[] = [];
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      for (let round = 0; round < 2; round += 1) {
+        aliased.push(
+          (await fixture(html`<lr-number-input steppers="false" label="Qty"></lr-number-input>`)) as LyraNumberInput,
+        );
+      }
+    });
+    expect(stepperCount(canonical)).to.equal(0);
+    for (const el of aliased) {
+      expect(stepperCount(el)).to.equal(stepperCount(canonical));
+      expect(el.withoutSteppers).to.equal(true);
+      expect(el.steppers).to.equal(false);
+      expect(el.hasAttribute('without-steppers'), 'the canonical attribute is not reflected').to.equal(false);
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-number-input:property:steppers']);
+    expect(warnings[0]!.message).to.contain('without-steppers');
+  });
+
+  it('keeps the steppers for a bare or true steppers attribute', async () => {
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      for (const el of [
+        (await fixture(html`<lr-number-input steppers label="Qty"></lr-number-input>`)) as LyraNumberInput,
+        (await fixture(html`<lr-number-input steppers="true" label="Qty"></lr-number-input>`)) as LyraNumberInput,
+        (await fixture(html`<lr-number-input label="Qty"></lr-number-input>`)) as LyraNumberInput,
+      ]) {
+        expect(el.steppers).to.equal(true);
+        expect(el.withoutSteppers).to.equal(false);
+        expect(stepperCount(el)).to.equal(2);
+      }
+    });
+    expect(warnings, 'an alias write that leaves the default unchanged is not a change').to.have.length(0);
+  });
+
+  it('forwards property writes inverted and restores the steppers when the attribute is removed', async () => {
+    const el = (await fixture(html`<lr-number-input label="Qty"></lr-number-input>`)) as LyraNumberInput;
+    await captureDeprecationWarnings(usage, async () => {
+      el.steppers = false;
+      await el.updateComplete;
+      expect(el.withoutSteppers).to.equal(true);
+      expect(stepperCount(el)).to.equal(0);
+      el.steppers = true;
+      await el.updateComplete;
+      expect(el.withoutSteppers).to.equal(false);
+      expect(stepperCount(el)).to.equal(2);
+      el.setAttribute('steppers', 'false');
+      await el.updateComplete;
+      expect(stepperCount(el)).to.equal(0);
+      el.removeAttribute('steppers');
+      await el.updateComplete;
+    });
+    expect(stepperCount(el)).to.equal(2);
+  });
+
+  it('does not warn for the canonical without-steppers or an unset alias', async () => {
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      await fixture(html`<lr-number-input without-steppers label="Qty"></lr-number-input>`);
+      await fixture(html`<lr-number-input label="Qty"></lr-number-input>`);
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('lets the last-written spelling win when both are present', async () => {
+    let el: LyraNumberInput | undefined;
+    await captureDeprecationWarnings(usage, async () => {
+      el = (await fixture(html`<lr-number-input without-steppers steppers label="Qty"></lr-number-input>`)) as LyraNumberInput;
+    });
+    expect(el!.withoutSteppers, 'steppers is parsed last').to.equal(false);
+    expect(stepperCount(el!)).to.equal(2);
+    el!.removeAttribute('without-steppers');
+    el!.setAttribute('without-steppers', '');
+    await el!.updateComplete;
+    expect(el!.steppers, 'a later canonical write syncs back to the alias').to.equal(false);
+    expect(el!.getAttribute('steppers'), 'and the alias reflects it').to.equal('false');
+    expect(stepperCount(el!)).to.equal(0);
+  });
+});
+
+describe('lr-native-time-input deprecated no-spin-buttons alias', () => {
+  const usage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-native-time-input', kind: 'property', name: 'noSpinButtons' },
+  ];
+  const nativeFlag = (el: LyraNativeTimeInput) =>
+    el.shadowRoot!.querySelector('input')!.hasAttribute('data-without-spin-buttons');
+
+  it('renders the same native input as without-spin-buttons and warns once', async () => {
+    const canonical = await fixture<LyraNativeTimeInput>(
+      html`<lr-native-time-input without-spin-buttons label="Start"></lr-native-time-input>`,
+    );
+    const aliased: LyraNativeTimeInput[] = [];
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      for (let round = 0; round < 2; round += 1) {
+        aliased.push(
+          await fixture<LyraNativeTimeInput>(
+            html`<lr-native-time-input no-spin-buttons label="Start"></lr-native-time-input>`,
+          ),
+        );
+      }
+    });
+    expect(nativeFlag(canonical)).to.equal(true);
+    for (const el of aliased) {
+      expect(el.noSpinButtons).to.equal(true);
+      expect(nativeFlag(el)).to.equal(nativeFlag(canonical));
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-native-time-input:property:noSpinButtons',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-spin-buttons');
+  });
+
+  it('keeps the alias and the canonical property in step, last write wins', async () => {
+    const el = await fixture<LyraNativeTimeInput>(html`<lr-native-time-input></lr-native-time-input>`);
+    await captureDeprecationWarnings(usage, async () => {
+      el.noSpinButtons = true;
+      await el.updateComplete;
+    });
+    expect(el.withoutSpinButtons).to.equal(true);
+    expect(el.hasAttribute('without-spin-buttons'), 'the canonical attribute reflects').to.equal(true);
+    el.withoutSpinButtons = false;
+    await el.updateComplete;
+    expect(el.noSpinButtons, 'a canonical write syncs back to the alias').to.equal(false);
+    expect(nativeFlag(el)).to.equal(false);
+  });
+
+  it('stays silent while the alias is unset', async () => {
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      const el = await fixture<LyraNativeTimeInput>(html`<lr-native-time-input></lr-native-time-input>`);
+      expect(el.noSpinButtons).to.equal(false);
+      expect(nativeFlag(el)).to.equal(false);
+    });
+    expect(warnings).to.have.length(0);
+  });
 });

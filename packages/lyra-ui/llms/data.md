@@ -176,13 +176,18 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
   hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
-- `compact: boolean = false` (reflected) — tighter card padding; same convention as `lr-empty`'s and
-  `lr-widget`'s `compact`
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
+  density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
+  and removes the attribute. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it
+  still renders exactly like `size="s"`; the two stay in step, the last write wins, and `compact`
+  reads `true` whenever `size` is `s` or smaller
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
   `block-size: 100%` stretch, so the stat can sit inline in prose, a toolbar, or a table cell.
-  `plain` wins over `compact` when both are set (there is no padding left to tighten), and it drops
+  `plain` wins over the compact density when both are set (there is no padding left to tighten), and it drops
   `emphasis`'s accent edge — that edge is card chrome — while `emphasis`'s brand value tint still
   applies. A `plain` stat with a safe `href` swaps the card's border-color/lift hover affordance
   (invisible with no border) for an underline on `[part="value"]`; the `:focus-visible` ring is
@@ -218,7 +223,7 @@ the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default
 `--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
 `--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
-rendering path — the default card, `compact` (own defaults `var(--lr-space-s)` /
+rendering path — the default card, the compact density (`size="s"` and below; own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
 `.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
 unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
@@ -566,15 +571,19 @@ anchors, and `--lr-data-grid-cell-link-hover-color` (default
 `var(--lr-data-grid-cell-link-color, var(--lr-color-brand))`) controls those anchors on hover,
 focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
 default. Six independent interaction-background hooks preserve those state boundaries:
-`--lr-data-grid-control-hover-background` and `--lr-data-grid-control-active-background` theme
-search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-background` themes
-the page-size selector when pressed; `--lr-data-grid-row-active-background` themes pressed data
-rows; and `--lr-data-grid-sortable-header-hover-background` and
-`--lr-data-grid-sortable-header-active-background` theme sortable header states. They default to
+`--lr-data-grid-control-hover-bg` and `--lr-data-grid-control-active-bg` theme
+search, toolbar, pager, and resize controls; `--lr-data-grid-page-size-active-bg` themes
+the page-size selector when pressed; `--lr-data-grid-row-active-bg` themes pressed data
+rows; and `--lr-data-grid-sortable-header-hover-bg` and
+`--lr-data-grid-sortable-header-active-bg` theme sortable header states. They default to
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
 `--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
 uses the hover mix), so an accent override remains coherent while each surface can still be
-overridden independently.
+overridden independently. Deprecated aliases: `--lr-data-grid-control-hover-background`,
+`--lr-data-grid-control-active-background`, `--lr-data-grid-page-size-active-background`,
+`--lr-data-grid-row-active-background`, `--lr-data-grid-sortable-header-hover-background` and
+`--lr-data-grid-sortable-header-active-background` (use the same names ending in `-bg`; removed in
+23.0.0). Each is still read as the fallback of its `-bg` name.
 
 ```html
 <lr-data-grid
@@ -963,21 +972,29 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   otherwise the failure is announced a third time, through the native role as well.
 - `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
-  including `''`, renders verbatim
-- `noColumnsDescription: string = ''` (attribute `no-columns-description`)
-- `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
-  state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
-  branch's own built-in default — the two shadow-root-level branches (no columns, no rows) render
-  spacious, while the filtered-to-zero branch, which sits inside `[part='base']` alongside the filter
-  field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
-  parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
-  filled
+- `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
+  no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
+  including `''`, renders verbatim. Deprecated alias: `no-columns-heading`/`noColumnsHeading` (use
+  `empty-columns-heading`; removed in 23.0.0)
+- `emptyColumnsDescription: string = ''` (attribute `empty-columns-description`) — description of
+  the built-in no-columns state. Deprecated alias: `no-columns-description`/`noColumnsDescription`
+  (use `empty-columns-description`; removed in 23.0.0)
+- `emptySize?: LyraSize` (attribute `empty-size`) — size of the built-in `[part='empty']` state on
+  the shared size ladder: `s` and the steps below it render it compact, `m` and above spacious.
+  Leave it unset (the default) to keep each empty branch's own built-in default — the two
+  shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
+  branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
+  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled. Deprecated
+  alias: `empty-compact`/`emptyCompact` (use `empty-size="s"` for compact or `empty-size="m"` for
+  spacious; removed in 23.0.0) — its presence still renders like `empty-size="s"`,
+  `empty-compact="false"` like `empty-size="m"`, and removing it restores each branch's default
 - `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
   while `priority`-hidden columns are hidden; omission renders localized
   `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
-- `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
-  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
+- `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
+  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
+  Deprecated alias: `hide-columns-label`/`hideColumnsLabel` (use `columns-hide-label`; removed in
+  23.0.0)
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
   Priority-hidden columns hide their header, body, and footer cells together at the same measured
@@ -1045,8 +1062,10 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. Other events are `lr-row-click`
-(`detail: { row }`), `lr-load-more` (fired on the "load more" button),
+sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
+(a row was activated by pointer or Enter/Space, `detail: { row }`; its deprecated alias
+`lr-row-click` still fires right after it from the same activation with an equal detail — use
+`lr-row-activate`; removed in 23.0.0), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the
@@ -1087,7 +1106,7 @@ fresh load has actually started, or failed again immediately).
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
 renders as this slot's fallback content. The no-columns branch is deliberately **not**
-slot-replaceable: it reports a configuration problem (`noColumnsHeading`), not "this query returned
+slot-replaceable: it reports a configuration problem (`emptyColumnsHeading`), not "this query returned
 nothing", and one slot covering all three would collapse that distinction. Everything else comes
 from `columns`/`rows`. `error` — replaces the built-in failed-load state, including its retry
 button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as
@@ -1233,8 +1252,8 @@ declaration to retheme every internal scroll container in the library, including
   t.addEventListener("lr-sort", (e) =>
     console.log("sort committed", e.detail.sortKey, e.detail.sortDir)
   );
-  t.addEventListener("lr-row-click", (e) =>
-    console.log("clicked", e.detail.row)
+  t.addEventListener("lr-row-activate", (e) =>
+    console.log("activated", e.detail.row)
   );
 </script>
 ```
@@ -1269,7 +1288,7 @@ declaration to retheme every internal scroll container in the library, including
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
   `console.warn` on first render in development builds only — an unnamed grid is an accessibility
   defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
-- `revealColumnsLabel`/`hideColumnsLabel` only ever reach the DOM on
+- `revealColumnsLabel`/`columnsHideLabel` only ever reach the DOM on
   `[part='reveal-columns-button']`, which itself only renders while at least one column declares
   `priority`. Setting either label with no `priority` column is therefore always inert — it logs
   the same shape of one-time, development-only, production-silent `console.warn` as the missing
@@ -1655,12 +1674,12 @@ explicitly empty labels remain empty and later labels render normally.
 - `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
   `value` while removing `aria-valuetext`)
-- `showValue: boolean = true` (attribute `show-value`, not reflected) — whether the decorative
-  `part="value"` caption renders at all; `show-value="false"` omits it the same way an empty
-  `label` already omits `part="label"`. `aria-valuenow`/`aria-valuetext` and the host's accessible
-  name are unaffected either way, since the caption itself is always `aria-hidden`. Mirrors
-  `<lr-progress-bar>`'s/`<lr-progress-ring>`'s own `showValue` name and meaning; the default here
-  is `true` (a gauge's whole purpose is showing the reading it announces) where theirs is `false`.
+- `withoutValue: boolean = false` (attribute `without-value`, not reflected) — omits the decorative
+  `part="value"` caption, the same way an empty `label` already omits `part="label"`.
+  `aria-valuenow`/`aria-valuetext` and the host's accessible name are unaffected either way, since
+  the caption itself is always `aria-hidden`. The caption shows by default because a gauge's whole
+  purpose is showing the reading it announces. Deprecated alias: `show-value`/`showValue` (use
+  `without-value`; removed in 23.0.0) — `show-value="false"` still equals `without-value`
 - `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
   `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
   whenever `thresholds` is empty or matches nothing.
@@ -1677,8 +1696,8 @@ explicitly empty labels remain empty and later labels render normally.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value` (rendered only while `showValue` is
-true), `label` (rendered only while `label` is non-empty)
+**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value` (omitted while `without-value` is
+set), `label` (rendered only while `label` is non-empty)
 
 **Themeable custom properties:** `--lr-gauge-fill` (fill stroke; overrides `variant`/`thresholds`
 entirely and falls back to the effective variant's shared semantic token —
@@ -1704,7 +1723,7 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
 <lr-gauge
   shape="linear"
   size="xs"
-  show-value="false"
+  without-value
   aria-label="Spend"
   value="84"
   max="100"
@@ -1754,7 +1773,7 @@ uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--
   way to step it; for a dimension off the ladder, set plain CSS `width`/`height` (or `font-size`)
   on the element instead. The value/label captions are `em`-sized against that same host font-size,
   so they shrink right along with the frame at a smaller tier or a smaller host `font-size` —
-  combine a small tier (or a small host `font-size`) with `show-value="false"` for a slim,
+  combine a small tier (or a small host `font-size`) with `without-value` for a slim,
   thresholded dashboard meter, matching `<lr-progress-bar size="xs">`'s footprint but with
   `role="meter"` and one `thresholds` array instead of a hand-written ratio-to-variant mapping.
 - Divide-by-zero guarded, and radial/linear share one component via the `shape`
@@ -1795,8 +1814,10 @@ list carries the accessible name; a host `aria-label` overrides `label`.
 - `comparisonLabel: string = ''` (attribute `comparison-label`; falls back to a localized generic
   label)
 - `label: string = ''` (accessible name for the stage list)
-- `dropoff: boolean = true` (reflected; `dropoff="false"` in markup really does turn it off —
-  the property uses the explicit `false`-parsing converter, not attribute presence)
+- `withoutDropoff: boolean = false` (attribute `without-dropoff`, reflected) — omits the change
+  from the previous stage otherwise rendered above each later stage. Deprecated alias:
+  `dropoff`/`dropoff="false"` (use `without-dropoff`; removed in 23.0.0) — `dropoff="false"` still
+  equals `without-dropoff`
 - `sharePrecision: number = 0` (attribute `share-precision`; fraction digits for every share and
   drop-off percentage, clamped to `0`–`20`)
 
@@ -1950,9 +1971,10 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
   `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
   sequence and records are frozen; reassign `legend` after changes.
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
-  activation or palette selection
+  activation or palette selection. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`;
+  removed in 23.0.0)
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on).
@@ -2035,7 +2057,7 @@ canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over th
 with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
 with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
-on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
+on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
@@ -2061,7 +2083,7 @@ Set `accessibleCells: true` (`accessible-cells`) to opt into a semantic grid bac
 window of native buttons. It retains the complete `aria-rowcount`/`aria-colcount` and arrow-key
 navigation model without mounting one node per cell. Buttons use localized `aria-label`s, explicit
 `aria-selected="true"|"false"` from the controlled `selectedCell`, and roving tabindex; the grid
-continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
+continues to emit `lr-cell-activate` and leaves selection state consumer-controlled.
 When matrix/calendar data refreshes while one of those buttons owns focus, the semantic matrix
 coordinate or calendar date remains the sole roving stop. If it disappears, focus clamps to the
 nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
@@ -2222,7 +2244,7 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   sentinel", so signed datasets render their negative half instead of dropping it. In signed mode a
   structurally absent matrix cell reads as `NaN` so it stays no-data while a real `-1` beside it
   renders on the ramp; in default mode an absent cell still resolves to `-1`, keeping `valueAt()`
-  and the `lr-cell-click` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
+  and the `lr-cell-activate` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
   square root of a negative has no meaning
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
@@ -2254,7 +2276,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   selectedCells: readonly Readonly<HeatmapSelectedCell>[]; source: HeatmapSelectionSource }`, with
   source `'pointer' | 'keyboard' | 'row' | 'column'`. Assign the event's array back to `selectedCells`
   to accept it; property assignments are silent. Output is deduplicated in row/column order. Click
-  or Enter/Space toggles one cell and retains `lr-cell-click`. Pointer dragging paints or erases
+  or Enter/Space toggles one cell and retains `lr-cell-activate`. Pointer dragging paints or erases
   according to the starting cell, previews transient selection, and proposes once on release;
   pointer cancellation, Escape, disconnect, data/mode changes discard the gesture. A drag does
   not emit a cell click. Shift+arrows extends/contracts a rectangle from the anchor while retaining
@@ -2290,7 +2312,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   present for every grid position — including a sparse gap position with no matching entry in `days`
   at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
   alongside it). It lets a callback key off the date without re-deriving the grid's own
-  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
+  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-activate`'s detail.
   Unset (the default) falls back to localized matrix row/column/value or calendar date/value
   templates. The default English catalog renders "Row X, Col Y: value" (matrix) / "Jan 15: value"
   — short month + day, **not** a weekday abbreviation (calendar). Matrix row/column placeholders,
@@ -2398,14 +2420,16 @@ those callbacks position individual columns/rows instead of `padLeft`/`padTop` p
 
 For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
 set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
-selection, `lr-cell-click`, and `cellText` keep working with no matrix rebuild.
+selection, `lr-cell-activate`, and `cellText` keep working with no matrix rebuild.
 
 For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
 `fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.
 For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
-**Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
+**Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-activate` (fired on click, or Enter/Space on the keyboard-focused cell —
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode; its
+deprecated alias `lr-cell-click` still fires right after it from the same activation with an equal
+detail — use `lr-cell-activate`; removed in 23.0.0),
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
@@ -2462,9 +2486,10 @@ visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (defa
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
 dedicated token distinct from both the focus ring and the annotation ring so a host can retheme it
 independently). `--lr-heatmap-tooltip-bg` (default
-`var(--lr-color-surface)`) and `--lr-heatmap-tooltip-text` (default `var(--lr-color-text)`) —
+`var(--lr-color-surface)`) and `--lr-heatmap-tooltip-color` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+directly, no `getComputedStyle` bridging needed. Deprecated alias: `--lr-heatmap-tooltip-text` (use
+`--lr-heatmap-tooltip-color`; removed in 23.0.0), still read as its fallback. `--lr-heatmap-sticky-label-bg` (default
 `var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
@@ -2558,7 +2583,7 @@ is now literal.
   (calendar mode: a day-count + range summary instead). In default canvas mode,
   `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,
   per-cell-interactive control (roving arrow-key focus, shared light-DOM announcements,
-  `lr-cell-click`). `role="img"` would flatten that interactive subtree for some assistive tech.
+  `lr-cell-activate`). `role="img"` would flatten that interactive subtree for some assistive tech.
   With `accessibleCells`, the canvas becomes `aria-hidden` and the native cell-button overlay owns
   the interactive semantics instead.
 - `NaN`/non-finite cell values in matrix mode are correctly treated as no-data now (alongside `-1`),
@@ -2572,7 +2597,7 @@ is now literal.
 '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
 - this component's legend can show more than a label (a value caption, `legendStops` swatches,
   annotation entries, a custom slot) and can now be turned off outright with `withoutLegend`.
-  `lr-sequence-strip`'s `showLegend` key is swatch+label only, the same "legend needs more than a
+  `lr-sequence-strip`'s `withLegend` key is swatch+label only, the same "legend needs more than a
   label" shape `lr-context-meter`'s `legendDisplay` addresses for that component; unaddressed here,
   since fixing it belongs with whichever component actually has the gap.
 
@@ -2593,7 +2618,7 @@ active cell, not from the center of the whole strip. The tooltip is visual only 
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
 cell, or pressing Enter/Space on the roving cell, emits `lr-item-activate`. Selection is controlled,
-so the consumer updates `selectedIndex` when it accepts that activation. Setting `showLegend`
+so the consumer updates `selectedIndex` when it accepts that activation. Setting `withLegend`
 additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
 mapping is readable without visiting each cell.
 
@@ -2649,16 +2674,17 @@ readonly color, readonly label? }`; `color`
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item
   still gets a row, and an item whose `categoryId` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
-  once — and it wraps onto further rows in a narrow allocation rather than overflowing
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing. Deprecated
+  alias: `show-legend`/`showLegend` (use `with-legend`; removed in 23.0.0)
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
-  `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
+  `"Subagent"`). Setting it does two things: with `withLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
   treatment, and it adds the marker to the auto-generated `aria-label` summary, which is otherwise
   per-category only. The marker count is reported as its own clause rather than folded into any
@@ -2695,7 +2721,7 @@ Enter/Space — it has a pointer cursor plus paired hover/press treatments, and 
 it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
 item's label, hidden until a cell is hovered or focused),
-`legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
+`legend` (the static category key rendered below the strip when `withLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
@@ -2742,7 +2768,7 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 **Known gotchas:**
 
-- the activation event is `lr-item-activate`, not `lr-cell-click`. Click and Enter/Space emit the
+- the activation event is `lr-item-activate`, not `lr-cell-activate`. Click and Enter/Space emit the
   activated item's `index`/`id`, but do not mutate the controlled `selectedIndex`; listen for the
   event and update that property when the application accepts the activation.
 - an `items` entry whose `categoryId` has no matching `categories` entry still contributes to the
@@ -3179,10 +3205,11 @@ import type {
 - `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
   `lr-node-palette` drag sets, emitting `lr-node-add`. The decoded payload must be a plain record
   with a non-empty string `type`; text fields and total payload size are bounded.
-- `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
+- `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit.
+  window pointer listeners so a later release cannot commit. Deprecated alias: `locked` (use
+  `readonly`; removed in 23.0.0)
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
@@ -3209,11 +3236,11 @@ import type {
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
-All viewport-mutating methods, including `focusNode()`, are inert while `locked`; coordinate mapping
+All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
 edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
-effective `locked`, `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
+effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
@@ -3352,14 +3379,25 @@ owns none of that.
   the canvas; use this stable hook or the canvas's normalized `node-type-*` part for type-specific
   presentation
 - `heading: string = ''`
+- `headingLevel: LyraHeadingLevel = 'none'` (attribute `heading-level`) — semantic level of the
+  visible `heading`. `'none'` (the default) keeps it plain text, as cards inside a canvas usually
+  are; `'1'`–`'6'` expose `[part="heading"]` as `role="heading"` at that `aria-level`, for a
+  standalone card in a document outline. Invalid untyped values use level 3; nothing is exposed
+  while `heading` is empty
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
 - `statusDetail: string = ''` (attribute `status-detail`) — appended to the status line
 - `durationMs: number | null = null` (attribute `duration-ms`) — formatted into the status line
 - `selected: boolean = false` (reflected)
-- `compact: boolean = false` (reflected) — tighter card padding, row gap, and header icon-to-heading
-  gap for dense canvases and palette previews; the border, background, shadow and the
-  `selected`/`status="running"` treatments all stay
+- `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
+  `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
+  compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
+  and palette previews; the border, background, shadow and the `selected`/`status="running"`
+  treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
+  before. An unsupported value normalizes to unset and removes the attribute. Deprecated alias:
+  `compact` (use `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like
+  `size="s"`; the two stay in step, the last write wins, and `compact` reads `true` whenever
+  `size` is `s` or smaller
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
@@ -3384,9 +3422,9 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 
 **Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
 `--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
-(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact`;
-`--lr-flow-node-compact-header-gap` (default `var(--lr-space-2xs)`) — `[part="header"]`'s own
-icon-to-heading gap while `compact` — and
+(default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap at the compact density
+(`size="s"` and below); `--lr-flow-node-compact-header-gap` (default `var(--lr-space-2xs)`) —
+`[part="header"]`'s own icon-to-heading gap at the compact density — and
 `--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
 while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
 fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any
@@ -3494,7 +3532,7 @@ viewport-to-content ratio. The token inherits from ancestors; set it to `0` to o
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
   from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
   currently renders.
-- A locked snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
+- A readonly canvas snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
   shortcut can mutate the canvas.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up. A completed drag consumes only the browser-synthesized click following its
@@ -3528,7 +3566,8 @@ otherwise available direction.
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
-- `hideLock: boolean = false` (attribute `hide-lock`) — omits the lock/unlock toggle button
+- `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
+  Deprecated alias: `hide-lock`/`hideLock` (use `without-lock`; removed in 23.0.0)
 - `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
   floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws
@@ -3537,7 +3576,7 @@ otherwise available direction.
   canonical type is `LyraFrame`; the former component-local appearance alias is removed.
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
-`zoomOut()`/`fit()`, or toggles its `locked` property.
+`zoomOut()`/`fit()`, or toggles its `readonly` property.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
 `<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:
@@ -3547,7 +3586,7 @@ the consumer nests inside it is left alone — so an icon or label child keeps w
 page gives it.
 
 **CSS parts:** `base` (the `role="group"` wrapper; drops its floating-surface chrome under
-`frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted when `hideLock`).
+`frame="plain"`), `zoom-in`, `zoom-out`, `fit`, `lock` (omitted while `without-lock` is set).
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
@@ -3591,8 +3630,9 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `decorations: FlowRunDecorations = {}` (attribute: false) — a detached, deeply frozen readonly
   record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
   canvas; invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors, and consumers reassign the record after changes
-- `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
-  complete" strip, keeping only the decoration push
+- `withoutSummary: boolean = false` (attribute `without-summary`) — omits the "{done} of {total}
+  steps complete" strip, keeping only the decoration push. Deprecated alias:
+  `hide-summary`/`hideSummary` (use `without-summary`; removed in 23.0.0)
 - `label: string = ''` — accessible name for the summary strip
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` removes the border, background, shadow, padding and radius, so a summary
@@ -3670,16 +3710,17 @@ boolean }[]`. `value` is an _absolute_
   `variant` remains reserved for semantic tone across Lyra.
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the meter, one swatch/label pair per `segments` entry, each swatch
   painted from that segment's resolved `color`/`tone`. Without it a segment's own label is exposed
   only through a hover `title` (desktop-only, undiscoverable) and the visually-hidden breakdown
   list, so a meter split across more than two or three categories reads as unlabeled colour to a
   sighted user. Non-interactive: it toggles nothing and emits nothing, mirroring
-  `lr-sequence-strip`'s `showLegend` rather than the interactive `lr-graph-legend`. The whole
+  `lr-sequence-strip`'s `withLegend` rather than the interactive `lr-graph-legend`. The whole
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
-  being clipped.
+  being clipped. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`; removed in
+  23.0.0)
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
   legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
   property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
@@ -3688,7 +3729,7 @@ boolean }[]`. `value` is an _absolute_
   numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,
   unlike `lr-chart`'s `label | value | percentage` legend vocabulary, because a part-to-whole key is
   ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
-  effect while `showLegend` is unset.
+  effect while `withLegend` is unset.
 - `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
   becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
   `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
@@ -3696,7 +3737,7 @@ boolean }[]`. `value` is an _absolute_
   rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
   buttons already expose the same label/count pairs with their pressed state attached. A band's
   inline size IS its share, so a small band is a small pointer target: pair `interactive` with
-  `showLegend` where that matters, since the legend row is the same action at full row height. The
+  `withLegend` where that matters, since the legend row is the same action at full row height. The
   ring's arcs share one bounding box, so a focused arc reports itself by dimming as well as by the
   shared focus outline — an outline alone cannot say *which* arc.
 - `selectedIndices: readonly number[] = []` (attribute: false) — indexes rendered as
@@ -3725,7 +3766,7 @@ own handler sees the pre-activation value.
 meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
 category list), `segment-item` (one hidden category/value entry), `label`, and — only under
-`showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
+`withLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
 color hook as `segment`) and `legend-label`, plus `legend-value` and `legend-percent` under the
 matching `legendDisplay` settings. While `interactive` is set, `segment` and `legend-item` are
 `<button>`s (a `role="button"` arc under `shape="ring"`) and a selected one carries a second part
@@ -4062,9 +4103,13 @@ allocations; the name track uses at most 40% of the available inline size.
 **Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots
 of at most the first 10,000 source entries; malformed records, blank names, and later duplicate
 names are skipped first-wins before render, reveal state, copy actions, and events; reassign after
-changes), `revealable: boolean = true` (reflected), `copyable: boolean = true`
-(reflected), and `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty
-string remains empty. A host `aria-label` wins by attribute presence, including when empty.
+changes), `withoutReveal: boolean = false` (attribute `without-reveal`, reflected; omits every
+secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButton: boolean = false`
+(attribute `without-copy-button`, reflected; omits every entry's copy button), and
+`label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
+empty. A host `aria-label` wins by attribute presence, including when empty. Deprecated aliases:
+`revealable` (use `without-reveal`; removed in 23.0.0) and `copyable` (use `without-copy-button`;
+removed in 23.0.0) — `revealable="false"`/`copyable="false"` still equal the `without-` attributes.
 
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
@@ -4333,10 +4378,10 @@ the nested `lr-select` triggers in both LTR and RTL; they do not widen the host 
   CSS pixels while `aria-valuetext` is localized with the effective locale. Row/group measurement is
   cached by stable identity: after width, columns, locale, or display structure changes, a pending
   `scrollToIndex()` target realigns after measurement unless a user scroll supersedes the correction.
-  `--lr-data-grid-control-hover-background`, `--lr-data-grid-control-active-background`,
-  `--lr-data-grid-page-size-active-background`, `--lr-data-grid-row-active-background`,
-  `--lr-data-grid-sortable-header-hover-background`, and
-  `--lr-data-grid-sortable-header-active-background` theme those independent state surfaces.
+  `--lr-data-grid-control-hover-bg`, `--lr-data-grid-control-active-bg`,
+  `--lr-data-grid-page-size-active-bg`, `--lr-data-grid-row-active-bg`,
+  `--lr-data-grid-sortable-header-hover-bg`, and
+  `--lr-data-grid-sortable-header-active-bg` theme those independent state surfaces.
 - **Table:** resize-handle numeric ARIA ranges remain CSS pixels, with localized current-pixel
   `aria-valuetext`. Adjacent row-expand controls inherit table typography and use a `1em` glyph.
 - **Flow canvas:** only direct child cards participate. A matching `node-id` receives the managed

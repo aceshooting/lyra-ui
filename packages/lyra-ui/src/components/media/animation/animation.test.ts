@@ -10,6 +10,14 @@ import {
   setDefaultAnimation,
 } from "../../../utilities/animation-registry.js";
 import "./animation.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
+
+const RESPECT_REDUCED_MOTION: readonly DeprecatedUsage[] = [
+  { tag: "lr-animation", kind: "property", name: "respectReducedMotion" },
+];
 
 /** Stubs `window.matchMedia('(prefers-reduced-motion: reduce)')` with a
  *  controllable fake `MediaQueryList` so reduced-motion arbitration is
@@ -825,14 +833,15 @@ it("finishes immediately at creation time (still emitting lr-start then lr-finis
   }
 });
 
-it('respect-reduced-motion="false" (plain HTML attribute) plays through normally instead of instantly finishing when play is already true under reduced motion', async () => {
+/** Connects a 5-iteration fade-in that is already playing under OS reduced motion, after
+ *  `configure` has run on the still-disconnected element, and reports whether `lr-finish` fired
+ *  right after `lr-start` (the reduced-motion instant-finish path) rather than seconds later. */
+async function finishesInstantlyUnderReducedMotion(
+  configure: (el: LyraAnimation) => void,
+): Promise<boolean> {
   const stub = stubReducedMotion(true);
   const el = document.createElement("lr-animation") as LyraAnimation;
-  // A plain literal attribute value -- not a JS property/boolean-directive binding -- must drive
-  // this true-defaulting boolean property back to false. Set before connecting, mirroring the
-  // sibling reduced-motion test above.
-  el.setAttribute("respect-reduced-motion", "false");
-  expect(el.respectReducedMotion).to.be.false;
+  configure(el);
   el.name = "fade-in";
   el.iterations = 5;
   el.play = true;
@@ -847,16 +856,89 @@ it('respect-reduced-motion="false" (plain HTML attribute) plays through normally
     document.body.append(el);
     await startEvent;
     await el.updateComplete;
-
-    // Real (non-reduced) playback never resolves synchronously at creation time -- unlike the
-    // identical reduced-motion setup in the sibling test above, no lr-finish has fired
-    // immediately after lr-start.
-    expect(finished).to.be.false;
-    expect(el.play).to.be.true;
+    // The instant finish settles within a frame or two; real playback of five 1s iterations
+    // cannot finish inside this margin.
+    await aTimeout(100);
+    expect(el.play).to.equal(!finished);
+    return finished;
   } finally {
     stub.restore();
     el.remove();
   }
+}
+
+it("ignore-reduced-motion plays through normally instead of instantly finishing when play is already true under reduced motion", async () => {
+  expect(
+    await finishesInstantlyUnderReducedMotion((el) => {
+      el.setAttribute("ignore-reduced-motion", "");
+      expect(el.ignoreReducedMotion).to.be.true;
+      expect(el.respectReducedMotion).to.be.false;
+    }),
+  ).to.be.false;
+});
+
+it('the deprecated respect-reduced-motion="false" attribute equals ignore-reduced-motion and warns once', async () => {
+  const results: boolean[] = [];
+  const warnings = await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
+    for (let index = 0; index < 2; index += 1) {
+      results.push(
+        await finishesInstantlyUnderReducedMotion((el) => {
+          // A plain literal attribute value -- not a JS property/boolean-directive binding --
+          // drives the true-defaulting alias back to false.
+          el.setAttribute("respect-reduced-motion", "false");
+          expect(el.respectReducedMotion).to.be.false;
+          expect(el.ignoreReducedMotion).to.be.true;
+        }),
+      );
+    }
+  });
+  expect(results).to.deep.equal([false, false]);
+  expect(warnings.map(({ key }) => key)).to.deep.equal([
+    "lyra-deprecated:lr-animation:property:respectReducedMotion",
+  ]);
+  expect(warnings[0]!.message).to.contain("ignore-reduced-motion");
+});
+
+it("the deprecated respectReducedMotion property forwards both ways and reflects again", async () => {
+  await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
+    const el = (await fixture(html`
+      <lr-animation name="fade-in"><p>content</p></lr-animation>
+    `)) as LyraAnimation;
+    el.respectReducedMotion = false;
+    await el.updateComplete;
+    expect(el.ignoreReducedMotion).to.be.true;
+    expect(el.hasAttribute("ignore-reduced-motion")).to.be.true;
+    expect(el.getAttribute("respect-reduced-motion")).to.equal("false");
+
+    el.respectReducedMotion = true;
+    await el.updateComplete;
+    expect(el.ignoreReducedMotion).to.be.false;
+    expect(el.hasAttribute("ignore-reduced-motion")).to.be.false;
+    expect(el.hasAttribute("respect-reduced-motion")).to.be.false;
+
+    // The alias syncs back from a canonical write.
+    el.ignoreReducedMotion = true;
+    await el.updateComplete;
+    expect(el.respectReducedMotion).to.be.false;
+    expect(el.getAttribute("respect-reduced-motion")).to.equal("false");
+  });
+});
+
+it("removing respect-reduced-motion restores the default, and the last-written spelling wins", async () => {
+  await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
+    expect(
+      await finishesInstantlyUnderReducedMotion((el) => {
+        el.setAttribute("respect-reduced-motion", "false");
+        el.removeAttribute("respect-reduced-motion");
+        expect(el.ignoreReducedMotion).to.be.false;
+      }),
+    ).to.be.true;
+
+    const both = (await fixture(html`
+      <lr-animation name="fade-in" respect-reduced-motion ignore-reduced-motion><p>content</p></lr-animation>
+    `)) as LyraAnimation;
+    expect(both.ignoreReducedMotion).to.be.true;
+  });
 });
 
 it("reacts live to an OS-level reduced-motion preference change while already connected, rebuilding the Animation (re-fires lr-start/lr-finish)", async () => {

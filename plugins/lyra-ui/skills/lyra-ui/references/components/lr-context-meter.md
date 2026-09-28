@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,16 +39,17 @@ boolean }[]`. `value` is an _absolute_
   `variant` remains reserved for semantic tone across Lyra.
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the meter, one swatch/label pair per `segments` entry, each swatch
   painted from that segment's resolved `color`/`tone`. Without it a segment's own label is exposed
   only through a hover `title` (desktop-only, undiscoverable) and the visually-hidden breakdown
   list, so a meter split across more than two or three categories reads as unlabeled colour to a
   sighted user. Non-interactive: it toggles nothing and emits nothing, mirroring
-  `lr-sequence-strip`'s `showLegend` rather than the interactive `lr-graph-legend`. The whole
+  `lr-sequence-strip`'s `withLegend` rather than the interactive `lr-graph-legend`. The whole
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
-  being clipped.
+  being clipped. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`; removed in
+  23.0.0)
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
   legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
   property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
@@ -57,7 +58,7 @@ boolean }[]`. `value` is an _absolute_
   numbers are formatted through `effectiveLocale`. Combinable rather than mutually exclusive,
   unlike `lr-chart`'s `label | value | percentage` legend vocabulary, because a part-to-whole key is
   ordinarily read as "count AND share". A foreign attribute value normalizes to `'label'`. No
-  effect while `showLegend` is unset.
+  effect while `withLegend` is unset.
 - `interactive: boolean = false` (reflected) — opt-in filter mode. Every band, and every legend row,
   becomes a real `<button>` emitting the cancelable `lr-segment-activate`; the ring's arcs carry
   `role="button"` with their own tab stop and Enter/Space handling, since an SVG shape cannot be a
@@ -65,7 +66,7 @@ boolean }[]`. `value` is an _absolute_
   rows are reachable, and the visually-hidden `[part="segment-list"]` steps aside because the
   buttons already expose the same label/count pairs with their pressed state attached. A band's
   inline size IS its share, so a small band is a small pointer target: pair `interactive` with
-  `showLegend` where that matters, since the legend row is the same action at full row height. The
+  `withLegend` where that matters, since the legend row is the same action at full row height. The
   ring's arcs share one bounding box, so a focused arc reports itself by dimming as well as by the
   shared focus outline — an outline alone cannot say *which* arc.
 - `selectedIndices: readonly number[] = []` (attribute: false) — indexes rendered as
@@ -94,7 +95,7 @@ own handler sees the pre-activation value.
 meter semantics), `track` (the unfilled/empty capacity), `segment` (one occupied segment — carries
 `data-tone` and, for custom colors, `--lr-context-meter-segment-color`), `segment-list` (the hidden
 category list), `segment-item` (one hidden category/value entry), `label`, and — only under
-`showLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
+`withLegend` — `legend`, `legend-item`, `legend-swatch` (carrying the same `data-tone` and custom
 color hook as `segment`) and `legend-label`, plus `legend-value` and `legend-percent` under the
 matching `legendDisplay` settings. While `interactive` is set, `segment` and `legend-item` are
 `<button>`s (a `role="button"` arc under `shape="ring"`) and a selected one carries a second part

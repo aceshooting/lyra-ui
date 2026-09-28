@@ -17,7 +17,7 @@ describe('code-block header', () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;
       el.codeBlockHeader = true;
-      el.highlightCode = false;
+      el.withoutSyntaxHighlighting = true;
       el.content = '```\n```\n\n```make\n\tbuild\n```';
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('[part="code-block-copy"]')));
@@ -49,7 +49,7 @@ describe('code-block header', () => {
     it(`${name} rejects decoration forgery and strips authored styles only while enabled`, async () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;
-      el.highlightCode = false;
+      el.withoutSyntaxHighlighting = true;
       el.codeBlockHeader = true;
       el.content = '<style>.line { display:none }</style>\n\n<a part="code-block-copy" data-lr-code-chrome href="/">Decoy</a>\n\n```js\nvisible\n```';
       host.append(el);
@@ -63,7 +63,7 @@ describe('code-block header', () => {
     it(`${name} bounds controls and clips language labels by code point`, async () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;
-      el.codeBlockHeader = true; el.highlightCode = false;
+      el.codeBlockHeader = true; el.withoutSyntaxHighlighting = true;
       el.content = Array.from({ length: 205 }, (_, index) => `\`\`\`${'x'.repeat(40)}\nvalue ${index}\n\`\`\``).join('\n\n');
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('button')));
@@ -74,7 +74,7 @@ describe('code-block header', () => {
     it(`${name} localizes existing controls and returns localized clipboard failure`, async () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;
-      el.codeBlockHeader = true; el.highlightCode = false; el.content = '```js\nsource\n```';
+      el.codeBlockHeader = true; el.withoutSyntaxHighlighting = true; el.content = '```js\nsource\n```';
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('button')));
       const button = el.shadowRoot!.querySelector('button')!;
@@ -101,7 +101,7 @@ describe('code-block header', () => {
     it(`${name} suppresses stale clipboard settlement after content replacement and disconnect`, async () => {
       const host = await fixture<HTMLElement>(html`<div></div>`);
       const el = document.createElement(name) as LyraMarkdown;
-      el.codeBlockHeader = true; el.highlightCode = false; el.content = '```\none\n```';
+      el.codeBlockHeader = true; el.withoutSyntaxHighlighting = true; el.content = '```\none\n```';
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('button')));
       let resolveWrite: (() => void) | undefined;
@@ -133,7 +133,7 @@ describe('code-block header labels, keyboard and direction', () => {
       const host = await fixture<HTMLElement>(html`<div dir=${dir}></div>`);
       const el = document.createElement(name) as LyraMarkdown;
       el.codeBlockHeader = true;
-      el.highlightCode = false;
+      el.withoutSyntaxHighlighting = true;
       el.content = content;
       host.append(el);
       await waitUntil(() => Boolean(el.shadowRoot?.querySelector('[part~="code-block-copy"]')));
@@ -215,7 +215,7 @@ async function mountHeader(
   const host = await fixture<HTMLElement>(html`<div dir=${dir} lang=${lang} style=${style}></div>`);
   const el = document.createElement(name) as LyraMarkdown;
   el.codeBlockHeader = true;
-  el.highlightCode = false;
+  el.withoutSyntaxHighlighting = true;
   Object.assign(el, props);
   el.content = content;
   host.append(el);
@@ -305,7 +305,7 @@ describe('code-block header: anchors and headings are header-independent', () =>
       for (const codeBlockHeader of [false, true]) {
         const host = await fixture<HTMLElement>(html`<div></div>`);
         const el = document.createElement(name) as LyraMarkdown;
-        Object.assign(el, { codeBlockHeader, highlightCode: false, content });
+        Object.assign(el, { codeBlockHeader, withoutSyntaxHighlighting: true, content });
         Object.assign(el as unknown as { anchorTimeoutMs: number; anchorRetryIntervalMs: number }, { anchorTimeoutMs: 200, anchorRetryIntervalMs: 10 });
         host.append(el);
         await waitUntil(() => Boolean(el.shadowRoot?.querySelector('pre')));
@@ -602,7 +602,7 @@ describe('code-block header: forgery, fallback highlights and focus restore', ()
         for (const codeBlockHeader of [false, true]) {
           const host = await fixture<HTMLElement>(html`<div></div>`);
           const el = document.createElement(name) as LyraMarkdown;
-          Object.assign(el, { codeBlockHeader, highlightCode: false, content });
+          Object.assign(el, { codeBlockHeader, withoutSyntaxHighlighting: true, content });
           host.append(el);
           await waitUntil(() => Boolean(el.shadowRoot?.querySelector('pre')));
           el.highlights = [
@@ -633,7 +633,7 @@ describe('code-block header: forgery, fallback highlights and focus restore', ()
         return mounted;
       };
       const highlighted = async (el: LyraMarkdown): Promise<void> => {
-        el.highlightCode = true;
+        el.withoutSyntaxHighlighting = false;
         await waitUntil(() => Boolean(el.shadowRoot!.querySelector('pre code span')), 'never highlighted', { timeout: 45_000 });
       };
       const first = await mountPending();

@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `locked` / `locked` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 29 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -82,10 +82,11 @@ import type {
 - `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
   `lr-node-palette` drag sets, emitting `lr-node-add`. The decoded payload must be a plain record
   with a non-empty string `type`; text fields and total payload size are bounded.
-- `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
+- `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit.
+  window pointer listeners so a later release cannot commit. Deprecated alias: `locked` (use
+  `readonly`; removed in 23.0.0)
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
@@ -112,11 +113,11 @@ import type {
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
-All viewport-mutating methods, including `focusNode()`, are inert while `locked`; coordinate mapping
+All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
 edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
-effective `locked`, `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
+effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
 **Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target

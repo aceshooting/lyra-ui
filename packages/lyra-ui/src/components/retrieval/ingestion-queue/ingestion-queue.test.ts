@@ -287,6 +287,19 @@ describe('populated rows', () => {
     expect(bar1.indeterminate).to.be.true;
   });
 
+  it('names each progress bar with the host aria-label, not the deprecated accessible-label', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[item({ id: '1', stage: 'uploading', progress: 62 })]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    const bar = el.shadowRoot!.querySelector('lr-progress-bar')!;
+    expect(bar.hasAttribute('accessible-label')).to.be.false;
+    const name = bar.getAttribute('aria-label');
+    expect(name).to.be.a('string');
+    expect(name!.length).to.be.greaterThan(0);
+  });
+
   it('shows chunk count only once chunkCount is set', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue

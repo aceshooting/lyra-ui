@@ -7,7 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `wrap` / `wrap` since `21.1.0`; use property `without-wrap`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,7 +23,7 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary.
 
-Direction: every line is left-to-right. Without `wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. With `wrap`, the scrollport follows the page direction.
+Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
 clears output and preserves the normal `null` property readback.
@@ -30,22 +32,28 @@ clears output and preserves the normal `null` property readback.
 codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
 `content` source, preserving commit order with same-turn `write()`/`clear()` calls.
 `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
-(reflected) — stick-to-bottom, `wrap: boolean = true` (reflected), `copyable: boolean = true`
-(reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
+(reflected) — stick-to-bottom, `withoutWrap: boolean = false` (attribute `without-wrap`, reflected)
+— keeps each line on one horizontally scrollable row instead of soft-wrapping it,
+`withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) and
+`downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). Empty/blank highlight ids
 and later duplicates are omitted before painting, focus ownership, active lookup, and activation
 events. A non-empty host `aria-label` is forwarded to the nested `role="log"`; an absent or explicit
 empty value uses the localized terminal-purpose fallback, so the actionable log remains named.
-`compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
-rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
-convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
-background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
+Deprecated aliases: `wrap` (use `without-wrap`; removed in 23.0.0) and `copyable` (use
+`without-copy-button`; removed in 23.0.0) — both inverted, so `wrap="false"` equals `without-wrap`
+and `copyable="false"` equals `without-copy-button`.
+`size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
+`xs`/`2xs`) tightens `[part="toolbar"]`'s padding and gap and each rendered line's inline padding
+for a terminal embedded in an already-padded transcript row, the same convention `<lr-task-list>`
+and `<lr-thinking-panel>` use; purely a density knob, the card border and background stay.
+Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
 `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border, corner radius,
 and raised surface so a terminal nested inside a container that already draws a border (an agent-run
 panel, a message bubble) doesn't double it, while keeping the toolbar/log divider and whichever
-regular or compact padding applies. `anchorKinds:
+regular or dense padding applies. `anchorKinds:
 LyraAnchor['kind'][] = ['line-range']` is readonly — a scrollback buffer addresses positions by line number, so `line-range` is the
 only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
 viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
@@ -111,9 +119,9 @@ ordinary rendered lines. `--lr-terminal-highlight-accent-bg` (default `var(--lr-
 `--lr-terminal-highlight-neutral-bg` (default `var(--lr-color-surface)`) — the background of a
 `highlights[]` entry of the matching `tone`. `--lr-terminal-compact-toolbar-padding` (default
 `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-terminal-compact-toolbar-gap` (default
-`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `compact`, and
-`--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each rendered
-line's inline padding while `compact` — all three sit behind inline `var()` fallbacks, so a
+`var(--lr-space-2xs)`) retune `[part="toolbar"]`'s padding and button gap while `size` is `s` or
+smaller, and `--lr-terminal-compact-line-padding-inline` (default `var(--lr-space-xs)`) retunes each
+rendered line's inline padding at that size — all three sit behind inline `var()` fallbacks, so a
 transcript can retune every nested terminal at once without restating the rules. Each highlight
 background is decoupled from the identical shared token it
 falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/download-button hover tint)

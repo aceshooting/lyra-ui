@@ -84,7 +84,7 @@ export const SelectedThemeHooks: Story = {
     <lr-compare-panel
       style="
         max-width: 44rem;
-        --lr-compare-panel-selected-background: var(--lr-color-success-quiet);
+        --lr-compare-panel-selected-bg: var(--lr-color-success-quiet);
         --lr-compare-panel-selected-border-color: var(--lr-color-success);
         --lr-compare-panel-selected-color: var(--lr-color-success);
         --lr-compare-panel-selected-font-weight: var(--lr-font-weight-bold);

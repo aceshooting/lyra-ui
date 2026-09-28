@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showClaims` / `show-claims` since `21.1.0`; use property `without-claims`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,8 +42,10 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
 - `label?: string` — fallback name for the stable group, using localized
   `groundingSummaryLabel` when omitted. A non-empty host `aria-label` makes the host the sole overall
   owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
-- `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
-  `lr-claim-evidence`; set false to keep the aggregate scorecard only
+- `withoutClaims: boolean = false` (attribute `without-claims`, reflected) — omits the
+  `assessment.claims` detail that otherwise renders through `lr-claim-evidence`, keeping the
+  aggregate scorecard only. Deprecated alias: `show-claims`/`showClaims` (use `without-claims`;
+  `show-claims="false"` equals `without-claims`; removed in 23.0.0)
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — shared semantic heading
   level used by both warnings and evidence sections; `'none'` keeps the visual text without
   exposing a heading role, and invalid untyped values fall back to level 3

@@ -3,6 +3,7 @@ import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../.
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const requests: ToolApprovalRequest[] = [{ id: 'call-1', toolName: 'web_search', args: { query: 'Lyra UI' } }];
 
@@ -31,14 +32,62 @@ describe('lr-approval-queue', () => {
     await expect(populated).to.be.accessible();
   });
 
-  it('honors editable="false" and forwards it to the reused dialog', async () => {
+  it('honors readonly and forwards it to the reused dialog', async () => {
     const el = (await fixture(html`
-      <lr-approval-queue editable="false" .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue readonly .requests=${requests}></lr-approval-queue>
     `)) as LyraApprovalQueue;
     (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect(el.editable).to.be.false;
-    expect((el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { editable: boolean }).editable).to.be.false;
+    expect(el.readonly).to.be.true;
+    expect((el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { readonly: boolean }).readonly).to.be.true;
+  });
+
+  it('keeps editable="false" working as the deprecated inverted alias of readonly, warning once', async () => {
+    const EDITABLE: readonly DeprecatedUsage[] = [{ tag: 'lr-approval-queue', kind: 'property', name: 'editable' }];
+    let forwarded: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(EDITABLE, async () => {
+      const aliased = (await fixture(html`
+        <lr-approval-queue editable="false" .requests=${requests}></lr-approval-queue>
+      `)) as LyraApprovalQueue;
+      const bare = (await fixture(html`
+        <lr-approval-queue editable .requests=${requests}></lr-approval-queue>
+      `)) as LyraApprovalQueue;
+      const property = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
+      property.editable = false;
+      const both = (await fixture(html`
+        <lr-approval-queue editable readonly .requests=${requests}></lr-approval-queue>
+      `)) as LyraApprovalQueue;
+      for (const el of [aliased, bare, property, both]) {
+        (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
+        await el.updateComplete;
+      }
+      const dialogReadonly = (el: LyraApprovalQueue): boolean =>
+        (el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { readonly: boolean }).readonly;
+      forwarded = [aliased, bare, property, both].map(dialogReadonly);
+      forwarded.push(aliased.editable, bare.editable);
+    });
+    expect(forwarded).to.deep.equal([true, false, true, true, false, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-approval-queue:property:editable']);
+  });
+
+  it('applies the last write between editable and readonly, and syncs editable back without warning', async () => {
+    const EDITABLE: readonly DeprecatedUsage[] = [{ tag: 'lr-approval-queue', kind: 'property', name: 'editable' }];
+    const reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(EDITABLE, async () => {
+      const aliasLast = (await fixture(html`
+        <lr-approval-queue readonly editable .requests=${requests}></lr-approval-queue>
+      `)) as LyraApprovalQueue;
+      reads.push(aliasLast.readonly);
+      const el = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
+      el.readonly = true;
+      await el.updateComplete;
+      reads.push(el.editable);
+      el.readonly = false;
+      await el.updateComplete;
+      reads.push(el.editable);
+    });
+    expect(reads).to.deep.equal([false, false, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-approval-queue:property:editable']);
   });
 
   it('keeps parent and reused-dialog open state synchronized after child close', async () => {

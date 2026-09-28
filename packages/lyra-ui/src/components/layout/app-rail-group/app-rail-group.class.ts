@@ -8,6 +8,8 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { styles } from './app-rail-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -16,7 +18,10 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand } from '../../../internal/de
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailGroupToggleDetail {
+  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
+  /** Whether the group's content is (or, on the request, would be) shown. */
+  expanded?: boolean;
 }
 
 export interface LyraAppRailGroupEventMap {
@@ -41,7 +46,7 @@ export interface LyraAppRailGroupEventMap {
  * carrying `aria-expanded` and `aria-controls`, exactly as the accordion pattern prescribes,
  * rather than a separate unlabeled chevron next to an inert title. Collapsing goes through the
  * library's request/commit pair, so a consumer can veto it (`preventDefault()`) or resolve it
- * itself by assigning `open` from the request listener.
+ * itself by assigning `collapsed` from the request listener.
  *
  * The owning rail marks a slotted group `icon-only` the same way it marks a slotted item, and the
  * group forwards that to the items and nested groups it DIRECTLY owns — including ones appended
@@ -58,14 +63,16 @@ export interface LyraAppRailGroupEventMap {
  * @slot header-actions - Controls rendered beside the heading — an "add" button, an overflow menu.
  *   A SIBLING of the heading (and so of the collapse control inside it), matching `<lr-details>`'s
  *   header-actions shape, so activating one never toggles the group.
- * @event lr-toggle-request - Cancelable proposal emitted before `open` changes from the built-in
- *   collapse control. Call `preventDefault()` to keep the current state, or assign `open` from the
- *   listener to resolve it yourself — a write during the dispatch suppresses the default commit
- *   even when it assigns the value the property already held. Not emitted for a direct `open`
- *   write. `detail: LyraAppRailGroupToggleDetail`.
- * @event lr-toggle - The group finished opening or closing. Non-cancelable, emitted after `open`
- *   is written, and never emitted for a vetoed or listener-resolved request.
- *   `detail: LyraAppRailGroupToggleDetail`.
+ * @event lr-toggle-request - Cancelable proposal emitted before `collapsed` changes from the
+ *   built-in collapse control. Call `preventDefault()` to keep the current state, or assign
+ *   `collapsed` from the listener to resolve it yourself — a write during the dispatch suppresses
+ *   the default commit even when it assigns the value the property already held. Not emitted for
+ *   a direct `collapsed` write. `detail: LyraAppRailGroupToggleDetail` — `expanded` is the
+ *   proposed state; the deprecated `open` key carries the same value.
+ * @event lr-toggle - The group finished expanding or collapsing. Non-cancelable, emitted after
+ *   `collapsed` is written, and never emitted for a vetoed or listener-resolved request.
+ *   `detail: LyraAppRailGroupToggleDetail` — `expanded` is the settled state; the deprecated
+ *   `open` key carries the same value.
  * @csspart base - The `role="group"` container.
  * @csspart header - The row holding the heading and any header actions.
  * @csspart heading - The heading landmark. Carries `role="heading"` and `aria-level`.
@@ -116,6 +123,9 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    open: ['collapsed', invertAlias, invertAlias],
+  };
 
   static override get observedAttributes(): string[] {
     return [...super.observedAttributes, 'icon-only'];
@@ -132,14 +142,34 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   @property({ type: Number, attribute: 'heading-level' }) headingLevel = 3;
 
   /** Opts in the built-in collapse control. `false` (the default) renders the heading as inert
-   *  text, exactly as a plain section title. `open` still governs whether the content renders, so
-   *  a consumer can drive collapse entirely from its own chrome without opting in here. */
+   *  text, exactly as a plain section title. `collapsed` still governs whether the content
+   *  renders, so a consumer can drive collapse entirely from its own chrome without opting in
+   *  here. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
+
+  /** Whether the group's content is hidden. `false` by default — a nav section that hid itself on
+   *  first paint would be the surprising default.
+   *  @default false */
+  @property({ type: Boolean, reflect: true })
+  get collapsed(): boolean {
+    return this._collapsed;
+  }
+  set collapsed(next: boolean) {
+    const old = this._collapsed;
+    this._collapsed = next;
+    // Unconditional, including for a write of the value already held: the guard records that a
+    // write HAPPENED, which is the only question a synchronous listener's self-resolution can be
+    // answered by (a value compare reports "unchanged" for exactly that case).
+    markVetoGuardWrite(this.toggleGuard);
+    this.requestUpdate('collapsed', old);
+  }
+  private _collapsed = false;
 
   /** Whether the group's content is shown. `true` by default — a nav section that hid itself on
    *  first paint would be the surprising default — which is why it carries
    *  `trueDefaultBooleanConverter`: Lit's presence-based boolean converter cannot parse
    *  `open="false"`, so without it the property would be unsettable from markup.
+   *  @deprecated Use `collapsed` (inverted); removal not before 23.0.0.
    *  @default true */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter })
   get open(): boolean {
@@ -148,9 +178,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   set open(next: boolean) {
     const old = this._open;
     this._open = next;
-    // Unconditional, including for a write of the value already held: the guard records that a
-    // write HAPPENED, which is the only question a synchronous listener's self-resolution can be
-    // answered by (a value compare reports "unchanged" for exactly that case).
+    // A listener resolving a toggle request through the alias counts as a write, as it did before.
     markVetoGuardWrite(this.toggleGuard);
     this.requestUpdate('open', old);
   }
@@ -274,15 +302,15 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   };
 
   private onToggleClick = (): void => {
-    const next = !this._open;
+    const expanded = this._collapsed;
     requestThenCommit({
-      requestDetail: { open: next },
+      requestDetail: { open: expanded, expanded },
       emitRequest: (detail, init: { cancelable: true }) =>
         this.emit('lr-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
-        this.open = next;
-        this.emit('lr-toggle', { open: next });
+        this.collapsed = !expanded;
+        this.emit('lr-toggle', { open: expanded, expanded });
       },
     });
   };
@@ -307,11 +335,11 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
               ? html`<button
                   part="toggle"
                   type="button"
-                  aria-expanded=${this._open ? 'true' : 'false'}
+                  aria-expanded=${this._collapsed ? 'false' : 'true'}
                   aria-controls=${this.contentId}
                   aria-label=${named
                     ? nothing
-                    : this.localize(this._open ? 'collapse' : 'expand')}
+                    : this.localize(this._collapsed ? 'expand' : 'collapse')}
                   @click=${this.onToggleClick}
                 >
                   <span part="toggle-icon" aria-hidden="true">${chevronIcon()}</span>${headingContent}
@@ -325,7 +353,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
             ></slot
           ></span>
         </div>
-        <div part="content" id=${this.contentId} ?hidden=${!this._open}>
+        <div part="content" id=${this.contentId} ?hidden=${this._collapsed}>
           <slot @slotchange=${this.onContentSlotChange}></slot>
         </div>
       </div>

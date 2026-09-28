@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
@@ -191,8 +193,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   padded safe area -- unlike `<lr-dialog>`, it does not shrink-wrap to content, since
  *   maximizing image real estate is the point.
  * @csspart toolbar - Top row: `counter` (start), the `actions` slot wrapper, `close-button` (end).
- * @csspart counter - Visible, localized "Image N of Total" text. Omitted entirely when
- *   `showCounter` is `false`.
+ * @csspart counter - Visible, localized "Image N of Total" text. Omitted entirely while
+ *   `without-counter` is set.
  * @csspart live-region - Visually-hidden, `aria-hidden` mirror of the current position. On every
  *   `index` change while open, the spoken copy is appended to the shared light-DOM polite sink,
  *   regardless of trigger (button, keyboard, or a consumer setting `index`/`images` directly),
@@ -235,6 +237,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, srOnly, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showCounter: ['withoutCounter', invertAlias, invertAlias],
+  };
 
   private _open = false;
 
@@ -284,6 +289,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  `wa-dialog`. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
+  /** Hides only the visible `part="counter"`. The accessibility `part="live-region"`
+   *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
+   *  Deliberately not reflected: nothing styles or queries it, so reflection would only churn
+   *  attributes on a modal that already churns them. */
+  @property({ type: Boolean, attribute: 'without-counter' }) withoutCounter = false;
+
   /** Shows/hides only the visible `part="counter"`. The accessibility `part="live-region"`
    *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
    *  Mirrors `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses the shared
@@ -291,7 +302,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  `type: Boolean` handling, so a plain-HTML consumer with no way to write a `.showCounter`
    *  property binding can still turn this off with `show-counter="false"`. Deliberately not
    *  reflected: nothing styles or queries `[show-counter]`, so the serializing half of a
-   *  reflecting converter would be dead code on a modal that already churns attributes. */
+   *  reflecting converter would be dead code on a modal that already churns attributes.
+   *  @deprecated Use `without-counter` (inverted); removal not before 23.0.0. */
   @property({ attribute: 'show-counter', converter: trueDefaultBooleanConverter }) showCounter = true;
 
   /** Base image sizing policy, using the same vocabulary as `<lr-image-viewer>`. `actual`
@@ -708,7 +720,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         @keydown=${this.onPanelKeyDown}
       >
         <div part="toolbar">
-          ${this.showCounter && count > 0 ? html`<span part="counter">${positionText}</span>` : nothing}
+          ${!this.withoutCounter && count > 0 ? html`<span part="counter">${positionText}</span>` : nothing}
           <div part="actions" ?hidden=${!this.slotPresence.has('actions')}>
             <slot name="actions"></slot>
           </div>

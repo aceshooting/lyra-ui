@@ -17,7 +17,7 @@ export const styles = css`
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
     --_lr-message-actions-button-bg-active: color-mix(
       in oklab,
-      var(--lr-icon-button-background-hover, var(--lr-color-surface-raised)),
+      var(--lr-icon-button-bg-hover, var(--lr-icon-button-background-hover, var(--lr-color-surface-raised))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     --_lr-message-actions-button-color: var(--lr-color-text-quiet);

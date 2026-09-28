@@ -1913,11 +1913,11 @@ async function checkMarkdownMathAndSanitization(): Promise<void> {
 
   const hostileMarkdown = document.createElement('lr-markdown') as HTMLElement & {
     content: string;
-    highlightCode: boolean;
+    withoutSyntaxHighlighting: boolean;
     shadowRoot: ShadowRoot;
   };
   hostileMarkdown.content = hostileSource;
-  hostileMarkdown.highlightCode = false;
+  hostileMarkdown.withoutSyntaxHighlighting = true;
   document.body.append(hostileMarkdown);
   await waitFor(
     () => hostileMarkdown.shadowRoot?.querySelector('[part="heading"]') !== null,
@@ -1937,12 +1937,12 @@ async function checkMarkdownMathAndSanitization(): Promise<void> {
 
   const markdown = document.createElement('lr-markdown') as HTMLElement & {
     content: string;
-    highlightCode: boolean;
+    withoutSyntaxHighlighting: boolean;
     math: boolean;
     shadowRoot: ShadowRoot;
   };
   markdown.content = '$x^2$';
-  markdown.highlightCode = false;
+  markdown.withoutSyntaxHighlighting = true;
   markdown.math = true;
   document.body.append(markdown);
   await waitFor(

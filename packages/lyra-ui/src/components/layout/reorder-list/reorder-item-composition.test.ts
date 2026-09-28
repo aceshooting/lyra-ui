@@ -3,9 +3,13 @@ import { sendKeys } from '@web/test-runner-commands';
 import './reorder-item.js';
 import './reorder-list.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function movePart(el: LyraReorderItem, part: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
@@ -22,11 +26,26 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
     expect(movePart(el, 'move-up-button').localName).to.equal('lr-icon-button');
     expect(movePart(el, 'move-down-button').localName).to.equal('lr-icon-button');
     expect(movePart(el, 'move-up-button').getAttribute('exportparts')).to.contain(
-      'button:move-up-button__control'
+      'button:move-up-button-control'
     );
     expect(movePart(el, 'move-down-button').getAttribute('exportparts')).to.contain(
-      'button:move-down-button__control'
+      'button:move-down-button-control'
     );
+  });
+
+  it('forwards each native control under its hyphenated name and its deprecated __ alias', async () => {
+    const el = (await fixture(html`
+      <div>
+        <style>
+          .forwarded::part(move-up-button-control) { outline: 3px solid rgb(10, 20, 30); }
+          .forwarded::part(move-down-button__control) { outline: 3px solid rgb(40, 50, 60); }
+        </style>
+        <lr-reorder-item class="forwarded" value="a">Row</lr-reorder-item>
+      </div>
+    `)).querySelector<LyraReorderItem>('lr-reorder-item')!;
+    await el.updateComplete;
+    expect(getComputedStyle(nativeControl(el, 'move-up-button')).outlineColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(nativeControl(el, 'move-down-button')).outlineColor).to.equal('rgb(40, 50, 60)');
   });
 
   it('takes its paint from the shared --lr-icon-button-* contract on an ancestor', async () => {
@@ -47,8 +66,8 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
 
   it('keeps the composed accessible name that names the verb and the row', async () => {
     const el = (await fixture(
-      html`<lr-reorder-item value="a" accessible-label="Second row">Row</lr-reorder-item>`
-    )) as LyraReorderItem;
+      html`<div role="list"><lr-reorder-item value="a" aria-label="Second row">Row</lr-reorder-item></div>`
+    )).querySelector<LyraReorderItem>('lr-reorder-item')!;
     await el.updateComplete;
     const control = nativeControl(el, 'move-up-button') as HTMLButtonElement & {
       ariaLabelledByElements?: readonly Element[] | null;
@@ -114,5 +133,74 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
       await item.updateComplete;
     }
     await expect(list).to.be.accessible();
+  });
+});
+
+describe('lr-reorder-item: host aria-label and the deprecated accessible-label attribute', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-reorder-item', kind: 'attribute', name: 'accessible-label' },
+  ];
+  const labelledText = (el: LyraReorderItem, part: string): string =>
+    (movePart(el, part).getAttribute('aria-labelledby') ?? '')
+      .split(/\s+/)
+      .map((id) => el.shadowRoot!.getElementById(id)?.textContent ?? '')
+      .join(' ')
+      .trim();
+
+  it('names the row and both move actions from the host aria-label, without a warning', async () => {
+    let el!: LyraReorderItem;
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el = (await fixture(
+        html`<div role="list"><lr-reorder-item value="a" aria-label="Invoices">Row</lr-reorder-item></div>`
+      )).querySelector<LyraReorderItem>('lr-reorder-item')!;
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up Invoices');
+    expect(labelledText(el, 'move-down-button')).to.equal('Move down Invoices');
+    expect(el.getAttribute('aria-label')).to.equal('Invoices');
+    await expect(el.parentElement!).to.be.accessible();
+  });
+
+  it('keeps the accessible-label alias naming both move actions, and warns once naming aria-label', async () => {
+    const labels: string[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(
+          html`<lr-reorder-item value="a" accessible-label="Invoices">Row</lr-reorder-item>`
+        )) as LyraReorderItem;
+        await el.updateComplete;
+        labels.push(labelledText(el, 'move-up-button'));
+      }
+    });
+    expect(labels).to.deep.equal(['Move up Invoices', 'Move up Invoices']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-reorder-item:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('lets the host aria-label win over the accessible-label alias', async () => {
+    let el!: LyraReorderItem;
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      el = (await fixture(
+        html`<lr-reorder-item value="a" accessible-label="Old" aria-label="New">Row</lr-reorder-item>`
+      )) as LyraReorderItem;
+      await el.updateComplete;
+    });
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up New');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up Old');
+  });
+
+  it('does not warn for a property-only accessibleLabel assignment', async () => {
+    const el = (await fixture(html`<lr-reorder-item value="a">Row</lr-reorder-item>`)) as LyraReorderItem;
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.accessibleLabel = 'Assigned';
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up Assigned');
   });
 });

@@ -7,9 +7,11 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-toggle-background` since `21.1.0`; use css-property `--lr-toggle-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-toggle-hover-background` since `21.1.0`; use css-property `--lr-toggle-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-toggle-pressed-background` since `21.1.0`; use css-property `--lr-toggle-pressed-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -105,13 +107,15 @@ and press get outline affordances, and disabled toggles read as `GrayText` at fu
 **Themeable custom properties** (not declared on the host, so ancestor values win):
 `--lr-toggle-radius` (default `var(--lr-form-control-radius)`), `--lr-toggle-padding-inline`
 (default `var(--lr-space-s)`), `--lr-toggle-gap` (default `var(--lr-form-control-gap)`),
-`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-background` (default
+`--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-bg` (default
 `transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
-`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-background` (default
+`var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-bg` (default
 `color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
-`--lr-toggle-pressed-background` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
+`--lr-toggle-pressed-bg` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
 (default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
-`var(--lr-color-border-loud)`).
+`var(--lr-color-border-loud)`). Deprecated aliases: `--lr-toggle-background`,
+`--lr-toggle-hover-background` and `--lr-toggle-pressed-background` (use `--lr-toggle-bg`,
+`--lr-toggle-hover-bg` and `--lr-toggle-pressed-bg`; removed in 23.0.0).
 
 ```html
 <script type="module">

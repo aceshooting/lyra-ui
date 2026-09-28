@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `noSpinButtons` / `no-spin-buttons` since `21.1.0`; use property `without-spin-buttons`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 18 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,7 +39,9 @@ properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `ste
 native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
 node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
 The inherited `--lr-input-*` theme inputs therefore remain configurable from an ancestor theme
-wrapper without being shadowed by the subclass. Among those inherited properties and methods:
+wrapper without being shadowed by the subclass. On this element the spin-button switch is spelled
+`without-spin-buttons` (`withoutSpinButtons`). Deprecated alias: `no-spin-buttons` (use
+`without-spin-buttons`; kept in step, last write wins; removed in 23.0.0). Among those inherited properties and methods:
 `defaultValue: string = ''` (attribute `value`, reflected) is the reset value, and
 `customError: string | null = null` (attribute `custom-error`, reflected) is a consumer-supplied
 validation message. `getForm()` returns the browser-resolved form owner, including an external

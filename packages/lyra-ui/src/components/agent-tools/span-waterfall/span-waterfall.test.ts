@@ -4,6 +4,7 @@ import type { LyraSpanWaterfall } from './span-waterfall.js';
 import { MAX_RENDERED_LYRA_SPANS, type LyraSpan } from '../trace-tree/span.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -396,8 +397,8 @@ describe('lr-span-waterfall', () => {
     }
   });
 
-  it('hides the axis when hide-axis is set', async () => {
-    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS} hide-axis></lr-span-waterfall>`)) as LyraSpanWaterfall;
+  it('hides the axis when without-axis is set', async () => {
+    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS} without-axis></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="axis"]')) == null).to.be.true;
   });
@@ -776,7 +777,7 @@ it('formats durations with the effective locale', async () => {
   const el = (await fixture(html`
     <lr-span-waterfall
       lang="de-DE"
-      hide-axis
+      without-axis
       .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 2500 }]}
     ></lr-span-waterfall>
   `)) as LyraSpanWaterfall;
@@ -788,7 +789,7 @@ it('formats durations with the effective locale', async () => {
 it('routes duration text through the shared duration helper and this.localize() so a strings override reaches it (regression)', async () => {
   const el = (await fixture(html`
     <lr-span-waterfall
-      hide-axis
+      without-axis
       .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 2500 }]}
     ></lr-span-waterfall>
   `)) as LyraSpanWaterfall;
@@ -830,5 +831,56 @@ describe('lr-span-waterfall trace extent past the render cap', () => {
       tickLabels.some((label) => label.includes('10')),
       `the axis still runs to the full trace duration (ticks: ${tickLabels.join(', ')})`,
     ).to.equal(true);
+  });
+});
+
+describe('lr-span-waterfall deprecated hide-axis alias', () => {
+  const HIDE_AXIS: readonly DeprecatedUsage[] = [
+    { tag: 'lr-span-waterfall', kind: 'property', name: 'hideAxis' },
+  ];
+  const hasAxis = (el: LyraSpanWaterfall): boolean => el.shadowRoot!.querySelector('[part="axis"]') !== null;
+
+  it('hides the axis through the canonical without-axis without a deprecation warning', async () => {
+    let shown = true;
+    const warnings = await captureDeprecationWarnings(HIDE_AXIS, async () => {
+      const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS} without-axis></lr-span-waterfall>`);
+      shown = hasAxis(el);
+    });
+    expect(shown).to.equal(false);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps hide-axis working with the same result and warns once', async () => {
+    let aliasShown = true;
+    let propertyShown = true;
+    let mirrored = false;
+    const warnings = await captureDeprecationWarnings(HIDE_AXIS, async () => {
+      const first = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS} hide-axis></lr-span-waterfall>`);
+      aliasShown = hasAxis(first);
+      mirrored = first.withoutAxis && first.hideAxis;
+      const second = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`);
+      second.hideAxis = true;
+      await second.updateComplete;
+      propertyShown = hasAxis(second);
+    });
+    expect(aliasShown).to.equal(false);
+    expect(propertyShown).to.equal(false);
+    expect(mirrored).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-span-waterfall:property:hideAxis']);
+  });
+
+  it('applies the last write between hide-axis and without-axis, and syncs hideAxis back without warning', async () => {
+    const reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(HIDE_AXIS, async () => {
+      const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS} hide-axis></lr-span-waterfall>`);
+      el.withoutAxis = false;
+      await el.updateComplete;
+      reads.push(el.hideAxis, hasAxis(el));
+      el.withoutAxis = true;
+      await el.updateComplete;
+      reads.push(el.hideAxis, hasAxis(el));
+    });
+    expect(reads).to.deep.equal([false, true, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-span-waterfall:property:hideAxis']);
   });
 });

@@ -237,7 +237,7 @@ describe('lr-menubar', () => {
   it('selection bubbles once, returns focus, and checkbox changes bubble', async () => {
     const bar = await sample(); const file = item(bar, 'file'); let selected = ''; let count = 0; let changes = 0;
     bar.addEventListener('lr-select', event => { selected = event.detail.item.id; count++; });
-    bar.addEventListener('lr-menu-item-change', () => { changes++; });
+    bar.addEventListener('lr-menu-item-change-request', () => { changes++; });
     key(file, 'ArrowDown'); await waitUntil(() => active() === 'new');
     bar.querySelector<LyraMenuItem>('#new')!.click();
     await waitUntil(() => !file.menuOpen); expect(selected).to.equal('new'); expect(count).to.equal(1); expect(active()).to.equal('file');

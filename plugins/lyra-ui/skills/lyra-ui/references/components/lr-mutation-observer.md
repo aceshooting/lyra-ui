@@ -9,6 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated property** `characterData` / `character-data` since `21.1.0`; use property `char-data`; removal not before `23.0.0` — character-data is a Lyra-only spelling of the mirrored char-data attribute (the Web Awesome and Shoelace name) with identical behavior. It keeps reflecting and enabling character-data observation through the 22.x line, and setting it logs a one-time development warning.
 - **Deprecated property** `observeAttributes` / `attributes` since `21.1.0`; use property `attr="*" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)`; removal not before `23.0.0` — attributes is a Lyra-only boolean spelling of the mirrored attr="*" (observe every attribute). Where attr, attr-old-value or a non-empty attributeFilter is also set, attribute observation is already on, so remove attributes instead: adding attr="*" would replace an attributeFilter. It keeps reflecting and enabling attribute observation through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `subtree` / `subtree` since `21.1.0`; use property `without-subtree`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,8 +27,10 @@ adds no layout.
 needed; reflected), `attr: string | null = null` (reflected; `*` observes every attribute; otherwise a
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
-mapped attributes reflect. Plus `subtree: boolean = true`, and programmatic
-`attributeFilter: string[] = []` (neither reflects).
+mapped attributes reflect. Plus `withoutSubtree: boolean = false` (attribute `without-subtree`;
+observes only the slotted elements themselves, not their descendants), and programmatic
+`attributeFilter: string[] = []` (neither reflects). Deprecated alias: `subtree` (use
+`without-subtree`; `subtree="false"` equals `without-subtree`; removed in 23.0.0).
 
 **Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
 23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)

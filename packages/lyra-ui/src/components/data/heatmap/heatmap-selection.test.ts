@@ -44,7 +44,7 @@ describe('lr-heatmap controlled multiple selection', () => {
       .selectedCell=${{ row: 0, col: 0 }} .selectedCells=${[{ row: 1, col: 1 }]}></lr-heatmap>`);
     const details = changes(el);
     let clicks = 0;
-    el.addEventListener('lr-cell-click', () => clicks++);
+    el.addEventListener('lr-cell-activate', () => clicks++);
     cell(el, 1, 1).click();
     await el.updateComplete;
     expect(clicks).to.equal(1);
@@ -283,7 +283,7 @@ describe('lr-heatmap selection across modes and input devices', () => {
     const el = await matrix();
     const details = changes(el);
     let clicks = 0;
-    el.addEventListener('lr-cell-click', () => clicks++);
+    el.addEventListener('lr-cell-activate', () => clicks++);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     const dispatch = (type: string, col: number): void => {
       const rect = cell(el, 0, col).getBoundingClientRect();

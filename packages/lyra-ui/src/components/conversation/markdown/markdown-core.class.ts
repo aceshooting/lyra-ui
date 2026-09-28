@@ -30,8 +30,9 @@ import {
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
 import { styles } from './markdown.styles.js';
-// The parse-only variant, matching `<lr-markdown>`. Inert either way today (neither `gfm` nor
-// `highlightCode` reflects, so no `toAttribute` is ever called), but the pair had drifted onto
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+// The parse-only variant, matching `<lr-markdown>`. Inert either way today (neither the deprecated
+// `gfm` nor `highlightCode` alias reflects, so no `toAttribute` is ever called), but the pair had drifted onto
 // two different converters, and the reflecting one would start behaving differently the moment any
 // either property gained `reflect: true`.
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -56,7 +57,8 @@ const katexState = createMarkdownKatexState();
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by `gfm` and `highlightCode`. */
+ *  `fromAttribute` checks the literal string instead. Shared by the deprecated `gfm` and
+ *  `highlightCode` aliases. */
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -130,7 +132,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * characters inside code are rendered as authored, not neutralized.
  *
  * Fenced code blocks are syntax-highlighted via the same fine-grained `shiki/core` recipe
- * `<lr-code-block-core>` uses (`highlightCode`, default `true` — gated by whether a fenced
+ * `<lr-code-block-core>` uses (on unless `without-syntax-highlighting` — gated by whether a fenced
  * block's language is a key in `languages`, since there is no default highlighter here to gate on
  * "is shiki installed at all"). The very first render of any content is always plain (identical to
  * `<lr-markdown>`'s own output); highlighting arrives as an asynchronous upgrade one render
@@ -267,6 +269,11 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    gfm: ['withoutGfm', invertAlias, invertAlias],
+    highlightCode: ['withoutSyntaxHighlighting', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
 
   private static readonly variant = createMarkdownVariantContext(
     'lr-markdown-core',
@@ -310,7 +317,15 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ attribute: 'html-mode' }) override htmlMode: MarkdownHtmlMode =
     'sanitize';
 
-  /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
+  /** Disables GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
+  @property({ type: Boolean, attribute: 'without-gfm' }) override withoutGfm = false;
+
+  /**
+   * Deprecated inverted alias of `without-gfm` (`withoutGfm`): `gfm="false"` equals `without-gfm`,
+   * and removing it restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-gfm`; removal not before 23.0.0.
+   */
   @property({ converter: trueDefaultBooleanConverter }) override gfm = true;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
@@ -359,15 +374,27 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
-  /** Deprecated compatibility spelling of `code-block-header`: either property enables the header.
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins.
    * Setting it logs a one-time development warning.
    * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'code-block-chrome' })
   override codeBlockChrome = false;
 
-  /** Syntax-highlights fenced code blocks through the fine-grained Shiki core loader when
-   *  `languages` supplies the matching grammar. The empty default language map means no fenced
-   *  block is highlighted; set `false` to keep plain output even when grammars are supplied. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
+  /** Turns off syntax highlighting of fenced code blocks, keeping plain output even when grammars
+   *  are supplied. Unset (the default), fenced blocks are highlighted through the fine-grained Shiki
+   *  core loader when `languages` supplies the matching grammar; the empty default language map
+   *  means no fenced block is highlighted. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
+  @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
+  override withoutSyntaxHighlighting = false;
+
+  /**
+   * Deprecated inverted alias of `without-syntax-highlighting` (`withoutSyntaxHighlighting`):
+   * `highlight-code="false"` equals `without-syntax-highlighting`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-syntax-highlighting`; removal not before 23.0.0.
+   */
   @property({
     attribute: 'highlight-code',
     converter: trueDefaultBooleanConverter,

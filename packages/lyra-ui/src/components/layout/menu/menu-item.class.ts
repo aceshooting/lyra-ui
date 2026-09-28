@@ -13,6 +13,7 @@ import {
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -80,6 +81,11 @@ export interface MenuItemStateChangeDetail {
 
 export interface LyraMenuItemEventMap {
   'lr-menu-item-state-change': CustomEvent<MenuItemStateChangeDetail>;
+  /** Cancelable proposed next `checked` value of a checkbox or radio item. */
+  'lr-menu-item-change-request': CustomEvent<MenuItemChangeDetail>;
+  /** @deprecated Use `lr-menu-item-change-request`; removal not before 23.0.0. Fired right after it
+   *  from the same activation, with an equal detail; either event's `preventDefault()` vetoes the
+   *  proposed `checked` value. */
   'lr-menu-item-change': CustomEvent<MenuItemChangeDetail>;
 }
 /**
@@ -139,7 +145,7 @@ export interface LyraMenuItemEventMap {
  * `aria-checked` reflecting `checked` and a checkmark glyph shown once
  * `checked` is `true`. Activating a `checkbox`-type item (click, or the
  * parent's Enter/Space handling via `select()`) first fires a cancelable
- * `lr-menu-item-change` with the proposed next `checked` value, then mutates
+ * `lr-menu-item-change-request` with the proposed next `checked` value, then mutates
  * `checked` unless a listener prevents that event. It fires
  * the owning menu's canonical `lr-select` afterwards either way. `type="normal"` (the default) renders and
  * behaves exactly as before this option existed — no role, rendering, or
@@ -148,16 +154,16 @@ export interface LyraMenuItemEventMap {
  * `type="radio"` renders `role="menuitemradio"` instead, reusing the same
  * `aria-checked` reflection and checkmark glyph as `checkbox`, but with
  * exclusive-choice group semantics layered on top: activating an already-
- * `checked` radio is a no-op on `checked` itself — no `lr-menu-item-change`
+ * `checked` radio is a no-op on `checked` itself — no `lr-menu-item-change-request`
  * proposal, no state change, matching native `<input type="radio">`
  * semantics — though it still falls through to the owning menu's usual
  * selection, exactly like re-activating any other item. Activating an
- * *unchecked* radio fires the same cancelable `lr-menu-item-change` with
+ * *unchecked* radio fires the same cancelable `lr-menu-item-change-request` with
  * `checked: true`; once that is not prevented, this item becomes `checked`
  * and every other `type="radio"` item the *same owning `<lr-menu>`* owns
  * directly (never one owned by a nested submenu, which has its own owning
  * menu) whose `group` matches this item's `group` is unchecked directly —
- * without an `lr-menu-item-change` of its own. `group` defaults to `undefined`,
+ * without an `lr-menu-item-change-request` of its own. `group` defaults to `undefined`,
  * so every ungrouped radio row beneath one menu shares a single exclusive
  * scope unless narrowed by giving each subset its own `group` string.
  *
@@ -174,14 +180,19 @@ export interface LyraMenuItemEventMap {
  * @slot suffix - Shoelace-compatible decorative trailing content. Its flattened subtree is inert and
  *   hidden from assistive technology.
  * @slot submenu - A nested `<lr-menu>` or direct mapped menu items that open beside this row.
- * @event lr-menu-item-change - A `type="checkbox"` item was activated, or a `type="radio"` item
- * was activated while unchecked (an already-checked radio never fires this).
+ * @event lr-menu-item-change-request - A `type="checkbox"` item was activated, or a `type="radio"`
+ * item was activated while unchecked (an already-checked radio never fires this).
  * `detail: { value, checked }` contains the item's own `value` and the
  * proposed next `checked` value, before the property mutates. Cancelable:
  * prevent it to retain the current `checked` value. The usual
  * the parent menu's `lr-select` still follows, so selection and close
  * behavior are unchanged. Never fired for `type="normal"`. Unchecking a radio's group siblings
- * once this event commits fires no event of its own.
+ * once this event commits fires no event of its own. Fires before `lr-menu-item-change`, from the
+ * same activation; either event may veto.
+ * @event lr-menu-item-change - Deprecated cancelable alias of `lr-menu-item-change-request`, kept
+ * firing unchanged right after it with an equal `detail: { value, checked }`; either event may
+ * veto, and a veto through this alias logs a one-time development warning. Removal not before
+ * 23.0.0.
  * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
  *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
  *   where `disabled` is the effective `disabled || loading`. `<lr-menu>` consumes this to repair its
@@ -569,7 +580,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
 
   /** Activates this item through its owning menu (no-op while `disabled` or `loading`). Called by
    *  this element's own click handler, and by `<lr-menu>`'s Enter/Space keydown handling.
-   *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change`; it commits
+   *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change-request`
+   *  (then its deprecated `lr-menu-item-change` alias); it commits
    *  that proposed `checked` state only when the event is not prevented, then fires selection --
    *  see the class doc. For `type="radio"`, an already-`checked` item skips the proposal entirely
    *  (no event, no state change -- native radio semantics) and simply falls through to selection;
@@ -587,27 +599,39 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     }
     if (this.type === 'checkbox') {
       const checked = !this.checked;
-      const changeEvent = this.emit(
-        'lr-menu-item-change',
-        { value: this.value, checked },
-        { cancelable: true }
-      );
-      if (!changeEvent.defaultPrevented) this.checked = checked;
+      if (this.proposeChecked(checked)) this.checked = checked;
     } else if (this.type === 'radio' && !this.checked) {
       // An already-checked radio proposes nothing and changes nothing here -- matching native
       // radio semantics (see the class doc) -- but still falls through to activate() below, same
       // as re-selecting any other item.
-      const changeEvent = this.emit(
-        'lr-menu-item-change',
-        { value: this.value, checked: true },
-        { cancelable: true }
-      );
-      if (!changeEvent.defaultPrevented) {
+      if (this.proposeChecked(true)) {
         this.checked = true;
         this.owningMenu?.uncheckRadioGroup(this, this.group);
       }
     }
     this.owningMenu?.activate(this);
+  }
+
+  /** Emits the cancelable `lr-menu-item-change-request` proposal, then its deprecated
+   *  `lr-menu-item-change` alias with its own equal detail, and reports whether neither vetoed. The
+   *  alias is dispatched unconditionally so a listener bound only to the old name can still veto,
+   *  exactly as one bound to the canonical name can. */
+  private proposeChecked(checked: boolean): boolean {
+    const value = this.value;
+    const request = this.emit(
+      'lr-menu-item-change-request',
+      { value, checked },
+      { cancelable: true }
+    );
+    const deprecatedAlias = this.emit(
+      'lr-menu-item-change',
+      { value, checked },
+      { cancelable: true }
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-menu-item-change', 'lr-menu-item-change-request');
+    }
+    return !request.defaultPrevented && !deprecatedAlias.defaultPrevented;
   }
 
   /** Opens this item's submenu. A no-op without one, or while `disabled`/`loading`. `focus` uses
@@ -963,6 +987,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     return this.readSlottedLabel();
   }
 
+  /** @internal The loading spinner's part tokens. A subclass registered under another tag may add
+   *  its own name for the same node. */
+  protected get spinnerParts(): string {
+    return 'spinner spinner__base';
+  }
+
   override render(): TemplateResult {
     const baseContent = html`
       <span part="icon" aria-hidden="true" inert ?hidden=${!this.hasIconSlot}>
@@ -991,7 +1021,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         <slot name="suffix" @slotchange=${this.onSuffixSlotChange}></slot>
       </span>
       ${this.loading
-        ? html`<span part="spinner spinner__base" aria-hidden="true"
+        ? html`<span part=${this.spinnerParts} aria-hidden="true"
             >${spinnerIcon()}</span
           >`
         : nothing}

@@ -7,13 +7,24 @@ import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraFrame,
+  type LyraSize,
+  type LyraVariant,
+} from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './stat.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** The sizes that select the compact density, which the deprecated `compact` alias reads back. */
+const COMPACT_SIZES: ReadonlySet<unknown> = new Set(['2xs', 'xs', 's', 'small']);
+const isCompactSize = (size: unknown): boolean => COMPACT_SIZES.has(size);
 
 export type StatGoodDirection = 'up' | 'down';
 export type StatOrientation = LyraOrientation;
@@ -100,12 +111,12 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  *   fill of a linked card mixes from this value too, so one override retints both. `frame="plain"`
  *   still paints transparent.
  * @cssprop [--lr-stat-padding=var(--lr-space-m)] - Padding of the card, read by both `[part="base"]`
- *   and the linked-card content wrapper so a linked and unlinked stat never drift. The `compact`
- *   and `frame="plain"` variants read the same property with their own current default as its
- *   fallback (`var(--lr-space-s)` and `0` respectively), so one override reaches every rendering
- *   path.
+ *   and the linked-card content wrapper so a linked and unlinked stat never drift. The compact
+ *   density (`size="s"` and below) and `frame="plain"` read the same property with their own
+ *   current default as its fallback (`var(--lr-space-s)` and `0` respectively), so one override
+ *   reaches every rendering path.
  * @cssprop [--lr-stat-gap=var(--lr-space-xs)] - Gap between the card's stacked parts, read by both
- *   `[part="base"]` and the linked-card content wrapper. The `compact` variant reads the same
+ *   `[part="base"]` and the linked-card content wrapper. The compact density reads the same
  *   property with its own current default (`var(--lr-size-0-125rem)`) as its fallback.
  * @cssprop [--lr-stat-trend-good-color=var(--lr-color-success)] - Text color of the trend pill
  *   when its polarity is "good". Independent of the headline value's `variant="success"` tint,
@@ -152,6 +163,9 @@ export class LyraStat extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (compact) => (compact ? 's' : undefined), isCompactSize],
+  };
 
   @property() label = '';
   /** Host accessible-name override forwarded to the linked anchor when `href` is safe. */
@@ -226,16 +240,39 @@ export class LyraStat extends LyraElement {
   /** Renders `value` as smaller/lighter prose (e.g. a loading/status message) instead of the bold
    *  numeric headline style, and hides `unit`. */
   @property({ type: Boolean, reflect: true }) prose = false;
-  /** Tighter padding for constrained spaces — same convention as `lr-empty`'s `compact`. */
+  private _size?: LyraSize;
+  /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
+   *  or `small`/`medium`/`large`. `s` and the steps below it select the compact density (tighter
+   *  padding and gap, for constrained spaces); `m` and the steps above it keep the default
+   *  density. Opt-in: with no size the stat renders exactly as before. Unsupported values
+   *  normalize to the omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+  /**
+   * Deprecated spelling of the compact density: `compact` sets `size="s"`, clearing it removes
+   * the size, and any `size` at or below `s` reads back as `compact`. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `size="s"`; removal not before 23.0.0.
+   */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Container treatment — the shared `frame` vocabulary, not a fill. `'card'` (the default) keeps
    *  the bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the
    *  border, background, padding, corner radius and the `block-size: 100%` stretch so the stat can
-   *  sit inline in prose, a toolbar or a table cell. `plain` wins over `compact` when both are set
-   *  (nothing left to tighten), and it also drops `emphasis`'s accent edge — that edge is card
-   *  chrome — while `emphasis`'s brand value tint still applies. A `plain` stat with a safe `href`
-   *  swaps the card's border-color/lift hover affordance (invisible with no border) for an
-   *  underline on `[part='value']`; the `:focus-visible` ring is unchanged.
+   *  sit inline in prose, a toolbar or a table cell. `plain` wins over the compact density when
+   *  both are set (nothing left to tighten), and it also drops `emphasis`'s accent edge — that
+   *  edge is card chrome — while `emphasis`'s brand value tint still applies. A `plain` stat with
+   *  a safe `href` swaps the card's border-color/lift hover affordance (invisible with no border)
+   *  for an underline on `[part='value']`; the `:focus-visible` ring is unchanged.
    *
    *  This was `appearance` before 8.0.0, where `appearance` meant two unrelated things across the
    *  library; it now means "how a control fills itself" everywhere, and the container treatment it

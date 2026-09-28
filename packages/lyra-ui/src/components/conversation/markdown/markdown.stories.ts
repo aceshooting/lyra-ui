@@ -45,7 +45,7 @@ const gfmSample = `| Feature | Status |
 `;
 
 export const GithubFlavored: Story = {
-  render: () => html`<lr-markdown gfm .content=${gfmSample}></lr-markdown>`,
+  render: () => html`<lr-markdown .content=${gfmSample}></lr-markdown>`,
 };
 
 const codeSample = '```ts\nexport function greet(name: string): string {\n  return `Hello, ${name}!`;\n}\n```\n';
@@ -260,7 +260,7 @@ export const CodeBlockHeaders: Story = {
 };
 export const RightToLeftCode: Story = {
   parameters: { docs: { description: { story: 'Arabic prose with inline code, a fenced block with one long line, an indented block and an authored `<pre>` of Arabic verse in sanitize mode. Code reads left-to-right; prose and the authored verse follow their own direction.' } } },
-  render: () => html`<div dir="rtl" lang="ar" style="inline-size: 400px; max-inline-size: 100%"><lr-markdown code-block-header .highlightCode=${false} .content=${'استخدم الخيار `--verbose` لعرض التفاصيل.\n\n```js\nconst report = buildReport({ verbose: true, locale: \'ar\', includeTimings: true, destination: \'./out/report.json\' });\n```\n\n    indented_code --flag\n\n<pre>قصيدة عربية\nسطر ثانٍ من الشعر</pre>'}></lr-markdown></div>`,
+  render: () => html`<div dir="rtl" lang="ar" style="inline-size: 400px; max-inline-size: 100%"><lr-markdown code-block-header without-syntax-highlighting .content=${'استخدم الخيار `--verbose` لعرض التفاصيل.\n\n```js\nconst report = buildReport({ verbose: true, locale: \'ar\', includeTimings: true, destination: \'./out/report.json\' });\n```\n\n    indented_code --flag\n\n<pre>قصيدة عربية\nسطر ثانٍ من الشعر</pre>'}></lr-markdown></div>`,
 };
 
 export const ProgressiveStreaming: Story = {

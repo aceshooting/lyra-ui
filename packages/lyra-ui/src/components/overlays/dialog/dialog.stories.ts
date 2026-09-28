@@ -66,7 +66,7 @@ export const LabelPropNoHeading: Story = {
       <lr-dialog label="Delete this item?">
         <p style="margin: 0;">
           The <code>label</code> property visibly renders in the mapped title row and names the
-          dialog. Use <code>accessible-label</code> for an accessible-only override.
+          dialog. Use a host <code>aria-label</code> for an accessible-only override.
         </p>
         <div slot="footer">
           <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('cancel')}>
@@ -92,7 +92,6 @@ export const AccessibleNameWithVisibleHeading: Story = {
       .open=${context.viewMode !== 'docs'}
       heading="Visible account settings"
       aria-label="Account settings dialog"
-      closable
     >
       <p>The visible heading remains present while assistive technology receives the explicit host name.</p>
     </lr-dialog>
@@ -168,7 +167,6 @@ export const NarrowLongContent: Story = {
       .open=${context.viewMode !== 'docs'}
       dir="rtl"
       heading="إعداداتالمشروعالدوليةطويلةجداً"
-      closable
     >
       <p>محتوىواجهةحوارمحليطويلجداًبدونأيفرصةللفصلالتلقائي</p>
       <p>تبقى التفاصيل الطويلة ورسائل التحقق قابلة للقراءة والتمرير داخل مساحة الحوار الضيقة.</p>
@@ -194,7 +192,6 @@ export const KeyboardScrollAfterResize: Story = {
     <lr-dialog
       .open=${context.viewMode !== 'docs'}
       heading="Reading view"
-      closable
       style="--lr-dialog-width: 70rem"
     >
       <button
@@ -226,7 +223,6 @@ export const HeaderSlots: Story = {
   render: (_args, context) => html`
     <lr-dialog
       .open=${context.viewMode !== 'docs'}
-      closable
       heading-level="2"
       style="--lr-dialog-spacing: 1.25rem; --lr-dialog-backdrop-filter: blur(3px);"
     >
@@ -251,7 +247,6 @@ export const AssertiveHeight: Story = {
     <lr-dialog
       .open=${context.viewMode !== 'docs'}
       heading="Release notes"
-      closable
       style="--lr-dialog-height: 20rem;"
     >
       ${Array.from({ length: 20 }, (_, i) => html`<p>Line ${i + 1} of the changelog.</p>`)}
@@ -280,7 +275,7 @@ export const SizeTiers: Story = {
         (size) => html`
           <div>
             <button @click=${openDialog}>Open size="${size}"</button>
-            <lr-dialog size=${size} label="Size ${size}" closable>
+            <lr-dialog size=${size} label="Size ${size}">
               <p style="margin: 0;">This panel's width cap is <code>size="${size}"</code>.</p>
             </lr-dialog>
           </div>
@@ -295,7 +290,7 @@ export const WithoutHeader: Story = {
     docs: {
       description: {
         story:
-          '`no-header` (and the Web Awesome/legacy `without-header` alias) drops the header row entirely. Pair custom chrome with `accessible-label`, a host `aria-label`, or a direct heading.',
+          '`no-header` (and the Web Awesome/legacy `without-header` alias) drops the header row entirely. Pair custom chrome with a host `aria-label` or a direct heading.',
       },
     },
   },
@@ -304,9 +299,9 @@ export const WithoutHeader: Story = {
       .open=${context.viewMode !== 'docs'}
       heading="Never rendered"
       no-header
-      accessible-label="Custom chrome"
+      aria-label="Custom chrome"
     >
-      <p style="margin: 0;">No header row is rendered even though heading and closable are both set.</p>
+      <p style="margin: 0;">No header row is rendered even though a heading and the default close button are both set.</p>
     </lr-dialog>
   `,
 };
@@ -344,7 +339,6 @@ export const AutofocusAndLifecycle: Story = {
       <button @click=${openDialog}>Open dialog</button>
       <lr-dialog
         heading="Rename project"
-        closable
         @lr-after-show=${() => console.info('lr-after-show')}
         @lr-after-hide=${() => console.info('lr-after-hide')}
       >

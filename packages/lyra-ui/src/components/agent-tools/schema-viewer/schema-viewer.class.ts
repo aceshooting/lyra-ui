@@ -688,15 +688,31 @@ function snapshotSchema(value: unknown): JsonSchemaNode | null {
  * @csspart limit - Resource-ceiling status shown when additional nodes are omitted.
  * @csspart issue-limit - Resource-ceiling status shown when additional validation issues are omitted.
  * @csspart empty - The empty state.
- * @cssprop [--lr-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
- * @cssprop [--lr-schema-viewer-max-indent=var(--lr-size-12rem)] - Maximum visual indentation;
+ * @cssprop [--lr-json-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
+ * @cssprop [--lr-json-schema-viewer-max-indent=var(--lr-size-12rem)] - Maximum visual indentation;
  *   complete JSON Pointer paths and selection semantics remain unchanged at deeper levels.
- * @cssprop [--lr-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
- * @cssprop [--lr-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Error issue background.
- * @cssprop [--lr-schema-viewer-warning-border=var(--lr-color-warning)] - Warning issue border.
- * @cssprop [--lr-schema-viewer-warning-bg=var(--lr-color-warning-quiet)] - Warning issue background.
- * @cssprop [--lr-schema-viewer-info-border=var(--lr-color-brand)] - Info issue border.
- * @cssprop [--lr-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Info issue background.
+ * @cssprop [--lr-json-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
+ * @cssprop [--lr-json-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Error issue background.
+ * @cssprop [--lr-json-schema-viewer-warning-border=var(--lr-color-warning)] - Warning issue border.
+ * @cssprop [--lr-json-schema-viewer-warning-bg=var(--lr-color-warning-quiet)] - Warning issue background.
+ * @cssprop [--lr-json-schema-viewer-info-border=var(--lr-color-brand)] - Info issue border.
+ * @cssprop [--lr-json-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Info issue background.
+ * @cssprop [--lr-schema-viewer-selected-border=var(--lr-color-brand)] - Deprecated alias of `--lr-json-schema-viewer-selected-border`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-max-indent=var(--lr-size-12rem)] - Deprecated alias of `--lr-json-schema-viewer-max-indent`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-error-border=var(--lr-color-danger)] - Deprecated alias of `--lr-json-schema-viewer-error-border`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Deprecated alias of `--lr-json-schema-viewer-error-bg`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-warning-border=var(--lr-color-warning)] - Deprecated alias of `--lr-json-schema-viewer-warning-border`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-warning-bg=var(--lr-color-warning-quiet)] - Deprecated alias of `--lr-json-schema-viewer-warning-bg`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-info-border=var(--lr-color-brand)] - Deprecated alias of `--lr-json-schema-viewer-info-border`; removal not
+ *   before 23.0.0.
+ * @cssprop [--lr-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Deprecated alias of `--lr-json-schema-viewer-info-bg`; removal not
+ *   before 23.0.0.
  * @status stable
  * @since 9.0.0
  */

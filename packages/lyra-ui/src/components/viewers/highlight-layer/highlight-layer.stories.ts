@@ -36,7 +36,7 @@ export const NonInteractive: Story = {
   render: () => html`
     <figure style="position:relative; width:320px; margin:0;">
       <div style="width:320px; height:200px; background:var(--lr-color-surface-raised);"></div>
-      <lr-highlight-layer .items=${ITEMS} .interactive=${false}></lr-highlight-layer>
+      <lr-highlight-layer .items=${ITEMS} without-interaction></lr-highlight-layer>
     </figure>
   `,
 };

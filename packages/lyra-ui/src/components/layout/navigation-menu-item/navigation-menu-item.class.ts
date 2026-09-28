@@ -37,7 +37,10 @@ import { styles } from './navigation-menu-item.styles.js';
 
 /** Payload emitted with `lr-toggle` after an accepted disclosure change renders. */
 export interface LyraNavigationMenuToggleDetail {
+  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
   open: boolean;
+  /** Whether the item's panel is now open. */
+  expanded?: boolean;
   source: LyraDetailsToggleSource;
 }
 
@@ -96,9 +99,10 @@ function parseTimeList(value: string): number[] {
  *   link item.
  * @slot expand-icon - Replaces the caret glyph. The wrapper is inert and `aria-hidden`.
  * @event lr-toggle - An accepted open-state change rendered. Not cancelable.
- *   `detail: { open: boolean, source: 'user' | 'programmatic' | 'peer' }`; `peer` means a sibling
- *   opened. Never emitted for initial markup. Panel content such as `lr-details` also bubbles
- *   `lr-toggle`, so a delegated listener filters on `event.target.localName`.
+ *   `detail: { expanded: boolean, open: boolean, source: 'user' | 'programmatic' | 'peer' }`;
+ *   `expanded` is the new state (the deprecated `open` key carries the same value) and `peer`
+ *   means a sibling opened. Never emitted for initial markup. Panel content such as `lr-details`
+ *   also bubbles `lr-toggle`, so a delegated listener filters on `event.target.localName`.
  * @csspart base - The native link or button. Also carries `base-current` while `current` is set
  *   and `base-open` while its panel is open.
  * @csspart base-current - State alias on the base while `current` is set.
@@ -421,7 +425,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   private queueToggle(open: boolean, source: NavigationMenuToggleSource | null): void {
     if (source === null) return;
     void this.updateComplete.then(() => {
-      this.emit('lr-toggle', { open, source });
+      this.emit('lr-toggle', { open, expanded: open, source });
     });
   }
 

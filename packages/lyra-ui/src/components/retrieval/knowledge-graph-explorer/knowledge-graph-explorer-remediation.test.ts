@@ -11,21 +11,21 @@ import { PresetSearchQuery } from './knowledge-graph-explorer.stories.js';
 
 const nodes = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }];
 
-it('keeps a removed search-query null while clearing the actual search surface and results', async () => {
+it('keeps a removed query null while clearing the actual search surface and results', async () => {
   const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
-    search-query="Alpha" .nodes=${nodes}
+    query="Alpha" .nodes=${nodes}
   ></lr-knowledge-graph-explorer>`);
-  el.removeAttribute('search-query');
+  el.removeAttribute('query');
   await el.updateComplete;
-  expect(el.searchQuery).to.equal(null);
+  expect(el.query).to.equal(null);
   const input = el.shadowRoot!.querySelector<LyraInput>('[part="search"]')!;
   await input.updateComplete;
   expect(input.value).to.equal('');
   expect(el.shadowRoot!.querySelectorAll('[part="search-results"]').length).to.equal(0);
-  el.setAttribute('search-query', '');
+  el.setAttribute('query', '');
   await el.updateComplete;
-  expect(el.searchQuery).to.equal('');
-  el.setAttribute('search-query', 'Beta');
+  expect(el.query).to.equal('');
+  el.setAttribute('query', 'Beta');
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="search-result"]')!.textContent).to.include('Beta');
 });
@@ -33,7 +33,7 @@ it('keeps a removed search-query null while clearing the actual search surface a
 it('routes native path-node activation through selection, graph focus and details once', async () => {
   const path = [{ kind: 'node', node: nodes[0] }, { kind: 'edge', relation: 'knows' }, { kind: 'node', node: nodes[1] }];
   const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
-    .nodes=${nodes} .links=${[{ source: 'a', target: 'b' }]} .path=${path}
+    .nodes=${nodes} .edges=${[{ source: 'a', target: 'b' }]} .path=${path}
   ></lr-knowledge-graph-explorer>`);
   const graph = el.shadowRoot!.querySelector<LyraGraph>('[part="graph"]')!;
   await waitUntil(() => graph.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'graph nodes render', { timeout: 5000 });
@@ -75,7 +75,7 @@ it('the actual preset-search story displays canonical query and match metadata a
   await sendKeys({ press: 'Control+A' });
   await sendKeys({ type: 'einstein' });
   await el.updateComplete;
-  expect(el.searchQuery).to.equal('einstein');
+  expect(el.query).to.equal('einstein');
   expect(wrapper.querySelector('output')!.textContent).to.equal('einstein');
   expect(wrapper.querySelectorAll('output')[1]?.textContent).to.equal('0 (exact)');
 });

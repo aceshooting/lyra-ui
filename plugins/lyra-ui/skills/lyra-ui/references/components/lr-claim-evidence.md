@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,15 +36,16 @@ the danger treatment instead of producing an empty or misleading badge.
 At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
 `limit` notice after the list rather than mounting an unbounded number of rows.
 
-- `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
-  evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
-  density knob: each claim's border and background stay. `false` (the default) keeps the full
-  claim-trigger padding.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the
+  same convention as `lr-source-card`'s/`lr-entity-card`'s `size`. Purely a density knob: each
+  claim's border and background stay. `m` (the default) and larger keep the full claim-trigger
+  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps each claim's bordered, filled box;
   `'plain'` removes the border, background, and corner radius from every `claim` row, so claims
-  nested inside an already-bordered container don't double the frame. `plain` wins over `compact`
-  when both are set — nothing left to tighten.
+  nested inside an already-bordered container don't double the frame. `plain` wins over the dense
+  `size` tier when both are set — nothing left to tighten.
 
 **Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`). A nested
 `lr-citation-badge` activation is contained and translated to `lr-citation-select`; the distinct
@@ -56,9 +57,9 @@ composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unch
 500-claim render ceiling), `empty`.
 
 **Themeable custom properties:** `--lr-claim-evidence-compact-padding` (default
-`var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `compact`;
+`var(--lr-space-xs)`) — `[part='claim-trigger']`'s padding while `size` is `s` or smaller;
 `--lr-claim-evidence-compact-gap` (default `var(--lr-space-xs)`) — the gap between
-`[part='claim-trigger']`'s columns while `compact`. Both apply only in the `compact` state.
+`[part='claim-trigger']`'s columns at that size. Both apply only in the dense tier.
 Otherwise shared tokens only.
 
 Selection is controlled: activation emits the complete claim but does not assign

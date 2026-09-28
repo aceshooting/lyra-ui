@@ -28,7 +28,7 @@ export const Collapsible: StoryObj = {
       <lr-app-rail-item href="/atlas">Atlas</lr-app-rail-item>
       <lr-app-rail-item href="/beacon">Beacon</lr-app-rail-item>
     </lr-app-rail-group>
-    <lr-app-rail-group collapsible heading="Archived" open="false">
+    <lr-app-rail-group collapsible heading="Archived" collapsed>
       <lr-app-rail-item href="/older">Older</lr-app-rail-item>
     </lr-app-rail-group>
   `,

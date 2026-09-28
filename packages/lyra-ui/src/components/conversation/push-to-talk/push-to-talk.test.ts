@@ -11,6 +11,7 @@ import "../../utility/live-region/live-region.js";
 import type { LyraPushToTalk } from "./push-to-talk.js";
 import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -232,23 +233,62 @@ it("defaults to mode=hold, state=idle, and every capture prop at its documented 
   expect(el.deviceId).to.equal("");
   expect(el.levelEvents).to.be.false;
   expect(el.maxDurationMs).to.equal(0);
-  expect(el.showTimer).to.be.true;
+  expect(el.withoutTimer).to.be.false;
   expect(el.disabled).to.be.false;
   expect(el.stream).to.be.null;
 });
 
-it('accepts show-timer="false" as a plain-HTML attribute string, not just a property binding', async () => {
-  const el = (await fixture(
-    html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
-  )) as LyraPushToTalk;
+it('keeps the deprecated show-timer="false" alias equal to without-timer, warning once', async () => {
+  let el!: LyraPushToTalk;
+  let both!: LyraPushToTalk;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-push-to-talk", kind: "property", name: "showTimer" }],
+    async () => {
+      el = (await fixture(
+        html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+      both = (await fixture(
+        html`<lr-push-to-talk show-timer without-timer></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    "lyra-deprecated:lr-push-to-talk:property:showTimer",
+  ]);
+  expect(el.withoutTimer).to.be.true;
   expect(el.showTimer).to.be.false;
+  expect(both.withoutTimer, "the later without-timer attribute wins").to.be.true;
+  expect(both.showTimer).to.be.false;
 });
 
-it("leaving show-timer unset keeps the documented true default", async () => {
+it("forwards a show-timer property write, syncs back from without-timer, and lets the last write win", async () => {
+  let el!: LyraPushToTalk;
+  let both!: LyraPushToTalk;
+  await captureDeprecationWarnings(
+    [{ tag: "lr-push-to-talk", kind: "property", name: "showTimer" }],
+    async () => {
+      el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      el.showTimer = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-push-to-talk without-timer show-timer></lr-push-to-talk>`
+      )) as LyraPushToTalk;
+    }
+  );
+  expect(el.withoutTimer).to.be.true;
+  el.withoutTimer = false;
+  await el.updateComplete;
+  expect(el.showTimer).to.be.true;
+  expect(both.withoutTimer, "the later show-timer attribute wins").to.be.false;
+  expect(both.showTimer).to.be.true;
+});
+
+it("leaving without-timer unset keeps the timer on by default", async () => {
   const el = (await fixture(
     html`<lr-push-to-talk></lr-push-to-talk>`
   )) as LyraPushToTalk;
-  expect(el.showTimer).to.be.true;
+  expect(el.withoutTimer).to.be.false;
+  expect(el.hasAttribute("without-timer")).to.be.false;
 });
 
 it("formats the elapsed timer with the effective locale’s digits and zero-padding", async () => {
@@ -1998,11 +2038,11 @@ it("emits no lr-level when level-events is unset (the default)", async () => {
   }
 });
 
-it("starts and stops the elapsed timer when show-timer changes during recording", async () => {
+it("starts and stops the elapsed timer when without-timer changes during recording", async () => {
   const restore = stubSuccessfulCapture();
   try {
     const el = (await fixture(
-      html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+      html`<lr-push-to-talk without-timer></lr-push-to-talk>`
     )) as LyraPushToTalk;
     const runtime = el as unknown as {
       tickTimer?: { owner: Window; handle: number };
@@ -2010,11 +2050,11 @@ it("starts and stops the elapsed timer when show-timer changes during recording"
     await el.start();
     expect(runtime.tickTimer === undefined).to.equal(true);
 
-    el.showTimer = true;
+    el.withoutTimer = false;
     await el.updateComplete;
     expect(runtime.tickTimer !== undefined).to.equal(true);
 
-    el.showTimer = false;
+    el.withoutTimer = true;
     await el.updateComplete;
     expect(runtime.tickTimer === undefined).to.equal(true);
     el.cancel();
@@ -2060,7 +2100,7 @@ it("starts, reschedules, and disables the recording-start deadline when max-dura
   let nextHandle = 500;
   try {
     const el = (await fixture(
-      html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
+      html`<lr-push-to-talk without-timer></lr-push-to-talk>`
     )) as LyraPushToTalk;
     const runtime = el as unknown as {
       maxDurationTimer?: { owner: Window; handle: number };

@@ -41,7 +41,7 @@ describe('lr-lite-chart axisLabelText', () => {
   it('renders every source label as its own tick when unset', async () => {
     const el = await mount(html`<lr-lite-chart
       type="bar"
-      show-data-table
+      with-data-table
       .labels=${LABELS}
       .datasets=${DATASETS}
     ></lr-lite-chart>`);
@@ -52,7 +52,7 @@ describe('lr-lite-chart axisLabelText', () => {
   it('overrides the rendered tick text without touching the data source', async () => {
     const el = await mount(html`<lr-lite-chart
       type="bar"
-      show-data-table
+      with-data-table
       .labels=${LABELS}
       .datasets=${PAIR}
       .axisLabelText=${(label: string, index: number) => `${index}:${label}`}
@@ -73,7 +73,7 @@ describe('lr-lite-chart axisLabelText', () => {
   it('renders no tick at all for a category the callback blanks with null', async () => {
     const el = await mount(html`<lr-lite-chart
       type="bar"
-      show-data-table
+      with-data-table
       .labels=${LABELS}
       .datasets=${PAIR}
       .axisLabelText=${(label: string, index: number) => (index % 2 === 0 ? label : null)}

@@ -37,20 +37,20 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
-  /* Density escape -- same convention as lr-empty's compact. Tuned values sit in inline var()
+  /* Density escape for the dense size tier (s and smaller). Tuned values sit in inline var()
      fallbacks, not a :host declaration (re-declared per instance, shadowing ancestor values), so a
      sidebar list retunes every row from outside; each fallback is the prior value one step down, so
      an unset row is unchanged. MUST precede the :host([active]) rules below -- equal specificity,
      so source order alone decides any declaration they share, and active is the stronger appearance
      statement.
 
-     compact deliberately skips [part='rename-button']'s min-inline-size/min-block-size (the shared
+     The dense tier deliberately skips [part='rename-button']'s min-inline-size/min-block-size (the shared
      --lr-icon-button-size target floor -- lower that token at an ancestor instead),
      [part='start']'s min sizes, and the excerpt/timestamp font sizes (already the smallest steps
      here; retune via the host's inherited font-size). The excerpt stays visible too: single-line
      ellipsised and ?hidden-bindable per row, it costs one line, and hiding it is a consumer
      decision. */
-  :host([compact]) [part~='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part~='base'] {
     padding: var(--lr-conversation-item-compact-padding, var(--lr-space-xs) var(--lr-space-s));
     gap: var(--lr-conversation-item-compact-gap, var(--lr-space-2xs));
   }
@@ -134,7 +134,7 @@ export const styles = css`
   }
   /* The label/excerpt/meta column's inter-row gap collapses entirely: the three lines carry their
      own line-height, so the hairline goes first. No var() hatch -- no smaller step to retune to. */
-  :host([compact]) [part='content'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='content'] {
     gap: 0;
   }
 

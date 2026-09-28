@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -93,6 +94,10 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    editable: ['readonly', invertAlias, invertAlias],
+  };
+
   /** Requests in display order. Controlled and never mutated by this component. Empty ids are
    *  omitted and duplicate ids normalize first-wins before counts, selection, dialog lookup, and
    *  events. */
@@ -102,7 +107,10 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   @property({ attribute: 'selected-invocation-id' }) selectedInvocationId: string | null = null;
   /** Whether the decision dialog is open. */
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Allows argument editing in the nested approval dialog. */
+  /** Withholds argument editing in the nested approval dialog. */
+  @property({ type: Boolean }) readonly = false;
+  /** Allows argument editing in the nested approval dialog.
+   *  @deprecated Use `readonly`; removal not before 23.0.0. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) editable = true;
   /** Accessible name and visible heading. Optional. Omitting it localizes the default
    *  `approvalQueueLabel` message; an explicit empty string renders no visible/accessible label. */
@@ -273,7 +281,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
               .open=${this.open}
               .toolName=${request.toolName}
               .args=${request.args}
-              .editable=${this.editable}
+              .readonly=${this.readonly}
               @lr-approve=${(event: CustomEvent<{ args: unknown }>) => this.onApprove(request, event)}
               @lr-deny=${(event: CustomEvent<null>) => this.onDeny(request, event)}
               @lr-close=${(event: CustomEvent<ToolApprovalDialogCloseReason>) => this.onClose(request, event)}

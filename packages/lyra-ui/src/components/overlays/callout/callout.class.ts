@@ -28,6 +28,7 @@ import {
   contextualVariants,
 } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   literalSetConverter,
   presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
@@ -161,24 +162,28 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  *   (`--lr-icon-button-size`) in both the default panel and the compact `inline` variant. As of
  *   16.0.0 this is a composed `<lr-icon-button>` host, not a native `<button>`: it still owns the
  *   grid placement, but the painted surface moved one shadow boundary deeper -- style it through
- *   `close-button__control` or the `--lr-icon-button-*` tokens. To resize it, set
+ *   `close-button-control` or the `--lr-icon-button-*` tokens. To resize it, set
  *   `--lr-icon-button-size-scope` (or the application-wide `--lr-theme-icon-button-size`) on this
  *   element or an ancestor -- NOT `--lr-icon-button-size` itself, which every `LyraElement`
  *   re-declares on its own `:host` and so never reaches this composed child.
- * @csspart close-button__control - The composed `<lr-icon-button>`'s own native control, forwarded
+ * @csspart close-button-control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface (background, radius, hover/press fill, focus ring and hit-area
  *   floor) now sits one shadow boundary deeper than `close-button`.
+ * @csspart close-button__control - Deprecated alias of `close-button-control` on the same node;
+ *   removal not before 23.0.0.
  * @csspart close-icon - The close button's visible "×" glyph, independent of the control's hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
- * @cssprop [--lr-callout-background=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
+ * @cssprop [--lr-callout-bg=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
  *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
  *   fallback.
+ * @cssprop [--lr-callout-background=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
+ *   Deprecated alias of `--lr-callout-bg`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-callout-border=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's border color.
  * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's text color.
  * @cssprop [--lr-callout-close-hover-bg=var(--lr-color-brand-quiet)] - The close button's hover
- *   background, decoupled from `--lr-callout-background` so a consumer can retint one without
+ *   background, decoupled from `--lr-callout-bg` so a consumer can retint one without
  *   affecting the other (e.g. keeping the hover fill visibly distinct from a `variant="brand"`
  *   panel, which shares the same default token).
  * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size,var(--lr-font-size-m))] - The callout's text size.
@@ -211,6 +216,13 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     contextualSizes,
     styles,
   ];
+
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
@@ -319,7 +331,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   open = true;
+  /** Accessible context for the callout, used only when the host has no `aria-label`: it names
+   *  the grouped panel and prefixes announced updates. In markup, use the host `aria-label`; the
+   *  `accessible-label` attribute spelling is deprecated (removal not before 23.0.0) and logs a
+   *  one-time development warning. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** The host `aria-label`: names the grouped panel and prefixes announced updates, winning by
+   *  presence over `accessibleLabel`. */
+  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
   private liveActive = false;
   private initialContentAnnounced = false;
@@ -513,7 +532,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   }
 
   private resolvedAccessibleLabel(): string {
-    const hostLabel = this.getAttribute('aria-label');
+    const hostLabel = this.hostAriaLabel;
     return this.normalizedText(
       hostLabel !== null ? hostLabel : this.accessibleLabel
     );
@@ -521,7 +540,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   private announcementText(): string {
     if (!isAccessibilityVisible(this)) return '';
-    const hostLabel = this.getAttribute('aria-label');
+    const hostLabel = this.hostAriaLabel;
     const context = this.normalizedText(
       hostLabel !== null ? hostLabel : this.accessibleLabel
     );
@@ -618,7 +637,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       </div>
       <lr-icon-button
         part="close-button"
-        exportparts="button:close-button__control"
+        exportparts="button:close-button-control, button:close-button__control"
         ?hidden=${!this.closable}
         aria-label=${this.localize('close')}
         @click=${this.close}

@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `locked` / `locked` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -25,12 +25,17 @@ gap overrides also govern vertical pointer snapping. The component continues to 
 layout proposals; the caller accepts them by assigning `layout`.
 
 **Properties:** `layout: readonly LyraDashboardCell[] = []` (attribute: false, never mutated by the component),
-`columns: number = 12`, `rowHeight: number = 80` (px, also the row snap pitch), `gap: number = 8`
-(px, both axes), `collision: 'reject' | 'push' | 'overlap' = 'reject'`, `cellsDraggable: boolean = false`
-(attribute `cells-draggable` — pointer drag plus Ctrl/Cmd+Arrow), `cellsResizable: boolean = false`
-(attribute `cells-resizable` — the resize handle plus Ctrl/Cmd+Shift+Arrow), `locked: boolean =
-false` (reflected — disables every gesture grid-wide), `accessibleLabel: string | null = null`
-(attribute `aria-label`, falls back to a localized grid name).
+`columns: number = 12`, `rowHeight: number | string = 80` (attribute `row-height`; also the row
+snap pitch), `gap: number | string = 8` (both axes), `collision: 'reject' | 'push' | 'overlap' =
+'reject'`, `cellsDraggable: boolean = false` (attribute `cells-draggable` — pointer drag plus
+Ctrl/Cmd+Arrow), `cellsResizable: boolean = false` (attribute `cells-resizable` — the resize handle
+plus Ctrl/Cmd+Shift+Arrow), `readonly: boolean = false` (reflected — disables every gesture
+grid-wide), `accessibleLabel: string | null = null` (attribute `aria-label`, falls back to a
+localized grid name). `rowHeight` and `gap` take a number of pixels or a CSS length (`px`, `rem`,
+`em`, `vw`, `vh`), resolved to pixels when the grid renders — `rem` against the document root, `em`
+against the grid; a numeric attribute value parses to a number, and an unresolvable value falls back
+to the default. Deprecated alias: `locked` (use `readonly`; removed in 23.0.0). Both reflect and stay in step;
+the last write wins.
 
 **Events:** `lr-cell-move` (`detail: { cellId, position, previous }`), `lr-cell-resize`
 (`detail: { cellId, size, previous }`), `lr-collision`
@@ -67,7 +72,8 @@ Right/Down grow and Left/Up shrink, while pointer resizing retains the logical i
 In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
 interactive-action block-size (`--lr-icon-button-size`). The handle is absolutely positioned and
 cannot contribute intrinsic size itself; the state-aware floor prevents it from overlapping the
-preceding cell or gap while readonly and locked short cells retain content-derived sizing.
+preceding cell or gap while short cells without a handle (a `readonly` grid, or a cell's own
+`locked`) retain content-derived sizing.
 Host, grid, cell, and direct slotted-content boundaries also permit intrinsic inline shrinkage and
 inherit `overflow-wrap: anywhere`, so an unbroken consumer-authored text run cannot widen a 320px
 stack. This does not seize overflow from child-owned widgets: custom content can still declare

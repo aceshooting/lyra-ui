@@ -8,6 +8,7 @@ import type {
   PromptStudioVersion,
 } from './prompt-studio.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -78,7 +79,7 @@ it('normalizes a large message collection once per render while retaining keyed 
     expect(firstAfter.querySelector<HTMLTextAreaElement>('[part="message-content"]')!.value).to.equal('Message 0');
 
     normalizations = 0;
-    const reordered = oneEvent(el, 'lr-message-reorder');
+    const reordered = oneEvent(el, 'lr-message-reorder-request');
     firstAfter.querySelector<HTMLButtonElement>('[part="move-message-down"]')!.click();
     await reordered;
     await el.updateComplete;
@@ -618,9 +619,10 @@ it('emits a cancelable reorder request before applying an immutable next message
   const original = reorderMessages.map((message) => ({ ...message }));
   const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
   const emitted: string[] = [];
+  el.addEventListener('lr-message-reorder-request', () => emitted.push('lr-message-reorder-request'));
   el.addEventListener('lr-message-reorder', () => emitted.push('lr-message-reorder'));
   el.addEventListener('lr-change', () => emitted.push('lr-change'));
-  const reorderPending = oneEvent(el, 'lr-message-reorder');
+  const reorderPending = oneEvent(el, 'lr-message-reorder-request');
   const changePending = oneEvent(el, 'lr-change');
   (el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!).click();
 
@@ -641,7 +643,7 @@ it('emits a cancelable reorder request before applying an immutable next message
     'user',
     'assistant',
   ]);
-  expect(emitted).to.deep.equal(['lr-message-reorder', 'lr-change']);
+  expect(emitted).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder', 'lr-change']);
 });
 
 it('honors a prevented message reorder without mutating state or emitting lr-change', async () => {
@@ -649,7 +651,7 @@ it('honors a prevented message reorder without mutating state or emitting lr-cha
   const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
   let reorderCount = 0;
   let changeCount = 0;
-  el.addEventListener('lr-message-reorder', (event) => {
+  el.addEventListener('lr-message-reorder-request', (event) => {
     reorderCount++;
     event.preventDefault();
   });
@@ -688,7 +690,7 @@ it('supports native keyboard activation and keeps focus with the moved message a
   const el = (await fixture(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
   const moveDown = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!;
   moveDown.focus();
-  const reorderPending = oneEvent(el, 'lr-message-reorder');
+  const reorderPending = oneEvent(el, 'lr-message-reorder-request');
   const changePending = oneEvent(el, 'lr-change');
   await sendKeys({ press: 'Enter' });
   await Promise.all([reorderPending, changePending]);
@@ -703,7 +705,7 @@ it('supports native keyboard activation and keeps focus with the moved message a
     '[data-message-id="system"] [part="move-message-down"]',
   )!;
   secondMoveDown.focus();
-  const secondReorderPending = oneEvent(el, 'lr-message-reorder');
+  const secondReorderPending = oneEvent(el, 'lr-message-reorder-request');
   const secondChangePending = oneEvent(el, 'lr-change');
   await sendKeys({ press: 'Enter' });
   await Promise.all([secondReorderPending, secondChangePending]);
@@ -776,4 +778,92 @@ it('mixes the selected version hover and press from --lr-prompt-studio-version-s
     await sendMouse({ type: 'up' });
     await resetMouse();
   }
+});
+
+describe('lr-prompt-studio deprecated lr-message-reorder alias', () => {
+  const REORDER: readonly DeprecatedUsage[] = [{ tag: 'lr-prompt-studio', kind: 'event', name: 'lr-message-reorder' }];
+  const moveFirstDown = (el: LyraPromptStudio): void =>
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!.click();
+
+  it('still fires the alias after the canonical request, with an equal but separate cancelable detail', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
+    const seen: CustomEvent<PromptStudioMessageReorderDetail>[] = [];
+    el.addEventListener('lr-message-reorder-request', (event) => seen.push(event));
+    el.addEventListener('lr-message-reorder', (event) => seen.push(event));
+    const warnings = await captureDeprecationWarnings(REORDER, async () => {
+      moveFirstDown(el);
+      await el.updateComplete;
+    });
+    expect(seen.map((event) => event.type)).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder']);
+    expect(seen.map((event) => event.cancelable)).to.deep.equal([true, true]);
+    expect(seen[1]!.detail).to.deep.equal(seen[0]!.detail);
+    expect(seen[1]!.detail === seen[0]!.detail).to.be.false;
+    expect(warnings, 'listening without vetoing is not a deprecated use').to.have.length(0);
+    expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'system', 'assistant']);
+  });
+
+  it('lets a listener bound only to the alias veto the move, warning once', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
+    let changeCount = 0;
+    el.addEventListener('lr-change', () => changeCount++);
+    el.addEventListener('lr-message-reorder', (event) => event.preventDefault());
+    const warnings = await captureDeprecationWarnings(REORDER, async () => {
+      moveFirstDown(el);
+      await el.updateComplete;
+      moveFirstDown(el);
+      await el.updateComplete;
+    });
+    expect(changeCount).to.equal(0);
+    expect(el.messages.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-prompt-studio:event:lr-message-reorder']);
+  });
+
+  it('does not warn when the canonical request is the one that vetoes', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
+    el.addEventListener('lr-message-reorder-request', (event) => event.preventDefault());
+    let aliasSawPrevented: boolean | undefined;
+    el.addEventListener('lr-message-reorder', (event) => {
+      aliasSawPrevented = event.defaultPrevented;
+    });
+    const warnings = await captureDeprecationWarnings(REORDER, async () => {
+      moveFirstDown(el);
+      await el.updateComplete;
+    });
+    expect(aliasSawPrevented).to.equal(false);
+    expect(warnings).to.have.length(0);
+    expect(el.messages.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
+  });
+});
+
+describe('lr-prompt-studio heading-level', () => {
+  const heading = (el: LyraPromptStudio): Element => el.shadowRoot!.querySelector('[part="toolbar"]')!.firstElementChild!;
+
+  it('keeps the level-two toolbar heading by default', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Studio"></lr-prompt-studio>`);
+    expect(el.headingLevel).to.equal('2');
+    expect(heading(el).localName).to.equal('h2');
+    expect(heading(el).textContent).to.equal('Studio');
+  });
+
+  it('renders the requested level and drops heading semantics for none, keeping the visual size and weight', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Studio" heading-level="4"></lr-prompt-studio>`);
+    const size = getComputedStyle(heading(el)).fontSize;
+    const weight = getComputedStyle(heading(el)).fontWeight;
+    expect(heading(el).localName).to.equal('h4');
+    el.headingLevel = 'none';
+    await el.updateComplete;
+    expect(heading(el).localName).to.equal('span');
+    expect(heading(el).textContent).to.equal('Studio');
+    expect(getComputedStyle(heading(el)).fontSize).to.equal(size);
+    expect(getComputedStyle(heading(el)).fontWeight).to.equal(weight);
+    await expect(el).to.be.accessible();
+  });
+
+  it('returns to the level-two heading when the heading-level attribute is removed', async () => {
+    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Studio" heading-level="4"></lr-prompt-studio>`);
+    expect(heading(el).localName).to.equal('h4');
+    el.removeAttribute('heading-level');
+    await el.updateComplete;
+    expect(heading(el).localName).to.equal('h2');
+  });
 });

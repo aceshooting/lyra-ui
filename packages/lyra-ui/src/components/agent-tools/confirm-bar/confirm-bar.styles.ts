@@ -8,7 +8,7 @@ export const styles = css`
     container: lr-confirm-bar / inline-size;
     /* inline-size containment removes content-based intrinsic sizing, so without this fallback the
        bar collapses to a sliver in any shrink-to-fit context -- the pairing eval-result, mcp-app
-       and prompt-studio also declare. The compact host sets container: none and is unaffected. */
+       and prompt-studio also declare. The dense host sets container: none and is unaffected. */
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -29,7 +29,7 @@ export const styles = css`
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
-    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+    /* The RESTING frame's own hook, alongside the dense tier's existing padding/gap levers --
        the default tier every approval prompt actually renders was the only one with no
        component-specific override, so retinting one embedded bar meant a ::part(base) rule or an
        app-wide --lr-color-surface change. */
@@ -94,39 +94,39 @@ export const styles = css`
     }
   }
 
-  /* Density escape, matching lr-agent-run's and lr-commit-card's compact: density and layout only,
+  /* Density escape, matching lr-agent-run's and lr-commit-card's dense size tier: density and layout only,
      so the card border, radius and background stay -- frame='plain' below drops those. Tuned
      values sit behind inline var() fallbacks, not a :host declaration every instance would
      re-declare and so shadow an ancestor value. */
-  :host([compact]) {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) {
     display: inline-flex;
-    /* The container query above measures this host, and a compact bar lives in narrow slots, so it
+    /* The container query above measures this host, and a dense bar lives in narrow slots, so it
        would fire nearly always and stretch the buttons -- the opposite of the intent. With no
        containment here and normally no ancestor container, max-inline-size: 20rem never matches. */
     container: none;
   }
-  :host([compact]) [part='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--lr-confirm-bar-compact-gap, var(--lr-space-s));
     padding: var(--lr-confirm-bar-compact-padding, var(--lr-space-s));
   }
-  :host([compact]) [part='heading'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='heading'] {
     flex: 1 1 auto;
     min-inline-size: 0;
   }
-  :host([compact]) [part='footer'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='footer'] {
     flex: 0 0 auto;
   }
   /* Once decided the buttons unmount and [part='footer'] holds only the usually unassigned footer
      slot: a zero-size flex item still eating one gap mid-row. Dropping the box closes the row up
      and promotes any real slotted content to a direct flex item. */
-  :host([compact][decision]) [part='footer'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])[decision]) [part='footer'] {
     display: contents;
   }
   /* Chrome escape: the shared frame='plain' treatment, matching lr-agent-run and lr-result-card.
-     MUST stay after :host([variant='danger']) [part='base'] and :host([compact]) [part='base'] --
+     MUST stay after :host([variant='danger']) [part='base'] and the dense size rule's [part='base'] --
      all three are equal-specificity, so source order decides, and plain ('no chrome at all') is
      the stronger statement. The Deny/Approve lr-buttons keep their own border/background, so a
      chrome-less bar keeps a visible affordance. */
@@ -141,5 +141,5 @@ export const styles = css`
      Chromium's :empty ignores only comments), and that dead rule matters: decide() focuses
      [part='status'] before setting this.decision, so display: none there would no-op .focus() and
      drop focus to <body> as the buttons unmount. The zero-sized item costs one trailing gap in a
-     compact row. See llms/agent-tools.md. */
+     dense row. See llms/agent-tools.md. */
 `;

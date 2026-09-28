@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -78,9 +78,10 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
   `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
   sequence and records are frozen; reassign `legend` after changes.
-- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
+- `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
-  activation or palette selection
+  activation or palette selection. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`;
+  removed in 23.0.0)
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on).

@@ -181,19 +181,19 @@ export const ToggleSelection: Story = {
     docs: {
       description: {
         story:
-          '`toggleable` is the sole opt-in for the native `[part=toggle-button]`; `selected` independently supplies its current `aria-pressed` state. The visible label, start, and end layers become inert and aria-hidden, so the toggle remains the sole action; do not put independent controls in those slots. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection.',
+          '`toggleable` is the sole opt-in for the native `[part=toggle-button]`; `selected` independently supplies its current `aria-pressed` state. The visible label, start, and end layers become inert and aria-hidden, so the toggle remains the sole action; do not put independent controls in those slots. Activation emits the cancelable `lr-chip-toggle-request` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection.',
       },
     },
   },
   render: () => {
     const log = (e: CustomEvent<ChipSelectDetail>) => {
       const out = document.getElementById('chip-toggle-log');
-      if (out) out.textContent = `lr-chip-select: ${JSON.stringify(e.detail)}`;
+      if (out) out.textContent = `lr-chip-toggle-request: ${JSON.stringify(e.detail)}`;
     };
     return html`
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <lr-chip variant="brand" toggleable selected value="series-a" @lr-chip-select=${log}>Series A</lr-chip>
-        <lr-chip variant="brand" toggleable value="category:beta" @lr-chip-select=${log}>Category: Beta</lr-chip>
+        <lr-chip variant="brand" toggleable selected value="series-a" @lr-chip-toggle-request=${log}>Series A</lr-chip>
+        <lr-chip variant="brand" toggleable value="category:beta" @lr-chip-toggle-request=${log}>Category: Beta</lr-chip>
       </div>
       <p id="chip-toggle-log" style="font-family: monospace; margin-top: 0.5rem;">
         No event fired yet. Click a chip, then click it again -- it stays clickable both ways.

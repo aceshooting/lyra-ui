@@ -69,7 +69,7 @@ viewport-to-content ratio. The token inherits from ancestors; set it to `0` to o
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
   from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
   currently renders.
-- A locked snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
+- A readonly canvas snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
   shortcut can mutate the canvas.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up. A completed drag consumes only the browser-synthesized click following its

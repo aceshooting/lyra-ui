@@ -2,6 +2,10 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { Citation, GroundedClaim } from '../../../ai/types.js';
 import './claim-evidence.js';
 import type { LyraClaimEvidence } from './claim-evidence.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
 const claims: GroundedClaim[] = [
   {
@@ -264,14 +268,14 @@ it('suppresses the claim row border and background when frame is plain', async (
   expect(style.borderRadius).to.equal('0px');
 });
 
-it('tightens claim-trigger padding and gap when compact', async () => {
+it('tightens claim-trigger padding and gap when size is s', async () => {
   const defaultEl = (await fixture(
     html`<lr-claim-evidence
       .claims=${claims}
       .citations=${citations}
     ></lr-claim-evidence>`
   )) as LyraClaimEvidence;
-  expect(defaultEl.compact).to.be.false;
+  expect(defaultEl.size).to.equal('m');
   const defaultTrigger = defaultEl.shadowRoot!.querySelector(
     '[part="claim-trigger"]'
   ) as HTMLElement;
@@ -281,7 +285,7 @@ it('tightens claim-trigger padding and gap when compact', async () => {
 
   const compactEl = (await fixture(
     html`<lr-claim-evidence
-      compact
+      size="s"
       .claims=${claims}
       .citations=${citations}
     ></lr-claim-evidence>`
@@ -451,5 +455,67 @@ describe('lr-claim-evidence render cap', () => {
       html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`
     )) as LyraClaimEvidence;
     expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+});
+
+describe('lr-claim-evidence size and the deprecated compact alias', () => {
+  const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-claim-evidence', kind: 'property', name: 'compact' }];
+  const observe = (el: LyraClaimEvidence): string => {
+    const trigger = getComputedStyle(el.shadowRoot!.querySelector('[part="claim-trigger"]')!);
+    return `${trigger.paddingInlineStart}|${trigger.columnGap}`;
+  };
+  const mount = (markup: ReturnType<typeof html>) => fixture<LyraClaimEvidence>(markup);
+
+  it('applies size="s" without a deprecation warning', async () => {
+    let dense = '';
+    let regular = '';
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      dense = observe(await mount(html`<lr-claim-evidence size="s" .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+      regular = observe(await mount(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-claim-evidence size="s" .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+      alias = observe(await mount(html`<lr-claim-evidence compact .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+      const el = await mount(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-claim-evidence:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+      const el = await mount(html`<lr-claim-evidence compact .claims=${claims} .citations=${citations}></lr-claim-evidence>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-claim-evidence compact size="m" .claims=${claims} .citations=${citations}></lr-claim-evidence>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
   });
 });

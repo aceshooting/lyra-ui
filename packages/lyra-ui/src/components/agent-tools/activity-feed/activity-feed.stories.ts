@@ -79,7 +79,7 @@ export const WithTimestamps: Story = {
       style="max-width: 32rem;"
       mode="live"
       expanded
-      show-timestamps
+      with-timestamps
       .entries=${withTimes}
     ></lr-activity-feed>`;
   },
@@ -236,11 +236,11 @@ export const LiveStreamingDemo: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-activity-feed expanded .entries=${entries}></lr-activity-feed>
-      <lr-activity-feed compact expanded .entries=${entries}></lr-activity-feed>
+      <lr-activity-feed size="s" expanded .entries=${entries}></lr-activity-feed>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-activity-feed frame="plain" expanded .entries=${entries}></lr-activity-feed>
       </div>
@@ -250,7 +250,7 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter header/entry-row spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the feed’s internal header/body divider.',
+          'Top to bottom: the default card, `size="s"` (tighter header/entry-row spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the feed’s internal header/body divider.',
       },
     },
   },
@@ -260,7 +260,7 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-activity-feed mode="live" expanded show-timestamps .entries=${entries}></lr-activity-feed>
+      <lr-activity-feed mode="live" expanded with-timestamps .entries=${entries}></lr-activity-feed>
     </div>
   `,
 };

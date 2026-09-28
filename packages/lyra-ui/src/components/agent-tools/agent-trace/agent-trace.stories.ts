@@ -63,7 +63,7 @@ export const Default: Story = {
 };
 
 export const WithTokensAndCost: Story = {
-  render: () => html`<lr-agent-trace style="max-width: 48rem" .spans=${spans} show-tokens show-cost></lr-agent-trace>`,
+  render: () => html`<lr-agent-trace style="max-width: 48rem" .spans=${spans} with-tokens with-cost></lr-agent-trace>`,
 };
 
 export const SyncedSelection: Story = {
@@ -92,7 +92,7 @@ export const Empty: Story = {
 /** 320px container — the filter legend wraps, the handoff list stays full-width, and the tree
  *  falls back to its own narrow-container behavior (hides token/cost columns, then the bar). */
 export const Narrow: Story = {
-  render: () => html`<lr-agent-trace style="max-width: 320px" .spans=${spans} show-tokens show-cost></lr-agent-trace>`,
+  render: () => html`<lr-agent-trace style="max-width: 320px" .spans=${spans} with-tokens with-cost></lr-agent-trace>`,
 };
 
 export const RetintedActiveHandoff: Story = {

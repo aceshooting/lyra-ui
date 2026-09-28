@@ -63,7 +63,7 @@ for (const direction of ['ltr', 'rtl']) {
     expect(alpha(el, 70, 41)).to.equal(0);
     expect(alpha(el, 60, 20)).to.be.lessThan(255);
     const clicks: unknown[] = [];
-    el.addEventListener('lr-cell-click', event => clicks.push(event.detail));
+    el.addEventListener('lr-cell-activate', event => clicks.push(event.detail));
     click(el, 82, 30);
     click(el, 70, 41);
     expect(clicks.length).to.equal(0);

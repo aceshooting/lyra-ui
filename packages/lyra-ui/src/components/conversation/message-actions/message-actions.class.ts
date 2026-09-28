@@ -262,7 +262,7 @@ function editIcon(): SVGTemplateResult {
  * `--lr-theme-icon-button-size` (the application-wide one) -- NOT `--lr-icon-button-size` itself,
  * which every `LyraElement` re-declares on its own `:host` and so never reaches a composed child
  * (`internal/tokens.test.ts` proves this) -- on this element or any ancestor of it;
- * `::part(regenerate-button__control)`/`::part(edit-button__control)` also reach the built-ins'
+ * `::part(regenerate-button-control)`/`::part(edit-button-control)` also reach the built-ins'
  * composed native controls directly for a one-off override. Either way the shrink is local to the
  * elements it targets, not a library-wide floor change. A coarse-pointer/no-hover safety net
  * (`internal/tokens.styles.ts`'s `baseTokens`) then floors the rendered hit area back at
@@ -296,10 +296,14 @@ function editIcon(): SVGTemplateResult {
  *   16.0.0. It still owns the accessible name, the activation and the toolbar tab stop; its
  *   background, radius, hover/press mixes, focus ring and hit-area floor now come from
  *   `--lr-icon-button-*`.
- * @csspart regenerate-button__control - The regenerate action's own native `<button>`, forwarded
+ * @csspart regenerate-button-control - The regenerate action's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `regenerate-button`.
+ * @csspart regenerate-button__control - Deprecated alias of `regenerate-button-control`, on the
+ *   same node; removal not before 23.0.0.
  * @csspart edit-button - The built-in edit action, likewise a composed `<lr-icon-button>`.
- * @csspart edit-button__control - The edit action's own native `<button>`.
+ * @csspart edit-button-control - The edit action's own native `<button>`.
+ * @csspart edit-button__control - Deprecated alias of `edit-button-control`, on the same node;
+ *   removal not before 23.0.0.
  * @csspart feedback - The embedded `lr-message-feedback`.
  * @status stable
  * @since 4.0.0
@@ -948,7 +952,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'regenerate':
         return html`<lr-icon-button
           part="regenerate-button"
-          exportparts="button:regenerate-button__control"
+          exportparts="button:regenerate-button-control, button:regenerate-button__control"
           aria-label=${this.localize('regenerateResponse')}
           @click=${this.onRegenerateClick}
         >
@@ -957,7 +961,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'edit':
         return html`<lr-icon-button
           part="edit-button"
-          exportparts="button:edit-button__control"
+          exportparts="button:edit-button-control, button:edit-button__control"
           aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
         >

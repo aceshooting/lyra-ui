@@ -9,6 +9,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -37,7 +38,7 @@ interface SearchState {
   forceExpand: Set<string>;
   /**
    * Every path key reachable in the tree as of the last walk -- populated
-   * regardless of whether `search` is set, so `expandedOverrides` can be
+   * regardless of whether `query` is set, so `expandedOverrides` can be
    * pruned down to it whenever `data` changes.
    */
   paths: Set<string>;
@@ -411,14 +412,14 @@ export interface LyraJsonViewerEventMap {
  *   `{ ok: false, text, reason, error }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active-match cursor
  *   changes -- from `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct
- *   `search`/`data` property write. `detail: { query, matchCount, matchCountExact, activeIndex }`;
+ *   `query`/`data` property write. `detail: { query, matchCount, matchCountExact, activeIndex }`;
  *   `matchCountExact=false` means the bounded count is a known lower bound.
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
  * @csspart row - A single structural JSON row (opening/value rows and closing-delimiter rows).
  * @csspart key - An object property key or array index label.
- * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, `data-match` while it matches `search`, and `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position.
+ * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, `data-match` while it matches `query`, and `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position.
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
@@ -427,7 +428,7 @@ export interface LyraJsonViewerEventMap {
  *   viewer scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
  * @cssprop [--lr-json-viewer-match-bg=var(--lr-color-warning-quiet)] - Background (and
- *   surrounding box-shadow) of a key/value that currently matches `search`.
+ *   surrounding box-shadow) of a key/value that currently matches `query`.
  * @cssprop [--lr-json-viewer-row-hover-bg=var(--lr-color-brand-quiet)] - Hover background for a
  *   structural row.
  * @cssprop [--lr-json-viewer-active-outline=var(--lr-focus-ring-color)] - Outline color for the
@@ -464,10 +465,23 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    collapsedDepth: 'expandDepth',
+    search: 'query',
+  };
 
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
-  /** Nodes at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined: nothing auto-collapses. */
+  /** Nodes at or beyond this nesting depth (root = 0) start collapsed, so only the levels above it
+   *  start expanded. Omit/undefined: nothing auto-collapses. */
+  @property({ type: Number, attribute: 'expand-depth' })
+  expandDepth?: number;
+  /**
+   * Nodes at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined: nothing auto-collapses.
+   *
+   * @deprecated Use `expand-depth`; removal not before 23.0.0.
+   */
+  // numeric-guard-exempt: deprecated alias kept in step with expandDepth, which safeExpandDepth finiteCount()-normalizes
   @property({ type: Number, attribute: 'collapsed-depth' })
   collapsedDepth?: number;
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
@@ -476,11 +490,17 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
   /** Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
+  @property() query = '';
+  /**
+   * Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property.
+   *
+   * @deprecated Use `query`; removal not before 23.0.0.
+   */
   @property() search = '';
 
   /**
    * Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding
-   * the `collapsedDepth`/search defaults once a node's toggle has been used.
+   * the `expandDepth`/search defaults once a node's toggle has been used.
    * Pruned in `willUpdate()` (to the paths still reachable in the tree)
    * whenever `data` changes, so a long-lived instance bound to reshaping
    * data -- this component's own stated streaming use case -- doesn't
@@ -526,13 +546,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     super.disconnectedCallback();
   }
 
-  /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
+  /** `expandDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
-   *  invalid one. A raw `NaN` (e.g. an invalid `collapsed-depth` attribute) would otherwise make
-   *  every `depth >= collapsedDepth` comparison false, silently disabling auto-collapse instead of
+   *  invalid one. A raw `NaN` (e.g. an invalid `expand-depth` attribute) would otherwise make
+   *  every `depth >= expandDepth` comparison false, silently disabling auto-collapse instead of
    *  falling back to a sane depth. */
-  private get safeCollapsedDepth(): number | undefined {
-    return this.collapsedDepth === undefined ? undefined : finiteCount(this.collapsedDepth);
+  private get safeExpandDepth(): number | undefined {
+    return this.expandDepth === undefined ? undefined : finiteCount(this.expandDepth);
   }
 
   private previewText(type: 'object' | 'array', count: number, exact = true): string {
@@ -559,8 +579,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const override = this.expandedOverrides.get(pathKey);
     if (override !== undefined) return override;
     if (forceExpand.has(pathKey)) return true;
-    const collapsedDepth = this.safeCollapsedDepth;
-    if (collapsedDepth !== undefined && depth >= collapsedDepth) return false;
+    const expandDepth = this.safeExpandDepth;
+    if (expandDepth !== undefined && depth >= expandDepth) return false;
     return true;
   }
 
@@ -630,7 +650,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   /**
    * Builds the key/value-match sets, the ancestor-paths-of-a-match set that
-   * `search` drives, and the full set of path keys reachable in the tree
+   * `query` drives, and the full set of path keys reachable in the tree
    * (`paths`, used to prune `expandedOverrides` -- see `willUpdate()`).
    * Guards against a self-referencing `data` the same way `renderNode()`
    * does: a container value already on the current recursion path is
@@ -638,7 +658,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    */
   private computeSearch(): SearchState {
     const locale = this.effectiveLocale;
-    const query = (this.search ?? '').trim().toLocaleLowerCase(locale);
+    const query = (this.query ?? '').trim().toLocaleLowerCase(locale);
     const keyMatches = new Set<string>();
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
@@ -909,7 +929,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       this.dataSnapshotTruncated = snapshot.truncated;
     }
     const locale = this.effectiveLocale;
-    if (!this.hasUpdated || changed.has('data') || changed.has('search') || locale !== this.searchLocale) {
+    if (!this.hasUpdated || changed.has('data') || changed.has('query') || locale !== this.searchLocale) {
       this.searchLocale = locale;
       const next = this.computeSearch();
       if (!this.hasUpdated || changed.has('data')) {
@@ -944,7 +964,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   private emitSearchChange(): void {
     this.emit('lr-search-change', {
-      query: this.search,
+      query: this.query,
       matchCount: this.searchState.orderedMatches.length,
       matchCountExact: !this.searchState.truncated,
       activeIndex: this.activeSearchIndex,
@@ -982,19 +1002,18 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   /**
-   * Sets the declarative `search` property and awaits the recompute -- the resolved count is the
+   * Sets the declarative `query` property and awaits the recompute -- the resolved count is the
    * number of matches (also `searchState.orderedMatches.length` / rendered `[data-match]` spans).
    *
    * Named `runSearch()` rather than `search()` -- unlike every sibling viewer's imperative search
    * quartet (pdf/docx/csv/notebook/spreadsheet/ebook-viewer, av-player, terminal), `search` here is
-   * *already* a pre-existing public `@property()` string (declarative highlighting, predating this
-   * quartet) -- a method can't share a class member name with a property (Lit's reactive-property
-   * machinery throws at definition time: "declared as a reactive property but it's actually declared
-   * as a value on the prototype"), so the convenience method keeping the declarative `search` prop's
-   * name, type, and back-compat semantics fully untouched has to be named something else.
+   * *already* a public reactive property (the deprecated alias of `query`, predating this quartet)
+   * -- a method can't share a class member name with a property (Lit's reactive-property machinery
+   * throws at definition time: "declared as a reactive property but it's actually declared as a
+   * value on the prototype"), so the convenience method has to be named something else.
    */
   async runSearch(query: string): Promise<number> {
-    this.search = query;
+    this.query = query;
     await this.updateComplete;
     return this.searchState.orderedMatches.length;
   }
@@ -1024,9 +1043,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     return true;
   }
 
-  /** Resets `search` to `''`, clearing all matches and the cursor. */
+  /** Resets `query` to `''`, clearing all matches and the cursor. */
   clearSearch(): void {
-    this.search = '';
+    this.query = '';
   }
 
   private async scrollActiveMatchIntoView(): Promise<void> {

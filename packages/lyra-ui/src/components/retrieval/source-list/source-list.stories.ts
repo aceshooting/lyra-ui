@@ -14,7 +14,7 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => html`
     <lr-source-list label-plural="2 sources" style="max-width: 32rem;">
-      <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+      <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
         <span slot="excerpt">Revenue grew 12% year over year, driven primarily by...</span>
         <span slot="full"
           >Revenue grew 12% year over year, driven primarily by strong performance in the cloud
@@ -22,7 +22,7 @@ export const Default: Story = {
           accounts.</span
         >
       </lr-source-card>
-      <lr-source-card source-id="doc-2" title="meeting_notes.txt">
+      <lr-source-card source-id="doc-2" heading="meeting_notes.txt">
         <span slot="excerpt">Team agreed to revisit the roadmap next quarter.</span>
       </lr-source-card>
     </lr-source-list>
@@ -32,7 +32,7 @@ export const Default: Story = {
 export const ExpandedInitially: Story = {
   render: () => html`
     <lr-source-list label-plural="1 source" expanded style="max-width: 32rem;">
-      <lr-source-card source-id="doc-1" title="notes.txt">
+      <lr-source-card source-id="doc-1" heading="notes.txt">
         <span slot="excerpt">Rendered already expanded.</span>
       </lr-source-card>
     </lr-source-list>
@@ -46,7 +46,7 @@ export const Empty: Story = {
 export const FallbackLabel: Story = {
   render: () => html`
     <lr-source-list label="Source" style="max-width: 32rem;">
-      <lr-source-card source-id="doc-1" title="a.pdf">
+      <lr-source-card source-id="doc-1" heading="a.pdf">
         <span slot="excerpt">No label-plural set, so the plain label is used.</span>
       </lr-source-card>
     </lr-source-list>
@@ -64,14 +64,14 @@ export const Interactive: Story = {
           if (log) log.textContent = `lr-toggle: expanded=${(e as CustomEvent).detail.expanded}`;
         }}
       >
-        <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+        <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
           <span slot="excerpt">Revenue grew 12% year over year.</span>
           <span slot="full">Revenue grew 12% year over year, driven primarily by cloud adoption.</span>
         </lr-source-card>
-        <lr-source-card source-id="doc-2" title="meeting_notes.txt">
+        <lr-source-card source-id="doc-2" heading="meeting_notes.txt">
           <span slot="excerpt">Team agreed to revisit the roadmap next quarter.</span>
         </lr-source-card>
-        <lr-source-card source-id="doc-3" title="spec.pdf" page="4" href="https://example.com/spec.pdf">
+        <lr-source-card source-id="doc-3" heading="spec.pdf" page="4" href="https://example.com/spec.pdf">
           <span slot="excerpt">See section 4 for the full API contract.</span>
         </lr-source-card>
       </lr-source-list>
@@ -85,7 +85,7 @@ export const Interactive: Story = {
 export const SlottedControlsAndSemantics: Story = {
   render: () => html`
     <lr-source-list label-plural="1 source" expanded style="max-width: 32rem;">
-      <lr-source-card source-id="doc-1" title="annual_report.pdf">
+      <lr-source-card source-id="doc-1" heading="annual_report.pdf">
         <span slot="excerpt">A source card alongside author-owned controls and status.</span>
       </lr-source-card>
       <a href="https://example.com/">Open the source index</a>
@@ -101,7 +101,7 @@ export const NarrowAllStates: Story = {
       <lr-source-list label-plural="2 sources with deliberately long labels">
         <lr-source-card
           source-id="collapsed-long"
-          title="collapsed-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
+          heading="collapsed-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
         >
           <span slot="excerpt">Collapsed list state.</span>
         </lr-source-card>
@@ -109,7 +109,7 @@ export const NarrowAllStates: Story = {
       <lr-source-list label-plural="1 expanded source with long evidence" expanded>
         <lr-source-card
           source-id="expanded-long"
-          title="expanded-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
+          heading="expanded-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
         >
           <span slot="excerpt"
             >UnbrokenExcerptTokenThatMustWrapInsideTheNarrowSourceListWithoutHorizontalScrolling.</span
@@ -123,22 +123,22 @@ export const NarrowAllStates: Story = {
 };
 
 export const DensityAndChrome: Story = {
-  name: 'compact + frame="plain"',
+  name: 'size="s" + frame="plain"',
   render: () => html`
     <div style="display:grid; gap:1rem; max-width:32rem;">
       <lr-source-list label-plural="2 sources" expanded>
-        <lr-source-card source-id="doc-1" title="annual_report.pdf">
+        <lr-source-card source-id="doc-1" heading="annual_report.pdf">
           <span slot="excerpt">Default card framing keeps this panel visually distinct.</span>
         </lr-source-card>
       </lr-source-list>
-      <lr-source-list label-plural="2 sources" compact expanded>
-        <lr-source-card compact source-id="doc-1" title="annual_report.pdf">
-          <span slot="excerpt">Compact keeps the card while tightening header and list spacing.</span>
+      <lr-source-list label-plural="2 sources" size="s" expanded>
+        <lr-source-card size="s" source-id="doc-1" heading="annual_report.pdf">
+          <span slot="excerpt">The dense size keeps the card while tightening header and list spacing.</span>
         </lr-source-card>
       </lr-source-list>
       <div style="border:1px solid var(--lr-color-border); border-radius:var(--lr-radius); padding:0.75rem;">
         <lr-source-list label-plural="1 source" frame="plain" expanded>
-          <lr-source-card frame="plain" source-id="doc-1" title="notes.txt">
+          <lr-source-card frame="plain" source-id="doc-1" heading="notes.txt">
             <span slot="excerpt">Plain nests in existing message chrome without a second outer frame.</span>
           </lr-source-card>
         </lr-source-list>
@@ -149,7 +149,7 @@ export const DensityAndChrome: Story = {
     docs: {
       description: {
         story:
-          'Top to bottom: the default card, `compact` (tighter header/list spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal header/list divider.',
+          'Top to bottom: the default card, `size="s"` (tighter header/list spacing with chrome intact), and `frame="plain"` inside a container that already supplies the outer border. Plain keeps the panel’s internal header/list divider.',
       },
     },
   },

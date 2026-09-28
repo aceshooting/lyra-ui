@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-result-card-background` since `21.1.0`; use css-property `--lr-result-card-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-result-field` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -34,17 +35,21 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 
 - `heading: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
-- `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
-  rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
-  `compact`. Purely a density knob: the border and background stay, so use `frame="plain"`
-  instead to drop the chrome entirely. When both are set, plain leaves compact padding and gaps
-  intact.
+- `headingLevel: LyraHeadingLevel = 'none'` (attribute `heading-level`) — semantic level of
+  `[part="heading"]`. The default `none` keeps it a plain label; `1`–`6` also exposes it to heading
+  navigation at that level (`role="heading"` with `aria-level`).
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) tightens the header/body padding for dense contexts (a card rendered as a row in a
+  transcript or result list), same convention as `<lr-agent-run>`'s own `size`; `m` and larger keep
+  the full padding. Purely a density knob: the border and background stay, so use `frame="plain"`
+  instead to drop the chrome entirely. When both are set, plain leaves the dense padding and gaps
+  intact. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
   (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
   radius, so a card nested inside a host frame that already draws a border (e.g.
-  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; compact
-  padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
+  `<lr-tool-result-view>`'s own chrome) doesn't double it. Plain controls only the chrome; the
+  dense `size` tier's padding and gaps still apply when both are set. The exported alias `ResultCardAppearance` is
   retained as a name for the same union.
 - `withActions: boolean = false` (attribute `with-actions`, reflected) — explicit first-render
   presence hint for the `actions` slot. Client-only markup normally does not need it because the
@@ -66,19 +71,20 @@ default tooltip, scoped to just this element rather than the whole card), `actio
 whenever the slot has no assigned content), `body`.
 
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
-`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
+`var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `size` is `s` or smaller;
 `--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
-`[part="header"]`'s heading and actions while `compact`, one step tighter than the uncompacted
+`[part="header"]`'s heading and actions at that size, one step tighter than the regular
 `--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
-`[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
-`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
-than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
-not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
-`--lr-result-card-background` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
+`[part="body"]` padding at that size; `--lr-result-card-compact-body-gap` (default
+`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children at that size, one step tighter
+than the regular `--lr-space-xs`. The two gap knobs mean the dense tier tightens interior spacing,
+not only the padding box — a dense card no longer keeps full-size gaps inside a shrunken frame.
+`--lr-result-card-bg` (default `var(--lr-color-surface)`), `--lr-result-card-border-color`
 (default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
-`frame="plain"` still drops the outer chrome and that divider.
+`frame="plain"` still drops the outer chrome and that divider. Deprecated alias:
+`--lr-result-card-background` (use `--lr-result-card-bg`; removed in 23.0.0).
 Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
 `--lr-color-surface`/`-text`, `--lr-radius`.
 

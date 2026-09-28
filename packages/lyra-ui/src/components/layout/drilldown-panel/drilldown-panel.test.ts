@@ -10,6 +10,10 @@ import type { LyraSourceCard } from "../../retrieval/source-card/source-card.js"
 import type { LyraDocumentPreview } from "../../viewers/document-preview/document-preview.js";
 import type { LyraEntityCard } from "../../retrieval/entity-card/entity-card.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 const entity: LyraDrilldownEntity = {
   entityId: "entity-1",
@@ -92,14 +96,14 @@ function textDocuments(
   }));
 }
 
-it("defaults to an empty path, empty types, and showFocusButton=true", async () => {
+it("defaults to an empty path, empty types, and withoutFocusButton=false", async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel></lr-drilldown-panel>`
   )) as LyraDrilldownPanel;
   expect(el.path).to.deep.equal([]);
   expect(el.types).to.deep.equal([]);
   expect(el.communityLabel).to.equal("");
-  expect(el.showFocusButton).to.be.true;
+  expect(el.withoutFocusButton).to.be.false;
 });
 
 it("announces post-mount schema limits through the shared light-DOM sink", async () => {
@@ -774,7 +778,7 @@ it("translates every owned evidence/document event with authoritative node and i
   });
 });
 
-it("renders lr-source-card per evidence item with source-id/title/page/href and excerpt/full slots mapped field-for-field", async () => {
+it("renders lr-source-card per evidence item with source-id/heading/page/href and excerpt/full slots mapped field-for-field", async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel></lr-drilldown-panel>`
   )) as LyraDrilldownPanel;
@@ -782,7 +786,7 @@ it("renders lr-source-card per evidence item with source-id/title/page/href and 
   await el.updateComplete;
   const card = el.shadowRoot!.querySelector("lr-source-card") as LyraSourceCard;
   expect(card.sourceId).to.equal("evidence-1");
-  expect(card.title).to.equal("annual_report.pdf");
+  expect(card.heading).to.equal("annual_report.pdf");
   expect(card.page).to.equal(12);
   expect(card.href).to.equal("https://example.com/report.pdf");
   expect(card.querySelector('[slot="excerpt"]')!.textContent).to.equal(
@@ -805,12 +809,12 @@ it("renders lr-document-preview per normalized LyraDrilldownDocument", async () 
   expect(preview.filename).to.equal("contract.pdf");
 });
 
-it("renders lr-entity-card per entity with entity/types/communityLabel/showFocusButton forwarded", async () => {
+it("renders lr-entity-card per entity with entity/types/communityLabel/withoutFocusButton forwarded", async () => {
   const el = await populated();
   el.activeCategory = "entities";
   el.types = [{ id: "person", label: "Person" }];
   el.communityLabel = "Nobel laureates";
-  el.showFocusButton = false;
+  el.withoutFocusButton = true;
   await el.updateComplete;
   const card = el.shadowRoot!.querySelector("lr-entity-card") as LyraEntityCard;
   expect(card.entity).to.deep.equal({
@@ -820,7 +824,7 @@ it("renders lr-entity-card per entity with entity/types/communityLabel/showFocus
   });
   expect(card.types).to.deep.equal([{ id: "person", label: "Person" }]);
   expect(card.communityLabel).to.equal("Nobel laureates");
-  expect(card.showFocusButton).to.be.false;
+  expect(card.withoutFocusButton).to.be.true;
 });
 
 it("pages a 1k-document category truthfully and keeps fetch concurrency, replacement, and disconnect ownership bounded", async () => {
@@ -966,16 +970,106 @@ it("reports category input omitted by the 1k schema ceiling without mounting it"
   ).to.equal("1–1,000 of 1,005 Documents");
 });
 
-it('honors the plain show-focus-button="false" attribute form, not just a property binding', async () => {
+it('honors the plain without-focus-button attribute form, not just a property binding', async () => {
   const el = (await fixture(
-    html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
+    html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`
   )) as LyraDrilldownPanel;
-  expect(el.showFocusButton).to.be.false;
+  expect(el.withoutFocusButton).to.be.true;
   el.path = [nodeWithAllCategories];
   el.activeCategory = "entities";
   await el.updateComplete;
   const card = el.shadowRoot!.querySelector("lr-entity-card") as LyraEntityCard;
-  expect(card.showFocusButton).to.be.false;
+  expect(card.withoutFocusButton).to.be.true;
+});
+
+describe("lr-drilldown-panel: without-focus-button and the deprecated inverted show-focus-button alias", () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: "lr-drilldown-panel", kind: "property", name: "showFocusButton" },
+  ];
+
+  async function entitiesCard(el: LyraDrilldownPanel): Promise<LyraEntityCard> {
+    el.path = [nodeWithAllCategories];
+    el.activeCategory = "entities";
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector("lr-entity-card") as LyraEntityCard;
+  }
+
+  it('renders show-focus-button="false" exactly like without-focus-button, and warns once', async () => {
+    const canonical = await entitiesCard(
+      (await fixture(html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`)) as LyraDrilldownPanel
+    );
+    const cards: LyraEntityCard[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(
+          html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
+        )) as LyraDrilldownPanel;
+        expect(el.withoutFocusButton).to.be.true;
+        cards.push(await entitiesCard(el));
+      }
+    });
+    for (const card of cards) expect(card.withoutFocusButton).to.equal(canonical.withoutFocusButton);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-drilldown-panel:property:showFocusButton",
+    ]);
+    expect(warnings[0]!.message).to.contain("without-focus-button");
+  });
+
+  it("keeps the showFocusButton property working as the inverse, without reflecting", async () => {
+    const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
+    expect(el.showFocusButton).to.be.true;
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      el.showFocusButton = false;
+      await el.updateComplete;
+    });
+    expect(el.withoutFocusButton).to.be.true;
+    expect(el.hasAttribute("show-focus-button")).to.be.false;
+    expect((await entitiesCard(el)).withoutFocusButton).to.be.true;
+  });
+
+  it("lets the last authored attribute win between without-focus-button and show-focus-button", async () => {
+    const results: boolean[] = [];
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      for (const markup of [
+        html`<lr-drilldown-panel show-focus-button without-focus-button></lr-drilldown-panel>`,
+        html`<lr-drilldown-panel without-focus-button show-focus-button></lr-drilldown-panel>`,
+      ]) {
+        const el = (await fixture(markup)) as LyraDrilldownPanel;
+        results.push(el.withoutFocusButton);
+      }
+    });
+    expect(results).to.deep.equal([true, false]);
+  });
+
+  it("lets the last write win in both directions after the first render", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = (await fixture(
+        html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`
+      )) as LyraDrilldownPanel;
+      expect(el.showFocusButton).to.be.false;
+      el.setAttribute("show-focus-button", "true");
+      await el.updateComplete;
+      expect(el.withoutFocusButton).to.be.false;
+      expect((await entitiesCard(el)).withoutFocusButton).to.be.false;
+      el.withoutFocusButton = true;
+      await el.updateComplete;
+      expect(el.showFocusButton).to.be.false;
+      expect((await entitiesCard(el)).withoutFocusButton).to.be.true;
+    });
+  });
+
+  it("keeps a lone show-focus-button attribute driving the focus action after the first render", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = (await fixture(
+        html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
+      )) as LyraDrilldownPanel;
+      expect(el.withoutFocusButton).to.be.true;
+      el.removeAttribute("show-focus-button");
+      await el.updateComplete;
+      expect(el.withoutFocusButton).to.be.false;
+      expect((await entitiesCard(el)).withoutFocusButton).to.be.false;
+    });
+  });
 });
 
 it("shows the Agent runs tab only once content is projected into the runs slot, keyed off the light DOM directly", async () => {
@@ -1266,7 +1360,7 @@ it("contains complete unbroken content inside a 319px allocation in LTR and RTL"
       ).to.be.at.most(allocation.right + 1);
     }
     expect(
-      (el.shadowRoot!.querySelector("lr-source-card") as LyraSourceCard).title
+      (el.shadowRoot!.querySelector("lr-source-card") as LyraSourceCard).heading
     ).to.equal(long);
   }
 });

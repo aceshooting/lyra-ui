@@ -71,7 +71,7 @@ export const CancelableCheckboxChange: StoryObj = {
     docs: {
       description: {
         story:
-          'Checkbox activation first emits cancelable `lr-menu-item-change`. Preventing it retains `checked`; the owning menu still emits its usual `lr-select` action.',
+          'Checkbox activation first emits cancelable `lr-menu-item-change-request`. Preventing it retains `checked`; the owning menu still emits its usual `lr-select` action.',
       },
     },
   },
@@ -96,7 +96,7 @@ export const CancelableCheckboxChange: StoryObj = {
         <lr-menu-item
           type="checkbox"
           value="wrap"
-          @lr-menu-item-change=${(event: Event) => {
+          @lr-menu-item-change-request=${(event: Event) => {
             const example = (
               event.currentTarget as HTMLElement
             ).closest<HTMLElement>('[data-checkbox-change-example]');

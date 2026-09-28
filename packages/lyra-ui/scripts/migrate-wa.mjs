@@ -85,7 +85,7 @@ const CONDITIONAL_BEHAVIOR_REVIEW_TAGS = new Set(['wa-random-content']);
 /**
  * Tags whose migrated Lyra target intentionally diverges from upstream at the *runtime default*
  * level in a way no static surface/member diff can see: `<lr-animation>`/`<lr-animated-image>`
- * default `respect-reduced-motion` to `true` and therefore freeze/snap their animation whenever
+ * respect prefers-reduced-motion by default and therefore freeze/snap their animation whenever
  * the OS/browser reports `prefers-reduced-motion: reduce`, while the mirrored upstream component
  * does not add that behavior. The divergence applies to every migrated instance unconditionally
  * (it does not depend on the markup's attributes the way `wa-random-content`'s multi-flag review
@@ -109,9 +109,9 @@ const ICON_VOCABULARY_REVIEW_TAGS = new Set([
 function reducedMotionReviewMessage(upstreamTag) {
   return (
     `${upstreamTag} does not freeze or snap its animation under prefers-reduced-motion: reduce. ` +
-    'The migrated Lyra target defaults respect-reduced-motion to true and does exactly that ' +
+    'The migrated Lyra target respects prefers-reduced-motion by default and does exactly that ' +
     'automatically. Review whether the migrated element should keep animating for users who asked ' +
-    'for less motion, or set respect-reduced-motion="false" to preserve upstream playback under ' +
+    'for less motion, or set ignore-reduced-motion to preserve upstream playback under ' +
     'that preference.'
   );
 }

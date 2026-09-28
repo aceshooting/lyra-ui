@@ -21,7 +21,7 @@ const chunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = {
   chunkId: 'chunk-a',
   sourceId: 'source-a',
 };
-const chunkExpand: LyraChunkInspectorEventMap['lr-expand']['detail'] = {
+const chunkExpand: LyraChunkInspectorEventMap['lr-chunk-toggle']['detail'] = {
   chunkId: 'chunk-a',
   expanded: true,
 };

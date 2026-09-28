@@ -368,10 +368,10 @@ for (const [wrap, resize] of [
     el.value = 'short';
     await el.updateComplete;
     await waitUntil(aligned, 'short content must retain a gutter through the viewport');
-    el.lineNumbers = false;
+    el.withoutLineNumbers = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="gutter"]').length).to.equal(0);
-    el.lineNumbers = true;
+    el.withoutLineNumbers = false;
     await el.updateComplete;
     await waitUntil(aligned, 're-enabled line numbers must use current text geometry');
     expect(el.input!.scrollHeight - el.input!.clientHeight).to.be.at.most(1);
@@ -411,7 +411,7 @@ for (const [wrap, direction] of [['off', 'ltr'], ['off', 'rtl'], ['soft', 'ltr']
         && caret.top >= top - 1 && caret.bottom <= top + frame.clientHeight + 1;
     };
     for (const lineNumbers of [true, false]) {
-      el.lineNumbers = lineNumbers;
+      el.withoutLineNumbers = !lineNumbers;
       await el.updateComplete;
       for (const offset of [value.length, value.indexOf('\n'), 0]) {
         el.setSelectionRange(offset, offset);
@@ -423,7 +423,7 @@ for (const [wrap, direction] of [['off', 'ltr'], ['off', 'rtl'], ['soft', 'ltr']
         expect(el.input!.scrollLeft).to.equal(0);
       }
     }
-    el.lineNumbers = true;
+    el.withoutLineNumbers = false;
     el.value = '';
     await el.updateComplete;
     el.setSelectionRange(0, 0);

@@ -7,9 +7,10 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-heatmap-tooltip-text` since `21.1.0`; use css-property `--lr-heatmap-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-cell-click` since `21.1.0`; use event `addEventListener('lr-cell-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Optional peers** none
-- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,7 +25,7 @@ canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over th
 with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
 with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
 cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
-on the focused cell, fires `lr-cell-click`. The first render is silent, repeated identical focus
+on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
@@ -50,7 +51,7 @@ Set `accessibleCells: true` (`accessible-cells`) to opt into a semantic grid bac
 window of native buttons. It retains the complete `aria-rowcount`/`aria-colcount` and arrow-key
 navigation model without mounting one node per cell. Buttons use localized `aria-label`s, explicit
 `aria-selected="true"|"false"` from the controlled `selectedCell`, and roving tabindex; the grid
-continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
+continues to emit `lr-cell-activate` and leaves selection state consumer-controlled.
 When matrix/calendar data refreshes while one of those buttons owns focus, the semantic matrix
 coordinate or calendar date remains the sole roving stop. If it disappears, focus clamps to the
 nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
@@ -211,7 +212,7 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   sentinel", so signed datasets render their negative half instead of dropping it. In signed mode a
   structurally absent matrix cell reads as `NaN` so it stays no-data while a real `-1` beside it
   renders on the ramp; in default mode an absent cell still resolves to `-1`, keeping `valueAt()`
-  and the `lr-cell-click` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
+  and the `lr-cell-activate` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
   square root of a negative has no meaning
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
@@ -243,7 +244,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   selectedCells: readonly Readonly<HeatmapSelectedCell>[]; source: HeatmapSelectionSource }`, with
   source `'pointer' | 'keyboard' | 'row' | 'column'`. Assign the event's array back to `selectedCells`
   to accept it; property assignments are silent. Output is deduplicated in row/column order. Click
-  or Enter/Space toggles one cell and retains `lr-cell-click`. Pointer dragging paints or erases
+  or Enter/Space toggles one cell and retains `lr-cell-activate`. Pointer dragging paints or erases
   according to the starting cell, previews transient selection, and proposes once on release;
   pointer cancellation, Escape, disconnect, data/mode changes discard the gesture. A drag does
   not emit a cell click. Shift+arrows extends/contracts a rectangle from the anchor while retaining
@@ -279,7 +280,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   present for every grid position — including a sparse gap position with no matching entry in `days`
   at all, which still sits on a real calendar day (that case simply reports the `-1` "no data" value
   alongside it). It lets a callback key off the date without re-deriving the grid's own
-  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-click`'s detail.
+  anchor-week arithmetic; `MatrixCellPos` is unchanged, and so is `lr-cell-activate`'s detail.
   Unset (the default) falls back to localized matrix row/column/value or calendar date/value
   templates. The default English catalog renders "Row X, Col Y: value" (matrix) / "Jan 15: value"
   — short month + day, **not** a weekday abbreviation (calendar). Matrix row/column placeholders,
@@ -387,14 +388,16 @@ those callbacks position individual columns/rows instead of `padLeft`/`padTop` p
 
 For a GitHub-style contribution graph with rounded, visibly spaced cells, stay in calendar mode and
 set `cell-gap-x="3" cell-gap-y="3" cell-radius="2"` — week columns, weekday/month labels, date
-selection, `lr-cell-click`, and `cellText` keep working with no matrix rebuild.
+selection, `lr-cell-activate`, and `cellText` keep working with no matrix rebuild.
 
 For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
 `fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.
 For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
-**Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
+**Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-activate` (fired on click, or Enter/Space on the keyboard-focused cell —
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode; its
+deprecated alias `lr-cell-click` still fires right after it from the same activation with an equal
+detail — use `lr-cell-activate`; removed in 23.0.0),
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
@@ -451,9 +454,10 @@ visible regardless of what it's drawn over). `--lr-heatmap-selected-color` (defa
 `var(--lr-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
 dedicated token distinct from both the focus ring and the annotation ring so a host can retheme it
 independently). `--lr-heatmap-tooltip-bg` (default
-`var(--lr-color-surface)`) and `--lr-heatmap-tooltip-text` (default `var(--lr-color-text)`) —
+`var(--lr-color-surface)`) and `--lr-heatmap-tooltip-color` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+directly, no `getComputedStyle` bridging needed. Deprecated alias: `--lr-heatmap-tooltip-text` (use
+`--lr-heatmap-tooltip-color`; removed in 23.0.0), still read as its fallback. `--lr-heatmap-sticky-label-bg` (default
 `var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
@@ -547,7 +551,7 @@ is now literal.
   (calendar mode: a day-count + range summary instead). In default canvas mode,
   `[part="canvas"]` is itself a named `role="application"`, focusable, keyboard-operable,
   per-cell-interactive control (roving arrow-key focus, shared light-DOM announcements,
-  `lr-cell-click`). `role="img"` would flatten that interactive subtree for some assistive tech.
+  `lr-cell-activate`). `role="img"` would flatten that interactive subtree for some assistive tech.
   With `accessibleCells`, the canvas becomes `aria-hidden` and the native cell-button overlay owns
   the interactive semantics instead.
 - `NaN`/non-finite cell values in matrix mode are correctly treated as no-data now (alongside `-1`),
@@ -561,7 +565,7 @@ is now literal.
 '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
 - this component's legend can show more than a label (a value caption, `legendStops` swatches,
   annotation entries, a custom slot) and can now be turned off outright with `withoutLegend`.
-  `lr-sequence-strip`'s `showLegend` key is swatch+label only, the same "legend needs more than a
+  `lr-sequence-strip`'s `withLegend` key is swatch+label only, the same "legend needs more than a
   label" shape `lr-context-meter`'s `legendDisplay` addresses for that component; unaddressed here,
   since fixing it belongs with whichever component actually has the gap.
 

@@ -41,7 +41,7 @@ await preloadMarkdown();
 ```
 
 Fenced code blocks are also syntax-highlighted via the same optional `shiki` peer `<lr-code-block>`
-uses, gated by `highlightCode` (default `true`). This is a pure upgrade, not a separate opt-in: it's
+uses, on unless `without-syntax-highlighting` is set. This is a pure upgrade, not a separate opt-in: it's
 already transparently gated by whether `shiki` is installed at all, so an app that never installs the
 peer sees byte-identical output to before this property existed. The very first render of any content
 is always plain text/code (identical to today's output); highlighting arrives as an asynchronous
@@ -77,7 +77,9 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
-- `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists).
+- `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
+  (tables, strikethrough, autolinks, task lists), which is on by default. Deprecated alias: `gfm`
+  (use `without-gfm`; removed in 23.0.0) — inverted, so `gfm="false"` equals `without-gfm`.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
   text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
   `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
@@ -129,16 +131,19 @@ uses for its own `[part="body"]`.
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
   code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
   deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
-  development warning): either property enables the header, so use `code-block-header`. Plain
+  development warning): the two stay in step and the last write wins, so use `code-block-header`. Plain
   streaming defers headers until
   settle; progressive streaming adds them to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy
   deception. Trusted mode provides no such guarantee.
-- `highlightCode: boolean = true` (attribute `highlight-code`) — syntax-highlights fenced code
-  blocks via the optional `shiki` peer. `true` (the default) upgrades every fenced block once the
-  peer is available; set `false` to keep plain output even when `shiki` is installed. In progressive
-  mode, a block can be highlighted after it settles; the mutable tail remains unhighlighted.
+- `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) — turns off
+  fenced-code syntax highlighting. Unset (the default), every fenced block is upgraded via the
+  optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
+  installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
+  remains unhighlighted. Deprecated alias: `highlight-code`/`highlightCode` (use
+  `without-syntax-highlighting`; removed in 23.0.0) — inverted, so `highlight-code="false"` equals
+  `without-syntax-highlighting`.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
@@ -284,7 +289,7 @@ width inside a rendered fenced or indented `code-block`), plus shared tokens
 `loadMarkdownDeps()`, mirroring `chart-core-loader.ts`'s two-independent-optional-peers shape). Each half
 is loaded and caught independently — a consumer who installs only `marked` and explicitly sets
 `html-mode="trusted"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
-the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
+the same optional peer `<lr-code-block>` uses, for the fenced-block syntax
 highlighting — independent of the `marked`/`dompurify` pair, and its absence never blocks rendering
 (fenced blocks simply stay unhighlighted). The readonly `marked` property becomes available only
 after that lazy load resolves; each instance owns its configuration. Call `renderMarkdown()` after
@@ -417,15 +422,17 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 `Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
+'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`;
+deprecated alias: `gfm`, use `without-gfm`, removed in 23.0.0), `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockHeader: boolean = false` (attribute `code-block-header`) with its deprecated
 compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
 before 23.0.0),
-`highlightCode: boolean = true` (attribute
-`highlight-code`), `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+`withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`; deprecated
+alias: `highlight-code`/`highlightCode`, use `without-syntax-highlighting`, removed in 23.0.0),
+`languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
@@ -558,19 +565,25 @@ after the write fulfills.
 - `collapsed: boolean = false` (reflected) — whether the message body is hidden; effective whenever
   set, independent of `collapsible` (which only controls whether the toggle button itself is
   rendered) — mirrors `lr-widget`'s identical `collapsible`/`collapsed` pair
-- `attachmentsPosition: 'before'|'after' = 'after'` (attribute `attachments-position`) — places the
-  `attachments` slot before or after the message body; both the visual and reading order follow it
-- `actionsPosition: ChatMessageActionsPosition = 'inside'` (`'inside' | 'outside'`, attribute
-  `actions-position`, reflected) — `'outside'` renders the `actions` slot's content as a sibling
+- `attachmentsPlacement: ChatMessageAttachmentsPlacement = 'after'` (`'before' | 'after'`,
+  attribute `attachments-placement`) — places the `attachments` slot before or after the message
+  body; both the visual and reading order follow it. Deprecated alias: `attachments-position`/
+  `attachmentsPosition` (use `attachments-placement`; removed in 23.0.0)
+- `actionsPlacement: ChatMessageActionsPlacement = 'inside'` (`'inside' | 'outside'`, attribute
+  `actions-placement`, reflected) — `'outside'` renders the `actions` slot's content as a sibling
   immediately after `[part="bubble"]` instead of nested inside `[part="footer"]`'s own
-  padding/background box, for an action row that must sit visually outside the bubble's chrome
+  padding/background box, for an action row that must sit visually outside the bubble's chrome.
+  Deprecated alias: `actions-position`/`actionsPosition` (use `actions-placement`; removed in
+  23.0.0). `ChatMessageActionsPosition` remains exported as the same union.
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
   included in `lr-message-retry` detail when the built-in retry control is activated
 
 **Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
 only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
-`{ collapsed: boolean }`; preventing it vetoes the built-in collapse/expand transaction.
-`lr-toggle` carries that same detail after the accepted state is committed.
+`{ expanded: boolean, collapsed: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the
+proposed state; the deprecated `collapsed` key is its inverse and is removed in 23.0.0; preventing
+it vetoes the built-in collapse/expand transaction. `lr-toggle` carries that same detail after the
+accepted state is committed.
 
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
 (small status/metric chips — e.g. token count, latency, model name — entirely app-supplied), `actions`
@@ -586,7 +599,7 @@ entirely; unset, `status="failed"` renders exactly as before)
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
 `failure` slot is empty), `actions` (rendered inside the footer by default; a sibling immediately
-after `bubble` when `actionsPosition="outside"`), `failure` (`display: contents` wrapper for the
+after `bubble` when `actions-placement="outside"`), `failure` (`display: contents` wrapper for the
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
@@ -750,19 +763,24 @@ never exposed as a second, redundant accessibility-tree node for the same text.
 variant), `cursor` (the blinking bar in the `cursor` variant), `label` (the visible, `aria-hidden`,
 label, rendered only while `label-placement="after"`)
 
-**Themeable custom properties:** `--lr-typing-dot-size` (default `var(--lr-space-s)`, i.e. `0.5rem`;
-`0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one), `--lr-typing-gap` (default
-`var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact, `var(--lr-space-s)` roomy),
+**Themeable custom properties:** `--lr-typing-indicator-dot-size` (default `var(--lr-space-s)`, i.e.
+`0.5rem`; `0.375rem` on the compact tier, `var(--lr-space-m)` on the roomy one),
+`--lr-typing-indicator-gap` (default `var(--lr-space-xs)`, i.e. `0.25rem`; `0.1875rem` compact,
+`var(--lr-space-s)` roomy),
 `--lr-inline-cursor-width` (shared inline-cursor hook; default `var(--lr-size-0-125rem)`, compact
 `0.09375rem`, roomy `0.1875rem`), `--lr-inline-cursor-height` (shared inline-cursor hook; default
 `var(--lr-size-1em)`, unaffected by `size`),
-`--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
-`1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
-animation cycle. `--lr-typing-duration` is a dedicated alias: it defaults to the library-wide
+`--lr-typing-indicator-dot-stagger-1` (default `600ms`, second dot),
+`--lr-typing-indicator-dot-stagger-2` (default `1200ms`, third dot), and
+`--lr-typing-indicator-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) —
+the compound duration/timing-function token every variant uses as its animation cycle.
+`--lr-typing-indicator-duration` is a dedicated alias: it defaults to the library-wide
 `--lr-transition-ambient` token (shared by every other ambient-looping component), but overriding
 it retimes only this component, leaving `--lr-transition-ambient` itself — and anything else keyed
-off it — untouched.
+off it — untouched. Deprecated aliases: `--lr-typing-dot-size`, `--lr-typing-gap`,
+`--lr-typing-dot-stagger-1`, `--lr-typing-dot-stagger-2` and `--lr-typing-duration` (use the
+`--lr-typing-indicator-*` name of each; removed in 23.0.0) — each is still read as its namespaced
+name's fallback.
 
 **Optional peer deps:** none.
 
@@ -775,7 +793,7 @@ off it — untouched.
 <lr-typing-indicator shape="pulse" size="s"></lr-typing-indicator>
 <lr-typing-indicator shape="cursor"></lr-typing-indicator>
 <lr-typing-indicator
-  style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
+  style="--lr-typing-indicator-duration: 900ms ease-in-out; --lr-typing-indicator-dot-stagger-1: 300ms; --lr-typing-indicator-dot-stagger-2: 600ms"
 ></lr-typing-indicator>
 ```
 
@@ -795,7 +813,7 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
   freezing on its invisible ("off") blink half.
-- `--lr-typing-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
+- `--lr-typing-indicator-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
   compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
   override both stagger properties alongside it to preserve the default one-third/two-thirds dot
   phasing, as shown above.
@@ -850,13 +868,16 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   stretching the action buttons across the row's full height would otherwise look wrong. Layout
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
-- `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
-  always inserts a newline instead of submitting
+- `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
+  Enter always inserts a newline instead of submitting. Deprecated alias: `submit-on-enter`/
+  `submitOnEnter` (use `without-enter-submit`; removed in 23.0.0) — inverted, so
+  `submit-on-enter="false"` equals `without-enter-submit`
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
   validation gate; while idle, disables the built-in Send button and suppresses Enter/click
   submission without disabling the textarea or a busy-state Stop action
-- `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
-  instead of exposing a Stop action
+- `withoutStop: boolean = false` (reflected, attribute `without-stop`) — when set, busy states keep
+  a disabled Send button instead of exposing a Stop action. Deprecated alias: `stoppable` (use
+  `without-stop`; removed in 23.0.0) — inverted, so `stoppable="false"` equals `without-stop`
 - `readOnly: boolean = false` (attribute `readonly`, reflected) — native read-only editing state;
   intrinsic required/length constraints are barred while set
 - `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
@@ -887,7 +908,7 @@ validity and recomputes the current intrinsic constraints.
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
 - `lr-change` (`detail: { value }`) — paired with the native `change` event
-- `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
+- `lr-submit` (`detail: { value }`) — fired by Enter (unless `without-enter-submit`) or the built-in
   button while `status="idle"` and `submitDisabled` is false. `detail.value` is always the exact, untrimmed current value;
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
@@ -909,8 +930,9 @@ rendered above the input row).
 treatment). Scoped separately from the shared `--lr-color-text-quiet` token, which
 `[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
 button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
-user-bubble background pair documents). `--lr-chat-composer-background` (default
-`var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
+user-bubble background pair documents). `--lr-chat-composer-bg` (default
+`var(--lr-color-surface)`; deprecated alias: `--lr-chat-composer-background`, use
+`--lr-chat-composer-bg`, removed in 23.0.0), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
 `--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
 composer docked into a themed panel can match it, with no `::part(base)` override. `--lr-chat-composer-padding`
 (default `var(--lr-space-s)`) and `--lr-chat-composer-gap` (default `var(--lr-space-xs)`) retune
@@ -955,8 +977,8 @@ also re-runs this fit (one animation frame later, to avoid a `ResizeObserver`-lo
 whenever the textarea's own _width_ changes — a sidebar collapsing, a responsive breakpoint, a
 window resize — even though `value`/`min-rows`/`max-rows` never did, since the same text now wraps
 across a different number of lines. Enter-to-send only fires while
-`submit-on-enter` is `true` (the default): plain Enter submits and prevents the default newline;
-Shift+Enter always inserts a newline regardless of `submit-on-enter`; an IME composition step
+`without-enter-submit` is unset (the default): plain Enter submits and prevents the default newline;
+Shift+Enter always inserts a newline regardless of `without-enter-submit`; an IME composition step
 (checked via `isComposing`, with `keyCode === 229` as a defense-in-depth fallback for browsers that
 report `isComposing` inconsistently) is never treated as a submit trigger; and while `status` isn't
 `"idle"`, Enter is left alone to insert a newline instead of resubmitting — the textarea itself is
@@ -1152,19 +1174,21 @@ after composition.
   relative string — bucketed relative grouping is a list-level concern, not this row's job.
 - `active: boolean = false` (reflected) — whether this is the currently-selected/open session; drives
   the brand-quiet background treatment.
-- `renamable: boolean = true` (reflected) — whether inline-rename is available at all. When `false`, the
-  rename button never renders and the row can never enter its editing state; flipping it to `false`
+- `withoutRename: boolean = false` (attribute `without-rename`, reflected) — turns off inline
+  rename: the rename button never renders and the row can never enter its editing state; setting it
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
-  than leaving it stranded and still committable.
-- `compact: boolean = false` (reflected) — tighter row padding and gaps, for the dense history
-  sidebars these rows usually render in (same convention as `lr-empty`'s `compact`). Tightens
+  than leaving it stranded and still committable. Deprecated alias: `renamable` (use
+  `without-rename`; removed in 23.0.0) — inverted, so `renamable="false"` equals `without-rename`.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
+  `xs`/`2xs`) gives the tighter row padding and gaps of the dense history sidebars these rows
+  usually render in; `m` and larger keep the full row padding. The dense tier tightens
   `[part='base']`'s padding to `var(--lr-space-xs) var(--lr-space-s)` and its gap to
   `var(--lr-space-2xs)`, and collapses `[part='content']`'s inter-line gap to `0`. Deliberately
   changes nothing else: it does **not** shrink `[part='rename-button']` below the shared
   `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
   sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
-  size plus the compact padding, while a row with `renamable=false` and no actions collapses much
-  further.
+  size plus the dense padding, while a row with `without-rename` and no actions collapses much
+  further. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
@@ -1242,13 +1266,14 @@ inline-end. The indicator is `aria-hidden`, occupies the full row block-size, an
 the row is inactive.
 
 `--lr-conversation-item-compact-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) —
-`[part='base']`'s padding while `compact`. `--lr-conversation-item-compact-gap` (default
-`var(--lr-space-2xs)`) — `[part='base']`'s gap while `compact`. Like the active-state pair, both are
-inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding list can
-retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0` under
-`compact` with no hatch of its own — there is no smaller step left to retune to. `:host([compact])
-[part='base']` is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a row that
-is both compact and active keeps the active background and the promoted excerpt/timestamp contrast.
+`[part='base']`'s padding while `size` is `s` or smaller. `--lr-conversation-item-compact-gap`
+(default `var(--lr-space-2xs)`) — `[part='base']`'s gap at that size. Like the active-state pair,
+both are inline `var()` fallbacks at the point of use and never declared on `:host`, so a surrounding
+list can retune every row at once from an ancestor. `[part='content']`'s gap collapses to a flat `0`
+at the dense size with no hatch of its own — there is no smaller step left to retune to. The dense
+`[part='base']` rule is ordered _before_ `:host([active]) [part='base']` (equal specificity), so a
+row that is both dense and active keeps the active background and the promoted excerpt/timestamp
+contrast.
 
 `--lr-conversation-item-align` (default `flex-start`) controls the cross-axis `align-items` of both
 `[part='base']` and `[part='select-button']`. `flex-start` — today's only behavior — suits the
@@ -1304,12 +1329,12 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
   single-click `lr-select`.
 - While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
-- Setting `renamable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
-  fires) — a consumer toggling `renamable` off (e.g. in response to some other row entering rename
+- Setting `withoutRename = true` mid-rename silently discards the in-progress draft (no `lr-rename`
+  fires) — a consumer turning rename off (e.g. in response to some other row entering rename
   mode) should not expect the previous edit to be committed first.
-- `compact` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
-  floor. A compact row that still shows a rename button (or slotted `actions` at the same floor)
-  therefore bottoms out at roughly that icon size plus the compact padding, not at the text height.
+- The dense `size` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
+  floor. A dense row that still shows a rename button (or slotted `actions` at the same floor)
+  therefore bottoms out at roughly that icon size plus the dense padding, not at the text height.
   Lowering `--lr-icon-button-size` at an ancestor is the explicit, informed opt-out of the
   target-size floor; a density flag deliberately won't do it silently on your behalf.
 
@@ -1641,7 +1666,9 @@ properties existed:
   `tabSize`.
 - `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`) — forwarded to
   the composed `<lr-markdown>`'s own `htmlMode`.
-- `gfm: boolean = true` — forwarded to the composed `<lr-markdown>`'s own `gfm`.
+- `withoutGfm: boolean = false` (attribute `without-gfm`) — forwarded to the composed
+  `<lr-markdown>`'s own `withoutGfm`. Deprecated alias: `gfm` (use `without-gfm`; removed in
+  23.0.0) — inverted, so `gfm="false"` equals `without-gfm`.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
@@ -1654,14 +1681,17 @@ properties existed:
   and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its deprecated
   compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
   before 23.0.0; setting it logs a one-time development warning) — forwarded to the composed
-  Markdown element, which receives either header option as its own `codeBlockHeader`. Their
+  Markdown element as its own `codeBlockHeader` (the alias stays in step with it; the last write
+  wins). Their
   settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
   Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
   switches from plain text to Markdown when detection first succeeds, which replaces the displayed
   reply once, mid-stream.
-- `highlightCode: boolean = true` (attribute `highlight-code`) — forwarded to the composed
-  `<lr-markdown>`'s own `highlightCode`.
+- `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) —
+  forwarded to the composed `<lr-markdown>`'s own `withoutSyntaxHighlighting`. Deprecated alias:
+  `highlight-code`/`highlightCode` (use `without-syntax-highlighting`; removed in 23.0.0) —
+  inverted, so `highlight-code="false"` equals `without-syntax-highlighting`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
   `<lr-markdown>`'s own `headingAnchors`.
 - `math: boolean = false` — forwarded to the composed `<lr-markdown>`'s own `math`; the transitive
@@ -1751,10 +1781,10 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockHeader` (on when either this element's `codeBlockHeader` or its
-  deprecated `codeBlockChrome` is), `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `gfm`, `linkTarget`,
-  `internalLinkPrefix`, `headingOffset`, `highlightCode`, `headingAnchors`, `math`, `maxHeight` —
+  `streamingRender`, `codeBlockHeader` (its deprecated `codeBlockChrome` alias stays in step with
+  it), `languages` verbatim, and the rest of `<lr-markdown>`'s
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`,
+  `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
 blinking cursor degrades
@@ -1793,8 +1823,8 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `gfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
-`highlightCode`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+`withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
 entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
@@ -1816,15 +1846,17 @@ element's own `languages` to `{}` when unset, unlike the full variant's `undefin
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`); `gfm: boolean = true`; `linkTarget: string | null = '_blank'`
+'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`;
+deprecated alias: `gfm`, use `without-gfm`, removed in 23.0.0); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
 compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
-before 23.0.0); `highlightCode: boolean = true`
-(attribute `highlight-code`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
+before 23.0.0); `withoutSyntaxHighlighting: boolean = false` (attribute
+`without-syntax-highlighting`; deprecated alias: `highlight-code`/`highlightCode`, use
+`without-syntax-highlighting`, removed in 23.0.0); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
 progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches
@@ -1914,16 +1946,11 @@ generated framework members are removed rather than retained as aliases.
   integer; unset/non-finite values omit the `tokens` segment entirely.
 - `tokensPerSecond?: number` (attribute `tokens-per-second`) — finite values are clamped to zero or
   above; unset/non-finite values derive from `token-count`/elapsed time once one second has elapsed.
-- `showStop: boolean = true` (attribute `show-stop`, **not reflected**) — whether the built-in Stop
-  button renders at all. Uses a string-value-aware `ComplexAttributeConverter` (not Lit's default
-  presence-based `type: Boolean`), so a plain-HTML `show-stop="false"` content attribute correctly
-  turns it off — the literal string `"false"` maps to `false`; the attribute's mere presence with any
-  other value (or no value) maps to `true`. A Lit template can instead use a `.showStop=${false}`
-  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute _binding_ still can't turn
-  it off when the attribute was never present in markup to begin with — that binding only ever
-  removes the attribute when falsy, and removing an attribute that's already absent fires no
-  `attributeChangedCallback` (see AGENTS.md); use `.showStop=${false}` or the plain
-  `show-stop="false"` string form instead.
+- `withoutStop: boolean = false` (attribute `without-stop`, **not reflected**) — hides the built-in
+  Stop button, for a host that renders its own cancel control. A plain presence attribute, so
+  `?without-stop=${hidden}` works in a Lit template. Deprecated alias: `show-stop`/`showStop` (use
+  `without-stop`; removed in 23.0.0) — inverted, so `show-stop="false"` equals `without-stop`; any
+  other `show-stop` value (or none) keeps the button.
 
 **Events:** `lr-stop` (`detail: null`) — fired when the built-in Stop button is clicked while
 `status="running"`.
@@ -1932,8 +1959,8 @@ generated framework members are removed rather than retained as aliases.
 
 **CSS parts:** `base`, `elapsed` (always rendered, reads `"0.0s"` while idle), `tokens` (only
 rendered for a finite `token-count`), `throughput` (only rendered when
-a value is available, host-supplied or derived), `stop-button` (only rendered while `show-stop` is
-`true` and `status="running"`)
+a value is available, host-supplied or derived), `stop-button` (only rendered while `without-stop`
+is unset and `status="running"`)
 
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (base readout and
 tokens/throughput text color), `--lr-color-text` (the elapsed segment's higher-contrast color,
@@ -1949,7 +1976,6 @@ and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-ic
   status="running"
   started-at="1732000000000"
   token-count="340"
-  show-stop
 ></lr-generation-metrics>
 <script type="module">
   document
@@ -1983,10 +2009,8 @@ something that announces state _transitions_ instead. The Stop button gets a nor
 
 **Known gotchas:**
 
-- `showStop` defaults to `true` and is not a reflected property. Its `ComplexAttributeConverter`
-  makes the plain content attribute `show-stop="false"` work correctly, but a `?show-stop=${false}`
-  Lit boolean-attribute _binding_ still can't turn it off starting from absent markup — see the
-  property list above for the exact footgun.
+- The Stop button is on by default; `without-stop` is the only way to hide it (a presence
+  attribute, not reflected).
 - The derived `tokens-per-second` figure only appears once `elapsedMs >= 1000`; before that, the
   `throughput` part simply doesn't render — supply `tokens-per-second` yourself for a stable figure
   from the very first tick.
@@ -2037,10 +2061,10 @@ highlighted markup.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
-  `copyable="false"` disables it; use a property binding such as `.copyable=${false}` when binding a
-  value. A `?copyable=${false}` boolean-attribute binding only removes the attribute and cannot
-  override the true default.
+- `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
+  copy-to-clipboard button, which is shown by default. Deprecated alias: `copyable` (use
+  `without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+  `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -2089,8 +2113,10 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
 fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
 `'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
-`detail: { collapsed }` is the proposed next state and canceling leaves `collapsed` unchanged),
-`lr-toggle` (`detail: { collapsed: boolean }` — the committed state after the request is accepted),
+`detail: { expanded, collapsed }` is the proposed next state —
+`expanded` is the canonical key, the deprecated `collapsed` key is its inverse and is removed in
+23.0.0 — and canceling leaves `collapsed` unchanged), `lr-toggle` (`detail: { expanded: boolean,
+collapsed: boolean }` — the committed state after the request is accepted),
 `lr-line-activate` (`detail: { line: number }` — a gutter line number was activated while
 `activatableLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
@@ -2105,7 +2131,8 @@ property write is needed).
 `copy-button` (the copy control, a composed `<lr-icon-button>` as of 16.0.0; it also carries
 `copy-button-text` or `copy-button-icon` for the active `copyAppearance`, so match it by token —
 `[part~="copy-button"]` — not by exact value), `copy-button-text` / `copy-button-icon` (the copy
-control in each appearance), `copy-button__control` (the copy control's own native `<button>`),
+control in each appearance), `copy-button-control` (the copy control's own native `<button>`;
+deprecated alias: `copy-button__control`, use `copy-button-control`, removed in 23.0.0),
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
@@ -2118,7 +2145,7 @@ are both set)
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
 paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
 `color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their
+than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
 `-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
 those public tokens ahead of any default this component supplies. For SIZE use
 `--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
@@ -2221,8 +2248,8 @@ one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 
-- `copyable` defaults to `true` and reflects — literal `copyable="false"` and a `.copyable=${false}`
-  property binding both disable it; a `?copyable=${false}` boolean-attribute binding does not.
+- The copy button is on by default; hide it with the `without-copy-button` presence attribute
+  (`?without-copy-button=${hidden}` works in a Lit template).
 - if `code` or `language` changes while highlighting is loading, only the result matching the
   current values is rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
@@ -2259,7 +2286,7 @@ A `language` value absent from `languages` always renders the plain `<pre><code>
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
 path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
 same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/`language`/
-`filename`/`copyable`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
+`filename`/`withoutCopyButton`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
 `<lr-code-block>` exactly, including its CSS parts, themeable custom properties, and stylesheet
 (this component reuses `code-block.styles.ts` directly).
@@ -2276,9 +2303,9 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
-- `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button. Literal HTML
-  `copyable="false"` or a `.copyable=${false}` property binding disables it; a
-  `?copyable=${false}` boolean-attribute binding cannot override the true default.
+- `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
+  copy-to-clipboard button. Deprecated alias: `copyable` (use `without-copy-button`; removed in
+  23.0.0) — inverted, so `copyable="false"` equals `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -2326,8 +2353,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
-`copy-button-icon`, `copy-button__control`, `header-actions`, `toggle`, `body`, `pre`,
-`code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
+`copy-button-icon`, `copy-button-control` (deprecated alias: `copy-button__control`, removed in
+23.0.0), `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
+identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
@@ -2456,7 +2484,7 @@ internally (both imported unconditionally as side effects, not optional).
 </script>
 ```
 
-The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
+The internal `lr-slider` renders with its own value readout suppressed (`.withValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which formats `temperature` through the cached `Intl.NumberFormat` for the effective locale with up
 to 20 fractional digits, matching `lr-slider`'s own numeric readout. For example, `temperature="0.7"`
@@ -2627,17 +2655,18 @@ own tab stop, and its toggles contribute no actions while grouped.
 
 **CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
 `lr-copy-button`), `regenerate-button`, `edit-button`,
-`regenerate-button__control` / `edit-button__control` (each built-in action's own native `<button>` —
+`regenerate-button-control` / `edit-button-control` (each built-in action's own native `<button>` —
 as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
 toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
-embedded `lr-message-feedback`).
+embedded `lr-message-feedback`). Deprecated aliases: `regenerate-button__control` /
+`edit-button__control` (use the hyphenated names; removed in 23.0.0), on the same nodes.
 
 The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
 shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a
 dense action row, lower `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every
 `LyraElement` re-declares on its own `:host` and so never reaches a composed child) on this element
 or an ancestor, or reach a built-in's composed native control directly through
-`::part(regenerate-button__control)` / `::part(edit-button__control)`. A coarse-pointer/no-hover
+`::part(regenerate-button-control)` / `::part(edit-button-control)`. A coarse-pointer/no-hover
 media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
 override lowered it, so the shrink is safe on a touch device.
 
@@ -2645,7 +2674,7 @@ override lowered it, so the shrink is safe on a touch device.
 `<lr-icon-button>`s, so a part naming one of them now names the composed child's HOST, which paints
 nothing. A `border`, `background` or `border-radius` set on it is silently dead — only `color` still
 appears to work, because it inherits, which makes such a rule look half-alive rather than broken.
-Set `--lr-icon-button-background`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
+Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
 variants) on this element or an ancestor instead: the composed control reads those public tokens
 ahead of any default this component supplies. For SIZE use `--lr-theme-icon-button-size`, not
 `--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it never
@@ -2752,8 +2781,10 @@ string = ''` (attribute `device-id`) — a specific input device, `audioConstrai
 PushToTalkAudioConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints;
 it deliberately excludes `deviceId`, whose single authority is the dedicated property,
 `levelEvents: boolean = false` (attribute `level-events`) — opt in to `lr-level`, `maxDurationMs:
-number = 0` (attribute `max-duration-ms`) — auto-stop cap, `0` disables it, `showTimer: boolean =
-true` (attribute `show-timer`), `disabled: boolean = false` (reflected), plus two getter-only
+number = 0` (attribute `max-duration-ms`) — auto-stop cap, `0` disables it, `withoutTimer: boolean =
+false` (attribute `without-timer`) — hides the elapsed timer (deprecated alias: `show-timer`/
+`showTimer`, use `without-timer`, removed in 23.0.0; inverted, so `show-timer="false"` equals
+`without-timer`), `disabled: boolean = false` (reflected), plus two getter-only
 properties: `state: PushToTalkState` (`'idle' | 'requesting' | 'denied' | 'recording' | 'error'`,
 mirrored to `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
@@ -2761,7 +2792,7 @@ mirrored to `data-state`) and `stream: MediaStream | null` (the live capture str
 A host `aria-label` names the internal trigger by attribute presence; an explicitly empty value is
 preserved instead of being replaced by the generated Hold/Start/Stop label.
 
-`levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
+`levelEvents`, `maxDurationMs`, and `withoutTimer` stay reactive during an active recording: changing
 them starts or stops their audio-analysis, deadline, or elapsed-time work immediately. A changed
 maximum remains measured from the original recording start rather than granting a fresh duration;
 setting it to `0` removes the deadline.
@@ -2788,7 +2819,7 @@ recorder runtime failures), `lr-level`
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
-`timer` (the localized `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+`timer` (the localized `M:SS` elapsed-time readout, only while recording and `without-timer` is unset), and `status`
 (visible status text for the `requesting`/`denied`/`error`/unsupported states).
 
 **Themeable custom properties:** `--lr-push-to-talk-size` (default `var(--lr-size-3rem)`) — the
@@ -2840,7 +2871,8 @@ Each newly final entry's `text` is announced once through the shared light-DOM p
 instead, the same route `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is
 _mounted_ with are treated as existing transcript rather than newly spoken captions, so the first
 render only records them. `follow: boolean = true`
-(reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
+(reflected), `withTimestamps: boolean = false` (attribute `with-timestamps`; deprecated alias:
+`show-timestamps`/`showTimestamps`, use `with-timestamps`, removed in 23.0.0), `formatTimestamp?:
 (date: Date) => string` (attribute: false), `maxRenderedEntries: number = 500` (attribute
 `max-rendered-entries`) — `0` explicitly renders every entry; a positive value keeps only the newest N,
 `sessionId: string = ''` (attribute `session-id`) — changing session identity clears finalized-ID
@@ -2861,7 +2893,7 @@ state or the built-in jump action re-engages it. Direct `follow` assignments and
 
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
-(`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
+(`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
 interim entry exists), `jump-button` (shown only while `follow` is `false`), and `empty`.
 
@@ -3065,8 +3097,9 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
 'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; collapsed: boolean }` (the shared
-payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair). `LyraThreadList` and
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded: boolean; collapsed:
+boolean }` (the shared payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair;
+`collapsed` is the deprecated inverse of `expanded`, removed in 23.0.0). `LyraThreadList` and
 `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
@@ -3115,14 +3148,17 @@ self-management existed. Group headers and threads use separate
 internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
-data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
-= false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
-trailing group). `renamable: boolean = true` (reflected) — forwarded to each data-mode row's inline
-rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
-`lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
+data mode only: built-in icon buttons rendered into each row's `actions` slot. `withArchived: boolean
+= false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
+trailing group); deprecated alias: `show-archived`/`showArchived` (use `with-archived`; removed in
+23.0.0). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
+each data-mode row, turning its inline rename off; deprecated alias: `renamable` (use
+`without-rename`; removed in 23.0.0), inverted, so `renamable="false"` equals `without-rename`.
+`compact: boolean = false` (reflected) — data mode only: forwarded to each row
+`lr-conversation-item` as its dense `size="s"`, tightening every row's padding and gaps from one attribute
 (the density itself lives on the row item; retune it through
 `--lr-conversation-item-compact-padding`/`-gap` on this element or any ancestor). Slotted mode is a
-deliberate no-op — that mode renders host-supplied items as-is, so the host sets `compact` on its own
+deliberate no-op — that mode renders host-supplied items as-is, so the host sets `size` on its own
 items there, the same division of responsibility slotted mode already has for every other row
 property. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
@@ -3179,7 +3215,7 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 
 - `itemElement(conversationId)` — the rendered `lr-conversation-item` for one thread's
   `conversationId` (data mode) or one slotted item's own `conversation-id` (slotted mode), or
-  `null` when it is not currently rendered: filtered out by `showArchived`/search, windowed out of
+  `null` when it is not currently rendered: filtered out by `withArchived`/search, windowed out of
   the virtualized viewport, removed from `threads`, or never present
 
 `conversationId` is not a second identity scheme layered on top of the list — it is the same stable
@@ -3202,10 +3238,11 @@ including its retry button, while `error` is set.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle-request` (`detail: { groupId, collapsed }`, cancelable) — proposed before a
+`lr-group-toggle-request` (`detail: { groupId, expanded, collapsed }`, cancelable; `expanded` is
+the canonical key and the deprecated `collapsed` its inverse) — proposed before a
 custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
 `collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
-collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, collapsed }`) — the
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded, collapsed }`) — the
 change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
 `collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
@@ -3263,8 +3300,10 @@ lr-thread-list::part(row-actions) {
 ```
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
-`--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-foreground` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-background`, removed in 23.0.0),
+`--lr-thread-list-excerpt-highlight-color` (default `inherit`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-foreground`, removed in 23.0.0),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
@@ -3365,17 +3404,21 @@ fallback renders while empty. `timestamp?: LyraTimestamp` (`Date | string | numb
 false) — optional creation
 time, rendered as `<time datetime>`, default `hour:minute` in `effectiveLocale`; invalid strings are
 treated as unset. `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the
-default rendering. `restorable: boolean = true` — when `false`, renders a plain marker with no
-button. `confirmRestore: boolean = true` (attribute `confirm-restore`) — gates the event behind an
-inline confirm step; a string-aware converter parses `confirm-restore="false"` correctly from plain
-HTML. `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
+default rendering. `withoutRestore: boolean = false` (attribute `without-restore`) — renders a
+plain marker with no button (deprecated alias: `restorable`, use `without-restore`, removed in
+23.0.0; inverted, so `restorable="false"` equals `without-restore`).
+`withoutRestoreConfirmation: boolean = false` (attribute `without-restore-confirmation`) — skips
+the inline confirm step so Restore fires the event immediately (deprecated alias:
+`confirm-restore`/`confirmRestore`, use `without-restore-confirmation`, removed in 23.0.0;
+inverted, so `confirm-restore="false"` equals `without-restore-confirmation`).
+`restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
 `aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
 
 **Slots:** default — optional supplemental content under the marker row (e.g. what changed since
 this point).
 
 **Events:** `lr-restore` — `detail: { checkpointId, label }`; fired on Restore activation, after
-the inline confirm when `confirmRestore` is on. Not cancelable.
+the inline confirm unless `without-restore-confirmation` is set. Not cancelable.
 
 **Methods:** `click()` forwards to the current Restore action only when restoration is available.
 The confirm prompt names both Confirm and Cancel through `aria-describedby`; Escape/cancel restores
@@ -3383,7 +3426,7 @@ focus transactionally, and a same-turn controlled change that removes confirmati
 stale focus continuation win.
 
 **CSS parts:** `base` (`role="group"`), `line` (each of the two flanking rules), `icon` (bookmark
-glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
+glyph), `label`, `timestamp`, `restore-button` (not rendered while `without-restore`), `confirm-group`,
 `confirm-prompt`, `confirm-button`, `cancel-button`.
 
 **Themeable custom properties:** `--lr-checkpoint-spin-duration` (default
@@ -3711,8 +3754,10 @@ internal preview before the rendered candidate changes. Ids use the shared uniqu
 first-wins catalog rule documented under `lr-model-select`, including preview lookup. Assignments
 become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.
 `allowCustom: boolean = false` (attribute
-`allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
-boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
+`allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
+`withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
+affordances at all (deprecated alias: `preview`, use `without-preview`, removed in 23.0.0; inverted,
+so `preview="false"` equals `without-preview`). `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
 `spellcheck: boolean = true` (string-aware converter, same as `lr-model-select`), `autocapitalize:
 string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
@@ -3931,14 +3976,18 @@ warnings? }`
   `{ id: string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?:
 Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
 - `contextTotal: number = 0` (attribute `context-total`) — the overall context-window token budget
-- `showDetails: boolean = true` (attribute `show-details`, reflected) — whether the details pane is
-  available at all when data is present
+- `withoutDetails: boolean = false` (attribute `without-details`, reflected) — turns off the
+  built-in details pane even when data is present. Deprecated alias: `show-details`/`showDetails`
+  (use `without-details`; removed in 23.0.0) — inverted, so `show-details="false"` equals
+  `without-details`
 
 **Properties (composer / chrome):**
 
-- `showComposer: boolean = true` (attribute `show-composer`, reflected) — whether the built-in
-  plain-frame composer renders when no `composer` slot is supplied. Its workspace-owned dock supplies
-  the border and padding; a supplied `composer` slot keeps its own frame.
+- `withoutComposer: boolean = false` (attribute `without-composer`, reflected) — turns off the
+  built-in plain-frame composer that renders when no `composer` slot is supplied. Its workspace-owned
+  dock supplies the border and padding; a supplied `composer` slot keeps its own frame. Deprecated
+  alias: `show-composer`/`showComposer` (use `without-composer`; removed in 23.0.0) — inverted, so
+  `show-composer="false"` equals `without-composer`.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the
@@ -4028,8 +4077,10 @@ left-to-right inside a right-to-left document. `lr-message-parts` forwards no Ma
 nested code direction cannot be overridden from outside with `::part()`.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
-'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
-`show-reasoning`, reflected, with string-aware true-default conversion);
+'markdown'` (attribute `content-mode`, reflected) and `withoutReasoning: boolean = false` (attribute
+`without-reasoning`, reflected) — omits reasoning parts (deprecated alias: `show-reasoning`/
+`showReasoning`, use `without-reasoning`, removed in 23.0.0; inverted, so `show-reasoning="false"`
+equals `without-reasoning`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
 and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
@@ -4134,7 +4185,8 @@ emitted. Tool errors are never announced; only `error` parts are.
 `--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
 audio transcript's text color. Error parts have separate
 `--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
-`--lr-message-parts-error-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-message-parts-error-bg` (default `var(--lr-color-danger-quiet)`; deprecated alias:
+`--lr-message-parts-error-background`, removed in 23.0.0), and
 `--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
 fallbacks, so setting one on an ancestor rethemes only that state longhand.
 
@@ -4198,7 +4250,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`
 (attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and
 `maxLength?: number` (attribute `maxlength`);
-`submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`; deprecated alias:
+`submit-on-enter`/`submitOnEnter`, use `without-enter-submit`, removed in 23.0.0, inverted so
+`submit-on-enter="false"` equals `without-enter-submit`);
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
@@ -4290,8 +4344,10 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus.
 
-**Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
-(reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
+**Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
+(reflected) — renders each queued prompt as read-only text instead of an editor (deprecated alias:
+`editable`, use `readonly`, removed in 23.0.0; inverted, so `editable="false"` equals `readonly`);
+`disabled: boolean = false` (reflected);
 `label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
@@ -4403,15 +4459,16 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 (attribute `session-id`) — forwarded to the transcript feed so changing sessions resets finalized
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
-`showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
-converter); `label?: string` — accessible name for the session shell. Omitting it localizes the
+`withoutCapture: boolean = false` (attribute `without-capture`, reflected) — hides native
+push-to-talk capture (deprecated alias: `show-capture`/`showCapture`, use `without-capture`,
+removed in 23.0.0; inverted, so `show-capture="false"` equals `without-capture`); `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same
 closed-set converter.
 
 When a state transition removes a focused session action, focus moves to the replacement
-connect/disconnect action. Setting `showCapture` to `false` applies that handoff only when the
+connect/disconnect action. Setting `withoutCapture` applies that handoff only when the
 capture control owned focus; a surviving built-in, slotted, or external focus destination is not
 moved.
 
@@ -4493,8 +4550,10 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-conversation-chat-message-chat-message-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`.
   `ChatMessageToggleDetail {
+    expanded: boolean;
     collapsed: boolean;
   }`
+  `collapsed` is the deprecated inverse of `expanded` (removed in 23.0.0).
 
 - **`components-conversation-chat-composer-chat-composer-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`.
@@ -4506,6 +4565,15 @@ These named interfaces and helper signatures are available to typed integrations
     checkpointId: string;
     label: string;
   }`
+
+- **`components-conversation-code-block-code-block-shared-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.class.js`.
+  `LyraCodeBlockToggleDetail {
+    expanded: boolean;
+    collapsed: boolean;
+  }`
+  The `lr-toggle-request`/`lr-toggle` detail of `<lr-code-block>` and `<lr-code-block-core>`.
+  `collapsed` is the deprecated inverse of `expanded` (removed in 23.0.0).
 
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.

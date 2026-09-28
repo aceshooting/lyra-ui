@@ -1,7 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
@@ -26,6 +27,12 @@ export interface LyraSourceCardEventMap {
 }
 
 class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /**
  * `<lr-source-card>` — one citation/source entry, meant to be a direct
@@ -74,17 +81,17 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @attr aria-current - Current-item state forwarded reactively onto the `title` button: `page`,
  * `step`, `location`, `date`, `time`, `true` or `false`.
  * @cssprop [--lr-source-card-bg=var(--lr-color-surface)] - Background of the RESTING
- * `frame="card"` chrome, the companion to the `compact` tier's existing padding/gap levers.
+ * `frame="card"` chrome, the companion to the dense `size` tier's existing padding/gap levers.
  * `frame="plain"` still drops the fill entirely.
  * @cssprop [--lr-source-card-compact-padding=var(--lr-space-xs)] - `[part="base"]` padding while
- * `compact`.
+ * `size` is `s` or smaller.
  * @cssprop [--lr-source-card-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s rows
- * while `compact`.
+ * while `size` is `s` or smaller.
  *
  * @example
  * ```html
  * <lr-source-list label-plural="2 sources">
- *   <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
+ *   <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">
  *     <span slot="excerpt">Revenue grew 12% year over year...</span>
  *     <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
  *   </lr-source-card>
@@ -119,16 +126,24 @@ export class LyraSourceCard extends StripHostTitleAttribute(
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    title: 'heading',
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */
   @property({ attribute: 'source-id' }) sourceId = '';
+
+  /** The source's display title, e.g. a filename, rendered as the `title` button's own text. */
+  @property() heading = '';
 
   /** The source's display title, e.g. a filename. Rendered only as the
    *  title button's own text -- a bare host-level `title` attribute (the
    *  browser's global tooltip attribute) is actively stripped once Lit has
    *  synced it into this property, so the card never grows an unsolicited
    *  native tooltip repeating the same text. See `StripHostTitleAttribute`
-   *  (`internal/strip-host-title.ts`). */
+   *  (`internal/strip-host-title.ts`).
+   *  @deprecated Use `heading`; removal not before 23.0.0. */
   @property() override title = '';
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
@@ -138,10 +153,18 @@ export class LyraSourceCard extends StripHostTitleAttribute(
   /** Optional URL, echoed back (unopened) in `lr-open`'s detail. */
   @property() href?: string;
 
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
+   * and row gap, for the dense citation lists these cards usually render in. `m` (the default) and
+   * larger keep the full card padding. Purely a density knob: the border and background stay, so
+   * use `frame="plain"` to drop the chrome entirely.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Tighter root padding and row gap, for the dense citation lists these cards usually render in
    *  -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full card
    *  padding. Purely a density knob: the border and background stay, so use `frame="plain"`
-   *  to drop the chrome entirely. */
+   *  to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Turns off this card's OWN controls: the `title` button and the "Show more"/"Show less"
@@ -171,9 +194,9 @@ export class LyraSourceCard extends StripHostTitleAttribute(
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a card inside a `<lr-source-list>` (or any container already drawing its own
-   *  border/dividers) doesn't double the frame. `plain` wins over `compact` when both are set
-   *  (nothing left to tighten); the title and toggle keep their brand color and hover underline,
-   *  which never depended on the card chrome. */
+   *  border/dividers) doesn't double the frame. `plain` wins over the dense `size` tier when both
+   *  are set (nothing left to tighten); the title and toggle keep their brand color and hover
+   *  underline, which never depended on the card chrome. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   // See `<lr-widget>`'s `hasActionsSlot` for the identical
@@ -230,7 +253,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(
   };
 
   private get titleText(): string {
-    const base = this.title || this.localize('untitledSource');
+    const base = this.heading || this.localize('untitledSource');
     return this.page == null || this.page === ''
       ? base
       : this.localize('sourcePageSuffix', undefined, { base, page: this.page });

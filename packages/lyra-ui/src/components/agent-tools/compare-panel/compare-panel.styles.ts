@@ -110,12 +110,12 @@ export const styles = css`
   /* After the two arms above and at their own (0,2,0), so source order hands the cast vote its
      selected fill under the pointer -- the generic brand-quiet hover tint reads as unselected.
      Wrapping [data-selected] in :where() dropped this to (0,1,0) and inverted that: both pointer
-     arms won and the documented --lr-compare-panel-selected-background vanished under the pointer.
+     arms won and the documented --lr-compare-panel-selected-bg vanished under the pointer.
      The held state is restored by the rule below, not by yielding here. */
   [part="vote-button"][data-selected] {
     background: var(
-      --lr-compare-panel-selected-background,
-      var(--lr-color-brand-quiet)
+      --lr-compare-panel-selected-bg,
+      var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet))
     );
     border-color: var(
       --lr-compare-panel-selected-border-color,
@@ -130,14 +130,14 @@ export const styles = css`
   /* The selected button's own held state, at (0,3,0) so it out-ranks the [data-selected] rule above.
      Re-clicking an already-voted button re-emits the cancelable lr-vote, which a host commonly
      answers by advancing to the next pair, so the press must land visibly; losing the hover tint
-     there is the deliberate half of the trade. Mixes from --lr-compare-panel-selected-background so
+     there is the deliberate half of the trade. Mixes from --lr-compare-panel-selected-bg so
      a retinted selection gets a deeper tier of itself, not the stock token. */
   [part="vote-button"][data-selected]:where(:not(:disabled)):active {
     background: color-mix(
       in oklab,
       var(
-        --lr-compare-panel-selected-background,
-        var(--lr-color-brand-quiet)
+        --lr-compare-panel-selected-bg,
+        var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet))
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );

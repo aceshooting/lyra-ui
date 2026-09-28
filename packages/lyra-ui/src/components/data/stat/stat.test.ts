@@ -5,6 +5,7 @@ import type { LyraStat } from './stat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 it('renders label, value, and unit', async () => {
   const el = (await fixture(html`<lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>`)) as LyraStat;
@@ -893,9 +894,13 @@ it('reflects the prose attribute', async () => {
   expect(el.hasAttribute('prose')).to.be.true;
 });
 
-it('reflects the compact attribute', async () => {
-  const el = (await fixture(html`<lr-stat compact value="42"></lr-stat>`)) as LyraStat;
-  expect(el.hasAttribute('compact')).to.be.true;
+it('reflects size and leaves it unset by default', async () => {
+  const el = (await fixture(html`<lr-stat size="s" value="42"></lr-stat>`)) as LyraStat;
+  expect(el.getAttribute('size')).to.equal('s');
+  const bare = (await fixture(html`<lr-stat value="42"></lr-stat>`)) as LyraStat;
+  expect(bare.size).to.be.undefined;
+  expect(bare.hasAttribute('size')).to.be.false;
+  expect(bare.compact).to.be.false;
 });
 
 const baseChrome = (el: LyraStat) => {
@@ -999,8 +1004,8 @@ it('drops border, background, padding and the block-size stretch under frame="pl
   expect(getComputedStyle(base).blockSize).to.not.equal('200px');
 });
 
-it('lets plain win over compact when both are set (equal specificity, source order decides)', async () => {
-  const el = (await fixture(html`<lr-stat compact frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+it('lets plain win over the compact density when both are set (equal specificity, source order decides)', async () => {
+  const el = (await fixture(html`<lr-stat size="s" frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const s = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(s.paddingTop).to.equal('0px');
   expect(s.paddingLeft).to.equal('0px');
@@ -1008,12 +1013,12 @@ it('lets plain win over compact when both are set (equal specificity, source ord
 });
 
 describe('--lr-stat-padding / --lr-stat-gap cssprops', () => {
-  it('keeps the pre-existing card, compact, and plain padding/gap when unset', async () => {
+  it('keeps the pre-existing card, compact-density, and plain padding/gap when unset', async () => {
     const card = (await fixture(
       html`<lr-stat label="Revenue" value="12.4"></lr-stat>`
     )) as LyraStat;
     const compact = (await fixture(
-      html`<lr-stat compact label="Revenue" value="12.4"></lr-stat>`
+      html`<lr-stat size="s" label="Revenue" value="12.4"></lr-stat>`
     )) as LyraStat;
     const plain = (await fixture(
       html`<lr-stat frame="plain" label="Revenue" value="12.4"></lr-stat>`
@@ -1064,10 +1069,10 @@ describe('--lr-stat-padding / --lr-stat-gap cssprops', () => {
     expect(linkedContent.rowGap).to.equal('6px');
   });
 
-  it('overrides compact and plain padding/gap through the same property', async () => {
+  it('overrides compact-density and plain padding/gap through the same property', async () => {
     const compact = (await fixture(html`
       <lr-stat
-        compact
+        size="s"
         style="--lr-stat-padding: 20px; --lr-stat-gap: 6px;"
         label="Revenue"
         value="12.4"
@@ -1460,3 +1465,107 @@ it('rests a passive tile on the subtle tier and a linked tile on the control tie
   expect(edge(linked)).to.equal('rgb(10, 20, 30)');
 });
 
+
+describe('size density and the deprecated compact attribute', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-stat', kind: 'property', name: 'compact' }];
+  const chrome = (el: LyraStat): string[] => {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    return [base.paddingTop, base.paddingLeft, base.rowGap];
+  };
+
+  it('treats the smaller size steps and the small alias as the compact density, and m and above as the default', async () => {
+    for (const size of ['2xs', 'xs', 's', 'small']) {
+      const el = (await fixture(html`<lr-stat size=${size} value="1"></lr-stat>`)) as LyraStat;
+      expect(chrome(el)[0], size).to.equal('8px');
+    }
+    for (const size of ['m', 'medium', 'l', 'xl']) {
+      const el = (await fixture(html`<lr-stat size=${size} value="1"></lr-stat>`)) as LyraStat;
+      expect(chrome(el)[0], size).to.equal('12px');
+    }
+  });
+
+  it('renders compact exactly like size="s", keeps reflecting it, and warns once, naming size', async () => {
+    const canonical = (await fixture(html`<lr-stat size="s" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+    let aliased!: LyraStat;
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      aliased = await fixture<LyraStat>(html`<lr-stat compact label="Revenue" value="12.4"></lr-stat>`);
+      const linked = await fixture<LyraStat>(html`<lr-stat compact value="1" href="/x"></lr-stat>`);
+      await linked.updateComplete;
+    });
+    expect(chrome(aliased)).to.deep.equal(chrome(canonical));
+    expect(aliased.hasAttribute('compact')).to.be.true;
+    expect(aliased.size).to.equal('s');
+    expect(aliased.getAttribute('size')).to.equal('s');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-stat:property:compact']);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('lets the last write win between size and compact', async () => {
+    const canonical = (await fixture(html`<lr-stat size="m" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+    const large = (await fixture(html`<lr-stat size="l" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+    let aliasLast!: LyraStat;
+    let el!: LyraStat;
+    await captureDeprecationWarnings(COMPACT, async () => {
+      aliasLast = await fixture<LyraStat>(html`<lr-stat size="m" compact label="Revenue" value="12.4"></lr-stat>`);
+      el = await fixture<LyraStat>(html`<lr-stat size="l" label="Revenue" value="12.4"></lr-stat>`);
+      el.compact = true;
+      await el.updateComplete;
+      expect(el.size).to.equal('s');
+      expect(el.getAttribute('size')).to.equal('s');
+      expect(chrome(el)[0]).to.equal('8px');
+    });
+    expect(aliasLast.size).to.equal('s');
+    expect(chrome(aliasLast)[0]).to.equal('8px');
+
+    el.size = 'm';
+    await el.updateComplete;
+    expect(el.compact).to.be.false;
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(chrome(el)).to.deep.equal(chrome(canonical));
+    expect(chrome(el)[0]).to.equal('12px');
+    el.size = 'l';
+    await el.updateComplete;
+    expect(chrome(el)).to.deep.equal(chrome(large));
+
+    const linkedPadding = (stat: LyraStat): string =>
+      getComputedStyle(stat.shadowRoot!.querySelector('.linked-content') as HTMLElement).paddingTop;
+    const linked = await fixture<LyraStat>(html`<lr-stat size="m" value="1" href="/x"></lr-stat>`);
+    expect(linkedPadding(linked)).to.equal('12px');
+    await captureDeprecationWarnings(COMPACT, async () => {
+      linked.compact = true;
+      await linked.updateComplete;
+    });
+    expect(linkedPadding(linked)).to.equal('8px');
+  });
+
+  it('leaves frame="plain" and the horizontal column gap winning over compact, as over size="s"', async () => {
+    const columnGap = (el: LyraStat): string =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).columnGap;
+    const plainCanonical = await fixture<LyraStat>(html`<lr-stat size="s" frame="plain" value="1"></lr-stat>`);
+    const rowCanonical = await fixture<LyraStat>(
+      html`<lr-stat size="s" orientation="horizontal" value="1"></lr-stat>`
+    );
+    let plain!: LyraStat;
+    let row!: LyraStat;
+    await captureDeprecationWarnings(COMPACT, async () => {
+      plain = await fixture<LyraStat>(html`<lr-stat compact frame="plain" value="1"></lr-stat>`);
+      row = await fixture<LyraStat>(html`<lr-stat compact orientation="horizontal" value="1"></lr-stat>`);
+    });
+    expect(chrome(plain)).to.deep.equal(chrome(plainCanonical));
+    expect(chrome(plain)[0]).to.equal('0px');
+    expect(columnGap(row)).to.equal(columnGap(rowCanonical));
+    expect(columnGap(row)).to.equal('8px');
+  });
+
+  it('never warns for size or an untouched default', async () => {
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraStat>(html`<lr-stat size="xs" value="1"></lr-stat>`);
+      expect(el.compact, 'compact syncs back from a compact size').to.be.true;
+      el.size = 'l';
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+});

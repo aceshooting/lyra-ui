@@ -719,9 +719,9 @@ describe('getHeadingTree', () => {
     }
   });
 
-  it('retints a rendered table header row from --lr-docx-viewer-table-header-background', async () => {
+  it('retints a rendered table header row from --lr-docx-viewer-table-header-bg', async () => {
     const el = await fixture<LyraDocxViewer>(
-      html`<lr-docx-viewer style="--lr-docx-viewer-table-header-background: rgb(1, 2, 3);"></lr-docx-viewer>`,
+      html`<lr-docx-viewer style="--lr-docx-viewer-table-header-bg: rgb(1, 2, 3);"></lr-docx-viewer>`,
     );
     useLibrary(el, {
       mammoth: { convertToHtml: () => Promise.resolve({ value: '<table><tr><th>Name</th></tr><tr><td>Ada</td></tr></table>', messages: [] }) },
@@ -1438,7 +1438,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         // painted, so this is a live change to a transition-eligible property (background-color
         // eases over --lr-transition-fast) -- poll for the retinted value instead of reading
         // synchronously.
-        el.style.setProperty('--lr-docx-viewer-highlight-neutral-background', 'rgb(9, 8, 7)');
+        el.style.setProperty('--lr-docx-viewer-highlight-neutral-bg', 'rgb(9, 8, 7)');
         await waitUntil(
           () => getComputedStyle(mark).backgroundColor === 'rgb(9, 8, 7)',
           'the neutral highlight never retinted to rgb(9, 8, 7)',
@@ -1537,9 +1537,9 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     (globalThis as { Highlight?: unknown }).Highlight = undefined;
     const { el, restore } = await loadWithMarkup('<p>Hello world Hello</p>');
     try {
-      el.style.setProperty('--lr-docx-viewer-highlight-accent-background', 'rgb(1, 2, 3)');
-      el.style.setProperty('--lr-docx-viewer-search-match-background', 'rgb(4, 5, 6)');
-      el.style.setProperty('--lr-docx-viewer-search-match-active-background', 'rgb(7, 8, 9)');
+      el.style.setProperty('--lr-docx-viewer-highlight-accent-bg', 'rgb(1, 2, 3)');
+      el.style.setProperty('--lr-docx-viewer-search-match-bg', 'rgb(4, 5, 6)');
+      el.style.setProperty('--lr-docx-viewer-search-match-active-bg', 'rgb(7, 8, 9)');
       el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
       await el.updateComplete;
       const highlight = el.shadowRoot!.querySelector<HTMLElement>(
@@ -1565,6 +1565,81 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  describe('-bg/-color custom properties and their deprecated -background/-foreground aliases', () => {
+    const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+    const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
+    const declarations = (legacy: boolean, offset: number): [string, string][] => {
+      const bg = legacy ? 'background' : 'bg';
+      return [
+        [`--lr-docx-viewer-table-header-${bg}`, colorFor(offset)],
+        ...tones.map((tone, index): [string, string] => [
+          `--lr-docx-viewer-highlight-${tone}-${bg}`,
+          colorFor(offset + 1 + index),
+        ]),
+        [`--lr-docx-viewer-search-match-${bg}`, colorFor(offset + 10)],
+        [`--lr-docx-viewer-search-match-active-${bg}`, colorFor(offset + 11)],
+        [`--lr-docx-viewer-search-match-active-${legacy ? 'foreground' : 'color'}`, colorFor(offset + 12)],
+      ];
+    };
+
+    const paints = async (...sets: [string, string][][]): Promise<string[]> => {
+      const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+      (globalThis as { Highlight?: unknown }).Highlight = undefined;
+      const { el, restore } = await loadWithMarkup(
+        '<table><tr><th>Head</th></tr></table><p>alpha beta gamma delta omega Hello Hello</p>',
+      );
+      try {
+        for (const [name, value] of sets.flat()) el.style.setProperty(name, value);
+        const words = ['alpha', 'beta', 'gamma', 'delta', 'omega'];
+        el.highlights = tones.map((tone, index) => ({
+          id: tone,
+          tone,
+          anchor: { kind: 'text-quote', quote: words[index]! },
+        }));
+        await el.updateComplete;
+        const root = el.shadowRoot!;
+        const result = [getComputedStyle(root.querySelector('[part="content"] th')!).backgroundColor];
+        for (const tone of tones) {
+          const mark = root.querySelector(`[part="content"] mark[data-lr-highlight-tone="${tone}"]`)!;
+          result.push(getComputedStyle(mark).backgroundColor);
+        }
+        await el.search('Hello');
+        const matches = Array.from(root.querySelectorAll<HTMLElement>('[part~="search-match"]'));
+        const active = matches.find((match) => match.getAttribute('part')?.includes('search-match-active'))!;
+        const inactive = matches.find((match) => !match.getAttribute('part')?.includes('search-match-active'))!;
+        result.push(
+          getComputedStyle(inactive).backgroundColor,
+          getComputedStyle(active).backgroundColor,
+          getComputedStyle(active).color,
+        );
+        return result;
+      } finally {
+        restore();
+        (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+      }
+    };
+
+    const expected = (offset: number): string[] => [
+      colorFor(offset),
+      ...tones.map((_, index) => colorFor(offset + 1 + index)),
+      colorFor(offset + 10),
+      colorFor(offset + 11),
+      colorFor(offset + 12),
+    ];
+
+    it('paints the table header, every tone and both search states from the canonical names', async () => {
+      expect(await paints(declarations(false, 0))).to.deep.equal(expected(0));
+    });
+
+    it('still honors the deprecated spellings with the same result', async () => {
+      expect(await paints(declarations(true, 0))).to.deep.equal(expected(0));
+    });
+
+    it('lets the canonical name win when both spellings are set', async () => {
+      expect(await paints(declarations(true, 50), declarations(false, 0))).to.deep.equal(expected(0));
+    });
+  });
+
   it('resolves a non-accent tone through the carrier and visibly mixes it on pointer hover', async () => {
     // Each tone sets one private carrier that the resting background and the hover/active mixes all
     // read, instead of declaring `background` per tone -- a per-tone background is invisible to the
@@ -1574,7 +1649,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     (globalThis as { Highlight?: unknown }).Highlight = undefined;
     const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
     try {
-      el.style.setProperty('--lr-docx-viewer-highlight-success-background', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-docx-viewer-highlight-success-bg', 'rgb(10, 20, 30)');
       el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' }, tone: 'success' }];
       await el.updateComplete;
       const toned = el.shadowRoot!.querySelector<HTMLElement>(

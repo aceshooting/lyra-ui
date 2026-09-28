@@ -7,9 +7,11 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
+- **Deprecated css-property** `--lr-video-playlist-item-current-background` since `21.1.0`; use css-property `--lr-video-playlist-item-current-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
+- **Deprecated property** `autoAdvance` / `auto-advance` since `21.1.0`; use property `without-auto-advance`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,10 +25,12 @@ prefix. Import the granular registration entry with
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and
-forwarded). Lyra additionally provides `autoAdvance: boolean = true` (attribute `auto-advance`;
-`auto-advance="false"` disables completion-driven navigation) and `repeat: 'none' | 'one' | 'all' =
-'none'`. Keeping `autoAdvance` true preserves the mirrored behavior in which an ended video starts
-the next one. `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
+forwarded). Lyra additionally provides `withoutAutoAdvance: boolean = false` (attribute
+`without-auto-advance`; disables completion-driven navigation, so `repeat` has no effect either)
+and `repeat: 'none' | 'one' | 'all' = 'none'`. Leaving `without-auto-advance` unset preserves the
+mirrored behavior in which an ended video starts the next one. Deprecated alias: `auto-advance`
+(`autoAdvance`; use `without-auto-advance`, which `auto-advance="false"` equals; removing it
+restores the default; removed in 23.0.0). `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
 first. `items: readonly LyraVideoPlaylistItem[] = []` (attribute: false) is deterministic
 first-render row metadata with `{ title, poster?, duration?, unavailable? }`, indexed to the direct
 video children. Assign the same value before the server and browser first render. Seeded rows stay
@@ -61,9 +65,11 @@ are not playlist items.
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
-`var(--lr-color-brand)`) and `--lr-video-playlist-item-current-background` (default
+`var(--lr-color-brand)`) and `--lr-video-playlist-item-current-bg` (default
 `var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
-its hover and press mix from the current background rather than the plain-row surface.
+its hover and press mix from the current background rather than the plain-row surface. Deprecated
+alias: `--lr-video-playlist-item-current-background` (use `--lr-video-playlist-item-current-bg`;
+removed in 23.0.0).
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an
@@ -86,7 +92,7 @@ allocations the sidebar moves below the video through a container query; long ti
 without widening the host.
 
 **A child marked `inert` is unavailable:** it never becomes the active video,
-`next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders `disabled`
+`next()`/`previous()`/`goTo()` and automatic advancement step past it, and its playlist row renders `disabled`
 and `tabindex="-1"` so neither sequential nor optional-arrow focus can land on it — an inert element
 refuses focus, which would leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>`
 has no `disabled`
@@ -96,7 +102,7 @@ marking the _current_ video inert moves the selection to the nearest enabled chi
 `lr-video-change`) and hands optional-arrow focus to the row that replaced it, instead of leaving a
 stale arrow-navigation cursor on a row that can no longer take focus.
 
-Only the native `ended` notification drives `autoAdvance`/repeat completion. A native `error`
+Only the native `ended` notification drives automatic advancement and repeat completion. A native `error`
 records the stopped state but never changes selection; recovery and retry remain consumer-owned.
 
 ```html

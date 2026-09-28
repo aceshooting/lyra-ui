@@ -12,6 +12,15 @@ import type { LyraSlider } from "./slider.js";
 import { styles } from "./slider.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
+
+// The compatibility tests below deliberately use the deprecated show-value alias, which keeps
+// working until its removal.
+expectDeprecatedUsage("lr-slider", "property", "showValue");
 // Registers the real shipped `ar` catalog's `forms` slice so the `ar`/`ar-EG` locale tests
 // below can render without tripping the dev-mode locale-fallback warning that strict-console
 // platform lanes treat as fatal.
@@ -92,7 +101,7 @@ it("contains standalone unbroken label, reference, and hint content at 320px in 
   for (const direction of ["ltr", "rtl"] as const) {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div dir=${direction} style="inline-size: 320px; max-inline-size: 320px">
-        <lr-slider label=${text} hint=${text} show-value>
+        <lr-slider label=${text} hint=${text} with-value>
           <span slot="reference">${text}</span>
         </lr-slider>
       </div>
@@ -209,7 +218,7 @@ describe("mapped numeric and form contract", () => {
     const el = form.querySelector("lr-slider") as LyraSlider;
     expect(el.minValue).to.equal(0);
     expect(el.maxValue).to.equal(50);
-    expect(el.showValue).to.be.false;
+    expect(el.withValue).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('[part="value"]').length).to.equal(
       0
     );
@@ -594,7 +603,7 @@ it("renders the indicator and thumb position from the current percent-of-range",
 
 it("renders the visible value readout when requested, and omits it by default", async () => {
   const shown = (await fixture(
-    html`<lr-slider value="42" show-value></lr-slider>`
+    html`<lr-slider value="42" with-value></lr-slider>`
   )) as LyraSlider;
   const readout = shown.shadowRoot!.querySelector(
     '[part="value"]'
@@ -604,7 +613,7 @@ it("renders the visible value readout when requested, and omits it by default", 
   expect(readout.getAttribute("aria-hidden")).to.equal("true");
 
   const hidden = (await fixture(
-    html`<lr-slider value="42" .showValue=${false}></lr-slider>`
+    html`<lr-slider value="42" .withValue=${false}></lr-slider>`
   )) as LyraSlider;
   expect(hidden.shadowRoot!.querySelector('[part="value"]') === null).to.equal(
     true
@@ -614,7 +623,7 @@ it("renders the visible value readout when requested, and omits it by default", 
 it("maps a numeric value to opt-in human-readable aria-valuetext without changing the visible readout", async () => {
   const el = (await fixture(html`
     <lr-slider
-      show-value
+      with-value
       min="0"
       max="2"
       value="1"
@@ -632,7 +641,7 @@ it("maps a numeric value to opt-in human-readable aria-valuetext without changin
 it("formats the default visible value and aria-valuetext with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-slider
-      show-value
+      with-value
       lang="ar-EG"
       min="0"
       max="2000"
@@ -664,15 +673,15 @@ it("preserves numeric aria-valuetext when valueFormatter is unset and omits it f
   expect(thumb.hasAttribute("aria-valuetext")).to.be.false;
 });
 
-it('omits the value readout from a plain HTML show-value="false" content attribute too, not just the .showValue property binding', async () => {
+it('omits the value readout from a plain HTML with-value="false" content attribute too, not just the .withValue property binding', async () => {
   // Regression guard for trueDefaultBooleanConverter: Lit's default presence-based `type:
   // Boolean` converter can never be turned back off from a plain-HTML attribute once the
-  // property's own default is `true` -- a bare show-value="false" string would otherwise still
+  // property's own default is `true` -- a bare with-value="false" string would otherwise still
   // parse as truthy (only presence matters to the default converter).
   const el = (await fixture(
-    html`<lr-slider value="42" show-value="false"></lr-slider>`
+    html`<lr-slider value="42" with-value="false"></lr-slider>`
   )) as LyraSlider;
-  expect(el.showValue).to.be.false;
+  expect(el.withValue).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="value"]') === null).to.equal(
     true
   );
@@ -682,7 +691,7 @@ it('omits the value readout from a plain HTML show-value="false" content attribu
   const defaulted = (await fixture(
     html`<lr-slider value="42"></lr-slider>`
   )) as LyraSlider;
-  expect(defaulted.showValue).to.be.false;
+  expect(defaulted.withValue).to.be.false;
 });
 
 it("lets a forwarded host aria-label win on the thumb while retaining the label prop fallback", async () => {
@@ -2757,7 +2766,7 @@ it('mirrors range arrow keys under dir="rtl"', async () => {
 it("shows both handle values in the readout, formatted with the effective locale", async () => {
   const el = (await fixture(html`
     <lr-slider
-      show-value
+      with-value
       range
       lang="ar-EG"
       min="0"
@@ -3505,7 +3514,7 @@ it("leaves the single-handle contract unchanged when none of the new properties 
   expect(el.withMarkers).to.be.false;
   expect(el.withTooltip).to.be.false;
   expect(el.tooltip).to.equal("none");
-  expect(el.showValue).to.be.false;
+  expect(el.withValue).to.be.false;
   expect(el.orientation).to.equal("horizontal");
   expect(el.hint).to.equal("");
 
@@ -4264,7 +4273,7 @@ it("saturates when a finite step overflows only after it is added to the current
 });
 
 it('keeps numeric inline readouts by default and opts into formatted label-row values', async () => {
-  const el = await fixture<LyraSlider>(html`<lr-slider label="Speed" value="30" show-value
+  const el = await fixture<LyraSlider>(html`<lr-slider label="Speed" value="30" with-value
     .valueFormatter=${(value: number) => `${value}%`}></lr-slider>`);
   const readout = () => el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
   expect(readout().textContent).to.equal('30');
@@ -4286,7 +4295,7 @@ it('keeps numeric inline readouts by default and opts into formatted label-row v
 
 it('formats both live range values while committing only on key release', async () => {
   const el = await fixture<LyraSlider>(html`<lr-slider range label="Hours" min-value="2" max-value="8"
-    show-value value-display="formatted" value-placement="label"
+    with-value value-display="formatted" value-placement="label"
     .valueFormatter=${(value: number, handle: string) => `${handle}:${value} h`}></lr-slider>`);
   const events: string[] = [];
   el.addEventListener('lr-input', () => events.push('input'));
@@ -4306,7 +4315,7 @@ it('formats both live range values while committing only on key release', async 
 });
 
 it('uses localized numeric fallback for nullish formatted values and bounds long label rows', async () => {
-  const el = await fixture<LyraSlider>(html`<lr-slider lang="ar" dir="rtl" value="30" show-value
+  const el = await fixture<LyraSlider>(html`<lr-slider lang="ar" dir="rtl" value="30" with-value
     value-display="formatted" value-placement="label" style="inline-size:320px"
     .valueFormatter=${() => null}><span slot="label">${'Long label '.repeat(20)}</span></lr-slider>`);
   const value = el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!;
@@ -4314,7 +4323,7 @@ it('uses localized numeric fallback for nullish formatted values and bounds long
   el.valueFormatter = () => '0.3 hours '.repeat(40);
   await el.updateComplete;
   expect(el.scrollWidth).to.be.at.most(el.clientWidth + 1);
-  el.showValue = false;
+  el.withValue = false;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="label-row"]') === null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="value"]') === null).to.equal(true);
@@ -4322,7 +4331,7 @@ it('uses localized numeric fallback for nullish formatted values and bounds long
 
 it('preserves an authored fraction when value is bound before its domain and step', async () => {
   const el = await fixture<LyraSlider>(html`<lr-slider .value=${0.55} .min=${0} .max=${1} .step=${0.05}
-    show-value value-display="formatted" .valueFormatter=${(value: number) => `${Math.round(value * 100)}%`}></lr-slider>`);
+    with-value value-display="formatted" .valueFormatter=${(value: number) => `${Math.round(value * 100)}%`}></lr-slider>`);
   expect(el.value).to.equal(0.55);
   expect(el.shadowRoot!.querySelector('[part~="thumb"]')!.getAttribute('aria-valuenow')).to.equal('0.55');
   expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('55%');
@@ -4357,4 +4366,96 @@ it('preserves a domain batch snapshot and controlled range endpoints without emi
   await el.updateComplete;
   expect(el.value).to.equal(18);
   expect(changes).to.equal(0);
+});
+
+describe("deprecated show-value alias", () => {
+  const usage: readonly DeprecatedUsage[] = [
+    { tag: "lr-slider", kind: "property", name: "showValue" },
+  ];
+  const readout = (el: LyraSlider) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="value"]');
+
+  it("renders the same readout as with-value and warns once", async () => {
+    const canonical = await fixture<LyraSlider>(
+      html`<lr-slider value="42" with-value></lr-slider>`
+    );
+    let aliased: LyraSlider[] = [];
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      aliased = [
+        await fixture<LyraSlider>(html`<lr-slider value="42" show-value></lr-slider>`),
+        await fixture<LyraSlider>(html`<lr-slider value="42" show-value></lr-slider>`),
+      ];
+    });
+    for (const el of aliased) {
+      expect(el.withValue).to.equal(true);
+      expect(el.showValue).to.equal(true);
+      expect(readout(el)?.textContent).to.equal(readout(canonical)!.textContent);
+      expect(readout(el)?.getAttribute("aria-hidden")).to.equal("true");
+      expect(el.hasAttribute("with-value"), "the canonical attribute is not reflected").to.equal(false);
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-slider:property:showValue",
+    ]);
+    expect(warnings[0]!.message).to.contain("with-value");
+  });
+
+  it('treats show-value="false" and an unset alias as off', async () => {
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      const off = await fixture<LyraSlider>(
+        html`<lr-slider value="42" show-value="false"></lr-slider>`
+      );
+      expect(off.withValue).to.equal(false);
+      expect(readout(off) === null).to.equal(true);
+      const unset = await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
+      expect(unset.showValue).to.equal(false);
+    });
+    expect(warnings, "an alias write that leaves the default unchanged is not a change").to.have.length(0);
+  });
+
+  it("does not warn for the canonical with-value or an unset alias", async () => {
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      await fixture<LyraSlider>(html`<lr-slider value="42" with-value></lr-slider>`);
+      await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it("forwards a .showValue property write to withValue", async () => {
+    const el = await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
+    const warnings = await captureDeprecationWarnings(usage, async () => {
+      el.showValue = true;
+      await el.updateComplete;
+    });
+    expect(el.withValue).to.equal(true);
+    expect(readout(el) !== null).to.equal(true);
+    expect(warnings).to.have.length(1);
+    el.showValue = false;
+    await el.updateComplete;
+    expect(el.withValue).to.equal(false);
+    expect(readout(el) === null).to.equal(true);
+    el.withValue = true;
+    await el.updateComplete;
+    expect(el.showValue, "a canonical write syncs back to the alias").to.equal(true);
+  });
+
+  it("lets the last-written spelling win when both are present", async () => {
+    let shown: LyraSlider | undefined;
+    let hidden: LyraSlider | undefined;
+    let aliasLast: LyraSlider | undefined;
+    await captureDeprecationWarnings(usage, async () => {
+      shown = await fixture<LyraSlider>(
+        html`<lr-slider value="42" show-value="false" with-value></lr-slider>`
+      );
+      hidden = await fixture<LyraSlider>(
+        html`<lr-slider value="42" show-value with-value="false"></lr-slider>`
+      );
+      aliasLast = await fixture<LyraSlider>(
+        html`<lr-slider value="42" with-value show-value="false"></lr-slider>`
+      );
+    });
+    expect(readout(shown!) !== null).to.equal(true);
+    expect(readout(hidden!) === null).to.equal(true);
+    expect(aliasLast!.withValue, "show-value is parsed last").to.equal(false);
+    expect(readout(aliasLast!) === null).to.equal(true);
+  });
 });

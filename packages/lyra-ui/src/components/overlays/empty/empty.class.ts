@@ -10,7 +10,16 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { hasRealContent } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
 import { styles } from './empty.styles.js';
+
+/** The size steps that select the compact density. */
+const COMPACT_SIZES: ReadonlySet<LyraSize> = new Set<LyraSize>(['2xs', 'xs', 's', 'small']);
 
 /**
  * `<lr-empty>` — a generic empty/no-data state. First-party invention (no
@@ -43,13 +52,13 @@ import { styles } from './empty.styles.js';
  * @csspart heading - The heading paragraph (`role="heading"` at the configured level unless opted out).
  * @csspart description - The description paragraph.
  * @csspart actions - The wrapper around the `actions`-slotted content.
- * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used in compact mode;
- * set to `center` for dense but centered empty states.
- * @cssprop [--lr-empty-compact-padding=var(--lr-space-xs)] - Padding used in compact mode;
+ * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used at the compact density
+ * (`size="s"` and below); set to `center` for dense but centered empty states.
+ * @cssprop [--lr-empty-compact-padding=var(--lr-space-xs)] - Padding used at the compact density;
  * accepts any padding shorthand (e.g. `8px 2px`).
  * @cssprop [--lr-empty-compact-gap=var(--lr-space-2xs)] - Gap between the icon, title, and
- * description in compact mode.
- * @cssprop --lr-empty-compact-font-size - Heading font size used in compact mode. Unset by
+ * description at the compact density.
+ * @cssprop --lr-empty-compact-font-size - Heading font size used at the compact density. Unset by
  * default (no fallback), so the heading keeps its ordinary inherited font size until a consumer
  * opts in.
  * @status stable
@@ -57,6 +66,11 @@ import { styles } from './empty.styles.js';
  */
 export class LyraEmpty extends LyraElement {
   static override styles = [LyraElement.styles, styles];
+  /** `compact` is the compact density: it writes `size="s"` (clearing `size` when turned off), and
+   *  reads back `true` for `s` and every step below it. */
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (v) => (v ? 's' : undefined), (v) => COMPACT_SIZES.has(v as LyraSize)],
+  };
 
   /** Short heading, e.g. "No results". */
   @property() heading = '';
@@ -69,11 +83,40 @@ export class LyraEmpty extends LyraElement {
   /** Supporting copy, e.g. "Try a different search." */
   @property() description = '';
 
+  private _size?: LyraSize;
+  /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
+   *  or `small`/`medium`/`large`. `s` and the steps below it select the compact density, for use
+   *  inside a constrained space (e.g. a widget body or table cell) rather than as a full-page
+   *  state: left-aligned, tighter padding, and a lighter heading weight instead of the
+   *  centered/spacious default. `m` and the steps above it keep the default density. Opt-in: with
+   *  no size the empty state renders exactly as before. Unsupported values normalize to the
+   *  omitted state and remove the attribute. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    // Only a foreign (unsupported) raw attribute is repaired in place; a supported one is left for
+    // reflection, so a write synced from the deprecated `compact` while the element upgrades never
+    // overwrites a `size` attribute that has not been processed yet.
+    const raw = this.getAttribute('size');
+    const normalized =
+      raw !== null && optionalSizeConverter.normalize(raw) !== undefined
+        ? optionalSizeConverter.normalize(next)
+        : normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
   /**
    * Compact rendering for use inside a constrained space (e.g. a widget body
    * or table cell) rather than as a full-page state: left-aligned, tighter
    * padding, and a lighter heading weight instead of the centered/spacious
    * default.
+   *
+   * @deprecated Use `size="s"`; removal not before 23.0.0.
    */
   @property({ type: Boolean, reflect: true }) compact = false;
 

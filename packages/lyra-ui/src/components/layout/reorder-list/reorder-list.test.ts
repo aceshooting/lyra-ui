@@ -3,6 +3,10 @@ import "./reorder-list.js";
 import "./reorder-item.js";
 import type { LyraReorderList } from "./reorder-list.class.js";
 import type { LyraReorderItem } from "./reorder-item.class.js";
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from "../../../../test/expected-deprecations.js";
 
 describe("<lr-reorder-list>", () => {
   const threeItems = html`
@@ -109,14 +113,14 @@ describe("<lr-reorder-list>", () => {
     expect(items[2]!.atEnd).to.be.true;
   });
 
-  it("moves the middle item up on a move-up button click and emits lr-reorder with the new order", async () => {
+  it("moves the middle item up on a move-up button click and emits lr-reorder-request with the new order", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const middle = itemsOf(el)[1]!;
     const upButton = middle.shadowRoot!.querySelector(
       '[part="move-up-button"]'
     ) as HTMLButtonElement;
 
-    const listener = oneEvent(el, "lr-reorder");
+    const listener = oneEvent(el, "lr-reorder-request");
     upButton.click();
     const event = (await listener) as CustomEvent<{
       order: string[];
@@ -150,9 +154,9 @@ describe("<lr-reorder-list>", () => {
       item.addEventListener("lr-move-request", () => itemRequests++);
       el.addEventListener("lr-move-request", () => listRequests++);
       wrapper.addEventListener("lr-move-request", () => ancestorRequests++);
-      wrapper.addEventListener("lr-reorder", () => publicReorders++);
+      wrapper.addEventListener("lr-reorder-request", () => publicReorders++);
 
-      const reordered = oneEvent(el, "lr-reorder");
+      const reordered = oneEvent(el, "lr-reorder-request");
       upButton.click();
       await reordered;
 
@@ -190,14 +194,14 @@ describe("<lr-reorder-list>", () => {
     expect(ancestorRequests).to.equal(1);
   });
 
-  it("lr-reorder is cancelable: preventDefault() holds the move, marks the item pending, and applies nothing yet", async () => {
+  it("lr-reorder-request is cancelable: preventDefault() holds the move, marks the item pending, and applies nothing yet", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const middle = itemsOf(el)[1]!;
     const upButton = middle.shadowRoot!.querySelector(
       '[part="move-up-button"]'
     ) as HTMLButtonElement;
 
-    el.addEventListener("lr-reorder", (e) => e.preventDefault());
+    el.addEventListener("lr-reorder-request", (e) => e.preventDefault());
     upButton.click();
     await el.updateComplete;
 
@@ -213,7 +217,7 @@ describe("<lr-reorder-list>", () => {
       reorderMoveCancelled: 'Move discarded',
     };
     await el.updateComplete;
-    el.addEventListener('lr-reorder', (event) => event.preventDefault());
+    el.addEventListener('lr-reorder-request', (event) => event.preventDefault());
 
     (itemsOf(el)[1]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
     await Promise.all([el.updateComplete, ...itemsOf(el).map((item) => item.updateComplete)]);
@@ -240,7 +244,7 @@ describe("<lr-reorder-list>", () => {
 
   it('honors synchronous finalize/revert calls made while the cancelable request dispatches', async () => {
     const finalized = await fixture<LyraReorderList>(threeItems);
-    finalized.addEventListener('lr-reorder', (event) => {
+    finalized.addEventListener('lr-reorder-request', (event) => {
       event.preventDefault();
       finalized.finalizePendingMove();
     }, { once: true });
@@ -249,7 +253,7 @@ describe("<lr-reorder-list>", () => {
     expect(itemsOf(finalized)[0]!.pending).to.equal(false);
 
     const reverted = await fixture<LyraReorderList>(threeItems);
-    reverted.addEventListener('lr-reorder', (event) => {
+    reverted.addEventListener('lr-reorder-request', (event) => {
       event.preventDefault();
       reverted.revertPendingMove();
     }, { once: true });
@@ -264,7 +268,7 @@ describe("<lr-reorder-list>", () => {
       const before = itemsOf(el);
       const mover = before[1]!;
       const target = before[0]!;
-      el.addEventListener('lr-reorder', () => {
+      el.addEventListener('lr-reorder-request', () => {
         if (mutation === 'remove') mover.remove();
         if (mutation === 'reorder') el.append(target);
         if (mutation === 'disable-mover') mover.disabled = true;
@@ -301,7 +305,7 @@ describe("<lr-reorder-list>", () => {
       ),
     ).to.equal(true);
     let detail: { readonly order: readonly string[] } | undefined;
-    el.addEventListener('lr-reorder', (event) => {
+    el.addEventListener('lr-reorder-request', (event) => {
       detail = event.detail;
     }, { once: true });
     (all[3]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
@@ -317,7 +321,7 @@ describe("<lr-reorder-list>", () => {
       '[part="move-up-button"]'
     ) as HTMLButtonElement;
 
-    el.addEventListener("lr-reorder", (e) => e.preventDefault());
+    el.addEventListener("lr-reorder-request", (e) => e.preventDefault());
     upButton.click();
     await el.updateComplete;
 
@@ -335,7 +339,7 @@ describe("<lr-reorder-list>", () => {
       '[part="move-up-button"]'
     ) as HTMLButtonElement;
 
-    el.addEventListener("lr-reorder", (e) => e.preventDefault());
+    el.addEventListener("lr-reorder-request", (e) => e.preventDefault());
     upButton.click();
     await el.updateComplete;
 
@@ -357,7 +361,7 @@ describe("<lr-reorder-list>", () => {
   it("cancels a pending move if item membership changes before finalization", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const middle = itemsOf(el)[1]!;
-    el.addEventListener("lr-reorder", (event) => event.preventDefault());
+    el.addEventListener("lr-reorder-request", (event) => event.preventDefault());
     (
       middle.shadowRoot!.querySelector(
         '[part="move-up-button"]'
@@ -377,7 +381,7 @@ describe("<lr-reorder-list>", () => {
   it("cancels a pending move if the same members are externally reordered before finalization", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const middle = itemsOf(el)[1]!;
-    el.addEventListener("lr-reorder", (event) => event.preventDefault());
+    el.addEventListener("lr-reorder-request", (event) => event.preventDefault());
     (
       middle.shadowRoot!.querySelector(
         '[part="move-up-button"]'
@@ -400,7 +404,7 @@ describe("<lr-reorder-list>", () => {
   it("refuses to start a second move anywhere in the list while one is pending", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const items = itemsOf(el);
-    el.addEventListener("lr-reorder", (e) => e.preventDefault());
+    el.addEventListener("lr-reorder-request", (e) => e.preventDefault());
 
     const middleUp = items[1]!.shadowRoot!.querySelector(
       '[part="move-up-button"]'
@@ -409,7 +413,7 @@ describe("<lr-reorder-list>", () => {
     await el.updateComplete;
 
     let secondEventFired = false;
-    el.addEventListener("lr-reorder", () => {
+    el.addEventListener("lr-reorder-request", () => {
       secondEventFired = true;
     });
     const lastUp = itemsOf(el)[2]!.shadowRoot!.querySelector(
@@ -420,7 +424,7 @@ describe("<lr-reorder-list>", () => {
 
     expect(
       secondEventFired,
-      "no second lr-reorder while one move is still pending"
+      "no second lr-reorder-request while one move is still pending"
     ).to.be.false;
     expect(itemsOf(el).map((i) => i.value)).to.deep.equal(["a", "b", "c"]);
   });
@@ -435,7 +439,7 @@ describe("<lr-reorder-list>", () => {
     let detail:
       | { order: string[]; fromIndex: number; toIndex: number }
       | undefined;
-    el.addEventListener("lr-reorder", (e) => {
+    el.addEventListener("lr-reorder-request", (e) => {
       detail = (
         e as CustomEvent<{
           order: string[];
@@ -463,7 +467,7 @@ describe("<lr-reorder-list>", () => {
     ) as HTMLButtonElement;
     downButton.focus();
 
-    const listener = oneEvent(el, "lr-reorder");
+    const listener = oneEvent(el, "lr-reorder-request");
     downButton.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "ArrowDown",
@@ -499,7 +503,7 @@ describe("<lr-reorder-list>", () => {
     ) as HTMLButtonElement;
     nativeButton.focus();
 
-    const listener = oneEvent(el, "lr-reorder");
+    const listener = oneEvent(el, "lr-reorder-request");
     nativeButton.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "ArrowDown",
@@ -617,7 +621,7 @@ describe("<lr-reorder-list>", () => {
     ) as HTMLButtonElement;
     firstDownButton.focus();
 
-    const listener = oneEvent(el, "lr-reorder");
+    const listener = oneEvent(el, "lr-reorder-request");
     firstDownButton.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "ArrowDown",
@@ -650,7 +654,7 @@ describe("<lr-reorder-list>", () => {
     expect(upButton.disabled).to.be.true;
 
     let emitted = false;
-    el.addEventListener("lr-reorder", () => {
+    el.addEventListener("lr-reorder-request", () => {
       emitted = true;
     });
     upButton.click();
@@ -665,7 +669,7 @@ describe("<lr-reorder-list>", () => {
     await el.updateComplete;
 
     let emitted = false;
-    el.addEventListener("lr-reorder", () => {
+    el.addEventListener("lr-reorder-request", () => {
       emitted = true;
     });
     const downButton = itemsOf(el)[1]!.shadowRoot!.querySelector(
@@ -897,11 +901,11 @@ describe('<lr-reorder-list controlled>', () => {
     expect(el.hasAttribute('controlled')).to.equal(true);
   });
 
-  it('does not move the DOM itself on an uncanceled lr-reorder, and completes once the host reorders its own children to match', async () => {
+  it('does not move the DOM itself on an uncanceled lr-reorder-request, and completes once the host reorders its own children to match', async () => {
     const el = await fixture<LyraReorderList>(threeControlledItems);
     const middle = itemsOf(el)[1]!;
     let detail: { order: readonly string[] } | undefined;
-    el.addEventListener('lr-reorder', (e) => {
+    el.addEventListener('lr-reorder-request', (e) => {
       detail = (e as CustomEvent<{ order: readonly string[] }>).detail;
     });
     const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
@@ -1005,14 +1009,14 @@ describe('<lr-reorder-list controlled>', () => {
     expect(items[1]!.pending).to.equal(true);
 
     let secondEventFired = false;
-    el.addEventListener('lr-reorder', () => {
+    el.addEventListener('lr-reorder-request', () => {
       secondEventFired = true;
     });
     const lastUp = itemsOf(el)[2]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
     lastUp.click();
     await el.updateComplete;
 
-    expect(secondEventFired, 'no second lr-reorder while a controlled reconciliation is pending').to.equal(false);
+    expect(secondEventFired, 'no second lr-reorder-request while a controlled reconciliation is pending').to.equal(false);
     expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
   });
 
@@ -1042,7 +1046,7 @@ describe('<lr-reorder-list controlled>', () => {
   it('finalizePendingMove() starts a controlled reconciliation instead of moving the DOM itself', async () => {
     const el = await fixture<LyraReorderList>(threeControlledItems);
     const middle = itemsOf(el)[1]!;
-    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    el.addEventListener('lr-reorder-request', (e) => e.preventDefault());
     (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
 
@@ -1067,7 +1071,7 @@ describe('<lr-reorder-list controlled>', () => {
     const el = wrapper.querySelector('lr-reorder-list') as LyraReorderList;
     const externalButton = wrapper.querySelector('button') as HTMLButtonElement;
     const middle = itemsOf(el)[1]!;
-    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    el.addEventListener('lr-reorder-request', (e) => e.preventDefault());
     (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(middle.pending).to.equal(true);
@@ -1095,7 +1099,7 @@ describe('<lr-reorder-list controlled>', () => {
   it("still restores focus to the moved row's move button when focus was not moved away during a pending controlled reconciliation", async () => {
     const el = await fixture<LyraReorderList>(threeControlledItems);
     const middle = itemsOf(el)[1]!;
-    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    el.addEventListener('lr-reorder-request', (e) => e.preventDefault());
     (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(middle.pending).to.equal(true);
@@ -1153,7 +1157,7 @@ describe('<lr-reorder-list> revertPendingMove({ silent })', () => {
     el.strings = { reorderMoveCancelled: 'Move discarded' };
     await el.updateComplete;
     const middle = itemsOf(el)[1]!;
-    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    el.addEventListener('lr-reorder-request', (e) => e.preventDefault());
     (middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(middle.pending).to.equal(true);
@@ -1168,5 +1172,128 @@ describe('<lr-reorder-list> revertPendingMove({ silent })', () => {
     };
     await region.updateComplete;
     expect(region.shadowRoot!.textContent ?? '').to.not.contain('Move discarded');
+  });
+});
+
+describe('lr-reorder-request and its deprecated lr-reorder alias', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-reorder-list', kind: 'event', name: 'lr-reorder' },
+  ];
+  const threeItems = html`
+    <lr-reorder-list>
+      <lr-reorder-item value="a">Row A</lr-reorder-item>
+      <lr-reorder-item value="b">Row B</lr-reorder-item>
+      <lr-reorder-item value="c">Row C</lr-reorder-item>
+    </lr-reorder-list>
+  `;
+  const itemsOf = (el: LyraReorderList) =>
+    [...el.querySelectorAll('lr-reorder-item')] as LyraReorderItem[];
+  const moveMiddleUp = (el: LyraReorderList) =>
+    (itemsOf(el)[1]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLElement).click();
+
+  it('fires the canonical request first, then the alias, as separate equal frozen cancelable details', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const seen: CustomEvent<{ order: readonly string[]; fromIndex: number; toIndex: number }>[] = [];
+    const record = (event: Event) => seen.push(event as (typeof seen)[number]);
+    el.addEventListener('lr-reorder-request', record);
+    el.addEventListener('lr-reorder', record);
+    moveMiddleUp(el);
+    expect(seen.map((event) => event.type)).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
+    const expected = JSON.stringify({ order: ['b', 'a', 'c'], fromIndex: 1, toIndex: 0 });
+    expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([expected, expected]);
+    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
+    expect(seen.every((event) => Object.isFrozen(event.detail) && Object.isFrozen(event.detail.order))).to.equal(true);
+    expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
+      [true, true, true],
+      [true, true, true],
+    ]);
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
+  });
+
+  it('holds the move through the canonical request without a warning', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    let aliasPrevented: boolean | undefined;
+    el.addEventListener('lr-reorder-request', (event) => event.preventDefault());
+    el.addEventListener('lr-reorder', (event) => {
+      aliasPrevented = event.defaultPrevented;
+    });
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
+    expect(itemsOf(el)[1]!.pending).to.equal(true);
+    expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('still lets a listener on only the alias hold the move, and warns once naming lr-reorder-request', async () => {
+    const held: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await fixture<LyraReorderList>(threeItems);
+        el.addEventListener('lr-reorder', (event) => event.preventDefault());
+        moveMiddleUp(el);
+        held.push(itemsOf(el)[1]!.pending && itemsOf(el)[1]!.value === 'b');
+      }
+    });
+    expect(held).to.deep.equal([true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-reorder-list:event:lr-reorder',
+    ]);
+    expect(warnings[0]!.message).to.contain('lr-reorder-request');
+  });
+
+  it('lets an alias listener resolve its held move synchronously, like a canonical one', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraReorderList>(threeItems);
+      el.addEventListener('lr-reorder', (event) => {
+        event.preventDefault();
+        el.finalizePendingMove();
+      }, { once: true });
+      moveMiddleUp(el);
+      expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
+    });
+    expect(warnings).to.have.length(1);
+  });
+
+  it('does not warn when an alias listener only observes', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    let observed = 0;
+    el.addEventListener('lr-reorder', () => (observed += 1));
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
+    expect(observed).to.equal(1);
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
+    expect(warnings).to.have.length(0);
+  });
+
+  for (const resolve of ['finalize', 'revert'] as const) {
+    it(`still fires the alias after a canonical listener resolves the move synchronously (${resolve})`, async () => {
+      const el = await fixture<LyraReorderList>(threeItems);
+      const seen: string[] = [];
+      el.addEventListener('lr-reorder-request', (event) => {
+        seen.push(event.type);
+        event.preventDefault();
+        if (resolve === 'finalize') el.finalizePendingMove();
+        else el.revertPendingMove();
+      });
+      el.addEventListener('lr-reorder', (event) => seen.push(event.type));
+      moveMiddleUp(el);
+      expect(seen).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
+      expect(itemsOf(el).map((item) => item.value)).to.deep.equal(
+        resolve === 'finalize' ? ['b', 'a', 'c'] : ['a', 'b', 'c']
+      );
+      expect(itemsOf(el)[1]!.pending).to.equal(false);
+    });
+  }
+
+  it('still fires the alias when a canonical listener removes the list mid-dispatch, and moves nothing', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const seen: string[] = [];
+    el.addEventListener('lr-reorder-request', (event) => {
+      seen.push(event.type);
+      el.remove();
+    });
+    el.addEventListener('lr-reorder', (event) => seen.push(event.type));
+    moveMiddleUp(el);
+    expect(seen).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
+    expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(itemsOf(el).some((item) => item.pending)).to.equal(false);
   });
 });

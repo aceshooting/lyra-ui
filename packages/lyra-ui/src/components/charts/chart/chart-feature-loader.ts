@@ -88,7 +88,7 @@ export async function loadChartAndZoom(
   } catch (err) {
     console.warn(
       '<lr-chart> zoom support needs the optional peer dependency `chartjs-plugin-zoom` — ' +
-        'charts still render without it, but the `zoom` attribute has no effect until it is ' +
+        'charts still render without it, but the `zoomable` attribute has no effect until it is ' +
         'installed with `pnpm add chartjs-plugin-zoom`:',
       err,
     );
@@ -122,7 +122,7 @@ export async function loadChartAndRegisterZoom(
   } catch (err) {
     console.warn(
       '<lr-chart> zoom support could not be enabled — charts still render without it, but the ' +
-        '`zoom` attribute has no effect:',
+        '`zoomable` attribute has no effect:',
       err,
     );
     return { kind: 'feature-unavailable', mod };
@@ -133,18 +133,18 @@ export async function loadChartAndRegisterZoom(
 
 /**
  * Loads `chart.js` (reusing the cached core load) plus `chartjs-plugin-zoom`,
- * on first actual demand — most charts never set `zoom`, and the plugin has
+ * on first actual demand — most charts never set `zoomable`, and the plugin has
  * a hard dependency on `hammerjs`. Registers the plugin at most once across
  * the page. Call this instead of `loadChartJs()` from any chart that has
- * `zoom` set (at connect time, or later once `zoom` turns on).
+ * `zoomable` set (at connect time, or later once `zoomable` turns on).
  *
  * The whole operation (chart.js core + the zoom plugin import + its
  * registration) is memoized behind a single `zoomResultLoad` promise, assigned
  * synchronously before any `await` — mirroring `loadChartJs()`'s own
  * `chartJs` memoization above. A plain boolean "already registered" guard
  * checked before an `await` and only set after would leave a check-then-act
- * race across that `await` boundary: two callers racing to turn `zoom` on
- * close together (e.g. two `<lr-chart zoom>` elements connecting around
+ * race across that `await` boundary: two callers racing to turn `zoomable` on
+ * close together (e.g. two `<lr-chart zoomable>` elements connecting around
  * the same time) could both pass the check before either sets the flag,
  * each independently re-importing the plugin and calling
  * `mod.Chart.register()`. A single promise assigned up front closes that

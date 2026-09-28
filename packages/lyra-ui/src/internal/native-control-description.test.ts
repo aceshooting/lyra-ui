@@ -22,7 +22,7 @@ for (const [tag, selector] of entries) {
     const root = await fixture<HTMLElement>(html`<div><p id="owned-external">External</p><p id="owned-next">Next external</p><p id="generated-first">First generated</p><p id="generated-second">Second generated</p></div>`);
     const element = document.createElement(tag) as LyraElement;
     element.setAttribute('aria-describedby', 'owned-external');
-    if (tag === 'lr-locale-picker') element.setAttribute('show-flags', 'false');
+    if (tag === 'lr-locale-picker') element.setAttribute('without-flags', '');
     element.setAttribute('hint', 'Local hint');
     element.setAttribute('error-text', 'Local error');
     if (tag === 'lr-button') {

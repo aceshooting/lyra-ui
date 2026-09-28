@@ -473,21 +473,24 @@ it("emits one host lr-sort event for one bubbling table lr-sort event", async ()
   expect(count).to.equal(1);
 });
 
-it("does not leak the composed lr-table lr-row-click event past the host under its own name", async () => {
+it("does not leak the composed lr-table row events past the host under their own names", async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`
   )) as LyraDocumentLibrary;
   const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
   let count = 0;
+  el.addEventListener("lr-row-activate", () => count++);
   el.addEventListener("lr-row-click", () => count++);
 
-  table.dispatchEvent(
-    new CustomEvent("lr-row-click", {
-      detail: { row: docs[0] },
-      bubbles: true,
-      composed: true,
-    })
-  );
+  for (const type of ["lr-row-activate", "lr-row-click"]) {
+    table.dispatchEvent(
+      new CustomEvent(type, {
+        detail: { row: docs[0] },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
   await el.updateComplete;
 
   expect(count).to.equal(0);
@@ -684,7 +687,7 @@ it("opens a document via its name button, firing lr-open with the document id", 
   expect((event as CustomEvent).detail).to.deep.equal({ documentId: "d1" });
 });
 
-it("opens a document by activating its row elsewhere (non-interactive area), via lr-table lr-row-click", async () => {
+it("opens a document by activating its row elsewhere (non-interactive area), via lr-table lr-row-activate", async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`
   )) as LyraDocumentLibrary;
@@ -696,6 +699,19 @@ it("opens a document by activating its row elsewhere (non-interactive area), via
   row.click();
   const event = await listener;
   expect((event as CustomEvent).detail).to.deep.equal({ documentId: "d1" });
+});
+
+it("opens a document exactly once per row activation, even though lr-table also fires its deprecated alias", async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`
+  )) as LyraDocumentLibrary;
+  const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+  const row = table.shadowRoot!.querySelectorAll("[data-row-key]")[0] as HTMLElement;
+  const opened: unknown[] = [];
+  el.addEventListener("lr-open", (event) => opened.push((event as CustomEvent).detail));
+  row.click();
+  await el.updateComplete;
+  expect(opened).to.deep.equal([{ documentId: "d1" }]);
 });
 
 it("renders the built-in English fallback with no locale/strings registered", async () => {

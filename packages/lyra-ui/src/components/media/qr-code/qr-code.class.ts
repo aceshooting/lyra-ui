@@ -180,7 +180,7 @@ function resolveQrColor(
  * `[part="empty"]` without image semantics.
  *
  * Standard host `color` and `background-color` control foreground and
- * background paint. `--lr-qr-code-fill` and `--lr-qr-code-background` are
+ * background paint. `--lr-qr-code-fill` and `--lr-qr-code-bg` are
  * optional aliases for those host styles; otherwise inherited color and the
  * host's transparent background are preserved. The permanent upstream parity
  * properties `fill` and `background` take precedence over those CSS inputs.
@@ -215,7 +215,9 @@ function resolveQrColor(
  * @csspart error - Visible error shown when the peer is missing, or `value` failed to encode; the
  *   transition is announced through the shared light-DOM assertive region.
  * @cssprop --lr-qr-code-fill - Optional alias for host `color`, used by foreground modules.
- * @cssprop --lr-qr-code-background - Optional alias for host `background-color`, used by the canvas background.
+ * @cssprop --lr-qr-code-bg - Optional alias for host `background-color`, used by the canvas background.
+ * @cssprop --lr-qr-code-background - Deprecated alias of `--lr-qr-code-bg`; removal not before
+ *   23.0.0.
  * @status stable
  * @since 4.0.0
  */
@@ -253,7 +255,7 @@ export class LyraQrCode extends LyraElement {
   @property() fill = '';
 
   /** Upstream-compatible canvas-background color. A non-empty value takes precedence over host
-   * `background-color` and `--lr-qr-code-background`. */
+   * `background-color` and `--lr-qr-code-bg`. */
   @property() background = '';
 
   /** Safe media URL for an optional centered logo/image. */

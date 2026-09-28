@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { styles } from './agent-eval-dashboard.styles.js';
@@ -51,8 +52,9 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEven
  * @csspart run-status-message - Optional caller-supplied detail for a run status.
  * @csspart empty - The empty history message.
  * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
- * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Active metric background,
+ * @cssprop [--lr-agent-eval-dashboard-active-bg=var(--lr-color-brand-quiet)] - Active metric background,
  *   and the base its hover/press mixes from.
+ * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Deprecated alias of `--lr-agent-eval-dashboard-active-bg`; removal not before 23.0.0.
  * @status stable
  * @since 6.2.0
  */
@@ -89,6 +91,10 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   protected static override readonly immutableEventDetails = Object.freeze(['lr-run-activate']);
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showChart: ['withoutChart', invertAlias, invertAlias],
+  };
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */
   @property({ attribute: false }) metrics: readonly AgentEvaluationMetric[] = [];
   /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
@@ -102,6 +108,10 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
    *  `evaluationDashboardLabel` message; an explicit empty string renders no visible/accessible
    *  label. */
   @property() label?: string;
+  /** Suppresses the metric trend chart. */
+  @property({ type: Boolean, attribute: 'without-chart', reflect: true }) withoutChart = false;
+  /** Whether the metric trend chart renders.
+   *  @deprecated Use `without-chart`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter }) showChart = true;
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. */
@@ -197,8 +207,8 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}
-      ${this.showChart && active && runs.length
-        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} legend accessible-label=${active.label}></lr-lite-chart></div>`
+      ${!this.withoutChart && active && runs.length
+        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} with-legend .accessibleLabel=${active.label}></lr-lite-chart></div>`
         : nothing}
       ${this.renderRuns(runs)}
     </section>`;

@@ -45,33 +45,33 @@ export const styles = css`
      --_lr-docx-viewer-highlight-background pattern. */
   lr-virtual-list::part(cell-highlighted) {
     --_lr-notebook-viewer-highlight-background: var(
-      --lr-notebook-viewer-highlight-accent-background,
-      var(--lr-color-brand-quiet)
+      --lr-notebook-viewer-highlight-accent-bg,
+      var(--lr-notebook-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
     );
     background: var(--_lr-notebook-viewer-highlight-background);
   }
   lr-virtual-list::part(cell-highlighted-success) {
     --_lr-notebook-viewer-highlight-background: var(
-      --lr-notebook-viewer-highlight-success-background,
-      var(--lr-color-success-quiet)
+      --lr-notebook-viewer-highlight-success-bg,
+      var(--lr-notebook-viewer-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   lr-virtual-list::part(cell-highlighted-warning) {
     --_lr-notebook-viewer-highlight-background: var(
-      --lr-notebook-viewer-highlight-warning-background,
-      var(--lr-color-warning-quiet)
+      --lr-notebook-viewer-highlight-warning-bg,
+      var(--lr-notebook-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   lr-virtual-list::part(cell-highlighted-danger) {
     --_lr-notebook-viewer-highlight-background: var(
-      --lr-notebook-viewer-highlight-danger-background,
-      var(--lr-color-danger-quiet)
+      --lr-notebook-viewer-highlight-danger-bg,
+      var(--lr-notebook-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   lr-virtual-list::part(cell-highlighted-neutral) {
     --_lr-notebook-viewer-highlight-background: var(
-      --lr-notebook-viewer-highlight-neutral-background,
-      var(--lr-color-surface-raised)
+      --lr-notebook-viewer-highlight-neutral-bg,
+      var(--lr-notebook-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   /* Applied alongside cell-highlighted/cell-highlighted-<tone>: an inset outline rather than

@@ -2,9 +2,10 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './attachment-trigger.js';
 import type { LyraAttachmentTrigger } from './attachment-trigger.class.js';
+import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 
 const ANCESTOR_TOKENS =
-  '--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
+  '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
 
 function part(el: LyraAttachmentTrigger, name: string): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>(`[part~="${name}"]`)!;
@@ -23,8 +24,8 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
     const single = (await fixture(singleCapability)) as LyraAttachmentTrigger;
     await single.updateComplete;
     expect(part(single, 'trigger').localName).to.equal('lr-icon-button');
-    expect(part(single, 'trigger').getAttribute('exportparts')).to.contain(
-      'button:trigger__control'
+    expect(part(single, 'trigger').getAttribute('exportparts')).to.equal(
+      'button:trigger-control, button:trigger__control'
     );
 
     const multi = (await fixture(
@@ -32,9 +33,37 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
     )) as LyraAttachmentTrigger;
     await multi.updateComplete;
     expect(part(multi, 'menu-trigger').localName).to.equal('lr-icon-button');
-    expect(part(multi, 'menu-trigger').getAttribute('exportparts')).to.contain(
-      'button:menu-trigger__control'
+    expect(part(multi, 'menu-trigger').getAttribute('exportparts')).to.equal(
+      'button:menu-trigger-control, button:menu-trigger__control'
     );
+  });
+
+  it('styles the forwarded native controls through both the hyphenated parts and their deprecated aliases', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .canonical lr-attachment-trigger::part(trigger-control),
+      .canonical lr-attachment-trigger::part(menu-trigger-control) { outline-color: rgb(1, 2, 3); }
+      .alias lr-attachment-trigger::part(trigger__control),
+      .alias lr-attachment-trigger::part(menu-trigger__control) { outline-color: rgb(4, 5, 6); }
+    `;
+    document.head.append(style);
+    try {
+      for (const [scope, color] of [['canonical', 'rgb(1, 2, 3)'], ['alias', 'rgb(4, 5, 6)']] as const) {
+        const wrapper = await fixture(html`<div class=${scope}>
+          <lr-attachment-trigger .capabilities=${['files'] as const}></lr-attachment-trigger>
+          <lr-attachment-trigger .capabilities=${['files', 'image'] as const}></lr-attachment-trigger>
+        </div>`);
+        const [single, multi] = [...wrapper.querySelectorAll<LyraAttachmentTrigger>('lr-attachment-trigger')];
+        await single!.updateComplete;
+        await multi!.updateComplete;
+        await (part(single!, 'trigger') as LyraIconButton).updateComplete;
+        await (part(multi!, 'menu-trigger') as LyraIconButton).updateComplete;
+        expect(getComputedStyle(nativeControl(single!, 'trigger')).outlineColor, scope).to.equal(color);
+        expect(getComputedStyle(nativeControl(multi!, 'menu-trigger')).outlineColor, scope).to.equal(color);
+      }
+    } finally {
+      style.remove();
+    }
   });
 
   it('takes its paint from the shared --lr-icon-button-* contract on an ancestor', async () => {

@@ -11,7 +11,7 @@ export const styles = css`
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
-    /* The RESTING frame's own hook, alongside the compact tier's existing padding/gap levers --
+    /* The RESTING frame's own hook, alongside the dense size tier's existing padding/gap levers --
        the default tier every dossier list actually renders was the only one with no card-specific
        override, so retinting one themed list meant a ::part(base) rule or an app-wide
        --lr-color-surface change. frame='plain' still wins below: it opts out of chrome entirely. */
@@ -24,15 +24,15 @@ export const styles = css`
     block-size: 100%;
     box-sizing: border-box;
   }
-  /* Density escape -- same convention as lr-empty's compact and the sibling lr-community-card.
+  /* Density escape -- same convention as the sibling lr-community-card's dense size tier.
      Values sit behind inline var() fallbacks, not a :host declaration that every instance
      re-declares and so shadows any ancestor value; the fallbacks are the pre-existing values, so an
      unset card renders unchanged. */
-  :host([compact]) [part='base'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
     padding: var(--lr-entity-card-compact-padding, var(--lr-space-s));
     gap: var(--lr-entity-card-compact-gap, var(--lr-space-xs));
   }
-  /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
+  /* MUST stay after the dense size rule: both are :host([x]) [part='base'], equal specificity, so
      source order alone decides which padding/gap wins on a card that is both. plain is the stronger
      statement ("no chrome at all") and goes last. The header's focus button and type badge draw
      their own chrome and stay visible either way. */

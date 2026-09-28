@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated property** `showFlags` / `show-flags` since `21.1.0`; use property `without-flags`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,23 +49,25 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
-- `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`
-  (or `<lr-flag country={country} variant="compact">` when the entry sets `country`); `false`
-  omits the flag element entirely (not just visually).
+- `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
+  `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
+  when the entry sets `country`) and the trigger flag entirely (not just visually). Deprecated
+  alias: `show-flags`/`showFlags` (use `without-flags`, inverted: `show-flags="false"` is `without-flags`;
+  kept in step, last write wins; removed in 23.0.0).
 - `triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label'` (attribute `trigger-display`) —
   `'flag' | 'label' | 'flag-label'`. The default keeps the flag, label and chevron. `label`
   omits only the trigger flag; the menu keeps its flags and endonyms. `flag` centers the flag in
   a square and hides the visible label and chevron. The `trigger-label` remains available to
   assistive technology and describes the trigger's current language; its accessible name still
   follows `label`/the host `aria-label`. The square uses the shared/scoped trigger height with a
-  24px floor. `showFlags=false` retains visible text in every mode. Selection, keyboard navigation,
+  24px floor. `withoutFlags` retains visible text in every mode. Selection, keyboard navigation,
   form values and the uncommitted effective-locale preview keep their usual behavior.
 - `optionDisplay: LyraLocaleOptionDisplay = 'label-tag'` (attribute `option-display`) —
   `'label' | 'label-tag'`. The default renders each option row as the locale's label above its raw
   BCP-47 tag. `'label'` renders the label alone and **omits the `option-tag` element from the DOM**
   rather than hiding it with CSS — a visually hidden tag would still join the row's accessible name
   and would still be matched by `::part(option-tag)`, so under `'label'` that part matches nothing
-  at all. The trigger, the row flags, `showFlags`, selection, keyboard navigation and form values
+  at all. The trigger, the row flags, `withoutFlags`, selection, keyboard navigation and form values
   are identical in both modes; only the option rows change.
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger _displays_ `effectiveLocale` as a preview label, but
@@ -130,8 +132,8 @@ priority until cleared.
 
 **CSS parts:** `form-control`, `form-control-label`, `trigger`,
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
-`showFlags` is on and `triggerDisplay` is not `label`), `trigger-label` (the current language,
-visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `showFlags` is on),
+`withoutFlags` is off and `triggerDisplay` is not `label`), `trigger-label` (the current language,
+visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `withoutFlags` is off),
 `option-label`, `option-tag` (the row's secondary line — the raw BCP-47 tag; rendered only while
 `optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
 `expand-icon`,
@@ -173,7 +175,7 @@ change every unset locale picker beneath it.
 
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
-`@aceshooting/lyra-flags` package isn't installed and `showFlags` is left on.
+`@aceshooting/lyra-flags` package isn't installed and `withoutFlags` is left off.
 
 A compact header can set `trigger-display="flag"` and
 `--lr-locale-picker-trigger-height: 2.25rem` for a 36px square at the usual 16px root size.

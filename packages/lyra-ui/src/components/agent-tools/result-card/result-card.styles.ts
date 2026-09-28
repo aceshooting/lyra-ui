@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
   }
-  /* Card chrome behind inline var() fallbacks, same convention as the compact density below: each
+  /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below: each
      fallback is the pre-existing token, so an unset card paints exactly as before while a
      transcript can retune the nested card without a ::part(base) override. */
   [part='base'] {
@@ -13,24 +13,24 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-result-card-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-result-card-radius, var(--lr-radius));
-    background: var(--lr-result-card-background, var(--lr-color-surface));
+    background: var(--lr-result-card-bg, var(--lr-result-card-background, var(--lr-color-surface)));
     overflow: hidden;
     font-size: var(--lr-font-size-sm);
   }
-  /* Density escape -- same convention as lr-agent-run's compact. The tuned values sit behind
+  /* Density escape -- same convention as lr-agent-run's dense size tier. The tuned values sit behind
      inline var() fallbacks, not a :host declaration, which every instance would re-declare and so
      shadow any ancestor value; the fallbacks are the pre-existing values, so an unset card renders
      unchanged. */
-  :host([compact]) [part='header'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='header'] {
     padding: var(--lr-result-card-compact-header-padding, var(--lr-space-xs));
     gap: var(--lr-result-card-compact-header-gap, var(--lr-space-xs));
   }
-  :host([compact]) [part='body'] {
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='body'] {
     padding: var(--lr-result-card-compact-body-padding, var(--lr-space-xs));
     gap: var(--lr-result-card-compact-body-gap, var(--lr-space-2xs));
   }
   /* 'plain' removes the chrome entirely rather than just tightening it -- see the class doc for
-     why it wins over compact when both are set. */
+     why it wins over the dense size tier when both are set. */
   :host([frame='plain']) [part='base'] {
     border: 0;
     border-radius: 0;

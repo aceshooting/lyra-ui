@@ -114,7 +114,7 @@ describe('<lr-dropdown-item>', () => {
     let checkedDuringChange = true;
     let changeCancelable = false;
     let selections = 0;
-    item.addEventListener('lr-menu-item-change', (event) => {
+    item.addEventListener('lr-menu-item-change-request', (event) => {
       checkedDuringChange = item.checked;
       changeCancelable = event.cancelable;
       event.preventDefault();

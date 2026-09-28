@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   firstByRetrievalIdentity,
   isNonBlankIdentity,
@@ -118,6 +119,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showChart: ['withoutChart', invertAlias, invertAlias],
+  };
 
   /** Metric definitions shown as controls and used to format run values. */
   @property({ attribute: false }) metrics: readonly LyraRagEvaluationMetric[] =
@@ -136,7 +140,11 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
    *  localized default; an explicit empty string clears both. A non-empty host `aria-label`
    *  makes the host the sole overall owner; an explicitly empty host label stays empty. */
   @property() label?: string;
-  /** Whether a trend chart is rendered when an active metric and matching runs exist. */
+  /** Omits the trend chart that otherwise renders when an active metric and matching runs exist. */
+  @property({ type: Boolean, attribute: 'without-chart', reflect: true })
+  withoutChart = false;
+  /** Whether a trend chart is rendered when an active metric and matching runs exist.
+   *  @deprecated Use `without-chart`; removal not before 23.0.0. */
   @property({
     type: Boolean,
     attribute: 'show-chart',
@@ -146,6 +154,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   showChart = true;
   /** CSS block size forwarded to the composed trend chart. */
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
+
 
   private get normalizedMetrics(): LyraRagEvaluationMetric[] {
     return firstByRetrievalIdentity(
@@ -350,7 +359,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
             `;
           })}
         </div>
-        ${this.showChart && active && renderedRuns.length
+        ${!this.withoutChart && active && renderedRuns.length
           ? html`
               <div part="chart">
                 <lr-lite-chart
@@ -358,7 +367,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                   .height=${this.chartHeight}
                   .labels=${renderedRuns.map((run) => run.label)}
                   .datasets=${[{ label: active.label, data: values }]}
-                  accessible-label=${active.label}
+                  .accessibleLabel=${active.label}
                 ></lr-lite-chart>
               </div>
             `

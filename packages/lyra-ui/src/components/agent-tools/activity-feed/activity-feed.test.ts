@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function twoFrames(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -57,7 +58,7 @@ it('defaults to entries=[], mode="live", follow=true, expanded=false, and a loca
   expect(el.expanded).to.be.false;
   expect(el.label).to.be.undefined;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activity');
-  expect(el.showTimestamps).to.be.false;
+  expect(el.withTimestamps).to.be.false;
   expect(el.virtualizeAt).to.equal(199);
 });
 
@@ -578,8 +579,8 @@ it('renders a visible focus ring on [part="body"] when it is the tabbable scroll
   expect(focused.outlineOffset).to.equal('-2px'); // inset: -1 * --lr-focus-ring-offset
 });
 
-describe('showTimestamps', () => {
-  it('shows no timestamp by default, a formatted <time> when show-timestamps is set', async () => {
+describe('withTimestamps', () => {
+  it('shows no timestamp by default, a formatted <time> when with-timestamps is set', async () => {
     const ts = new Date('2024-01-01T10:30:00Z');
     const withoutFlag = (await fixture(
       html`<lr-activity-feed expanded .entries=${[{ id: '1', text: 'x', timestamp: ts }]}></lr-activity-feed>`,
@@ -589,7 +590,7 @@ describe('showTimestamps', () => {
     const withFlag = (await fixture(
       html`<lr-activity-feed
         expanded
-        show-timestamps
+        with-timestamps
         .entries=${[{ id: '1', text: 'x', timestamp: ts }]}
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
@@ -601,7 +602,7 @@ describe('showTimestamps', () => {
   it('overrides the default hour:minute rendering via formatTimestamp', async () => {
     const ts = new Date('2024-01-01T10:30:00Z');
     const el = (await fixture(
-      html`<lr-activity-feed expanded show-timestamps></lr-activity-feed>`,
+      html`<lr-activity-feed expanded with-timestamps></lr-activity-feed>`,
     )) as LyraActivityFeed;
     el.formatTimestamp = () => 'CUSTOM';
     el.entries = [{ id: '1', text: 'x', timestamp: ts }];
@@ -613,7 +614,7 @@ describe('showTimestamps', () => {
     const el = (await fixture(
       html`<lr-activity-feed
         expanded
-        show-timestamps
+        with-timestamps
         .entries=${[{ id: '1', text: 'x', timestamp: 'not-a-date' }]}
       ></lr-activity-feed>`,
     )) as LyraActivityFeed;
@@ -1210,7 +1211,7 @@ describe('entry part styling reaches both rendering paths', () => {
   async function feed(threshold: number, extraHostStyle = ''): Promise<LyraActivityFeed> {
     const el = (await fixture(html`<lr-activity-feed
       expanded
-      show-timestamps
+      with-timestamps
       virtualize-at=${threshold}
       style=${`--lr-theme-color-success-fill-loud: rgb(1, 2, 3); --lr-theme-color-text-quiet: rgb(4, 5, 6); ${extraHostStyle}`}
       .entries=${variantEntries}
@@ -1346,7 +1347,7 @@ it('is accessible expanded, with entries, icons, variants, and timestamps', asyn
   const el = (await fixture(
     html`<lr-activity-feed
       expanded
-      show-timestamps
+      with-timestamps
       .entries=${[
         {
           id: '1',
@@ -1545,18 +1546,18 @@ describe('focus repair', () => {
   });
 });
 
-describe('compact and frame', () => {
+describe('size and frame', () => {
   const part = (el: LyraActivityFeed, name: string) =>
     el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('defaults compact to false and reflects it as an attribute when set', async () => {
+  it('defaults size to "m", reflects it, and reflects size="s" when set', async () => {
     const plain = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
-    expect(plain.compact).to.be.false;
-    expect(plain.hasAttribute('compact')).to.be.false;
+    expect(plain.size).to.equal('m');
+    expect(plain.getAttribute('size')).to.equal('m');
 
-    const el = (await fixture(html`<lr-activity-feed compact></lr-activity-feed>`)) as LyraActivityFeed;
-    expect(el.compact).to.be.true;
-    expect(el.hasAttribute('compact')).to.be.true;
+    const el = (await fixture(html`<lr-activity-feed size="s"></lr-activity-feed>`)) as LyraActivityFeed;
+    expect(el.size).to.equal('s');
+    expect(el.getAttribute('size')).to.equal('s');
   });
 
   it('defaults frame to "card" and reflects it, in the shared container-frame vocabulary', async () => {
@@ -1569,12 +1570,12 @@ describe('compact and frame', () => {
     expect(el.getAttribute('frame')).to.equal('plain');
   });
 
-  it('compact tightens header and entry padding while keeping the card chrome', async () => {
+  it('size="s" tightens header and entry padding while keeping the card chrome', async () => {
     const regular = (await fixture(
       html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const el = (await fixture(
-      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+      html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
 
     const compactBase = getComputedStyle(part(el, 'base'));
@@ -1599,12 +1600,12 @@ describe('compact and frame', () => {
     );
   });
 
-  it('compact also tightens the gap between an entry\'s icon/dot and its label/timestamp', async () => {
+  it('size="s" also tightens the gap between an entry\'s icon/dot and its label/timestamp', async () => {
     const regular = (await fixture(
       html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     const el = (await fixture(
-      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+      html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
 
     const compactEntry = getComputedStyle(part(el, 'entry'));
@@ -1614,7 +1615,7 @@ describe('compact and frame', () => {
 
   it('retunes the compact entry gap through --lr-activity-feed-compact-entry-gap', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+      html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     el.style.setProperty('--lr-activity-feed-compact-entry-gap', '7px');
     await el.updateComplete;
@@ -1631,7 +1632,7 @@ describe('compact and frame', () => {
 
   it('retunes compact density through its dedicated cssprops', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
+      html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     el.style.setProperty('--lr-activity-feed-compact-header-padding', '1px 2px');
     el.style.setProperty('--lr-activity-feed-compact-header-gap', '3px');
@@ -1643,7 +1644,7 @@ describe('compact and frame', () => {
     expect(entry.padding).to.equal('4px 5px');
   });
 
-  it('leaves the default presentation byte-identical when compact and frame are unset', async () => {
+  it('leaves the default presentation byte-identical when size and frame are unset', async () => {
     const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
     const baseStyle = getComputedStyle(part(el, 'base'));
     expect(baseStyle.borderTopWidth).to.not.equal('0px');
@@ -1652,9 +1653,9 @@ describe('compact and frame', () => {
     expect(el.getAttribute('frame')).to.equal('card');
   });
 
-  it('is accessible in the compact and chrome-less presentations', async () => {
+  it('is accessible in the dense and chrome-less presentations', async () => {
     const el = (await fixture(
-      html`<lr-activity-feed compact frame="plain" expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
+      html`<lr-activity-feed size="s" frame="plain" expanded .entries=${makeEntries(2)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
     await expect(el).to.be.accessible();
   });
@@ -1664,11 +1665,11 @@ describe('card chrome theming hooks', () => {
   const part = (el: LyraActivityFeed, name: string) =>
     el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
 
-  it('repaints the card through --lr-activity-feed-background/-border-color/-radius', async () => {
+  it('repaints the card through --lr-activity-feed-bg/-border-color/-radius', async () => {
     const el = (await fixture(html`
       <lr-activity-feed
         expanded
-        style="--lr-activity-feed-background: rgb(1, 2, 3); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
+        style="--lr-activity-feed-bg: rgb(1, 2, 3); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
         .entries=${makeEntries(1)}
       ></lr-activity-feed>
     `)) as LyraActivityFeed;
@@ -1700,7 +1701,7 @@ describe('card chrome theming hooks', () => {
     const tokened = (await fixture(html`
       <lr-activity-feed
         expanded
-        style="--lr-activity-feed-background: var(--lr-color-surface); --lr-activity-feed-border-color: var(--lr-color-border-subtle); --lr-activity-feed-radius: var(--lr-radius)"
+        style="--lr-activity-feed-bg: var(--lr-color-surface); --lr-activity-feed-border-color: var(--lr-color-border-subtle); --lr-activity-feed-radius: var(--lr-radius)"
         .entries=${makeEntries(1)}
       ></lr-activity-feed>
     `)) as LyraActivityFeed;
@@ -1733,7 +1734,7 @@ describe('card chrome theming hooks', () => {
     const el = (await fixture(html`
       <lr-activity-feed
         expanded
-        style="--lr-activity-feed-background: rgb(255, 255, 255); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
+        style="--lr-activity-feed-bg: rgb(255, 255, 255); --lr-activity-feed-border-color: rgb(4, 5, 6); --lr-activity-feed-radius: 11px"
         .entries=${makeEntries(3)}
       ></lr-activity-feed>
     `)) as LyraActivityFeed;
@@ -1763,5 +1764,139 @@ describe('RTL', () => {
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
     // rotate(90deg): cos(90)=0, sin(90)=1 -> matrix(0, 1, -1, 0, 0, 0)
     expect(getComputedStyle(toggle).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+});
+
+describe('lr-activity-feed size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-activity-feed', kind: 'property', name: 'compact' }];
+  const density = (el: LyraActivityFeed): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, entry: getComputedStyle(el.shadowRoot!.querySelector('[part="entry"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
+      dense = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
+      const aliased = await fixture<LyraActivityFeed>(html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+      alias = density(aliased);
+      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraActivityFeed>(html`<lr-activity-feed compact size="l" expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+      const compactLast = await fixture<LyraActivityFeed>(html`<lr-activity-feed size="l" compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () => {
+  const fill = (el: LyraActivityFeed): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
+
+  it('paints from --lr-activity-feed-bg, keeps honouring --lr-activity-feed-background as its fallback, and lets --lr-activity-feed-bg win', async () => {
+    const canonical = await fixture<LyraActivityFeed>(html`<lr-activity-feed style="--lr-activity-feed-bg: rgb(1, 2, 3)"></lr-activity-feed>`);
+    const alias = await fixture<LyraActivityFeed>(html`<lr-activity-feed style="--lr-activity-feed-background: rgb(1, 2, 3)"></lr-activity-feed>`);
+    const both = await fixture<LyraActivityFeed>(
+      html`<lr-activity-feed style="--lr-activity-feed-bg: rgb(4, 5, 6); --lr-activity-feed-background: rgb(1, 2, 3)"></lr-activity-feed>`,
+    );
+    expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-activity-feed deprecated show-timestamps alias', () => {
+  const SHOW_TIMESTAMPS: readonly DeprecatedUsage[] = [
+    { tag: 'lr-activity-feed', kind: 'property', name: 'showTimestamps' },
+  ];
+  const entries = [{ id: '1', text: 'x', timestamp: new Date('2024-01-01T10:30:00Z') }];
+  const stamp = (el: LyraActivityFeed): string | null =>
+    el.shadowRoot!.querySelector('[part="entry-timestamp"]')?.getAttribute('datetime') ?? null;
+
+  it('keeps show-timestamps working like with-timestamps, warning once', async () => {
+    let canonical: string | null = null;
+    let alias: string | null = null;
+    let property: string | null = null;
+    let mirrored = false;
+    const warnings = await captureDeprecationWarnings(SHOW_TIMESTAMPS, async () => {
+      canonical = stamp(await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded with-timestamps .entries=${entries}></lr-activity-feed>`));
+      const aliased = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded show-timestamps .entries=${entries}></lr-activity-feed>`);
+      alias = stamp(aliased);
+      mirrored = aliased.withTimestamps && aliased.showTimestamps;
+      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${entries}></lr-activity-feed>`);
+      el.showTimestamps = true;
+      await el.updateComplete;
+      property = stamp(el);
+    });
+    expect(canonical).to.equal('2024-01-01T10:30:00.000Z');
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(mirrored).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:showTimestamps']);
+  });
+
+  it('applies the last write between show-timestamps and with-timestamps, and syncs back without warning', async () => {
+    const reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(SHOW_TIMESTAMPS, async () => {
+      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded show-timestamps .entries=${entries}></lr-activity-feed>`);
+      el.withTimestamps = false;
+      await el.updateComplete;
+      reads.push(el.showTimestamps, stamp(el) !== null);
+      el.withTimestamps = true;
+      await el.updateComplete;
+      reads.push(el.showTimestamps, stamp(el) !== null);
+    });
+    expect(reads).to.deep.equal([false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:showTimestamps']);
   });
 });

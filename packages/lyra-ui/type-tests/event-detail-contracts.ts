@@ -52,7 +52,7 @@ type _KnownDateChangeKeepsCompatibilityDetail = AssertTrue<
 type _RealtimeSessionIncludesCaptureEvents = AssertTrue<
   LyraRealtimeSessionEventMap extends LyraPushToTalkEventMap ? true : false
 >;
-type ToolResultMaximizeDetail = LyraToolResultDialogEventMap['lr-maximize-change']['detail'];
+type ToolResultMaximizeDetail = LyraToolResultDialogEventMap['lr-maximize-change-request']['detail'];
 type PollStatusPauseDetail = LyraPollStatusEventMap['lr-pause-change']['detail'];
 type RandomContentPauseDetail = LyraRandomContentEventMap['lr-pause-change']['detail'];
 type _ToolResultMaximizeIsNamed = AssertTrue<

@@ -73,7 +73,7 @@ it('rebinds popup dismissal to the current document without detached or stale li
         updateComplete: Promise<unknown>;
       };
       if (tagName === 'lr-locale-picker') {
-        (element as unknown as { showFlags: boolean }).showFlags = false;
+        (element as unknown as { withoutFlags: boolean }).withoutFlags = true;
       }
       elements.push(element);
       element.open = true;
@@ -335,7 +335,7 @@ it('uses destination-realm timers and AbortController for adopted async/type-ahe
   const adopt = async (tagName: string): Promise<HTMLElement & { updateComplete: Promise<unknown> }> => {
     const element = document.createElement(tagName) as HTMLElement & { updateComplete: Promise<unknown> };
     if (tagName === 'lr-locale-picker') {
-      (element as unknown as { showFlags: boolean }).showFlags = false;
+      (element as unknown as { withoutFlags: boolean }).withoutFlags = true;
     }
     elements.push(element);
     document.body.append(element);

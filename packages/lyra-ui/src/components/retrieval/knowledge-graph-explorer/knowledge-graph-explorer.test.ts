@@ -16,7 +16,7 @@ import type {
 import type {
   LyraGraphCommunity,
   LyraGraph,
-  LyraGraphLink,
+  LyraGraphEdge,
   LyraGraphNode,
 } from '../graph/graph.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -51,7 +51,7 @@ const nodes: LyraGraphNode[] = [
   { id: 'pierre', label: 'Pierre Curie', type: 'person' },
   { id: 'polonium', label: 'Polonium' },
 ];
-const links: LyraGraphLink[] = [
+const links: LyraGraphEdge[] = [
   { source: 'marie', target: 'pierre', label: 'married_to' },
   { source: 'marie', target: 'polonium', label: 'discovered' },
 ];
@@ -88,7 +88,7 @@ async function settledFixture(): Promise<LyraKnowledgeGraphExplorer> {
   const el = (await fixture(html`
     <lr-knowledge-graph-explorer
       .nodes=${nodes}
-      .links=${links}
+      .edges=${links}
       .nodeTypes=${nodeTypes}
     ></lr-knowledge-graph-explorer>
   `)) as LyraKnowledgeGraphExplorer;
@@ -105,7 +105,7 @@ describe('lr-knowledge-graph-explorer', () => {
       html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
     )) as LyraKnowledgeGraphExplorer;
     expect(el.nodes).to.deep.equal([]);
-    expect(el.links).to.deep.equal([]);
+    expect(el.edges).to.deep.equal([]);
     expect(el.pinnedNodeIds).to.deep.equal([]);
     expect(el.path).to.deep.equal([]);
     expect(el.selectedNodeId).to.equal(null);
@@ -237,14 +237,14 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
     expect(graph.nodes).to.deep.equal(nodes);
-    expect(graph.links).to.deep.equal(links);
+    expect(graph.edges).to.deep.equal(links);
     expect(graph.nodeTypes).to.deep.equal(nodeTypes);
   });
 
@@ -252,7 +252,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -270,18 +270,18 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.hiddenTypes).to.deep.equal(['person']);
   });
 
-  it('accepts a preset search-query attribute, filtering from the very first render', async () => {
+  it('accepts a preset query attribute, filtering from the very first render', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
-        search-query="curie"
+        query="curie"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
-    expect(el.searchQuery).to.equal('curie');
+    expect(el.query).to.equal('curie');
     expect(
       el.shadowRoot!.querySelectorAll('[part="search-result"]').length
     ).to.equal(2);
@@ -294,13 +294,13 @@ describe('lr-knowledge-graph-explorer', () => {
     ).to.equal('curie');
   });
 
-  it('does not announce a preset search-query on the very first render, but still announces a later user-driven change', async () => {
+  it('does not announce a preset query on the very first render, but still announces a later user-driven change', async () => {
     const before = sinkTexts().length;
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
-        search-query="polonium"
+        query="polonium"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -308,7 +308,7 @@ describe('lr-knowledge-graph-explorer', () => {
 
     expect(
       sinkTexts().length,
-      'mounting with a preset search-query must not announce -- there is no user action behind it'
+      'mounting with a preset query must not announce -- there is no user action behind it'
     ).to.equal(before);
 
     const searchInput = el.shadowRoot!.querySelector(
@@ -332,7 +332,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -368,7 +368,7 @@ describe('lr-knowledge-graph-explorer', () => {
       },
     ]);
     expect(
-      el.searchQuery,
+      el.query,
       'the component applies the query itself before announcing it'
     ).to.equal('curie');
 
@@ -384,7 +384,7 @@ describe('lr-knowledge-graph-explorer', () => {
       matchCountExact: true,
     });
 
-    el.searchQuery = 'polonium';
+    el.query = 'polonium';
     await el.updateComplete;
     expect(details.length, 'a direct host assignment stays silent').to.equal(2);
   });
@@ -394,7 +394,7 @@ describe('lr-knowledge-graph-explorer', () => {
       <lr-knowledge-graph-explorer
         style="block-size: 20rem"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -437,7 +437,7 @@ describe('lr-knowledge-graph-explorer', () => {
       <lr-knowledge-graph-explorer
         style="block-size: 30rem"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${manyNodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -462,7 +462,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -482,7 +482,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -503,7 +503,7 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.dimmedNodeIds).to.deep.equal(['polonium']);
     // polonium is dimmed, so both links touching it (married_to doesn't, discovered does) --
     // only "discovered" (marie->polonium) should dim; "married_to" (marie<->pierre) shouldn't.
-    expect(graph.dimmedLinkIds).to.deep.equal(['marie->polonium']);
+    expect(graph.dimmedEdgeIds).to.deep.equal(['marie->polonium']);
     const searchMirror = el.shadowRoot!.querySelector(
       '[part="search-results"] + .sr-only'
     )!;
@@ -522,7 +522,7 @@ describe('lr-knowledge-graph-explorer', () => {
     // role must itself carry role="listitem" (or a small allowed set) or the ARIA is invalid.
     expect(emptyEl!.getAttribute('role')).to.equal('listitem');
     expect(graph.dimmedNodeIds).to.deep.equal(['marie', 'pierre', 'polonium']);
-    expect(graph.dimmedLinkIds).to.deep.equal([
+    expect(graph.dimmedEdgeIds).to.deep.equal([
       'marie->pierre',
       'marie->polonium',
     ]);
@@ -588,14 +588,14 @@ describe('lr-knowledge-graph-explorer', () => {
 
   it('announces the very first search (empty query -> first non-empty query) to the live-region sink', async () => {
     // Regression guard for a suspected mounting-order/throttle gap: `syncAnnouncementSink()` runs
-    // in `connectedCallback()` (before first render) and `willUpdate()`'s announce-on-searchQuery-
-    // change branch is guarded by `changed.has('searchQuery')` -- neither should suppress the very
-    // first transition from the default empty `searchQuery` to a real one. Asserts on the actual
+    // in `connectedCallback()` (before first render) and `willUpdate()`'s announce-on-query-
+    // change branch is guarded by `changed.has('query')` -- neither should suppress the very
+    // first transition from the default empty `query` to a real one. Asserts on the actual
     // DOM text content the sink appends, not merely that a method was invoked.
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -624,7 +624,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         .hiddenTypes=${['person']}
         .selectedNodeId=${'polonium'}
@@ -673,7 +673,7 @@ describe('lr-knowledge-graph-explorer', () => {
       LyraKnowledgeGraphExplorerEventMap['lr-node-click'],
       LyraKnowledgeGraphExplorerEventMap['lr-link-click'],
       LyraKnowledgeGraphExplorerEventMap['lr-node-expand'],
-      LyraKnowledgeGraphExplorerEventMap['lr-community-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-community-activate'],
       LyraKnowledgeGraphExplorerEventMap['lr-relation-activate']
     ] = [
       new CustomEvent('lr-node-click', {
@@ -683,7 +683,7 @@ describe('lr-knowledge-graph-explorer', () => {
         detail: { sourceNodeId: 'a', targetNodeId: 'b' },
       }),
       new CustomEvent('lr-node-expand', { detail: { nodeId: 'a' } }),
-      new CustomEvent('lr-community-click', {
+      new CustomEvent('lr-community-activate', {
         detail: { communityId: 'community' },
       }),
       new CustomEvent('lr-relation-activate', {
@@ -694,7 +694,7 @@ describe('lr-knowledge-graph-explorer', () => {
       'lr-node-click',
       'lr-link-click',
       'lr-node-expand',
-      'lr-community-click',
+      'lr-community-activate',
       'lr-relation-activate',
     ]);
   });
@@ -729,7 +729,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
     // polonium's only neighbor is marie -- pierre is outside the kept neighborhood.
     expect(graph.dimmedNodeIds).to.deep.equal(['pierre']);
-    expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre']);
+    expect(graph.dimmedEdgeIds).to.deep.equal(['marie->pierre']);
   });
 
   it('highlight="none" forwards no dimming regardless of search/selection state', async () => {
@@ -739,7 +739,7 @@ describe('lr-knowledge-graph-explorer', () => {
     await el.updateComplete;
     const graph = el.shadowRoot!.querySelector('[part="graph"]') as LyraGraph;
     expect(graph.dimmedNodeIds).to.deep.equal([]);
-    expect(graph.dimmedLinkIds).to.deep.equal([]);
+    expect(graph.dimmedEdgeIds).to.deep.equal([]);
   });
 
   it('highlight="hover" dims by the hovered node\'s neighborhood when nothing is selected', async () => {
@@ -835,7 +835,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .selectedNodeId=${'marie'}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -855,7 +855,7 @@ describe('lr-knowledge-graph-explorer', () => {
           { id: 'marie', accessibleLabel: 'Marie Curie, chemist' },
           { id: 'pierre', label: 'Pierre Curie' },
         ]}
-        .links=${[]}
+        .edges=${[]}
         .selectedNodeId=${'marie'}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -872,7 +872,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${[{ id: 'marie', accessibleLabel: 'Marie Curie, chemist' }]}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -1462,7 +1462,7 @@ describe('lr-knowledge-graph-explorer', () => {
       <div dir="rtl">
         <lr-knowledge-graph-explorer
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           .nodeTypes=${nodeTypes}
         ></lr-knowledge-graph-explorer>
       </div>
@@ -1480,7 +1480,7 @@ describe('lr-knowledge-graph-explorer', () => {
       <lr-knowledge-graph-explorer
         style="inline-size: 320px; max-inline-size: 100%;"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1535,7 +1535,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .selectedNodeId=${'marie'}
       >
         <span slot="detail-body" id="extra-body">Extra body</span>
@@ -1572,7 +1572,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
         .selectedNodeId=${'marie'}
       >
@@ -1600,7 +1600,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1679,7 +1679,7 @@ describe('lr-knowledge-graph-explorer', () => {
       <lr-knowledge-graph-explorer
         renderer="canvas"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1717,7 +1717,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1754,7 +1754,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1776,7 +1776,7 @@ describe('lr-knowledge-graph-explorer', () => {
       { id: 'marie', label: 'Marie Curie' },
       { id: 'pierre', label: 'Pierre Curie' },
     ];
-    const testLinks: LyraGraphLink[] = [
+    const testLinks: LyraGraphEdge[] = [
       { source: 'marie', target: 'pierre', label: 'married_to' },
       { source: 'pierre', target: 'marie', label: 'friend_of' },
       { source: 'marie', target: 'ghost-out', label: 'ghost_out' }, // dangling target
@@ -1785,7 +1785,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${testNodes}
-        .links=${testLinks}
+        .edges=${testLinks}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'marie';
@@ -1806,14 +1806,14 @@ describe('lr-knowledge-graph-explorer', () => {
       { id: 'outgoing', label: 'Outgoing' },
       { id: 'incoming', label: 'Incoming' },
     ];
-    const testLinks: LyraGraphLink[] = [
+    const testLinks: LyraGraphEdge[] = [
       { source: 'origin', target: 'outgoing' },
       { source: 'incoming', target: 'origin' },
     ];
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${testNodes}
-        .links=${testLinks}
+        .edges=${testLinks}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     el.selectedNodeId = 'origin';
@@ -1838,7 +1838,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -1882,7 +1882,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .entityDetails=${{
           marie: {
             description: 'A physicist',
@@ -2074,7 +2074,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2096,7 +2096,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2135,7 +2135,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2216,7 +2216,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2274,7 +2274,7 @@ describe('lr-knowledge-graph-explorer', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         .nodeTypes=${nodeTypes}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2449,7 +2449,7 @@ describe('search matching against accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${namedOnlyByAccessibleLabel}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2464,7 +2464,7 @@ describe('search matching against accessibleLabel', () => {
         .nodes=${[
           { id: 'n1', label: 'Radium', accessibleLabel: 'Radium, element 88' },
         ]}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2477,7 +2477,7 @@ describe('search matching against accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${namedOnlyByAccessibleLabel}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2492,7 +2492,7 @@ describe('search matching against accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${namedOnlyByAccessibleLabel}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2512,7 +2512,7 @@ describe('search matching against accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${namedOnlyByAccessibleLabel}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2529,7 +2529,7 @@ describe('search matching against accessibleLabel', () => {
       <lr-knowledge-graph-explorer
         locale="tr"
         .nodes=${[{ id: 'n1', accessibleLabel: 'IĞDIR' }]}
-        .links=${[]}
+        .edges=${[]}
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2544,7 +2544,7 @@ describe('fit-to="container"', () => {
     const el = (await fixture(
       html`<lr-knowledge-graph-explorer
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
       ></lr-knowledge-graph-explorer>`
     )) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
@@ -2566,7 +2566,7 @@ describe('fit-to="container"', () => {
       <lr-knowledge-graph-explorer
         fit-to="container"
         .nodes=${nodes}
-        .links=${links}
+        .edges=${links}
         style="inline-size: 420px; --lr-canvas-reserved-height: 220px"
       ></lr-knowledge-graph-explorer>
     `)) as LyraKnowledgeGraphExplorer;
@@ -2616,7 +2616,7 @@ describe('fit-to="container"', () => {
         <lr-knowledge-graph-explorer
           fit-to="container"
           .nodes=${nodes}
-          .links=${links}
+          .edges=${links}
           style="--lr-canvas-reserved-height: 220px"
         ></lr-knowledge-graph-explorer>
       </div>

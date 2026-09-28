@@ -7,9 +7,9 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated part** `base__control` since `21.1.0`; use part `::part(base-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -92,8 +92,9 @@ the built-in button. Exactly one named icon is rendered at a time.
 - `base` / `button` — the built-in trigger, a composed `<lr-icon-button>` as of 16.0.0. It owns the
   accessible name, the activation and every state part below; its background, radius, hover/press
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
-- `base__control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
+- `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
   `background`/`border`/`padding` through `::part(base)` moves here, or onto the token.
+  Deprecated alias: `base__control` (use `base-control`; removed in 23.0.0).
 - `base-success` — added to the button's part list while the confirmation shows
   (`part="base button base-success"`).
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
@@ -194,7 +195,7 @@ import type {
   `--lr-icon-button-size` floor (2.5rem/40px). For a dense action row, lower
   `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every `LyraElement` re-declares
   on its own `:host` and so never reaches a composed child) on this element or an ancestor, or reach
-  the composed native control directly through `::part(base__control)`. A coarse-pointer/no-hover
+  the composed native control directly through `::part(base-control)`. A coarse-pointer/no-hover
   media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
   override lowered it, so the shrink is safe on a touch device.
 

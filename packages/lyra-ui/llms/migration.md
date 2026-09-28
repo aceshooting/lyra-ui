@@ -111,32 +111,603 @@ hydration compares template strings.
 
 | Component | Kind | Deprecated name | New name | Handling |
 |---|---|---|---|---|
+| `<lr-activity-feed>` | attribute | `show-timestamps` | `with-timestamps` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-activity-feed>` | css-property | `--lr-activity-feed-background` | `--lr-activity-feed-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-activity-feed>` | property | `showTimestamps` | `withTimestamps` | Rewritten where the component is proven |
+| `<lr-agent-eval-dashboard>` | attribute | `show-chart` | `without-chart` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-eval-dashboard>` | css-property | `--lr-agent-eval-dashboard-active-background` | `--lr-agent-eval-dashboard-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-agent-eval-dashboard>` | property | `showChart` | `withoutChart` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-run>` | attribute | `show-cancel` | `without-cancel` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-run>` | attribute | `show-retry` | `without-retry` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-run>` | css-property | `--lr-agent-run-background` | `--lr-agent-run-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-agent-run>` | property | `showCancel` | `withoutCancel` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-run>` | property | `showRetry` | `withoutRetry` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-trace>` | attribute | `show-bars` | `without-bars` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-trace>` | attribute | `show-cost` | `with-cost` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-agent-trace>` | attribute | `show-tokens` | `with-tokens` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-agent-trace>` | property | `showBars` | `withoutBars` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-trace>` | property | `showCost` | `withCost` | Rewritten where the component is proven |
+| `<lr-agent-trace>` | property | `showTokens` | `withTokens` | Rewritten where the component is proven |
+| `<lr-agent-workspace>` | attribute | `show-composer` | `without-composer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-workspace>` | attribute | `show-details` | `without-details` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-workspace>` | property | `showComposer` | `withoutComposer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-agent-workspace>` | property | `showDetails` | `withoutDetails` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-animated-image>` | attribute | `respect-reduced-motion` | `ignore-reduced-motion` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-animated-image>` | property | `respectReducedMotion` | `ignoreReducedMotion` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-animation>` | attribute | `respect-reduced-motion` | `ignore-reduced-motion` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-animation>` | property | `respectReducedMotion` | `ignoreReducedMotion` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-app-rail>` | attribute | `hide-toggle` | `without-toggle` | Rewritten where the component is proven |
+| `<lr-app-rail>` | attribute | `max-rail-width-px` | `max-rail-width` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-app-rail>` | attribute | `min-rail-width-px` | `min-rail-width` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-app-rail>` | attribute | `rail-width-px` | `rail-width` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-app-rail>` | css-property | `--lr-app-rail-background` | `--lr-app-rail-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-app-rail>` | css-property | `--lr-app-rail-panel-background` | `--lr-app-rail-panel-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-app-rail>` | property | `hideToggle` | `withoutToggle` | Rewritten where the component is proven |
+| `<lr-app-rail>` | property | `maxRailWidthPx` | `maxRailWidth` | Rewritten where the component is proven |
+| `<lr-app-rail>` | property | `minRailWidthPx` | `minRailWidth` | Rewritten where the component is proven |
+| `<lr-app-rail>` | property | `railWidthPx` | `railWidth` | Rewritten where the component is proven |
+| `<lr-app-rail-group>` | attribute | `open` | `collapsed` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-app-rail-group>` | property | `open` | `collapsed` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-approval-queue>` | attribute | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-approval-queue>` | property | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-accent-background` | `--lr-archive-viewer-highlight-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-active-background` | `--lr-archive-viewer-highlight-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-danger-background` | `--lr-archive-viewer-highlight-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-neutral-background` | `--lr-archive-viewer-highlight-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-success-background` | `--lr-archive-viewer-highlight-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-archive-viewer>` | css-property | `--lr-archive-viewer-highlight-warning-background` | `--lr-archive-viewer-highlight-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-attachment-chip>` | attribute | `previewable` | `without-preview` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-attachment-chip>` | attribute | `removable` | `without-remove-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-attachment-chip>` | property | `previewable` | `withoutPreview` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-attachment-chip>` | property | `removable` | `withoutRemoveButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-attachment-trigger>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-attachment-trigger>` | part | `menu-trigger__control` | `menu-trigger-control` | Rewritten where the component is proven |
+| `<lr-attachment-trigger>` | part | `trigger__control` | `trigger-control` | Rewritten where the component is proven |
+| `<lr-avatar-group>` | event | `lr-overflow-click` | `lr-overflow-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-bar-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-bar-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-bar-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-bar-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-bar-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-bar-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-bar-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-bar-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-box-plot>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-box-plot>` | attribute | `legend` | `with-legend` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-box-plot>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-box-plot>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-box-plot>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-box-plot>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-box-plot>` | property | `legend` | `withLegend` | Rewritten where the component is proven |
+| `<lr-box-plot>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-browser-frame>` | attribute | `controls` | `without-controls` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-browser-frame>` | css-property | `--lr-browser-frame-controller-background` | `--lr-browser-frame-controller-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-browser-frame>` | property | `controls` | `withoutControls` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-bubble-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-bubble-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-bubble-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-bubble-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-bubble-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-bubble-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-bubble-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-bubble-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-button>` | css-property | `--lr-button-active-background` | `--lr-button-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-button>` | css-property | `--lr-button-hover-background` | `--lr-button-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-button>` | css-property | `--lr-button-quiet-text` | `--lr-button-quiet-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-callout>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-callout>` | css-property | `--lr-callout-background` | `--lr-callout-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-callout>` | part | `close-button__control` | `close-button-control` | Rewritten where the component is proven |
+| `<lr-carousel>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-chat-composer>` | attribute | `stoppable` | `without-stop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chat-composer>` | attribute | `submit-on-enter` | `without-enter-submit` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chat-composer>` | css-property | `--lr-chat-composer-background` | `--lr-chat-composer-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-chat-composer>` | property | `stoppable` | `withoutStop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chat-composer>` | property | `submitOnEnter` | `withoutEnterSubmit` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chat-message>` | attribute | `actions-position` | `actions-placement` | Rewritten where the component is proven |
+| `<lr-chat-message>` | attribute | `attachments-position` | `attachments-placement` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-chat-message>` | property | `actionsPosition` | `actionsPlacement` | Rewritten where the component is proven |
+| `<lr-chat-message>` | property | `attachmentsPosition` | `attachmentsPlacement` | Rewritten where the component is proven |
+| `<lr-checkpoint>` | attribute | `confirm-restore` | `without-restore-confirmation` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-checkpoint>` | attribute | `restorable` | `without-restore` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-checkpoint>` | property | `confirmRestore` | `withoutRestoreConfirmation` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-checkpoint>` | property | `restorable` | `withoutRestore` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-chip>` | event | `lr-chip-select` | `lr-chip-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-chunk-inspector>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-code-block>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-code-block>` | part | `copy-button__control` | `copy-button-control` | Rewritten where the component is proven |
+| `<lr-code-block>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-code-block-core>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-code-block-core>` | part | `copy-button__control` | `copy-button-control` | Rewritten where the component is proven |
+| `<lr-code-block-core>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-code-editor>` | attribute | `line-numbers` | `without-line-numbers` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-code-editor>` | property | `lineNumbers` | `withoutLineNumbers` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-combobox>` | attribute | `show-unknown-option` | `with-unknown-option` | Rewritten where the component is proven |
+| `<lr-combobox>` | css-property | `--lr-combobox-text-color` | `--lr-combobox-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-combobox>` | property | `showUnknownOption` | `withUnknownOption` | Rewritten where the component is proven |
+| `<lr-commit-card>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-commit-card>` | css-property | `--lr-commit-card-background` | `--lr-commit-card-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-commit-card>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-compare-panel>` | css-property | `--lr-compare-panel-selected-background` | `--lr-compare-panel-selected-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-confirm-bar>` | attribute | `pending` | `pending-action` | Rewritten where the component is proven |
+| `<lr-confirm-bar>` | property | `pending` | `pendingAction` | Rewritten where the component is proven |
+| `<lr-context-meter>` | attribute | `show-legend` | `with-legend` | Rewritten where the component is proven |
+| `<lr-context-meter>` | property | `showLegend` | `withLegend` | Rewritten where the component is proven |
+| `<lr-conversation-item>` | attribute | `renamable` | `without-rename` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-conversation-item>` | property | `renamable` | `withoutRename` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-copy-button>` | part | `base__control` | `base-control` | Rewritten where the component is proven |
+| `<lr-csv-viewer>` | attribute | `has-header-row` | `without-header-row` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-csv-viewer>` | property | `hasHeaderRow` | `withoutHeaderRow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-dashboard-grid>` | attribute | `locked` | `readonly` | Rewritten where the component is proven |
+| `<lr-dashboard-grid>` | property | `locked` | `readonly` | Rewritten where the component is proven |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-control-active-background` | `--lr-data-grid-control-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-control-hover-background` | `--lr-data-grid-control-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-page-size-active-background` | `--lr-data-grid-page-size-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-row-active-background` | `--lr-data-grid-row-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-sortable-header-active-background` | `--lr-data-grid-sortable-header-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-data-grid>` | css-property | `--lr-data-grid-sortable-header-hover-background` | `--lr-data-grid-sortable-header-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-date-input>` | css-property | `--lr-date-input-text-color` | `--lr-date-input-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-date-picker>` | css-property | `--lr-cell-size` | `--lr-date-picker-cell-size` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-dialog>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-dialog>` | attribute | `closable` | `without-close-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-dialog>` | part | `close-button__control` | `close-button-control` | Rewritten where the component is proven |
+| `<lr-dialog>` | property | `closable` | `withoutCloseButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-add-background` | `--lr-diff-view-add-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-fold-background` | `--lr-diff-view-fold-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-highlight-accent-background` | `--lr-diff-view-highlight-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-highlight-danger-background` | `--lr-diff-view-highlight-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-highlight-neutral-background` | `--lr-diff-view-highlight-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-highlight-success-background` | `--lr-diff-view-highlight-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-highlight-warning-background` | `--lr-diff-view-highlight-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-diff-view>` | css-property | `--lr-diff-view-remove-background` | `--lr-diff-view-remove-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-dock-panel>` | attribute | `edge` | `placement` | Rewritten where the component is proven |
+| `<lr-dock-panel>` | attribute | `resizable` | `without-resize` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-dock-panel>` | property | `edge` | `placement` | Rewritten where the component is proven |
+| `<lr-dock-panel>` | property | `resizable` | `withoutResize` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-document-compare>` | attribute | `sync-scroll` | `without-sync-scroll` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-document-compare>` | property | `syncScroll` | `withoutSyncScroll` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-accent-background` | `--lr-docx-viewer-highlight-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-active-background` | `--lr-docx-viewer-highlight-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-danger-background` | `--lr-docx-viewer-highlight-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-neutral-background` | `--lr-docx-viewer-highlight-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-success-background` | `--lr-docx-viewer-highlight-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-highlight-warning-background` | `--lr-docx-viewer-highlight-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-search-match-active-background` | `--lr-docx-viewer-search-match-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-search-match-active-foreground` | `--lr-docx-viewer-search-match-active-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-search-match-background` | `--lr-docx-viewer-search-match-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-docx-viewer>` | css-property | `--lr-docx-viewer-table-header-background` | `--lr-docx-viewer-table-header-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-doughnut-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-doughnut-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-doughnut-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-doughnut-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-doughnut-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-doughnut-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-doughnut-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-doughnut-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-drawer>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-drawer>` | attribute | `closable` | `without-close-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-drawer>` | part | `close-button__control` | `close-button-control` | Rewritten where the component is proven |
+| `<lr-drawer>` | property | `closable` | `withoutCloseButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-drilldown-panel>` | attribute | `show-focus-button` | `without-focus-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-drilldown-panel>` | property | `showFocusButton` | `withoutFocusButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-dropdown>` | part | `popup__arrow` | `popup-arrow` | Rewritten where the component is proven |
+| `<lr-dropdown>` | part | `popup__popup` | `popup-popup` | Rewritten where the component is proven |
+| `<lr-dropdown-item>` | event | `lr-menu-item-change` | `lr-menu-item-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-dropdown-item>` | part | `spinner__base` | `spinner-base` | Rewritten where the component is proven |
+| `<lr-entity-card>` | attribute | `show-focus-button` | `without-focus-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-entity-card>` | property | `showFocusButton` | `withoutFocusButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-entity-dossier>` | attribute | `show-focus-button` | `without-focus-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-entity-dossier>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-entity-dossier>` | property | `showFocusButton` | `withoutFocusButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-env-list>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-env-list>` | attribute | `revealable` | `without-reveal` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-env-list>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-env-list>` | property | `revealable` | `withoutReveal` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-export-button>` | css-property | `--lr-export-button-active-background` | `--lr-export-button-active-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-export-button>` | css-property | `--lr-export-button-background` | `--lr-export-button-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-export-button>` | css-property | `--lr-export-button-hover-background` | `--lr-export-button-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-file-input>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-file-input>` | attribute | `paste` | `without-paste` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-file-input>` | property | `paste` | `withoutPaste` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-flow-canvas>` | attribute | `locked` | `readonly` | Rewritten where the component is proven |
+| `<lr-flow-canvas>` | property | `locked` | `readonly` | Rewritten where the component is proven |
+| `<lr-flow-controls>` | attribute | `hide-lock` | `without-lock` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-flow-controls>` | property | `hideLock` | `withoutLock` | Rewritten where the component is proven |
+| `<lr-flow-run-status>` | attribute | `hide-summary` | `without-summary` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-flow-run-status>` | property | `hideSummary` | `withoutSummary` | Rewritten where the component is proven |
+| `<lr-funnel>` | attribute | `dropoff` | `without-dropoff` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-funnel>` | property | `dropoff` | `withoutDropoff` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-gauge>` | attribute | `show-value` | `without-value` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-gauge>` | property | `showValue` | `withoutValue` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-generation-metrics>` | attribute | `show-stop` | `without-stop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-generation-metrics>` | property | `showStop` | `withoutStop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-graph>` | attribute | `link-distance` | `edge-distance` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-graph>` | attribute | `show-edge-labels` | `with-edge-labels` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-graph>` | css-property | `--lr-link-color` | `--lr-graph-edge-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-graph>` | css-property | `--lr-node-fill` | `--lr-graph-node-fill` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-graph>` | event | `lr-community-click` | `lr-community-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-graph>` | event | `lr-link-enter` | `lr-edge-enter` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-graph>` | event | `lr-link-leave` | `lr-edge-leave` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-graph>` | property | `dimmedLinkIds` | `dimmedEdgeIds` | Rewritten where the component is proven |
+| `<lr-graph>` | property | `linkDistance` | `edgeDistance` | Rewritten where the component is proven |
+| `<lr-graph>` | property | `links` | `edges` | Rewritten where the component is proven |
+| `<lr-graph>` | property | `selectedLinkIds` | `selectedEdgeIds` | Rewritten where the component is proven |
+| `<lr-graph>` | property | `showEdgeLabels` | `withEdgeLabels` | Rewritten where the component is proven |
+| `<lr-graph-legend>` | attribute | `interactive` | `without-interaction` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-graph-legend>` | property | `interactive` | `withoutInteraction` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-grounding-summary>` | attribute | `show-claims` | `without-claims` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-grounding-summary>` | property | `showClaims` | `withoutClaims` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-heatmap>` | css-property | `--lr-heatmap-tooltip-text` | `--lr-heatmap-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-heatmap>` | event | `lr-cell-click` | `lr-cell-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | attribute | `interactive` | `without-interaction` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-accent-background` | `--lr-highlight-layer-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-danger-background` | `--lr-highlight-layer-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-flash-background` | `--lr-highlight-layer-flash-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-neutral-background` | `--lr-highlight-layer-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-success-background` | `--lr-highlight-layer-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | css-property | `--lr-highlight-layer-warning-background` | `--lr-highlight-layer-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-highlight-layer>` | property | `interactive` | `withoutInteraction` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-histogram>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-histogram>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-histogram>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-histogram>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-histogram>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-histogram>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-histogram>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-histogram>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-icon-button>` | css-property | `--lr-icon-button-background` | `--lr-icon-button-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-icon-button>` | css-property | `--lr-icon-button-background-active` | `--lr-icon-button-bg-active` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-icon-button>` | css-property | `--lr-icon-button-background-hover` | `--lr-icon-button-bg-hover` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-include>` | attribute | `cache` | `without-cache` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-include>` | property | `cache` | `withoutCache` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-error-bg` | `--lr-json-schema-viewer-error-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-error-border` | `--lr-json-schema-viewer-error-border` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-info-bg` | `--lr-json-schema-viewer-info-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-info-border` | `--lr-json-schema-viewer-info-border` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-max-indent` | `--lr-json-schema-viewer-max-indent` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-selected-border` | `--lr-json-schema-viewer-selected-border` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-warning-bg` | `--lr-json-schema-viewer-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-schema-viewer>` | css-property | `--lr-schema-viewer-warning-border` | `--lr-json-schema-viewer-warning-border` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-json-viewer>` | attribute | `collapsed-depth` | `expand-depth` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-json-viewer>` | attribute | `search` | `query` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-json-viewer>` | property | `collapsedDepth` | `expandDepth` | Rewritten where the component is proven |
+| `<lr-json-viewer>` | property | `search` | `query` | Rewritten where the component is proven |
+| `<lr-knowledge-base>` | attribute | `hide-create` | `without-create` | Rewritten where the component is proven |
+| `<lr-knowledge-base>` | attribute | `hide-summary` | `without-summary` | Rewritten where the component is proven |
+| `<lr-knowledge-base>` | property | `hideCreate` | `withoutCreate` | Rewritten where the component is proven |
+| `<lr-knowledge-base>` | property | `hideSummary` | `withoutSummary` | Rewritten where the component is proven |
+| `<lr-knowledge-base-admin>` | attribute | `hide-ingestion` | `without-ingestion` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-knowledge-base-admin>` | property | `hideIngestion` | `withoutIngestion` | Rewritten where the component is proven |
+| `<lr-knowledge-graph-explorer>` | attribute | `search-query` | `query` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-knowledge-graph-explorer>` | event | `lr-community-click` | `lr-community-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-knowledge-graph-explorer>` | property | `links` | `edges` | Rewritten where the component is proven |
+| `<lr-knowledge-graph-explorer>` | property | `searchQuery` | `query` | Rewritten where the component is proven |
+| `<lr-lightbox>` | attribute | `show-counter` | `without-counter` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-lightbox>` | property | `showCounter` | `withoutCounter` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-line-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-line-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-line-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-line-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-line-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-line-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-line-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-line-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-lite-chart>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-lite-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-lite-chart>` | attribute | `legend` | `with-legend` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-lite-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-lite-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-lite-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-lite-chart>` | property | `legend` | `withLegend` | Rewritten where the component is proven |
+| `<lr-lite-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-locale-picker>` | attribute | `show-flags` | `without-flags` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-locale-picker>` | property | `showFlags` | `withoutFlags` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-map>` | event | `lr-map-legend-panel-toggle` | `lr-map-legend-panel-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-map>` | event | `lr-map-legend-toggle` | `lr-map-legend-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-markdown>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-markdown>` | attribute | `gfm` | `without-gfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-markdown>` | attribute | `highlight-code` | `without-syntax-highlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-markdown>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-markdown>` | property | `gfm` | `withoutGfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-markdown>` | property | `highlightCode` | `withoutSyntaxHighlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-markdown-core>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-markdown-core>` | attribute | `gfm` | `without-gfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-markdown-core>` | attribute | `highlight-code` | `without-syntax-highlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-markdown-core>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-markdown-core>` | property | `gfm` | `withoutGfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-markdown-core>` | property | `highlightCode` | `withoutSyntaxHighlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-media-card>` | event | `lr-before-media-download` | `lr-media-download-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-memory-panel>` | event | `lr-expand` | `lr-memory-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-menu-item>` | event | `lr-menu-item-change` | `lr-menu-item-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-message-actions>` | part | `edit-button__control` | `edit-button-control` | Rewritten where the component is proven |
+| `<lr-message-actions>` | part | `regenerate-button__control` | `regenerate-button-control` | Rewritten where the component is proven |
 | `<lr-message-parts>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-message-parts>` | attribute | `show-reasoning` | `without-reasoning` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-message-parts>` | css-property | `--lr-message-parts-error-background` | `--lr-message-parts-error-bg` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-message-parts>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-message-parts>` | property | `showReasoning` | `withoutReasoning` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-mutation-observer>` | attribute | `character-data` | `char-data` | Rewritten where the component is proven |
+| `<lr-mutation-observer>` | attribute | `subtree` | `without-subtree` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-mutation-observer>` | property | `characterData` | `charData` | Rewritten where the component is proven |
+| `<lr-mutation-observer>` | property | `subtree` | `withoutSubtree` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-native-time-input>` | attribute | `no-spin-buttons` | `without-spin-buttons` | Rewritten where the component is proven |
+| `<lr-native-time-input>` | property | `noSpinButtons` | `withoutSpinButtons` | Rewritten where the component is proven |
+| `<lr-notebook-viewer>` | css-property | `--lr-notebook-viewer-highlight-accent-background` | `--lr-notebook-viewer-highlight-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-notebook-viewer>` | css-property | `--lr-notebook-viewer-highlight-danger-background` | `--lr-notebook-viewer-highlight-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-notebook-viewer>` | css-property | `--lr-notebook-viewer-highlight-neutral-background` | `--lr-notebook-viewer-highlight-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-notebook-viewer>` | css-property | `--lr-notebook-viewer-highlight-success-background` | `--lr-notebook-viewer-highlight-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-notebook-viewer>` | css-property | `--lr-notebook-viewer-highlight-warning-background` | `--lr-notebook-viewer-highlight-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-number-input>` | attribute | `steppers` | `without-steppers` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-number-input>` | property | `steppers` | `withoutSteppers` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-page>` | event | `lr-nav-toggle` | `lr-nav-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-pie-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-pie-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-pie-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-pie-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-pie-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-pie-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-pie-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-pie-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-polar-area-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-polar-area-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-polar-area-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-polar-area-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-polar-area-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-polar-area-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-polar-area-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-polar-area-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-popover>` | attribute | `arrow` | `without-arrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-popover>` | property | `arrow` | `withoutArrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-progress-bar>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-progress-bar>` | attribute | `show-value` | `with-value` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-progress-bar>` | property | `showValue` | `withValue` | Rewritten where the component is proven |
+| `<lr-progress-ring>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-progress-ring>` | attribute | `show-value` | `with-value` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-progress-ring>` | property | `showValue` | `withValue` | Rewritten where the component is proven |
+| `<lr-prompt-input>` | attribute | `submit-on-enter` | `without-enter-submit` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-prompt-input>` | property | `submitOnEnter` | `withoutEnterSubmit` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-prompt-queue>` | attribute | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-prompt-queue>` | property | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-prompt-studio>` | event | `lr-message-reorder` | `lr-message-reorder-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-provenance-panel>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-push-to-talk>` | attribute | `show-timer` | `without-timer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-push-to-talk>` | property | `showTimer` | `withoutTimer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-qr-code>` | css-property | `--lr-qr-code-background` | `--lr-qr-code-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-radar-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-radar-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-radar-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-radar-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-radar-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-radar-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-radar-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-radar-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-rag-answer>` | attribute | `show-claims` | `without-claims` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-rag-answer>` | attribute | `show-sources` | `without-sources` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-rag-answer>` | property | `showClaims` | `withoutClaims` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-rag-answer>` | property | `showSources` | `withoutSources` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-rag-eval-dashboard>` | attribute | `show-chart` | `without-chart` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-rag-eval-dashboard>` | property | `showChart` | `withoutChart` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-realtime-session>` | attribute | `show-capture` | `without-capture` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-realtime-session>` | property | `showCapture` | `withoutCapture` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-reorder-item>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-reorder-item>` | part | `move-down-button__control` | `move-down-button-control` | Rewritten where the component is proven |
+| `<lr-reorder-item>` | part | `move-up-button__control` | `move-up-button-control` | Rewritten where the component is proven |
+| `<lr-reorder-list>` | event | `lr-reorder` | `lr-reorder-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-result-card>` | css-property | `--lr-result-card-background` | `--lr-result-card-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-retrieval-results>` | attribute | `dedupe` | `without-dedupe` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-retrieval-results>` | attribute | `selectable` | `without-selection` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-retrieval-results>` | property | `dedupe` | `withoutDedupe` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-retrieval-results>` | property | `selectable` | `withoutSelection` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-scatter-chart>` | attribute | `begin-at-zero` | `without-zero-baseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-scatter-chart>` | attribute | `show-data-table` | `with-data-table` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-scatter-chart>` | attribute | `zoom` | `zoomable` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-scatter-chart>` | css-property | `--lr-chart-tooltip-text` | `--lr-chart-tooltip-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-scatter-chart>` | event | `lr-point-click` | `lr-point-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-scatter-chart>` | property | `beginAtZero` | `withoutZeroBaseline` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-scatter-chart>` | property | `showDataTable` | `withDataTable` | Rewritten where the component is proven |
+| `<lr-scatter-chart>` | property | `zoom` | `zoomable` | Rewritten where the component is proven |
+| `<lr-select>` | attribute | `show-unknown-option` | `with-unknown-option` | Rewritten where the component is proven |
+| `<lr-select>` | property | `showUnknownOption` | `withUnknownOption` | Rewritten where the component is proven |
+| `<lr-sequence-playback>` | attribute | `loop` | `without-loop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-sequence-playback>` | property | `loop` | `withoutLoop` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-sequence-strip>` | attribute | `show-legend` | `with-legend` | Rewritten where the component is proven |
+| `<lr-sequence-strip>` | property | `showLegend` | `withLegend` | Rewritten where the component is proven |
+| `<lr-slider>` | attribute | `show-value` | `with-value` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-slider>` | property | `showValue` | `withValue` | Rewritten where the component is proven |
+| `<lr-source-card>` | attribute | `title` | `heading` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-source-card>` | property | `title` | `heading` | Rewritten where the component is proven |
+| `<lr-source-picker>` | attribute | `searchable` | `without-search` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-source-picker>` | attribute | `show-select-all` | `without-select-all` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-source-picker>` | property | `searchable` | `withoutSearch` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-source-picker>` | property | `showSelectAll` | `withoutSelectAll` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-span-waterfall>` | attribute | `hide-axis` | `without-axis` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-span-waterfall>` | property | `hideAxis` | `withoutAxis` | Rewritten where the component is proven |
+| `<lr-stack-trace>` | attribute | `collapse-internal` | `expand-internal` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-stack-trace>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-stack-trace>` | css-property | `--lr-stack-trace-background` | `--lr-stack-trace-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-stack-trace>` | property | `collapseInternal` | `expandInternal` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-stack-trace>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-streaming-text>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-streaming-text>` | attribute | `gfm` | `without-gfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-streaming-text>` | attribute | `highlight-code` | `without-syntax-highlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-streaming-text>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-streaming-text>` | property | `gfm` | `withoutGfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-streaming-text>` | property | `highlightCode` | `withoutSyntaxHighlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-streaming-text-core>` | attribute | `code-block-chrome` | `code-block-header` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-streaming-text-core>` | attribute | `gfm` | `without-gfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-streaming-text-core>` | attribute | `highlight-code` | `without-syntax-highlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-streaming-text-core>` | property | `codeBlockChrome` | `codeBlockHeader` | Rewritten where the component is proven |
+| `<lr-streaming-text-core>` | property | `gfm` | `withoutGfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-streaming-text-core>` | property | `highlightCode` | `withoutSyntaxHighlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-subagent-panel>` | css-property | `--lr-subagent-panel-background` | `--lr-subagent-panel-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-subagent-panel>` | css-property | `--lr-subagent-panel-hover-background` | `--lr-subagent-panel-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-table>` | event | `lr-row-click` | `lr-row-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tag>` | css-property | `--lr-tag-remove-hover-background` | `--lr-tag-remove-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-task-list>` | attribute | `collapsible` | `without-collapse` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-task-list>` | attribute | `expanded` | `collapsed` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-task-list>` | attribute | `label` | `heading` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-task-list>` | css-property | `--lr-task-list-background` | `--lr-task-list-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-task-list>` | property | `collapsible` | `withoutCollapse` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-task-list>` | property | `expanded` | `collapsed` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-task-list>` | property | `label` | `heading` | Rewritten where the component is proven |
+| `<lr-terminal>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-terminal>` | attribute | `wrap` | `without-wrap` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-terminal>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-terminal>` | property | `wrap` | `withoutWrap` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-test-results>` | attribute | `auto-expand-failures` | `without-auto-expand-failures` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-test-results>` | property | `autoExpandFailures` | `withoutAutoExpandFailures` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-thinking-panel>` | css-property | `--lr-thinking-panel-background` | `--lr-thinking-panel-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-thread-list>` | attribute | `renamable` | `without-rename` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-thread-list>` | attribute | `show-archived` | `with-archived` | Rewritten where the component is proven |
+| `<lr-thread-list>` | css-property | `--lr-thread-list-excerpt-highlight-background` | `--lr-thread-list-excerpt-highlight-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-thread-list>` | css-property | `--lr-thread-list-excerpt-highlight-foreground` | `--lr-thread-list-excerpt-highlight-color` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-thread-list>` | property | `renamable` | `withoutRename` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-thread-list>` | property | `showArchived` | `withArchived` | Rewritten where the component is proven |
+| `<lr-toggle>` | css-property | `--lr-toggle-background` | `--lr-toggle-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-toggle>` | css-property | `--lr-toggle-hover-background` | `--lr-toggle-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-toggle>` | css-property | `--lr-toggle-pressed-background` | `--lr-toggle-pressed-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-token-input>` | event | `lr-add` | `lr-token-add-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-token-input>` | event | `lr-remove` | `lr-token-remove-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-token-input>` | event | `lr-token-edit` | `lr-token-edit-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tool-approval-dialog>` | attribute | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tool-approval-dialog>` | attribute | `pending` | `pending-action` | Rewritten where the component is proven |
+| `<lr-tool-approval-dialog>` | property | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tool-approval-dialog>` | property | `pending` | `pendingAction` | Rewritten where the component is proven |
+| `<lr-tool-call-block>` | attribute | `error` | `error-text` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-tool-call-block>` | css-property | `--lr-tool-call-block-background` | `--lr-tool-call-block-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tool-call-block>` | property | `error` | `errorText` | Rewritten where the component is proven |
+| `<lr-tool-result-dialog>` | event | `lr-maximize-change` | `lr-maximize-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tool-timeline>` | attribute | `approval-editable` | `approval-readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tool-timeline>` | property | `approvalEditable` | `approvalReadonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tooltip>` | attribute | `arrow` | `without-arrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tooltip>` | css-property | `--lr-tooltip-background` | `--lr-tooltip-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tooltip>` | property | `arrow` | `withoutArrow` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tour>` | attribute | `show-progress` | `without-progress` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-tour>` | event | `lr-tour-step-change` | `lr-tour-step-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-tour>` | property | `showProgress` | `withoutProgress` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-trace-tree>` | attribute | `hide-bars` | `without-bars` | Rewritten where the component is proven |
+| `<lr-trace-tree>` | attribute | `show-cost` | `with-cost` | Rewritten where the component is proven |
+| `<lr-trace-tree>` | attribute | `show-tokens` | `with-tokens` | Rewritten where the component is proven |
+| `<lr-trace-tree>` | property | `hideBars` | `withoutBars` | Rewritten where the component is proven |
+| `<lr-trace-tree>` | property | `showCost` | `withCost` | Rewritten where the component is proven |
+| `<lr-trace-tree>` | property | `showTokens` | `withTokens` | Rewritten where the component is proven |
+| `<lr-transcript-feed>` | attribute | `show-timestamps` | `with-timestamps` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-transcript-feed>` | property | `showTimestamps` | `withTimestamps` | Rewritten where the component is proven |
+| `<lr-typing-indicator>` | css-property | `--lr-typing-dot-size` | `--lr-typing-indicator-dot-size` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-typing-indicator>` | css-property | `--lr-typing-dot-stagger-1` | `--lr-typing-indicator-dot-stagger-1` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-typing-indicator>` | css-property | `--lr-typing-dot-stagger-2` | `--lr-typing-indicator-dot-stagger-2` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-typing-indicator>` | css-property | `--lr-typing-duration` | `--lr-typing-indicator-duration` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-typing-indicator>` | css-property | `--lr-typing-gap` | `--lr-typing-indicator-gap` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-video>` | css-property | `--lr-video-poster-play-button-hover-background` | `--lr-video-poster-play-button-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-video-playlist>` | attribute | `auto-advance` | `without-auto-advance` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-video-playlist>` | css-property | `--lr-video-playlist-item-current-background` | `--lr-video-playlist-item-current-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-video-playlist>` | property | `autoAdvance` | `withoutAutoAdvance` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-voice-picker>` | attribute | `preview` | `without-preview` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-voice-picker>` | property | `preview` | `withoutPreview` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
+| `<lr-word-cloud>` | attribute | `show-legend` | `with-legend` | Rewritten where the component is proven |
+| `<lr-word-cloud>` | property | `showLegend` | `withLegend` | Rewritten where the component is proven |
+| `<lr-xml-viewer>` | attribute | `collapsed-depth` | `expand-depth` | Rewritten on the component; selectors reported (not reflected) |
+| `<lr-xml-viewer>` | css-property | `--lr-xml-viewer-highlight-accent-background` | `--lr-xml-viewer-highlight-accent-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-xml-viewer>` | css-property | `--lr-xml-viewer-highlight-danger-background` | `--lr-xml-viewer-highlight-danger-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-xml-viewer>` | css-property | `--lr-xml-viewer-highlight-neutral-background` | `--lr-xml-viewer-highlight-neutral-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-xml-viewer>` | css-property | `--lr-xml-viewer-highlight-success-background` | `--lr-xml-viewer-highlight-success-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-xml-viewer>` | css-property | `--lr-xml-viewer-highlight-warning-background` | `--lr-xml-viewer-highlight-warning-bg` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-xml-viewer>` | property | `collapsedDepth` | `expandDepth` | Rewritten where the component is proven |
+| `<lr-zoomable-frame>` | css-property | `--lr-zoomable-frame-control-hover-background` | `--lr-zoomable-frame-control-hover-bg` | Rewritten where the reach is unchanged, otherwise reported |
 
 | Component | Kind | Deprecated name | Replacement (manual) |
 |---|---|---|---|
+| `<lr-activity-feed>` | attribute | `compact` | `size="s"` |
+| `<lr-activity-feed>` | property | `compact` | `size="s"` |
+| `<lr-agent-run>` | attribute | `compact` | `size="s"` |
+| `<lr-agent-run>` | property | `compact` | `size="s"` |
+| `<lr-attachment-chip>` | attribute | `compact` | `size="s"` |
+| `<lr-attachment-chip>` | property | `compact` | `size="s"` |
+| `<lr-bar-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-bar-chart>` | property | `compact` | `size="s"` |
+| `<lr-bubble-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-bubble-chart>` | property | `compact` | `size="s"` |
+| `<lr-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-chart>` | property | `compact` | `size="s"` |
+| `<lr-chunk-inspector>` | attribute | `compact` | `size="s"` |
+| `<lr-chunk-inspector>` | property | `compact` | `size="s"` |
+| `<lr-claim-evidence>` | attribute | `compact` | `size="s"` |
+| `<lr-claim-evidence>` | property | `compact` | `size="s"` |
+| `<lr-commit-card>` | attribute | `compact` | `size="s"` |
+| `<lr-commit-card>` | property | `compact` | `size="s"` |
+| `<lr-community-card>` | attribute | `compact` | `size="s"` |
+| `<lr-community-card>` | property | `compact` | `size="s"` |
+| `<lr-confirm-bar>` | attribute | `compact` | `size="s"` |
+| `<lr-confirm-bar>` | property | `compact` | `size="s"` |
+| `<lr-conversation-item>` | attribute | `compact` | `size="s"` |
+| `<lr-conversation-item>` | property | `compact` | `size="s"` |
+| `<lr-doughnut-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-doughnut-chart>` | property | `compact` | `size="s"` |
+| `<lr-empty>` | attribute | `compact` | `size="s"` |
+| `<lr-empty>` | property | `compact` | `size="s"` |
+| `<lr-entity-card>` | attribute | `compact` | `size="s"` |
+| `<lr-entity-card>` | property | `compact` | `size="s"` |
+| `<lr-file-input>` | attribute | `compact` | `size="s"` |
+| `<lr-file-input>` | property | `compact` | `size="s"` |
+| `<lr-flow-node>` | attribute | `compact` | `size="s"` |
+| `<lr-flow-node>` | property | `compact` | `size="s"` |
 | `<lr-geojson-view>` | component | `lr-geojson-view` | `<lr-geojson-viewer>` |
+| `<lr-histogram>` | attribute | `compact` | `size="s"` |
+| `<lr-histogram>` | property | `compact` | `size="s"` |
 | `<lr-icon>` | attribute | `fixed-width` | `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)` |
 | `<lr-icon>` | css-property | `--lr-icon-fixed-width` | `inline-size (the same value, on the fixed-width icons only)` |
 | `<lr-icon>` | property | `fixedWidth` | `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)` |
+| `<lr-line-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-line-chart>` | property | `compact` | `size="s"` |
 | `<lr-mutation-observer>` | attribute | `attributes` | `attr="*" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)` |
 | `<lr-mutation-observer>` | property | `observeAttributes` | `attr="*" (or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set)` |
+| `<lr-pie-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-pie-chart>` | property | `compact` | `size="s"` |
+| `<lr-polar-area-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-polar-area-chart>` | property | `compact` | `size="s"` |
+| `<lr-radar-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-radar-chart>` | property | `compact` | `size="s"` |
+| `<lr-result-card>` | attribute | `compact` | `size="s"` |
+| `<lr-result-card>` | property | `compact` | `size="s"` |
+| `<lr-scatter-chart>` | attribute | `compact` | `size="s"` |
+| `<lr-scatter-chart>` | property | `compact` | `size="s"` |
+| `<lr-source-card>` | attribute | `compact` | `size="s"` |
+| `<lr-source-card>` | property | `compact` | `size="s"` |
+| `<lr-source-list>` | attribute | `compact` | `size="s"` |
+| `<lr-source-list>` | property | `compact` | `size="s"` |
 | `<lr-sparkline>` | css-property | `--lr-sparkline-stroke-width` | `--line-width (the same value, declared on lr-sparkline itself)` |
 | `<lr-sparkline>` | part | `area` | `::part(fill)` |
 | `<lr-split-panel>` | part | `split-panel` | `::part(base)` |
+| `<lr-stack-trace>` | attribute | `compact` | `size="s"` |
+| `<lr-stack-trace>` | property | `compact` | `size="s"` |
+| `<lr-stat>` | attribute | `compact` | `size="s"` |
+| `<lr-stat>` | property | `compact` | `size="s"` |
 | `<lr-stat>` | slot | (default slot) | `slot="start"` |
+| `<lr-subagent-panel>` | attribute | `compact` | `size="s"` |
+| `<lr-subagent-panel>` | property | `compact` | `size="s"` |
+| `<lr-table>` | attribute | `empty-compact` | `empty-size="s" for compact, empty-size="m" for spacious (remove it to keep each branch default)` |
+| `<lr-table>` | attribute | `hide-columns-label` | `columns-hide-label` |
+| `<lr-table>` | attribute | `no-columns-description` | `empty-columns-description` |
+| `<lr-table>` | attribute | `no-columns-heading` | `empty-columns-heading` |
+| `<lr-table>` | property | `emptyCompact` | `empty-size="s" for compact, empty-size="m" for spacious (remove it to keep each branch default)` |
+| `<lr-table>` | property | `hideColumnsLabel` | `columns-hide-label` |
+| `<lr-table>` | property | `noColumnsDescription` | `empty-columns-description` |
+| `<lr-table>` | property | `noColumnsHeading` | `empty-columns-heading` |
+| `<lr-task-list>` | attribute | `compact` | `size="s"` |
+| `<lr-task-list>` | property | `compact` | `size="s"` |
+| `<lr-terminal>` | attribute | `compact` | `size="s"` |
+| `<lr-terminal>` | property | `compact` | `size="s"` |
+| `<lr-thinking-panel>` | attribute | `compact` | `size="s"` |
+| `<lr-thinking-panel>` | property | `compact` | `size="s"` |
+| `<lr-widget>` | attribute | `compact` | `size="s"` |
+| `<lr-widget>` | property | `compact` | `size="s"` |
 
 | Component | Slot | Reported content | Change |
 |---|---|---|---|

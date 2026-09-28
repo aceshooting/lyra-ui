@@ -566,6 +566,10 @@ const CALENDAR_SPACING_PROPERTIES: ReadonlySet<PropertyKey> = new Set<CalendarSp
 ]);
 
 export interface LyraHeatmapEventMap {
+  /** A cell was activated by pointer or Enter/Space. */
+  'lr-cell-activate': CustomEvent<LyraHeatmapCellClickDetail>;
+  /** @deprecated Use `lr-cell-activate`; removal not before 23.0.0. Fired unchanged right after
+   *  it from the same activation, with an equal detail. */
   'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
   'lr-calendar-geometry-change': CustomEvent<LyraHeatmapCalendarGeometry>;
@@ -618,7 +622,7 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * shared light-DOM polite status announcement — avoids a
  * DOM-node-per-cell overlay, which would be hundreds of nodes for a year
  * calendar); and a click, or Enter/Space on the focused cell, fires
- * `lr-cell-click`. `annotations` additionally strokes a ring around
+ * `lr-cell-activate`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`. Focus-only updates restore
  * intersected neighboring fills and overlays without redrawing the entire canvas.
@@ -686,7 +690,7 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * `cellGapX`, `cellGapY` and `cellRadius` shape calendar cells too, but only once explicitly set
  * (property or attribute): a GitHub-style contribution graph with rounded, visibly spaced cells
  * stays in calendar mode, keeping week columns, weekday and month labels, date selection,
- * `lr-cell-click` and `cellText`. With none of them set, calendar geometry is unchanged. The
+ * `lr-cell-activate` and `cellText`. With none of them set, calendar geometry is unchanged. The
  * read-only `calendarGeometry` snapshot reports the painted calendar layout, mirroring
  * `matrixGeometry`.
  *
@@ -707,13 +711,15 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * or `colorSteps`.
  *
  * @customElement lr-heatmap
- * @event lr-cell-click - Fired on click, or Enter/Space on the
+ * @event lr-cell-activate - Fired on click, or Enter/Space on the
  * focused/hovered cell. `detail: { row, col, value }` in matrix mode,
  * `detail: { date, value }` in calendar mode. `cellText` overrides the
  * localized matrix row/column/value or calendar date/value template used for both the hover
  * tooltip and the keyboard live-region announcement. Use the callback for application-specific
  * wording that is not represented by the locale catalog.
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
+ * @event lr-cell-click - Deprecated alias of `lr-cell-activate`, fired unchanged right after it
+ * from the same activation with an equal `detail`. Removal not before 23.0.0.
  * @event lr-matrix-geometry-change - Fired after a matrix-mode draw pass whose resolved
  * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
  * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
@@ -757,7 +763,9 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * @cssprop [--lr-heatmap-no-data-fill=var(--lr-color-no-data)] - Fill for cells with no value.
  * @cssprop [--lr-heatmap-label-font] - Font for axis/legend labels drawn on the canvas.
  * @cssprop [--lr-heatmap-tooltip-bg=var(--lr-color-surface)] - Hover tooltip background.
- * @cssprop [--lr-heatmap-tooltip-text=var(--lr-color-text)] - Hover tooltip text color.
+ * @cssprop [--lr-heatmap-tooltip-color=var(--lr-color-text)] - Hover tooltip text color.
+ * @cssprop [--lr-heatmap-tooltip-text=var(--lr-color-text)] - Deprecated alias of `--lr-heatmap-tooltip-color`; removal not
+ *   before 23.0.0.
  * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
@@ -1478,7 +1486,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
    * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring
    * `<lr-lite-chart>`'s `selectedIndices` -- this component never mutates it itself; a consumer
-   * wires it up from `lr-cell-click` (or any other source) to build a toggle-select
+   * wires it up from `lr-cell-activate` (or any other source) to build a toggle-select
    * interaction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text
    * to the host's `aria-label`, and adds no selected suffix to the keyboard announcement,
    * reproducing today's exact output.
@@ -1511,7 +1519,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * button has a localized accessible name, explicit `aria-selected="true"` or
    * `"false"` from `selectedCell`, and participates in a roving tabindex so a
    * dense calendar does not create hundreds of tab stops. The selection is
-   * controlled: clicking a cell still emits `lr-cell-click`, and the
+   * controlled: clicking a cell still emits `lr-cell-activate`, and the
    * consumer updates `selectedCell` when it wants `aria-selected` to change.
    * Controlled grid refreshes preserve owned focus by matrix coordinate or calendar date, then
    * clamp to the nearest surviving interactive cell (or the heatmap base when none remain).
@@ -2292,7 +2300,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       Array.from(
         { length: colCount },
         // Default mode keeps the documented `-1` no-data sentinel, which `valueAt()` and the
-        // `lr-cell-click` payload both surface. In signed mode `-1` is legitimate data, so an
+        // `lr-cell-activate` payload both surface. In signed mode `-1` is legitimate data, so an
         // absent cell has to be non-finite instead -- a consumer with signed data spells no-data
         // as NaN/null, not -1.
         (_, col) =>
@@ -4275,13 +4283,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.selectionRangeBase = undefined;
       this.toggleSelectionPositions([pos], source);
     }
+    let detail: LyraHeatmapCellClickDetail;
     if ('week' in pos) {
       const { date, value } = this.calendarCellAt(pos);
-      this.emit('lr-cell-click', { date, value });
+      detail = { date, value };
     } else {
       const value = this.matrixValues[pos.row]?.[pos.col] ?? -1;
-      this.emit('lr-cell-click', { row: pos.row, col: pos.col, value });
+      detail = { row: pos.row, col: pos.col, value };
     }
+    this.emit('lr-cell-activate', { ...detail });
+    // Deprecated alias, fired right after with its own equal detail so a listener still bound to
+    // the old name keeps hearing every activation.
+    this.emit('lr-cell-click', { ...detail });
   }
 
   private selectedPositions = new Map<string, CellPos>();

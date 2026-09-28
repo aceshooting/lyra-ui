@@ -1,7 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame } from '../../../internal/variants.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
@@ -31,6 +32,12 @@ const TICKING_KINDS: ReadonlySet<string> = new Set(['running', 'collecting', 'wa
 /** Terminal statuses for which a static (not live-ticking) duration applies, and for which the
  *  built-in Retry button becomes relevant (a subset -- see `canRetry`). */
 const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled']);
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /** Badge label per status. `running`/`error` reuse this library's existing generic `statusRunning`/
  *  `statusError` keys (identical wording already used by `<lr-task-list>`'s own per-item status
@@ -105,7 +112,7 @@ export interface LyraAgentRunEventMap {
  * per-step or per-invocation rendering routes through an existing primitive:
  *
  * - **Elapsed time**: composes `<lr-generation-metrics>` (`status`/`started-at`, its own built-in
- *   Stop button hidden via `show-stop="false"` since this component renders its own Cancel/Retry
+ *   Stop button hidden via `without-stop` since this component renders its own Cancel/Retry
  *   pair instead) for the *live, ticking* readout while the run is genuinely in progress
  *   (`running`/`collecting`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` doesn't fit:
  *   its `phase` vocabulary
@@ -144,9 +151,9 @@ export interface LyraAgentRunEventMap {
  * `statusVariants` make application-defined lifecycle kinds first-class, while `metrics` renders
  * arbitrary labeled values such as prompt and completion token counts.
  *
- * The built-in Cancel button renders while `showCancel` is true and the run's status is one of
- * `TICKING_KINDS` (still genuinely in progress); Retry renders while `showRetry` is true and the
- * status is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-run-retry` with
+ * Unless `without-cancel` is set, the built-in Cancel button renders while the run's status is one
+ * of `TICKING_KINDS` (still genuinely in progress); unless `without-retry` is set, Retry renders
+ * while the status is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-run-retry` with
  * `CancelEventDetail`/`RetryEventDetail` from `src/ai/types.ts` — this component never cancels or
  * retries anything itself, it only requests. `RetryEventDetail.attempt` is a 1-based counter
  * local to this component, incremented on every `lr-run-retry` click and reset to `0` whenever
@@ -214,11 +221,12 @@ export interface LyraAgentRunEventMap {
  * @cssprop [--lr-agent-run-metric-success-color=var(--lr-color-success)] - Success metric value.
  * @cssprop [--lr-agent-run-metric-warning-color=var(--lr-color-warning)] - Warning metric value.
  * @cssprop [--lr-agent-run-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
- *   `compact`.
+ *   `size` is `s` or smaller.
  * @cssprop [--lr-agent-run-compact-gap=var(--lr-space-s)] - Gap between `[part="base"]`'s header
- *   and body while `compact`.
- * @cssprop [--lr-agent-run-background=var(--lr-color-surface)] - Fill of the outer card
+ *   and body while `size` is `s` or smaller.
+ * @cssprop [--lr-agent-run-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-agent-run-background=var(--lr-color-surface)] - Deprecated alias of `--lr-agent-run-bg`; removal not before 23.0.0.
  * @cssprop [--lr-agent-run-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-agent-run-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -267,6 +275,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showCancel: ['withoutCancel', invertAlias, invertAlias],
+    showRetry: ['withoutRetry', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   /** The run to display. Controlled and never mutated by this component -- pass a new object to
    *  update it. `null` renders the shared `<lr-empty>` `noData` state. A runtime summary record
    *  without `steps` renders an empty task slot, and a step without a status renders as pending. */
@@ -293,25 +307,45 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     return firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);
   }
 
+  /** Suppresses the built-in Cancel button, which otherwise renders while the run's own status is
+   *  cancelable (`running`/`collecting`/`waiting-input`/`waiting-approval`). Set it for a read-only
+   *  viewer. */
+  @property({ type: Boolean, attribute: 'without-cancel' }) withoutCancel = false;
+
   /** Whether the built-in Cancel button can render at all -- still gated by the run's own status
    *  being cancelable (`running`/`collecting`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
-   *  viewer. */
+   *  viewer.
+   *  @deprecated Use `without-cancel`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-cancel', converter: trueDefaultBooleanConverter }) showCancel = true;
 
+  /** Suppresses the built-in Retry button, which otherwise renders while the run's own status is
+   *  retryable (`error`/`cancelled`). */
+  @property({ type: Boolean, attribute: 'without-retry' }) withoutRetry = false;
+
   /** Whether the built-in Retry button can render at all -- still gated by the run's own status
-   *  being retryable (`error`/`cancelled`). */
+   *  being retryable (`error`/`cancelled`).
+   *  @deprecated Use `without-retry`; removal not before 23.0.0. */
   @property({ type: Boolean, attribute: 'show-retry', converter: trueDefaultBooleanConverter }) showRetry = true;
+
+  /**
+   * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
+   * and header/body gap for dense contexts (a run rendered as a row in a list, a side panel); `m`
+   * (the default) and larger keep the full card padding. Purely a density knob: the border and
+   * background stay, so use `frame="plain"` instead to drop the chrome entirely.
+   */
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Tighter root padding and header/body gap for dense contexts (a run rendered as a row in a
    *  list, a side panel) -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e.
    *  the full card padding. Purely a density knob: the border and background stay, so use
-   *  `frame="plain"` instead to drop the chrome entirely. */
+   *  `frame="plain"` instead to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
    *  corner radius, so a run nested inside a host container that already draws a border doesn't
-   *  double it. `plain` wins over `compact` when both are set (nothing left to tighten). The
+   *  double it. `plain` wins over the dense `size` tier when both are set (nothing left to tighten). The
    *  built-in Cancel/Retry buttons draw their own border/background and stay visibly interactive
    *  either way. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
@@ -436,12 +470,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   private get canCancel(): boolean {
     const kind = this.run?.status.kind;
-    return this.showCancel && kind !== undefined && TICKING_KINDS.has(kind);
+    return !this.withoutCancel && kind !== undefined && TICKING_KINDS.has(kind);
   }
 
   private get canRetry(): boolean {
     const kind = this.run?.status.kind;
-    return this.showRetry && (kind === 'error' || kind === 'cancelled');
+    return !this.withoutRetry && (kind === 'error' || kind === 'cancelled');
   }
 
   private onCancelClick = (): void => {
@@ -488,7 +522,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                       exportparts="elapsed:elapsed-time"
                       status="running"
                       .startedAt=${run.startedAt}
-                      .showStop=${false}
+                      .withoutStop=${true}
                     ></lr-generation-metrics>`
                   : staticElapsed
                     ? html`<span part="elapsed-static">${staticElapsed}</span>`

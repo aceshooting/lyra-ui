@@ -7,9 +7,10 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-tooltip-background` since `21.1.0`; use css-property `--lr-tooltip-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `arrow` / `arrow` since `21.1.0`; use property `without-arrow`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 8 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -74,10 +75,11 @@ later text renders normally.
   attributes can never disagree. Prefer `positioning-strategy` in new code. It also honors the
   cascading `--lr-positioning-strategy` custom property `<lr-popover>` documents, ahead of this
   mirrored `absolute` default, when neither spelling is authored on the instance.
-- `arrow: boolean = true` (reflected), `withoutArrow: boolean = false` (attribute `without-arrow`,
-  reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
-  (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
-  same arrow trio `<lr-popover>` documents (`llms/components/lr-popover.md`), new in 8.0.0
+- `withoutArrow: boolean = false` (attribute `without-arrow`, reflected),
+  `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
+  `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
+  documents (`llms/components/lr-popover.md`), new in 8.0.0. Deprecated alias: `arrow` (use
+  `without-arrow`, which `arrow="false"` equals; removed in 23.0.0)
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -126,15 +128,16 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 `arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
 
 **Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and
-`--arrow-size`; retained `--lr-tooltip-max-inline-size`, `--lr-tooltip-background`,
-`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
+`--arrow-size`; retained `--lr-tooltip-max-inline-size`, `--lr-tooltip-bg`,
+`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. Deprecated alias:
+`--lr-tooltip-background` (use `--lr-tooltip-bg`; removed in 23.0.0). A tooltip popup has no inner
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
 
 `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius` are listed on this tag
 because its rules live in the stylesheet module `lr-popover` also composes, but a tooltip bubble is
 a **deliberate exclusion** from the overlay-surface family: it is a high-contrast label, not a
-panel, so it keeps painting from `--lr-tooltip-background`/`--lr-tooltip-color`, draws no border,
+panel, so it keeps painting from `--lr-tooltip-bg`/`--lr-tooltip-color`, draws no border,
 and keeps the tighter `var(--lr-radius-xs)` corner. Setting any of the three changes nothing here.
 
 `--lr-positioning-strategy` (16.0.0) is not excluded: the tooltip honors the same cascading
@@ -147,7 +150,6 @@ default, when neither `positioning-strategy` nor `hoist` is authored on the inst
   trigger="hover focus click"
   show-delay="0"
   hide-delay="400"
-  arrow
   placement="right"
 >
   Copied to clipboard

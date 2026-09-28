@@ -36,7 +36,7 @@ export const ToggleSearch: Story = {
     <div>
       <button @click=${(event: Event) => {
         const picker = (event.currentTarget as HTMLElement).nextElementSibling as LyraSourcePicker;
-        picker.searchable = !picker.searchable;
+        picker.withoutSearch = !picker.withoutSearch;
       }}>Toggle search, retaining query and selection</button>
       <lr-source-picker .sources=${sources}></lr-source-picker>
     </div>
@@ -44,11 +44,7 @@ export const ToggleSearch: Story = {
 };
 
 export const NoSelectAllNoSearch: Story = {
-  // `.showSelectAll`/`.searchable` (property bindings), not `?show-select-all=`/`?searchable=` --
-  // both default to `true`, and a boolean-attribute binding that evaluates to `false` on a
-  // freshly-created element never actually removes an attribute that was never present, so
-  // `attributeChangedCallback` never fires and the constructor-time default would silently win.
-  render: () => html`<lr-source-picker .sources=${sources} .showSelectAll=${false} .searchable=${false}></lr-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} without-select-all without-search></lr-source-picker>`,
 };
 
 export const Empty: Story = {

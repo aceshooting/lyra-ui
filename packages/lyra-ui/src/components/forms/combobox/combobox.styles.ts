@@ -178,7 +178,7 @@ export const styles = css`
       var(--lr-combobox-border-color, var(--_lr-combobox-border-color));
     border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));
     background: var(--lr-combobox-fill, var(--_lr-combobox-fill));
-    color: var(--lr-combobox-text-color, var(--_lr-combobox-text-color));
+    color: var(--lr-combobox-color, var(--lr-combobox-text-color, var(--_lr-combobox-text-color)));
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
   }
@@ -260,7 +260,7 @@ export const styles = css`
       var(--lr-combobox-unknown-value-border-style, dashed)
       var(--lr-combobox-unknown-value-border-color, var(--lr-color-border));
   }
-  /* The synthetic listbox row for an unmatched committed value (showUnknownOption): the same
+  /* The synthetic listbox row for an unmatched committed value (withUnknownOption): the same
      dashed and italic treatment the trigger and tags already use, so they read as one thing. */
   [part~="option"][data-unknown-value] [part="option-label"] {
     font-style: italic;

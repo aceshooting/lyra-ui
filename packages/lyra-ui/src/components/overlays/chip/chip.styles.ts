@@ -283,7 +283,7 @@ export const styles = css`
      is the only colour guaranteed to contrast there, while --lr-color-mix-partner follows the PAGE
      text and would point the opposite way from the hover on a non-neutral chip. The hover value is
      restated rather than referenced because it is a literal here, not a public custom property
-     (unlike lr-tag's --lr-tag-remove-hover-background). */
+     (unlike lr-tag's --lr-tag-remove-hover-bg). */
   [part='remove-button']:not(:disabled):active {
     background: color-mix(in srgb, currentColor var(--lr-color-mix-active), color-mix(in srgb, currentColor 16%, transparent));
   }

@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hideSummary` / `hide-summary` since `21.1.0`; use property `without-summary`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -27,8 +27,9 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 - `decorations: FlowRunDecorations = {}` (attribute: false) — a detached, deeply frozen readonly
   record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
   canvas; invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors, and consumers reassign the record after changes
-- `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
-  complete" strip, keeping only the decoration push
+- `withoutSummary: boolean = false` (attribute `without-summary`) — omits the "{done} of {total}
+  steps complete" strip, keeping only the decoration push. Deprecated alias:
+  `hide-summary`/`hideSummary` (use `without-summary`; removed in 23.0.0)
 - `label: string = ''` — accessible name for the summary strip
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` removes the border, background, shadow, padding and radius, so a summary

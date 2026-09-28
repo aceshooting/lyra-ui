@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-tool-call-block-background` since `21.1.0`; use css-property `--lr-tool-call-block-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `error` / `error` since `21.1.0`; use property `error-text`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -51,7 +52,8 @@ progress, and `No data` only for a terminal status.
   to `0`. Formatted in the effective locale (`820ms`, `1.5s`)
 - `args: unknown` (property only) — call arguments; the identity is kept and never snapshotted
 - `result: unknown` (property only) — call result; `undefined` means no result yet
-- `error?: string` — a non-empty string renders the error section (caller text, verbatim)
+- `errorText?: string` (attribute `error-text`) — a non-empty string renders the error section
+  (caller text, verbatim). Deprecated alias: `error` (use `error-text`; removed in 23.0.0)
 - `redactedFields: readonly string[] = []` (property only) — dotted paths within
   `args`/`result`/`error` to mask with the localized `Value hidden` placeholder. A bare
   `'args'`/`'result'`/`'error'` masks the whole branch, arrays are walked by index
@@ -89,7 +91,8 @@ set), `duration` (only while finite), `body` (the disclosed region), `args`, `ar
 
 **Themeable custom properties:**
 
-- `--lr-tool-call-block-background` (default `var(--lr-color-surface)`) — card fill
+- `--lr-tool-call-block-bg` (default `var(--lr-color-surface)`) — card fill. Deprecated alias:
+  `--lr-tool-call-block-background` (use `--lr-tool-call-block-bg`; removed in 23.0.0)
 - `--lr-tool-call-block-border-color` (default `var(--lr-color-border)`) — card edge and
   header/body divider
 - `--lr-tool-call-block-radius` (default `var(--lr-radius)`) — card radius

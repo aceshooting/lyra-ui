@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { styles } from './highlight-layer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
@@ -61,7 +62,7 @@ export interface LyraHighlightLayerEventMap {
  * `<lr-highlight-layer>` — a presentational overlay that paints highlight rectangles
  * (percent-of-box coordinates) over positioned content and owns their activation, active/flash
  * styling, and keyboard access. `items` order is the caller's own reading order; the layer does not
- * re-sort geometrically. Fills its nearest positioned ancestor. With `interactive=false`, the
+ * re-sort geometrically. Fills its nearest positioned ancestor. With `without-interaction`, the
  * overlay remains pure paint (`aria-hidden`, no group owner or controls). If no item has a valid
  * rectangle, the component renders no subtree at all.
  *
@@ -75,17 +76,29 @@ export interface LyraHighlightLayerEventMap {
  * @csspart highlight-actions - Non-overlapping actions used when more than one logical highlight
  *   would otherwise create ambiguous minimum hit areas.
  * @csspart highlight-action - One action in the non-overlapping highlight action list.
- * @cssprop --lr-highlight-layer-accent-background - Accent highlight background.
+ * @cssprop --lr-highlight-layer-accent-bg - Accent highlight background.
+ * @cssprop --lr-highlight-layer-accent-background - Deprecated alias of
+ *   `--lr-highlight-layer-accent-bg`; removal not before 23.0.0.
  * @cssprop --lr-highlight-layer-accent-outline - Accent highlight outline.
- * @cssprop --lr-highlight-layer-success-background - Success highlight background.
+ * @cssprop --lr-highlight-layer-success-bg - Success highlight background.
+ * @cssprop --lr-highlight-layer-success-background - Deprecated alias of
+ *   `--lr-highlight-layer-success-bg`; removal not before 23.0.0.
  * @cssprop --lr-highlight-layer-success-outline - Success highlight outline.
- * @cssprop --lr-highlight-layer-warning-background - Warning highlight background.
+ * @cssprop --lr-highlight-layer-warning-bg - Warning highlight background.
+ * @cssprop --lr-highlight-layer-warning-background - Deprecated alias of
+ *   `--lr-highlight-layer-warning-bg`; removal not before 23.0.0.
  * @cssprop --lr-highlight-layer-warning-outline - Warning highlight outline.
- * @cssprop --lr-highlight-layer-danger-background - Danger highlight background.
+ * @cssprop --lr-highlight-layer-danger-bg - Danger highlight background.
+ * @cssprop --lr-highlight-layer-danger-background - Deprecated alias of
+ *   `--lr-highlight-layer-danger-bg`; removal not before 23.0.0.
  * @cssprop --lr-highlight-layer-danger-outline - Danger highlight outline.
- * @cssprop --lr-highlight-layer-neutral-background - Neutral highlight background.
+ * @cssprop --lr-highlight-layer-neutral-bg - Neutral highlight background.
+ * @cssprop --lr-highlight-layer-neutral-background - Deprecated alias of
+ *   `--lr-highlight-layer-neutral-bg`; removal not before 23.0.0.
  * @cssprop --lr-highlight-layer-neutral-outline - Neutral highlight outline.
- * @cssprop --lr-highlight-layer-flash-background - Flash-state background.
+ * @cssprop --lr-highlight-layer-flash-bg - Flash-state background.
+ * @cssprop --lr-highlight-layer-flash-background - Deprecated alias of
+ *   `--lr-highlight-layer-flash-bg`; removal not before 23.0.0.
  * @status stable
  * @since 4.0.0
  */
@@ -106,6 +119,11 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    interactive: ['withoutInteraction', invertAlias, invertAlias],
+  };
+
   private _items: readonly HighlightLayerItem[] = Object.freeze([]);
   /** Highlight records in caller reading order. IDs are trimmed and must be nonempty; the first
    * record for an ID is retained and blank or later duplicate records are ignored. */
@@ -118,8 +136,13 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
   /** Domain identity of the currently active highlight. */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
+  /** Pure paint: `pointer-events: none`, no tab stop, no role. By default the rectangles are
+   *  interactive, matching markdown's `sanitize` stance. */
+  @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
+  withoutInteraction = false;
   /** `false` = pure paint: `pointer-events: none`, no tab stop, no role. Default-true, matching
-   *  markdown's `sanitize` stance. */
+   *  markdown's `sanitize` stance.
+   *  @deprecated Use `without-interaction`; removal not before 23.0.0. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) interactive = true;
 
   @state() private focusedItem: HighlightLayerItem | null = null;
@@ -327,16 +350,17 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         )
       : -1;
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
-    const useActionList = this.interactive && renderedIndexes.length > 1;
-    const ariaLabel = this.interactive
+    const interactive = !this.withoutInteraction;
+    const useActionList = interactive && renderedIndexes.length > 1;
+    const ariaLabel = interactive
       ? hostAriaLabel(this) ?? this.localize('highlightLayerLabel')
       : undefined;
     return html`
       <div
         part="base"
-        role=${this.interactive ? 'group' : nothing}
+        role=${interactive ? 'group' : nothing}
         aria-label=${ariaLabel ?? nothing}
-        aria-hidden=${!this.interactive ? 'true' : nothing}
+        aria-hidden=${!interactive ? 'true' : nothing}
       >
         ${this.items.map((item, index) => {
           const isActive = activeIndex === index;
@@ -347,7 +371,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
           return rectsByItem[index]!.map((rect, rectIndex) => {
             const isPrimary = rectIndex === 0;
             return html`
-              ${this.interactive
+              ${interactive
                 ? !useActionList
                   ? html`
                     <span

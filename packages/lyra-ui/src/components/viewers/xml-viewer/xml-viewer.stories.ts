@@ -30,13 +30,13 @@ export const Default: Story = {
   ></lr-xml-viewer>`,
 };
 
-export const CollapsedDepth: Story = {
-  render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="2"></lr-xml-viewer>`,
+export const ExpandDepth: Story = {
+  render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} expand-depth="2"></lr-xml-viewer>`,
 };
 
 export const RightToLeftCollapsed: Story = {
   render: () => html`<div dir="rtl">
-    <lr-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="1"></lr-xml-viewer>
+    <lr-xml-viewer name="feed.rss" .xml=${FEED} expand-depth="1"></lr-xml-viewer>
   </div>`,
 };
 
@@ -69,7 +69,7 @@ export const Highlights: Story = {
     docs: {
       description: {
         story:
-          'Resolved `node-path` entries tint their rows and add focusable `highlight-action` buttons. Painting retains at most 100 entries from a 1,000-entry candidate window; `activeHighlightId` is retained from anywhere in the bounded host snapshot and painted first. Retune tones through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
+          'Resolved `node-path` entries tint their rows and add focusable `highlight-action` buttons. Painting retains at most 100 entries from a 1,000-entry candidate window; `activeHighlightId` is retained from anywhere in the bounded host snapshot and painted first. Retune tones through `--lr-xml-viewer-highlight-<tone>-bg`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
       },
     },
   },
@@ -116,7 +116,7 @@ export const SearchCollapsedBranches: Story = {
         else void viewer[method]();
       }}>${method}</button>
     `)}
-    <lr-xml-viewer max-height="12rem" collapsed-depth="1"
+    <lr-xml-viewer max-height="12rem" expand-depth="1"
       .xml=${'<root><first><entry>needle one</entry></first><second><entry>needle two</entry></second></root>'}
     ></lr-xml-viewer>
   </section>`,
