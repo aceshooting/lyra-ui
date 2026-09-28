@@ -10,42 +10,30 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 9348799,
+    "reviewedMeasurementBytes": 7652989,
     "headroomBytes": 34000,
     "targetAt25PercentBytes": 5872345,
-    "favorableIncompletePackageProbeBytes": 6088928,
-    "baselineExceptionReview": {
-      "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-28",
-      "reason": "Required compatibility metadata for deprecated aliases exceeds the baseline until its scheduled removal; reviewed byte measurements and ceilings are recorded in this policy.",
-      "approvedMaximumPackedBytes": 9382799
-    }
+    "favorableIncompletePackageProbeBytes": 6088928
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 38651210,
+    "reviewedMeasurementBytes": 34854525,
     "headroomBytes": 140000,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-28",
-    "baselineExceptionReview": {
-      "approvedBy": "maintainer (Ace Shooting)",
-      "approvedOn": "2026-09-28",
-      "reason": "Required compatibility metadata for deprecated aliases exceeds the baseline until its scheduled removal; reviewed byte measurements and ceilings are recorded in this policy.",
-      "approvedMaximumUnpackedBytes": 38791210
-    }
+    "reviewedOn": "2026-09-28"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
-    "stableTagAliasCount": 296,
-    "emittedFilesPerAlias": 2,
-    "measuredEntrypointRemainder": 1101,
+    "stableTagAliasCount": 304,
+    "emittedFilesPerAlias": 1,
+    "measuredEntrypointRemainder": 1268,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 1108
+    "entrypointHeadroom": 1275
   },
   "maximum": {
-    "packedBytes": 9382799,
-    "unpackedBytes": 38791210,
-    "fileCount": 4200
+    "packedBytes": 7686989,
+    "unpackedBytes": 34994525,
+    "fileCount": 4079
   }
 }

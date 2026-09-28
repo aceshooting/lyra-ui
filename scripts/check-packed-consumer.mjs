@@ -261,15 +261,17 @@ const SHADCN_THEME_RETENTION_MARKERS = Object.freeze({
   preset: Object.freeze([
     // The preset's own layer block. theme.css only NAMES that layer in its ordering statement.
     /@layer\s+lr-theme-preset\s*\{/u,
-    // An input only the preset declares.
-    /--lr-theme-heading-letter-spacing\s*:/u,
-    // The shadcn-compatible dark selector. theme.css deliberately answers only to .lr-dark.
+    // The preset makes neutral primary actions follow the brand; the base uses a mode resolver.
+    /--lr-theme-color-neutral-fill-loud\s*:\s*var\(\s*--lr-theme-color-brand-fill-loud\s*\)\s*[;}]/u,
+    // The compatibility .dark selector belongs to the fixed shadcn preset.
     /(?:^|[\s,{}])\.dark\s*[,{]/u,
   ]),
   baseTheme: Object.freeze([
     // theme.css's own layer block, which the preset never opens.
     /@layer\s+lr-theme\s*\{/u,
-    // An input only theme.css declares.
+    // The base installs the independent style-axis resolver; a fixed look does not.
+    /--_lr-style-resolver\s*:\s*1\s*[;}]/u,
+    // Shared motion inputs belong to the base rather than the fixed look.
     /--lr-theme-duration-fast\s*:/u,
   ]),
 });
@@ -561,7 +563,11 @@ async function verifyPackedMigrationCli(fixtureDir) {
     'component-inventory.mjs',
     'lyra-rename-ledger.mjs',
     'migrate-wa.mjs',
+    'migration-analysis.mjs',
     'migration-contract.json',
+    'migration-contract.mjs',
+    'migration-renames.mjs',
+    'migration-transforms.mjs',
   ];
   if (JSON.stringify(cliFiles) !== JSON.stringify(expectedCliFiles)) {
     throw new Error(

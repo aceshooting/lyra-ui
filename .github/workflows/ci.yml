@@ -573,22 +573,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Verify published tarball contents
-        run: |
-          set -euo pipefail
-          out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"
-          echo "$out"
-          missing=0
-          for f in dist/ssr-loader.js custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
-            if ! grep -qF "$f" <<< "$out"; then
-              echo "::error::tarball is missing expected file: $f"
-              missing=1
-            fi
-          done
-          if [[ "$missing" -ne 0 ]]; then
-            echo "::error::one or more expected files missing from the published tarball -- check files/exports/sideEffects in packages/lyra-ui/package.json"
-            exit 1
-          fi
       # Includes a single-component (<lr-button>) gzip-size canary, gated far tighter than the
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.

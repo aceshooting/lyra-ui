@@ -541,21 +541,6 @@ pnpm storybook:check-theme
 step "visual regression"
 pnpm --filter @aceshooting/lyra-ui test:visual
 
-step "verify published tarball contents"
-out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"
-echo "$out"
-missing=0
-for f in dist/ssr-loader.js custom-elements.json llms.txt llms-full.txt llms/index.md llms/shared.md llms/tokens.md llms/peers.md llms/migration.md llms/components/lr-table.md; do
-  if ! grep -qF "$f" <<< "$out"; then
-    echo "ERROR: tarball is missing expected file: $f" >&2
-    missing=1
-  fi
-done
-if [[ "$missing" -ne 0 ]]; then
-  echo "ERROR: expected files missing from the published tarball -- check files/exports/sideEffects in packages/lyra-ui/package.json" >&2
-  exit 1
-fi
-
 step "lyra-ui check:package-size"
 pnpm --filter @aceshooting/lyra-ui check:package-size
 

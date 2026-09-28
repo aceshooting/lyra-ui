@@ -342,8 +342,9 @@
   plan/spec/ledger docs, internal task/tier/project codenames, section-mark (`§`) references,
   audit severity ratings (`High`/`Medium`/`Low`), dated review findings, client/project names,
   local filesystem paths, or adoption/"battle-tested" status. This source ships verbatim in the
-  public npm tarball (`dist/`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, `llms/` all
-  carry these comments) — anything written here is published. Keep the *technical* rationale
+  public npm tarball (`dist/`, `custom-elements.json`, `llms.txt`, and focused `llms/` references
+  carry these comments; the large `llms-full.txt` remains a repository archive) — anything written
+  here is published. Keep the *technical* rationale
   ("previously X was broken, so we do Y") and drop the provenance — a code comment explains the
   code, not who reviewed it. Local-only planning/agent-tooling directories must never be
   referenced by path — by name or otherwise — from any tracked file, and must stay untracked via

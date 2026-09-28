@@ -9,6 +9,18 @@ import { fileURLToPath } from 'node:url';
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
 const FIXTURE_PATH = /(?:^|\/)fixtures(?:\/|$)/u;
+const REQUIRED_TARBALL_FILES = Object.freeze([
+  'dist/ssr-loader.js',
+  'custom-elements.json',
+  'llms.txt',
+  'llms/index.md',
+  'llms/shared.md',
+  'llms/tokens.md',
+  'llms/peers.md',
+  'llms/migration.md',
+  'llms/components/lr-table.md',
+]);
+const REPOSITORY_ONLY_TARBALL_FILES = Object.freeze(['llms-full.txt']);
 // The trailing segment is matched with a single unbounded class after the literal marker rather
 // than `[^/]+(?:\.[^/]+)+$`: those two quantifiers can both consume the same dots, so a path like
 // `a.test.` followed by many `..` backtracks exponentially (CodeQL js/redos). One class each side
@@ -221,6 +233,19 @@ export function packageBudgetFindings(metrics, budgets) {
   validatePackageBudgets(budgets);
   const findings = [];
   const packagePaths = metrics.files.map(normalizedPackagePath);
+  const packagedFiles = new Set(packagePaths);
+  for (const requiredFile of REQUIRED_TARBALL_FILES) {
+    if (!packagedFiles.has(requiredFile)) {
+      findings.push(`published tarball is missing required file: ${requiredFile}`);
+    }
+  }
+  for (const repositoryOnlyFile of REPOSITORY_ONLY_TARBALL_FILES) {
+    if (packagedFiles.has(repositoryOnlyFile)) {
+      findings.push(
+        `published tarball contains repository-only archive: ${repositoryOnlyFile}`,
+      );
+    }
+  }
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     if (metrics[metric] > budgets.maximum[metric]) {
       findings.push(

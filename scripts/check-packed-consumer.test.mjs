@@ -229,12 +229,54 @@ test('gates the shadcn preset canary on markers unique to each imported styleshe
     await rm(scratch, { recursive: true, force: true });
   }
 
+  const inspect = new Function('output', 'readFile', 'SHADCN_THEME_RETENTION_MARKERS', `
+    return (async () => {
+      const violations = [];
+      ${branch}
+      return violations;
+    })();
+  `);
   for (const [form, texts] of [['source', sources], ['minified', minified]]) {
+    const inspectFiles = (files) => inspect(
+      { files },
+      async (file) => texts[file === 'preset.css' ? 'preset' : 'baseTheme'],
+      markers,
+    );
+    assert.deepEqual(await inspectFiles(['preset.css', 'base.css']), [], `${form}: both stylesheets retained`);
+    const withoutPreset = await inspectFiles(['base.css']);
+    assert.equal(withoutPreset.length, 1, `${form}: missing preset fails independently`);
+    assert.match(withoutPreset[0], /no retained preset/u);
+    const withoutBase = await inspectFiles(['preset.css']);
+    assert.equal(withoutBase.length, 1, `${form}: missing base fails independently`);
+    assert.match(withoutBase[0], /no retained base theme/u);
+    assert.equal((await inspectFiles([])).length, 2, `${form}: neither stylesheet retained`);
     for (const [owner, other] of [['preset', 'baseTheme'], ['baseTheme', 'preset']]) {
       for (const marker of markers[owner]) {
         assert.match(texts[owner], marker, `${form} ${owner}: ${marker} must occur in the file it vouches for`);
         assert.doesNotMatch(texts[other], marker, `${form} ${other}: ${marker} must not occur in the other file`);
       }
     }
+  }
+});
+
+
+test('packed migration inventory requires the complete split runtime and rejects additions or omissions', async () => {
+  const preflight = checkerSource.match(
+    /async function verifyPackedMigrationCli\(fixtureDir\) \{(?<body>[\s\S]*?)\n  const migrationFixture =/u,
+  )?.groups?.body;
+  assert.ok(preflight, 'the real CLI inventory preflight must be exercised');
+  const inspect = new Function('fixtureDir', 'readdir', 'join', `return (async () => {${preflight}})();`);
+  const files = [
+    'component-inventory.mjs', 'lyra-rename-ledger.mjs', 'migrate-wa.mjs',
+    'migration-analysis.mjs', 'migration-contract.json', 'migration-contract.mjs',
+    'migration-renames.mjs', 'migration-transforms.mjs',
+  ];
+  const check = (entries) => inspect('/fixture', async () => [...entries], join);
+  await check([...files].reverse());
+  for (const missing of files) {
+    await assert.rejects(check(files.filter((file) => file !== missing)), /Packed migration runtime must contain only/u, missing);
+  }
+  for (const extra of ['unexpected.mjs', 'fixtures', 'migrate-wa.mjs']) {
+    await assert.rejects(check([...files, extra]), /Packed migration runtime must contain only/u, extra);
   }
 });

@@ -30,6 +30,25 @@ const budgets = {
   },
 };
 
+const requiredTarballFiles = [
+  'dist/ssr-loader.js',
+  'custom-elements.json',
+  'llms.txt',
+  'llms/index.md',
+  'llms/shared.md',
+  'llms/tokens.md',
+  'llms/peers.md',
+  'llms/migration.md',
+  'llms/components/lr-table.md',
+];
+
+function tarballFiles(...files) {
+  return [
+    ...requiredTarballFiles.map((path) => ({ path })),
+    ...files.map((file) => (typeof file === 'string' ? { path: file } : file)),
+  ];
+}
+
 test('enforces 25% unpacked reduction and an honest measured packed ceiling', () => {
   assert.doesNotThrow(() => validatePackageBudgets(budgets));
   assert.throws(
@@ -161,11 +180,11 @@ test('reports byte, file-count, and dangling-map regressions', () => {
         packedBytes: 885,
         unpackedBytes: 3_001,
         fileCount: 27,
-        files: [
+        files: tarballFiles(
           { path: 'dist/component.js.map' },
           { path: 'dist/component.js' },
           { path: 'src/component.ts' },
-        ],
+        ),
       },
       budgets,
     ),
@@ -186,7 +205,7 @@ test('rejects packed fixture, test, and story paths without changing the ceiling
         packedBytes: 884,
         unpackedBytes: 3_000,
         fileCount: 26,
-        files: [
+        files: tarballFiles(
           { path: 'dist/components/viewers/docx-viewer/fixtures/minimal-docx-fixture.d.ts' },
           { path: 'dist/components/viewers/docx-viewer/fixtures/minimal-docx-fixture.js' },
           { path: 'dist/components/viewers/ebook-viewer/fixtures/minimal-epub-fixture.d.ts' },
@@ -199,7 +218,7 @@ test('rejects packed fixture, test, and story paths without changing the ceiling
           { path: 'dist/components/agent-tools/test-results/test-results.js' },
           { path: 'dist/components/utility/storybook-link/storybook-link.js' },
           { path: 'dist/components/viewers/fixtures-browser/fixtures-browser.js' },
-        ],
+        ),
       },
       budgets,
     ),
@@ -218,18 +237,32 @@ test('normalizes Windows archive paths without matching plural fixture near-miss
         packedBytes: 884,
         unpackedBytes: 3_000,
         fileCount: 26,
-        files: [
+        files: tarballFiles(
           {
             path: 'dist\\components\\viewers\\spreadsheet-viewer\\fixtures\\minimal-xlsx-fixture.d.ts',
           },
           {
             path: 'dist\\components\\viewers\\fixtures-browser\\fixtures-browser.d.ts',
           },
-        ],
+        ),
       },
       budgets,
     ),
     ['published tarball contains 1 build-only fixture path(s)'],
+  );
+});
+
+test('requires focused public docs in the tarball inventory and rejects repository archive', () => {
+  const files = tarballFiles('llms-full.txt').filter(({ path }) => path !== 'llms/tokens.md');
+  assert.deepEqual(
+    packageBudgetFindings(
+      { packedBytes: 884, unpackedBytes: 3_000, fileCount: files.length, files },
+      budgets,
+    ),
+    [
+      'published tarball is missing required file: llms/tokens.md',
+      'published tarball contains repository-only archive: llms-full.txt',
+    ],
   );
 });
 

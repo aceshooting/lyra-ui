@@ -611,30 +611,53 @@ to 6,088,928 bytes, already 216,583 bytes above its mathematical target before r
 declarations, CSS, and other required runtime artifacts. Deleting those public artifacts or
 weakening their content is not an acceptable package-size fix.
 
-The complete package with category legends, native-button states, persistent table sort indicators
-and attribution styling, measured with exact Node 22.23.2/npm 10.9.8, contains 7,161,539 packed bytes
-and 29,561,077 unpacked bytes. Against a same-tool repack of published 14.2.0, required
-docs/editor/CEM/package metadata add 65,639 unpacked bytes, declarations add 12,441, and runtime/CSS
-add 10,382. All 3,164 public paths remain. The existing compaction pipeline preserves declaration
-JSDoc and readable runtime names while removing redundant syntax, comments and whitespace;
-removing required references or declarations is not a package-size fix.
+The complete 22.0.0 package produced by normal `pnpm pack` with Node 22.23.2 contains
+7,652,989 packed bytes, 34,854,525 unpacked bytes, and 4,072 files. Published 21.2.0 contains
+9,474,876 packed bytes, 38,652,973 unpacked bytes, and 4,195 files: reductions of 19.2%, 9.8%,
+and 123 files respectively. Package-only filesystem allocation on the same filesystem falls from
+52,895,744 to 47,738,880 bytes; these installed figures exclude dependencies. The final unpacked
+package is also 9.5% below the historical 38,510,084-byte baseline. Declaration consolidation keeps
+all JavaScript routes and public types, directs transparent registration aliases to their canonical
+declarations, and shares one empty declaration for side-effect-only locale entries. Pseudo-locale
+exports retain their declarations.
+
+Production browser bundles measured with the same esbuild 0.28.1 settings, shared locked dependency
+versions, ES2022 target, and gzip level 9 show the following registration-entry sizes. Optional peers
+are externalized according to each package's declarations; these figures exclude stylesheets.
+
+| Entry | 21.2.0 minified / gzip bytes | 22.0.0 minified / gzip bytes | Gzip change |
+| --- | ---: | ---: | ---: |
+| badge | 98,364 / 24,747 | 91,140 / 21,788 | -12.0% |
+| button | 134,018 / 33,545 | 127,428 / 30,579 | -8.8% |
+| input | 156,585 / 40,350 | 149,294 / 37,247 | -7.7% |
+| card | 114,492 / 29,556 | 107,228 / 26,551 | -10.2% |
+| tooltip | 199,064 / 55,662 | 197,128 / 54,268 | -2.5% |
+| popover | 190,744 / 53,650 | 190,571 / 52,915 | -1.4% |
+
+The button/input/card/tooltip composition falls from 81,389 to 79,846 gzip bytes. The complete
+registration bundle grows from 1,175,692 to 1,186,596 gzip bytes (0.9%) while adding eight components;
+code-block-core grows 0.3%. Whole-bundle figures sum independently compressed emitted chunks,
+including deferred chunks. The optional locale loader's initial static closure is 3,057 minified /
+1,468 gzip bytes; its 66 catalog imports remain deferred. Its generated catalog map is absent from
+the default component and root import graphs.
+
+The expanded style system has a separate cost: theme.css grows from 2,902 to 6,963 gzip bytes, and
+the standalone theme bootstrap grows from 3,980 to 6,088 gzip bytes with versioned sparse and nested
+ownership. These increases are reported separately from the package reduction. All figures describe production artifacts, not source-line counts.
 
 The byte ceilings are the exact reviewed measurements plus the existing 34,000 packed and
-140,000 unpacked headroom bytes: 7,195,539 and 29,701,077 bytes respectively.
-`validatePackageBudgets()` rejects a missing or renamed exception, an unpacked reviewed measurement
-that no longer exceeds its mathematical target, a packed measurement at or below the favorable
-probe, headroom above 0.5%, a ceiling that differs from measurement plus headroom, and a ceiling at or
-above its pre-8 baseline. A future increase requires a reproducible complete-package measurement
-and review rationale; changing the ceiling merely to clear a red gate is not sufficient.
+140,000 unpacked headroom bytes: 7,686,989 and 34,994,525 bytes respectively. Both ceilings are below
+the historical baseline, so the former baseline-overage approvals are no longer needed. The separate
+25%-target required-artifact exceptions remain explicit. `validatePackageBudgets()` rejects a missing
+or renamed exception, an unpacked reviewed measurement that no longer exceeds its target, a packed
+measurement at or below the recorded favorable probe, headroom above 0.5%, and a ceiling differing
+from measurement plus headroom. A ceiling at or above the historical baseline requires a separate
+named review; no such approval is active. Raising a ceiling merely to clear a failure is insufficient.
 
-The file ceiling is derived from 2,500 base artifacts, two emitted files for each of the
-285 stable tag aliases, a measured 94-file non-alias remainder, and 7 files reserved for the
-next component scaffold: 3,171 files. The 3,164-file measured inventory adds 12 required JavaScript/
-declaration artifacts for native descriptions, registry ownership, reactive property writes,
-overlay ordering, the deferred usage overlay runtime, and native SVG titles. These additions update
-the measured remainder while retaining the positive scaffold reserve. A new stable alias separately contributes
-its two emitted files. Validation requires the ceiling to equal this derivation and remain below
-the pre-8 file count.
+The file ceiling is 4,079: 2,500 base artifacts, one emitted JavaScript file for each of the 304 stable
+tag aliases, a measured 1,268-file remainder, and the existing seven-file reserve for the next
+component scaffold. Canonical declarations supply alias types without an extra declaration per alias.
+Validation requires this exact derivation and a ceiling below the historical 4,441-file baseline.
 
 ## `tsconfig.build.json` and dist hygiene
 
