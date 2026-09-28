@@ -242,6 +242,12 @@ const coreRawBudget = {
   // no eager or bundled optional peer. Sized to the measurement plus the same ~16 KiB headroom
   // 21.0.0 received (ceiling 4709.0 KiB). Maintainer-approved 2026-09-28.
   v211ReleaseAllowanceBytes: 17_000,
+  // 21.2.0 measured 4739.0 KiB raw, 30.0 KiB past the 21.1.0 ceiling: the deprecated aliases that
+  // keep every harmonized Lyra-only name working until 23.0.0 (plain reactive fields kept in step
+  // by one shared alias table, plus their canonical replacements and records). No optional peer
+  // became eager or bundled. Sized to the measurement plus ~16 KiB headroom (ceiling 4755.0 KiB);
+  // it reverses when 23.0.0 removes the aliases. Maintainer-approved 2026-09-28.
+  v212AliasHarmonizationAllowanceBytes: 47_000,
 };
 
 /**
@@ -359,7 +365,8 @@ const bundleEntries = {
     // is now 0 and every other term is unchanged, so the ceiling was 4,685,000 B (4575.2 KiB)
     // against a 4178.8 KiB measurement. The 21.0.0 programme term then raises it to 4,805,000 B
     // (4692.4 KiB) against a 4676.8 KiB measurement, and the 21.1.0 term to 4,822,000 B (4709.0 KiB)
-    // against a 4693.0 KiB measurement.
+    // against a 4693.0 KiB measurement, and the 21.2.0 alias term to 4,869,000 B (4754.9 KiB) against
+    // a 4739.0 KiB measurement.
     maxRawBytes:
       coreRawBudget.establishedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
@@ -374,7 +381,8 @@ const bundleEntries = {
       coreRawBudget.publicContractV10AllowanceBytes +
       coreRawBudget.v10RemediationSweepAllowanceBytes +
       coreRawBudget.shadcnV21ProgrammeAllowanceBytes +
-      coreRawBudget.v211ReleaseAllowanceBytes,
+      coreRawBudget.v211ReleaseAllowanceBytes +
+      coreRawBudget.v212AliasHarmonizationAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
