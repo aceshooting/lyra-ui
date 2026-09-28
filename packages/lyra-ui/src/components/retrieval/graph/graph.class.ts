@@ -14,7 +14,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { styles } from './graph.styles.js';
 import {
   loadD3,
@@ -3593,15 +3593,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /** The edge-label font size in used pixels: `--lr-font-size-2xs` resolved against the live root
-   *  (rem) or own (em) font size through the shared `resolveCssLength()`, so canvas text matches
+   *  (rem) or own (em) font size through the shared `resolveCssTokenLength()`, so canvas text matches
    *  what the same token paints in CSS on a page that isn't at the default 16px root size. A token
-   *  in a unit that has no used pixel length here (`ch`, `pt`, `calc()`) falls back to
-   *  DEFAULT_EDGE_LABEL_FONT_PX rather than being measured as raw pixels. */
+   *  without a usable pixel length falls back to DEFAULT_EDGE_LABEL_FONT_PX rather than being
+   *  measured as raw pixels. CSS math resolves in the host's theme scope. */
   private edgeLabelFontPx(): number {
     const raw = this.computedStyle()
       .getPropertyValue('--lr-font-size-2xs')
       .trim();
-    return resolveCssLength(raw, { host: this }) ?? DEFAULT_EDGE_LABEL_FONT_PX;
+    return resolveCssTokenLength(raw, { host: this }) ?? DEFAULT_EDGE_LABEL_FONT_PX;
   }
 
   private edgeLabelContext(): CanvasRenderingContext2D | null {

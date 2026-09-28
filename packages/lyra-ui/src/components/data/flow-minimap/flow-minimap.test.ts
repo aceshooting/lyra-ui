@@ -1103,6 +1103,12 @@ describe('viewport-rect minimum pointer target', () => {
     expect(wider.width).to.be.at.least(floorPx(3) - 0.5);
   });
 
+  it('honours a CSS math expression for the draggable target floor', async () => {
+    const box = hitRectOf(await mount(20000, 'max(calc(32px * 1.5), 44px)')).getBoundingClientRect();
+    expect(box.width).to.be.at.least(47.5);
+    expect(box.height).to.be.at.least(47.5);
+  });
+
   it('keeps the painted viewport exact while only the transparent hit rectangle is floored', async () => {
     const defaultFloor = await mount(20000);
     const noFloor = await mount(20000, '0px');

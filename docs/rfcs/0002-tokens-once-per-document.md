@@ -3,8 +3,8 @@
 - **Status:** Accepted
 - **Decision:** Accepted by the maintainer on 2026-09-27, with the 22.0 switch still conditional on
   the performance release gate; the unresolved questions not marked closed stay open, and closed
-  question 3's v23 removal of bare `.light`/`.dark` follows the fixed stylesheet's removal release,
-  open under [RFC 0003](0003-lyra-v21-migration-profile.md) question 11.
+  question 3's removal of bare `.light`/`.dark` follows the fixed stylesheet's removal release
+  (no earlier than v24 when deprecated in v22), under [RFC 0003](0003-lyra-v21-migration-profile.md) question 11.
 - **Authors:** Lyra UI maintainers
 - **Created:** 2026-09-27
 - **Tracking issue:** None yet; [roadmap](../roadmap.md) v22, "Architecture and packaging", item 30
@@ -324,7 +324,7 @@ generated list is closed:
 | `:root` | the document | compatible |
 | `.lr-light`, `.lr-dark`, `[data-lr-theme]` (any value) | existing mode scopes | compatible |
 | `.lr-token-light`, `.lr-token-dark`, `[data-lr-design-token-mode]` | `design-tokens.css` fixture scopes | compatible |
-| `.light`, `.dark` | nested regions of the deprecated fixed `themes/shadcn.css`; mode-neutral; removed with it in v23 | compatible in v22 |
+| `.light`, `.dark` | nested regions of the deprecated fixed `themes/shadcn.css`; mode-neutral; removed with it no earlier than v24 | compatible in v22 and v23 |
 | `[data-lr-theme-scope]` (presence; any value) | new mode-neutral marker | new |
 | `[data-lr-mode]`, `[data-lr-look]`, `[data-lr-accent]`, `[data-lr-density]`, `[data-lr-surface]` | RFC 0001's axis boundaries | new with RFC 0001 |
 
@@ -705,7 +705,8 @@ Numbers are stable, because RFC 0001 cites them; closed questions keep their pla
    `data-lr-theme="dark"` on a Lyra host inside an application root. Is on demand the right default,
    and does it need an opt-out, given that it appends to an application-owned array?
 3. **Closed: nested `.light` and `.dark` under the fixed shadcn stylesheet.** Bare `.light` and
-   `.dark` are mode-neutral scopes through v22 and leave with the stylesheet in v23; RFC 0001 scopes
+   `.dark` remain mode-neutral scopes while the fixed stylesheet is supported, through at least v23,
+   and leave with that stylesheet no earlier than v24; RFC 0001 scopes
    the switchable look's aliases.
 4. **Closed: composite components re-declaring shared outputs.** None do: every textual match is
    comment prose, and no parsed component sheet declares a layer name. The parser-based gate keeps

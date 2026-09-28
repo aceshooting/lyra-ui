@@ -1337,6 +1337,29 @@ it("rebuilds virtual transforms and spacer extent from the measured pitches", as
   });
 });
 
+it('aligns virtual rows and spacer extent with CSS math token heights', async () => {
+  const el = await fixture<LyraCommandPalette>(html`
+    <lr-command-palette
+      style="--lr-command-palette-row-height: max(calc(80px * 0.75), 24px); --lr-command-palette-group-height: calc(20px * 2)"
+      .commands=${[
+        { commandId: 'save', label: 'Save', group: 'File' },
+        { commandId: 'close', label: 'Close', group: 'File' },
+        { commandId: 'copy', label: 'Copy', group: 'Edit' },
+      ]}
+    ></lr-command-palette>
+  `);
+  el.openPalette();
+  await el.updateComplete;
+  await settleRowPitch(el);
+  expect(virtualGeometry(el)).to.deep.equal({
+    rows: ['translateY(40px)', 'translateY(100px)', 'translateY(200px)'],
+    groups: ['translateY(0px)', 'translateY(160px)'],
+    spacer: '260px',
+  });
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="command"]')!;
+  expect(Number.parseFloat(getComputedStyle(row).height)).to.equal(60);
+});
+
 it("rebuilds virtual geometry after live row and group token changes", async () => {
   const el = (await fixture(html`
     <lr-command-palette

@@ -70,6 +70,34 @@ change. See [RFC 0003](rfcs/0003-lyra-v21-migration-profile.md).
    enterprise look informed by Fluent later, guided by demand.
 8. A validated categorical chart palette per look in v22; sequential and diverging palettes in 22.x.
 
+#### v22 styling delivery gates
+
+The accepted RFCs describe the target contract. The retained CSS experiments establish feasibility;
+they are not a shipped style runtime, Material look, glass mixin or density preset. The existing
+`setLyraTheme()` and shadcn preset remain the implemented consumer entry points until stage 1 lands.
+
+- **One complete switching path.** Deliver the resolver, generated stylesheets and runtime looks,
+  storage migration, no-flash bootstrap, resets and observer updates together. An id passed to
+  `setLyraStyle()` selects an already-loaded stylesheet; it does not download or register a look.
+  `defineLyraLook()` validates a runtime look object. Examples must show the required imports.
+- **Scopes independent of the token optimization.** Define and test stylesheet adoption inside
+  application shadow roots even if RFC 0002's performance gate defers the document token layer.
+  Exercise the inherited look in nested roots, explicitly styled islands, iframes, top-layer popups
+  and body-mounted toast/confirmation helpers; document which scope owns each surface.
+- **Combination coverage.** Gate every built-in look × named accent × mode × surface combination,
+  including states and glass fallbacks. Add custom-accent cases and rendered compact/touch targets.
+  Independent choices may change derived geometry and contrast; the stored choices must survive.
+- **Whole-interface coverage.** Include native controls styled by `native.css`, typography and code
+  highlighting, charts/canvas, virtualized rows, and overlay chrome in the same gallery fixtures.
+  Record deliberate visual exceptions. A control-only showcase cannot establish a coherent look.
+- **Measured lengths.** Inventory JavaScript reads of theme tokens, including table/grid sizing and
+  virtualized row pitch. Resolve CSS math in the owner's live theme scope so density does not paint
+  one size while hit testing, scrolling or placement uses a fallback size.
+- **Separate release evidence.** Keep RFC 0001's bootstrap, all-component parity and switching gates,
+  RFC 0002's conditional performance gate, and glass device/legibility evidence distinct. Any work
+  not yet verified remains pending. APIs first deprecated in v22 remain supported through v23 and
+  cannot be removed before v24.
+
 ### Languages
 
 9. New catalogs, first tier: `es-419`, `vi`, `bn`, `th`, `ur`.

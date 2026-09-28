@@ -14,7 +14,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { styles } from './command-palette.styles.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { closeIcon } from '../../../internal/icons.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -513,12 +513,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private measureRowPitch(): void {
     const style = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!style) return;
-    const row = resolveCssLength(
+    const row = resolveCssTokenLength(
       style.getPropertyValue('--lr-command-palette-row-height').trim() ||
         style.getPropertyValue('--_lr-command-palette-row-height').trim(),
       { host: this }
     );
-    const group = resolveCssLength(
+    const group = resolveCssTokenLength(
       style.getPropertyValue('--lr-command-palette-group-height').trim() ||
         style.getPropertyValue('--_lr-command-palette-group-height').trim(),
       { host: this }

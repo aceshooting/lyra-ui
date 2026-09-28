@@ -374,13 +374,13 @@ it("inherits the placement gap hook from an ancestor", async () => {
   expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(20);
 });
 
-it("uses the live token after an unsupported public placement gap", async () => {
+it('uses the live token after an invalid public placement gap', async () => {
   const wrapper = await fixture(html`
     <div style="--lr-theme-space-s: 20px">
       <lr-selection-toolbar
         open
         text="selected"
-        style="--lr-selection-toolbar-placement-gap: calc(1rem + 2px)"
+        style="--lr-selection-toolbar-placement-gap: calc(invalid)"
         .rect=${new DOMRect(240, 200, 20, 20)}
       ></lr-selection-toolbar>
     </div>
@@ -393,6 +393,35 @@ it("uses the live token after an unsupported public placement gap", async () => 
   await aTimeout(0);
 
   expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(20);
+});
+
+it('resolves a density-scaled token for the rendered placement gap', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-space-s: max(calc(20px * 0.75), 0px)">
+      <lr-selection-toolbar open text="selected" .rect=${new DOMRect(240, 200, 20, 20)}></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(15);
+});
+
+it('uses a public math expression before the shared placement token', async () => {
+  const wrapper = await fixture(html`
+    <div style="--lr-theme-space-s: 20px">
+      <lr-selection-toolbar
+        open text="selected" style="--lr-selection-toolbar-placement-gap: calc(10px + 2px)"
+        .rect=${new DOMRect(240, 200, 20, 20)}
+      ></lr-selection-toolbar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-selection-toolbar') as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  await aTimeout(0);
+  expect(Math.round(200 - toolbar.getBoundingClientRect().bottom)).to.equal(12);
 });
 
 it("clamps a negative placement gap at zero", async () => {

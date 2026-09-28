@@ -15,7 +15,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
@@ -1007,11 +1007,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const ownerWindow = this.ownerDocument?.defaultView;
     const host = this.renderedNodeById(id) ?? this;
     const computed = ownerWindow?.getComputedStyle(host);
-    const customWidth = resolveCssLength(
+    const customWidth = resolveCssTokenLength(
       computed?.getPropertyValue('--lr-flow-canvas-node-fallback-inline-size').trim(),
       { host },
     );
-    const customHeight = resolveCssLength(
+    const customHeight = resolveCssTokenLength(
       computed?.getPropertyValue('--lr-flow-canvas-node-fallback-block-size').trim(),
       { host },
     );
@@ -1020,17 +1020,17 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     // is available, while ownerless SSR uses zero geometry (there is no layout viewport to fit).
     const width =
       customWidth ??
-      (resolveCssLength(
+      (resolveCssTokenLength(
         computed?.getPropertyValue('--lr-size-10rem').trim() || '10rem',
         { host },
       ) ?? 0) +
-        (resolveCssLength(
+        (resolveCssTokenLength(
           computed?.getPropertyValue('--lr-size-1rem').trim() || '1rem',
           { host },
         ) ?? 0);
     const height =
       customHeight ??
-      resolveCssLength(
+      resolveCssTokenLength(
         computed?.getPropertyValue('--lr-size-4rem').trim() || '4rem',
         { host },
       ) ??

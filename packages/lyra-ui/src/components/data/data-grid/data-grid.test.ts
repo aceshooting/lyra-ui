@@ -8546,6 +8546,19 @@ it('invalidates offscreen measured heights when row-height metrics change', asyn
   expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
 });
 
+it('updates cached virtual-row metrics from CSS math token heights', async () => {
+  const element = await dataGrid<Person>(html`
+    <lr-data-grid label="Computed row metrics" style="--row-height: 20px" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const state = measurementAccess(element);
+  state.measurementRowHeight = 20;
+  state.measuredItemHeights.set('row:number:offscreen', 80);
+  element.style.setProperty('--row-height', 'max(calc(80px * 0.75), 24px)');
+  state.measureRenderedItems();
+  expect(state.measurementRowHeight).to.equal(60);
+  expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
+});
+
 it('invalidates offscreen measured heights when inherited font metrics change', async () => {
   const element = await dataGrid<Person>(html`
     <lr-data-grid
@@ -9002,4 +9015,3 @@ describe("grid-line colour tier", () => {
     expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(10, 20, 30)"));
   });
 });
-

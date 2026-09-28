@@ -8,6 +8,7 @@ it('resolves density math while retaining the public literal-length contract', a
   expect(resolveCssTokenLength('clamp(24px, 3em, 44px)', { host })).to.equal(44);
   expect(resolveCssTokenLength('min(3em, 44px)', { host })).to.equal(44);
   expect(resolveCssTokenLength('calc(1em - 24px)', { host })).to.equal(-4);
+  expect(resolveCssTokenLength('calc(1em - 20px)', { host })).to.equal(0);
   expect(resolveCssTokenLength('24px', { host })).to.equal(24);
   expect(resolveCssLength('max(calc(2em * 0.75), 24px)', { host })).to.be.undefined;
   expect(host.childElementCount).to.equal(0);
@@ -16,6 +17,8 @@ it('resolves density math while retaining the public literal-length contract', a
 it('re-reads expressions inside shadow roots after the inherited font size changes', async () => {
   const host = await fixture<HTMLElement>(html`<div style="font-size: 20px"></div>`);
   const root = host.attachShadow({ mode: 'open' });
+  host.style.setProperty('--test-length', '2em');
+  expect(resolveCssTokenLength('calc(var(--test-length) + 2px)', { host })).to.equal(42);
   expect(resolveCssTokenLength('max(2em, 24px)', { host })).to.equal(40);
   host.style.fontSize = '30px';
   expect(resolveCssTokenLength('max(2em, 24px)', { host })).to.equal(60);

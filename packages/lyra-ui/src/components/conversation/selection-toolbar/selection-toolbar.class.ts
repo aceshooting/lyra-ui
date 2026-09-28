@@ -5,7 +5,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import {
   applyComposedFocusRepair,
@@ -120,8 +120,9 @@ interface ActionTabIndexLease {
  * @csspart action-copy - The copy action.
  * @cssprop [--lr-selection-toolbar-placement-gap=var(--lr-space-s)] - Non-negative distance
  *   between the selection and toolbar, and between the toolbar and viewport during collision
- *   avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values
- *   fall back to the default and negative values clamp to `0`.
+ *   avoidance. Unitless pixels, `px`, `rem`, `em`, and CSS length math are resolved live;
+ *   percentages have no placement basis. Invalid values fall back to the default and negative
+ *   values clamp to `0`.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-overlay)] - Shared floating-surface fill,
  * on the toolbar.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
@@ -852,7 +853,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private placementGapPx(): number {
     const view = this.ownerDocument.defaultView;
     const computed = view?.getComputedStyle(this);
-    const publicValue = resolveCssLength(
+    const publicValue = resolveCssTokenLength(
       computed
         ?.getPropertyValue('--lr-selection-toolbar-placement-gap')
         .trim() ?? '',
@@ -861,7 +862,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (publicValue !== undefined) {
       return finiteRange(publicValue, DEFAULT_PLACEMENT_GAP_PX, 0, Number.MAX_VALUE);
     }
-    const tokenValue = resolveCssLength(
+    const tokenValue = resolveCssTokenLength(
       computed?.getPropertyValue('--lr-space-s').trim() ?? '',
       { host: this },
     );

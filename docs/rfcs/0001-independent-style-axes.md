@@ -1,11 +1,11 @@
 # RFC 0001: Independent style axes
 
 - **Status:** Accepted
-- **Decision:** Accepted by the maintainer on 2026-09-27. The four items under "Still required
-  before acceptance" were not waived; they become merge gates for stage 1. The unresolved questions
-  stay open, as does the removal release for what this RFC deprecates in 22.0.0, including
-  question 4 and the records' `removalNotBefore`: the unchanged deprecation rule keeps it through
-  v23 ([RFC 0003](0003-lyra-v21-migration-profile.md), question 11).
+- **Decision:** Accepted by the maintainer on 2026-09-27. The four feasibility items under "Stage 1 merge
+  gates" were not waived. The unresolved questions stay open. Anything first deprecated in
+  22.0.0 remains supported through v23 and is removable no earlier than v24; this also applies to
+  question 4 and the records' `removalNotBefore`
+  ([RFC 0003](0003-lyra-v21-migration-profile.md), question 11).
 - **Authors:** Lyra UI maintainers
 - **Created:** 2026-09-27
 - **Tracking issue:** None yet; this RFC is item 1 of the v22 plan's "Themes and styling" list in
@@ -37,8 +37,8 @@ input. A disposable prototype confirms it in Chromium, Firefox and WebKit:
 
 A new `setLyraStyle()` family in the zero-dependency `@aceshooting/lyra-ui/theme.js` becomes the
 canonical API. It shares v21's runtime, storage key, contrast floor and no-flash bootstrap.
-`setLyraTheme()` and the theme-preset API remain as a deprecated facade through v22 and are removed
-in v23. [Staged delivery](#staged-delivery) then orders the rest: token foundations, density and
+`setLyraTheme()` and the theme-preset API remain as a deprecated facade through v23 and are removable
+no earlier than v24. [Staged delivery](#staged-delivery) then orders the rest: token foundations, density and
 glass, the Material-inspired look, chart palettes for each look, and the preset gallery.
 
 ## Motivation
@@ -118,8 +118,10 @@ guarantees that hold across combinations.
   - **density**: `compact`, `comfortable` or `touch`;
   - **mode**: `light`, `dark`, `system`, or `unset` for application-owned modes;
   - **accent**: a named accent, a custom colour, a per-role record, or the look's own.
-- **Independence.** Changing or resetting one axis never changes another axis's stored value or
-  rendered result, and never leaves obsolete inline values behind.
+- **Independence.** Changing or resetting one axis never changes another axis's stored choice or
+  owned overrides, and never leaves obsolete inline values behind. Derived appearance is recomputed:
+  compact density scales the new look's base geometry, and an accent adapts to its reference surfaces.
+  Independence does not promise identical pixels or identical derived token values after a look change.
 - **Scopes.** Every axis works at document scope and at element scope. A scoped element takes each
   axis from its nearest ancestor that sets it, independently of the other axes, through nested
   shadow roots.
@@ -137,7 +139,7 @@ guarantees that hold across combinations.
 - **No floor raise.** The browser floor is unchanged beyond the Popover floor that the roadmap
   (item 35) already plans.
 - **A defined deprecation path.** Every v21 theming surface is either compatible in v22, or
-  deprecated in v22 and removed in v23.
+  deprecated in v22 and supported through v23, with removal no earlier than v24.
 
 ### Non-goals
 
@@ -156,8 +158,8 @@ guarantees that hold across combinations.
 
 ## Proposed public contract
 
-Status legend: **new**; **compatible** (meaning unchanged); **deprecated** (works through v22,
-removed in v23); **breaking** (changed in v22).
+Status legend: **new**; **compatible** (meaning unchanged); **deprecated** (works through v23,
+removable no earlier than v24); **breaking** (changed in v22).
 
 ### The axes
 
@@ -500,6 +502,10 @@ where the runtime would drop something:
 It also stamps the id on the frozen map under a private symbol, which is how the facade recognizes a
 spread of a built-in map.
 
+This does not register the id or install a stylesheet. Apply the returned object for runtime form,
+or load `lyraLookCss()` output before selecting its id. A string such as `look: 'shadcn'` requires
+`looks/shadcn.css`; the surface and density selections likewise require their optional stylesheets.
+
 **`lyraLookCss(look, options)`** is DOM-free.
 
 - **Output:** it returns the stylesheet form of a look with both layer statements, the look's slots
@@ -531,7 +537,7 @@ record, and checks colour fields syntactically. The browser runtime re-validates
   is a notification and never cancelable.
 - **When it fires:** after every `setLyraStyle()` or `resetLyraStyle()` call, and after an
   operating-system change of the resolved mode (with `changed: ['resolvedMode']`).
-- **Compatibility during v22:** the same occasions also dispatch `lr-theme-change` with the v21
+- **Compatibility while the facade is supported:** the same occasions also dispatch `lr-theme-change` with the v21
   snapshot shape, so v21 listeners and mixed-version pages keep working. `lr-theme-preset-change`
   fires only through the deprecated preset API.
 - **No component changes:** no component event changes, so `events.ts` and the framework type maps
@@ -593,7 +599,7 @@ and adds fields whose names do not collide:
   shadcn scope does nothing, which the prototype confirmed.
 - **Scope list.** RFC 0002's scope list includes that selector and every axis attribute. That answers
   its open question 3 for the switchable look. The deprecated fixed form still needs bare `.light` and
-  `.dark` as scopes until v23.
+  `.dark` as scopes through v23, with removal no earlier than v24.
 
 ### Runtime modules
 
@@ -733,9 +739,16 @@ to the token, read after style resolution, the same approach as `resolveCanvasCo
 reads include:
 
 - the placement gap of `lr-selection-toolbar`, read from `--lr-space-s`;
-- the target size of `lr-heatmap` and `lr-flow-minimap`, read from `--lr-icon-button-size`.
+- the target size of `lr-heatmap` and `lr-flow-minimap`, and the selection-column reservation of
+  `lr-data-grid`, read from `--lr-icon-button-size`;
+- token-based table resize limits, data-grid dimensions, command-palette row/group pitches,
+  flow-canvas fallback geometry, mind-map ring gaps and graph edge-label font sizes.
 
-Stage 3 inventories every such read. On the default path, computed inputs remain plain lengths.
+Stage 3 inventories every such read, including reads outside `resolveCssLength()` callers. The
+internal `resolveCssTokenLength()` preserves the literal fast path and resolves CSS math in a live
+owner-document probe; the public `resolveCssLength()` keeps its literal-only contract. On the
+default path, computed inputs remain plain lengths. Verify both initial measurement and live
+axis changes, especially cached geometry in virtualized and canvas-based components.
 
 **States, focus, keyboard and pointer** are unaffected. Axes change no DOM, focus order, keyboard
 handling, event or ARIA. Rendered-DOM equality tests across axis combinations prove this, including
@@ -750,8 +763,8 @@ instant (open question 11).
 
 - `ThemeWatcher` (`internal/theme-watcher.ts`), used by the chart, heatmap, map, QR-code, word-cloud,
   audio-visualizer, media-player and e-book components;
-- `watchDarkTheme` (the code-block and markdown syntax themes). It also gains `data-lr-theme`, which
-  its filter lacks today;
+- `watchDarkTheme` (the code-block and markdown syntax themes), including `data-lr-theme` and
+  flattened ancestry through slots and shadow hosts;
 - `lr-zoomable-frame`'s theme sync. It filters only `data-lr-theme` and copies only `--lr-theme-*`,
   so it is rebuilt on `applyLyraStyleScope()` for the frame's document.
 
@@ -768,13 +781,19 @@ This is documented (open question 13).
 - Selectors do not cross shadow boundaries. So an axis *attribute* placed inside an application
   shadow root needs the resolver and the chosen stylesheets in that tree scope, just as a v21
   `.lr-dark` island does. Attributes in Lyra's own component templates never occur.
-- RFC 0002's adoption points are the delivery route (open question 12).
+- RFC 0002's adoption points are an optional delivery route (open question 12). Stage 1 must also
+  document and test explicit stylesheet adoption in application roots without the document token
+  optimization: its performance gate may defer independently of the style axes. Inherited styling
+  alone does not prove that an axis attribute inside a foreign root works.
 
 **Loading, empty and error handling.**
 
-- A stylesheet-form value whose stylesheet is missing renders the inherited value, and the
-  development build warns.
-- An unknown attribute value matches no rule, so the element inherits.
+- A missing look stylesheet leaves the Lyra base at that look boundary, because `theme.css`
+  declares that base on every `[data-lr-look]`. The development build warns; it must not report the
+  requested look as visually installed. Missing surface/density/accent styles leave their inherited
+  treatment in effect.
+- An unknown look id likewise creates a Lyra look boundary, rather than inheriting the parent look.
+  Other unknown axis values have no value-specific rule and leave the inherited choice in effect.
 - An invalid runtime value fails closed to that field's default.
 
 **Pickers.** Applications compose existing elements:
@@ -794,8 +813,10 @@ the narrow-allocation tests also run in `compact` and `touch`.
 - **Semantics, names, stateful ARIA, focus return and live regions:** not applicable. There is no new
   element, and axes never alter these. The runtime announces nothing, and a picker built by an
   application owns its own announcements.
-- **Contrast.** The static gate covers every built-in look × mode, every built-in look × named accent
-  × mode, and every built-in look × glass × mode.
+- **Contrast.** The static gate covers every built-in look × named accent (including no accent)
+  × mode × surface, including hover, press, selected and focus states. Testing accent and glass
+  separately does not prove their composition. Browser fixtures also combine custom accents and
+  glass with the solid fallbacks.
   - **Glass:** text and on-colours must reach 4.5:1, and control boundaries and focus rings 3:1,
     against the composited surface. That surface is the fill at the clamped minimum opacity,
     including the highlight layer and any translucent border, composited over black and over white.
@@ -975,8 +996,8 @@ shipped `theme.css` size exactly.
 | `themes/shadcn.css` → `looks/shadcn.css` | 1,986 B | 958 B, prototype (delta only) |
 | `accents.css` (nine accents) | — | ≈1.4 KB, prototype with ramps of the same shape |
 | `density.css`, `surfaces/glass.css` | — | each expected under 0.5 KB; measured by items 5 and 4 |
-| `theme/theme.js` | budget 6.24 KiB (bundled, minified) | +≈2 KB expected for axes, scopes, record migration and the facade. The facade is removed in v23. Measured in stage 1. |
-| Bootstrap string and `theme-bootstrap.js` | 3,980 B reviewed; 4,060 B ceiling | measured by a prototype before acceptance (see below) |
+| `theme/theme.js` | budget 6.24 KiB (bundled, minified) | +≈2 KB expected for axes, scopes, record migration and the facade. The facade remains through v23. Measured in stage 1. |
+| Bootstrap string and `theme-bootstrap.js` | 3,980 B reviewed; 4,060 B ceiling | measured by a prototype before stage 1 merges (see below) |
 | Per component | — | 0 for density; up to ≈0.4 KB for the glass mixin, only in surface-honouring components |
 
 For a Lyra-look page the net cost is about +2.5 KB of CSS; for a shadcn page it is about +1.5 KB. The
@@ -997,10 +1018,10 @@ except for the behaviour changes listed below. The parity tests prove this.
 | The five-name layer statement | compatible; sublayers nest inside `lr-theme-preset` | kept |
 | `lyraThemeBootstrap`, `createLyraThemeBootstrap()`, `theme-bootstrap.js`, and the bootstrap's script attributes | compatible; they restore every axis, and their bytes change | kept |
 | `LyraThemeTokens`, `LyraThemeTokenName`, `LyraThemeTokenValue`, `LyraThemeAccent`, `LyraThemeAccentValue`, `LyraThemeSemanticRole` | compatible, reused | kept |
-| `setLyraTheme()`, `getLyraTheme()`, `LyraTheme`, `LyraThemeMode`, `LyraThemeChangeDetail`, `lr-theme-change` | deprecated facade with v21 semantics | removed |
-| `defineLyraThemePreset()`, `applyLyraThemePreset()`, `LYRA_THEME_PRESETS`, the `LyraThemePreset*` types, `lr-theme-preset-change`, `data-lr-theme-preset` | deprecated | removed |
-| `LYRA_SHADCN_THEME_PRESET`, `theme/presets/shadcn.js` | deprecated; keeps its v21 map, stamped with the id `shadcn` | removed |
-| `themes/shadcn.css` | deprecated fixed form, generated | removed |
+| `setLyraTheme()`, `getLyraTheme()`, `LyraTheme`, `LyraThemeMode`, `LyraThemeChangeDetail`, `lr-theme-change` | deprecated facade with v21 semantics | kept |
+| `defineLyraThemePreset()`, `applyLyraThemePreset()`, `LYRA_THEME_PRESETS`, the `LyraThemePreset*` types, `lr-theme-preset-change`, `data-lr-theme-preset` | deprecated | kept |
+| `LYRA_SHADCN_THEME_PRESET`, `theme/presets/shadcn.js` | deprecated; keeps its v21 map, stamped with the id `shadcn` | kept |
+| `themes/shadcn.css` | deprecated fixed form, generated | kept |
 | Version 1 storage record | read and migrated | still read; revisit after v23 |
 
 **The facade** maps v21 calls onto the same state.
@@ -1060,7 +1081,7 @@ schema:
 
 - `component-metadata.json#deprecations` gains module-level records, keyed by `module` rather than
   `tag`. Their kinds are `function`, `type`, `constant`, `subpath`, `stylesheet`, `window-event` and
-  `root-attribute`, and each carries `since` and `removalNotBefore: 23.0.0`.
+  `root-attribute`, and each carries `since` and `removalNotBefore: 24.0.0`.
 - RFC 0003's rename ledger, whose entries are keyed by component tag, gains report-only module-level
   review entries for module specifiers, exported names, window events and function calls. Its
   coverage check pairs them with the new records in both directions.
@@ -1147,7 +1168,7 @@ The checks covered:
 - **Density.** The default path stays free of `calc()`, and `compact` scales padding and control
   height.
 
-**Still required before acceptance:**
+**Stage 1 merge gates (required by the acceptance decision):**
 
 - a bootstrap prototype, with its measured gzip size and a proposed ceiling;
 - the resolver generated from `canonical-tokens.json` rather than parsed from CSS;
@@ -1200,6 +1221,8 @@ All stages land before v22.0.0, in this order.
 **Related items.**
 
 - Item 30 (RFC 0002) treats every axis boundary as a theme scope and measures with scopes present.
+  Its document-token switch may be deferred without blocking the axes; stage 1 must prove the
+  explicit foreign-root stylesheet path independently.
 - Item 25 folds per-component `compact` properties into size and density.
 
 **Rollback.** Each stage adds new names and files. The facade keeps v21 code working throughout. The
@@ -1210,8 +1233,9 @@ resolver is internal: reverting `theme.css` to per-mode blocks changes no public
 - **Invariants (unit and browser).**
   - **Path independence:** random sequences of `setLyraStyle`, `resetLyraStyle` and facade calls
     leave the same attributes, inline values and ownership list as applying the final state once.
-  - **Independence:** each field's change or reset leaves every other field's stored value and
-    computed inputs unchanged.
+  - **Independence:** each field's change or reset leaves every other field's stored choice and
+    owned overrides unchanged. Assert the expected recomputation of shared results, including
+    look-relative density and accent contrast, rather than requiring those results to stay unchanged.
   - **No stale values:** after `resetLyraStyle()`, no Lyra-owned inline value remains, and
     application-owned inline values are never touched.
   - **Scopes:** replace semantics, `null` removal, ownership, and the RFC 0002 scope marker.
@@ -1234,6 +1258,10 @@ resolver is internal: reverting `theme.css` to per-mode blocks changes no public
   - Operating-system flips rewrite only root public values.
   - Canvas components repaint on every axis change.
   - Half-specified pairs keep v21 behaviour.
+- **Renderer coverage.** Gallery and regression fixtures include `native.css` controls, headings
+  and body text, code highlighting, canvas/chart labels and legends, virtualized rows, and open
+  overlays. Verify that mode/look/density changes update their paints and measured geometry;
+  document any intentional visual exception instead of claiming uniform coverage from buttons alone.
 - **Bootstrap and storage.**
   - Pre-paint restoration of each axis, of both forms, and of custom accents.
   - v1 migration, and a version 2 record read and then written by v21 code.
@@ -1292,9 +1320,9 @@ resolver is internal: reverting `theme.css` to per-mode blocks changes no public
 3. **The Material-inspired look's id.** Use `material`, or a neutral id such as `tonal` that implies
    no affiliation with a trademarked design system? The documentation would state the inspiration
    either way.
-4. **Fixed stylesheet form.** Remove `themes/shadcn.css` in v23 as proposed, or keep fixed
+4. **Fixed stylesheet form.** Remove `themes/shadcn.css` no earlier than v24, or keep fixed
    `themes/<id>.css` forms permanently as a one-look convenience?
-5. **`data-theme` in v23.** It is generic enough to collide with other libraries' theme attributes.
+5. **Future `data-theme` removal.** It is generic enough to collide with other libraries' theme attributes.
 6. **Named accents and CSS keywords.** Keep one API `accent` field in which names win (the
    `aquamarine` overlap), or split named accents into their own API field, as the record already does?
 7. **Nesting guard scope.** Should a popover opened from a glass surface always be solid, as proposed,

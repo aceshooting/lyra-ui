@@ -42064,8 +42064,10 @@ movement starts from the action that received the event rather than stale contro
 private so controlled rect updates cannot be silently overridden by stale authored CSS.
 **Themeable custom properties:** `--lr-selection-toolbar-placement-gap` (default
 `var(--lr-space-s)`) is the non-negative distance from the selection and from viewport edges while
-the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
-values fall back to the default and negative values clamp to `0`. Collision math uses the active
+the toolbar avoids collisions. It accepts unitless pixel values, `px`, `rem`, and `em` values, and
+CSS length math (`calc()`, `min()`, `max()`, `clamp()`) resolved in its live theme scope. Percentages
+have no placement-gap basis. Invalid values fall back to the default and negative values clamp to
+`0`. Collision math uses the active
 `visualViewport` bounds and offsets when available, including after visual-viewport changes.
 
 The toolbar is a floating surface and paints from the **shared overlay-surface family** (16.0.0):

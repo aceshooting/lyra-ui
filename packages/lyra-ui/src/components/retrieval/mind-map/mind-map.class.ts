@@ -10,7 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   acquireAnnouncementSink,
@@ -271,16 +271,16 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   /** Resolves `--lr-mind-map-ring-gap` to a real used pixel value for whatever unit it carries --
    *  a live root/host font-size read for rem/em (a hardcoded `* 16` gets ring spacing wrong on any
    *  page whose root font-size isn't the browser default 16px), delegated to the shared
-   *  `resolveCssLength()` so every unit-resolving component agrees on what a length means. A value
-   *  in a unit that cannot be resolved to a used pixel length here (`ch`, `pt`, `calc()`, a bare
-   *  `%` with no base) falls back to the default gap rather than being read as raw pixels. */
+   *  `resolveCssTokenLength()` so every unit-resolving component agrees on what a length means. A value
+   *  with no usable pixel length (including a percentage with no base) falls back to the default
+   *  gap rather than being read as raw pixels. CSS math uses the host's theme scope. */
   private ringGapPx(): number {
     const ownerWindow = this.ownerDocument.defaultView;
     const hostStyle = ownerWindow?.getComputedStyle(this) ?? this.style;
     const raw =
       hostStyle.getPropertyValue('--lr-mind-map-ring-gap').trim() ||
       hostStyle.getPropertyValue('--_lr-mind-map-ring-gap').trim();
-    return resolveCssLength(raw, { host: this }) ?? DEFAULT_RING_GAP_PX;
+    return resolveCssTokenLength(raw, { host: this }) ?? DEFAULT_RING_GAP_PX;
   }
 
   private relayout(): void {

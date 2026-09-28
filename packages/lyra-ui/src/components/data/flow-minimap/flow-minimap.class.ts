@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -177,7 +177,7 @@ export class LyraFlowMinimap extends LyraElement {
     // default is read from the shared size token instead, exactly as the documented
     // `var(--lr-icon-button-size)` default says, and the numeric constant below only guards an
     // environment where neither resolves at all.
-    const minSize = resolveCssLength(
+    const minSize = resolveCssTokenLength(
       computed.getPropertyValue('--lr-flow-minimap-viewport-min-size').trim() ||
         computed.getPropertyValue('--lr-icon-button-size').trim(),
       { host: this },
@@ -186,7 +186,7 @@ export class LyraFlowMinimap extends LyraElement {
       minSize !== undefined && Number.isFinite(minSize) && minSize >= 0
         ? minSize
         : DEFAULT_VIEWPORT_MIN_SIZE_PX;
-    const border = resolveCssLength(
+    const border = resolveCssTokenLength(
       computed.getPropertyValue('--lr-border-width-thin').trim(),
       { host: this },
     );

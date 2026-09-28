@@ -6,7 +6,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -2516,7 +2516,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         ?.getComputedStyle(this)
         .getPropertyValue('--lr-icon-button-size')
         .trim() ?? '';
-    const resolved = resolveCssLength(raw, { host: this });
+    const resolved = resolveCssTokenLength(raw, { host: this });
     const next =
       resolved !== undefined && Number.isFinite(resolved) && resolved > 0
         ? resolved

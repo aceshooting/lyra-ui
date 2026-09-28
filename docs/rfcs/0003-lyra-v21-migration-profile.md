@@ -637,7 +637,7 @@ Numbers are stable; closed questions keep their place.
     changesets raises only when it releases. Does a rename minor bump the version when its work
     opens, or land its records with the release? Item 16's 21.1.0 records face the same choice.
 11. **Other deprecations made in 22.0.0.** The unchanged rule keeps them through v23, so RFC 0001's
-    theming facade, preset API and fixed `themes/shadcn.css` are removable in 24.0.0, not v23 as
-    that RFC plans, unless each is deprecated in a 21.x minor. Their `globals` entries report them
-    either way; the removal release is open. RFC 0002's bare `.light`/`.dark` scopes leave with that
-    stylesheet.
+    theming facade, preset API and fixed `themes/shadcn.css` are removable no earlier than 24.0.0.
+    Their `globals` entries report them either way; the actual removal release remains open.
+    An earlier deprecation must ship in a real 21.x minor and cannot be backdated. RFC 0002's bare
+    `.light`/`.dark` scopes leave with that stylesheet.

@@ -8,7 +8,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import {
@@ -1595,9 +1595,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   }
 
   /** The themed floor a column may be dragged/keyed down to, in used pixels. `rem`/`em` resolve
-   *  against the live root/own font size through the shared `resolveCssLength()` -- a hardcoded
+   *  against the live root/own font size through the shared `resolveCssTokenLength()` -- a hardcoded
    *  `* 16` would pick the wrong floor on a page whose root font-size isn't the browser default.
-   *  A token in a unit with no used pixel length here (`ch`, `pt`, `calc()`, a bare `%` with no
+   *  CSS math resolves in the host's theme scope. A token with no used pixel length here (a bare `%` with no
    *  base) falls back to DEFAULT_RESIZE_MIN_WIDTH_PX rather than being read as raw pixels. */
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
@@ -1608,7 +1608,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       hostStyle?.getPropertyValue('--lr-table-resize-min-width').trim() ||
       hostStyle?.getPropertyValue('--_lr-table-resize-min-width-default').trim() ||
       '';
-    const resolved = resolveCssLength(themed, { host: this });
+    const resolved = resolveCssTokenLength(themed, { host: this });
     return resolved === undefined ? DEFAULT_RESIZE_MIN_WIDTH_PX : Math.max(0, resolved);
   }
 

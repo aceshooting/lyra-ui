@@ -10700,7 +10700,7 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 1838,
+              "line": 1861,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -20516,7 +20516,7 @@
             },
             {
               "file": "src/components/data/flow-minimap/flow-minimap.test.ts",
-              "line": 1237,
+              "line": 1243,
               "test": "is accessible under frame=\"plain\" with a resolved canvas",
               "target": "el",
               "state": "populated"
@@ -41725,7 +41725,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.test.ts",
-              "line": 440,
+              "line": 469,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -41800,7 +41800,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 976,
+              "line": 977,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

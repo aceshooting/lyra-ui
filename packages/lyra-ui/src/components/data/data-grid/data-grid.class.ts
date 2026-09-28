@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { ComplexAttributeConverter } from 'lit';
-import { resolveCssLength } from '../../../internal/css-length.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -2290,7 +2290,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const body = this.bodyElement;
     if (!body || this.visibleColumns.length === 0) return;
     const selectionWidth = this.selectionEnabled
-      ? resolveCssLength(this.computedToken('--lr-icon-button-size'), {
+      ? resolveCssTokenLength(this.computedToken('--lr-icon-button-size'), {
           host: this,
         }) ?? 0
       : 0;
@@ -2303,7 +2303,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       [...this.renderRoot.querySelectorAll<HTMLElement>('[role="columnheader"][data-column-id]')]
         .map((header) => [
           header.dataset['columnId'],
-          resolveCssLength(this.ownerDocument.defaultView?.getComputedStyle(header).width ?? '', { host: this }) ?? 0,
+          resolveCssTokenLength(this.ownerDocument.defaultView?.getComputedStyle(header).width ?? '', { host: this }) ?? 0,
         ] as const)
     );
     const fixedWidth = visible.reduce((total, { column, id }) => {
@@ -3389,7 +3389,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       '--row-height',
       '--_lr-data-grid-row-height'
     );
-    return finiteRange(resolveCssLength(raw, { host: this }) ?? 56, 56, 1);
+    return finiteRange(resolveCssTokenLength(raw, { host: this }) ?? 56, 56, 1);
   }
 
   private get virtualWindow(): {
@@ -3491,7 +3491,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return finiteRange(explicit, Math.max(112, minimum), minimum, maximum);
     const raw = this.computedToken('--lr-size-7rem');
     return finiteRange(
-      resolveCssLength(raw, { host: this }) ?? 112,
+      resolveCssTokenLength(raw, { host: this }) ?? 112,
       Math.max(112, minimum),
       minimum,
       maximum
