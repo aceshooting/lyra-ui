@@ -1710,13 +1710,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return undefined;
   }
 
-  private canonicalMembers(rows: readonly Row[]): Row[] {
+  private canonicalRowIndex(rows: readonly Row[] = this.allSourceRows): ReadonlyMap<DataGridKey, Row> {
     const byIdentity = new Map<DataGridKey, Row>();
-    for (const row of this.allSourceRows) {
+    for (const row of rows) {
       const identity = this.rowIdentity(row);
       if (identity !== undefined && !byIdentity.has(identity))
         byIdentity.set(identity, row);
     }
+    return byIdentity;
+  }
+
+  private canonicalMembers(
+    rows: readonly Row[],
+    byIdentity: ReadonlyMap<DataGridKey, Row> = this.canonicalRowIndex()
+  ): Row[] {
     const output: Row[] = [];
     const seen = new Set<DataGridKey>();
     for (const candidate of rows) {
@@ -2597,8 +2604,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     );
   }
 
-  private processedChildrenFor(row: Row): Row[] {
-    const children = this.canonicalMembers(this.childrenFor(row));
+  private processedChildrenFor(row: Row, byIdentity: ReadonlyMap<DataGridKey, Row>): Row[] {
+    const children = this.canonicalMembers(this.childrenFor(row), byIdentity);
     if (children.length === 0 || this.usesServerData) return children;
     const included = children.filter((child) => {
       if (this.rowMatches(child)) return true;
@@ -2781,6 +2788,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const result: DisplayItem<Row>[] = [];
     const sourceRows = this.allSourceRows;
     const indexes = this.sourceIndexMap(sourceRows);
+    // Resolve fresh callback-produced children against one bounded source snapshot for this
+    // traversal. The next projection rebuilds it so caller-owned row changes remain visible.
+    let byIdentity: ReadonlyMap<DataGridKey, Row> | undefined;
     const visited = new Set<unknown>();
     const stack = [...this.pageRows]
       .reverse()
@@ -2808,7 +2818,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         current.depth >= DATA_GRID_TREE_DEPTH_LIMIT
       )
         continue;
-      const children = this.processedChildrenFor(current.row);
+      const children = this.processedChildrenFor(
+        current.row,
+        byIdentity ??= this.canonicalRowIndex(sourceRows)
+      );
       for (let index = children.length - 1; index >= 0; index -= 1) {
         stack.push({ row: children[index]!, depth: current.depth + 1 });
       }

@@ -3901,7 +3901,11 @@
       "kind": "interface",
       "fingerprint": "afa77d36dd1a1a8b1783",
       "routes": [
-        "src/components/conversation/code-block/code-loader.ts"
+        "src/all.ts",
+        "src/components/conversation/code-block/code-loader.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/conversation.md",
       "family": "conversation",

@@ -4,6 +4,7 @@ import { extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import axe from 'axe-core';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 import { FAMILY_LABELS } from '../.storybook/story-indexer.js';
 import { findUnexpectedDiagnostics } from './docs-diagnostics.mjs';
 import {
@@ -117,11 +118,11 @@ const mimeTypes = {
 const isHydrationWarning = (message) =>
   message.type() === 'warning' && /\bhydrat(?:e|ed|es|ing|ion)\b/i.test(message.text());
 
-async function serve(request, response) {
+export async function serve(request, response, directory = staticRoot) {
   const requestPath = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
   const relativePath = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-  const filePath = normalize(join(staticRoot, relativePath));
-  if (filePath !== staticRoot && !filePath.startsWith(`${staticRoot}${sep}`)) {
+  const filePath = normalize(join(directory, relativePath));
+  if (filePath !== directory && !filePath.startsWith(`${directory}${sep}`)) {
     response.writeHead(403).end('Forbidden');
     return;
   }
@@ -129,12 +130,18 @@ async function serve(request, response) {
   try {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) throw new Error('not a file');
-    const headers = { 'content-type': mimeTypes[extname(filePath)] ?? 'application/octet-stream' };
+    const body = await readFile(filePath);
+    // Chromium must know a large bundle's size before deciding whether it fits its HTTP cache.
+    // A cacheable chunked response can instead fail mid-stream with ERR_CACHE_WRITE_FAILURE.
+    const headers = {
+      'content-type': mimeTypes[extname(filePath)] ?? 'application/octet-stream',
+      'content-length': body.byteLength,
+    };
     if (relativePath.startsWith('assets/')) {
       headers['cache-control'] = 'public, max-age=31536000, immutable';
     }
     response.writeHead(200, headers);
-    response.end(await readFile(filePath));
+    response.end(body);
   } catch {
     response.writeHead(404).end('Not found');
   }
@@ -264,7 +271,7 @@ async function waitForLocatorCount(locator, predicate, timeoutMs = 5000) {
   throw new Error(`timed out waiting for locator count (last seen: ${last})`);
 }
 
-async function auditComponentDocs(context, baseUrl, entries) {
+export async function auditComponentDocs(context, baseUrl, entries) {
   const work = buildStorybookDocsAuditPlan(entries);
   const failures = [];
   let cursor = 0;
@@ -455,7 +462,11 @@ async function auditComponentDocs(context, baseUrl, entries) {
             failures.push(`${entry.id} [${matrix.name}]: ${pageFailures.join('; ')}`);
           }
         }
-
+      } catch (error) {
+        failures.push(`${entry.id}: ${error instanceof Error ? error.message : error}`);
+      } finally {
+        // A failed runtime import can leave only the loading skeleton. Preserve its network or
+        // console cause even when readiness fails before the layout checks can start.
         const diagnosticFailures = findUnexpectedDiagnostics({ id: entry.id, diagnostics });
         if (diagnosticFailures.length) {
           failures.push(
@@ -464,9 +475,6 @@ async function auditComponentDocs(context, baseUrl, entries) {
               .join('; ')}`,
           );
         }
-      } catch (error) {
-        failures.push(`${entry.id}: ${error instanceof Error ? error.message : error}`);
-      } finally {
         auditPage.off('pageerror', onPageError);
         auditPage.off('console', onConsole);
         auditPage.off('requestfailed', onRequestFailed);
@@ -950,7 +958,9 @@ async function main() {
   console.log(`Storybook smoke/a11y checks passed for ${requiredStories.length} representative stories.`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+if (isMainModule(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

@@ -1009,8 +1009,9 @@ it("keeps a non-matching child that has its own matching descendant when filteri
 
 it("resolves descendant selection state when a childRows callback returns a freshly constructed row each call", async () => {
   const parent: Person = { id: 1, name: "Parent", team: "Tree", score: 1 };
+  let childName = 'Child';
   const childRowsCallback = (row: Person): Person[] =>
-    row.id === 1 ? [{ id: 2, name: "Child", team: "Tree", score: 2 }] : [];
+    row.id === 1 ? [{ id: 2, name: childName, team: "Tree", score: 2 }] : [];
   const element = await dataGrid(html`
     <lr-data-grid
       label="Dangling children"
@@ -1046,6 +1047,10 @@ it("resolves descendant selection state when a childRows callback returns a fres
     })
   );
   expect((await cascade).detail.selectedKeys).to.include(1);
+  childName = 'Updated child';
+  element.requestUpdate();
+  await element.updateComplete;
+  expect(element.shadowRoot!.textContent).to.contain('Updated child');
 });
 
 it("treats a row as childless instead of throwing when the childRows callback itself throws", async () => {
@@ -1329,16 +1334,23 @@ it("bounds deep and cyclic public tree models without rejecting the update", asy
   }
   let root: DeepRow = { id: 5_999 };
   for (let id = 5_998; id >= 0; id -= 1) root = { id, children: [root] };
+  let childReads = 0;
+  const childRows = (row: DeepRow): DeepRow[] => {
+    childReads += 1;
+    return row.children ?? [];
+  };
   const element = await dataGrid<DeepRow>(html`
     <lr-data-grid
       label="Deep tree"
       row-key="id"
-      child-rows="children"
+      .childRows=${childRows}
       .expandedKeys=${Array.from({ length: 6_000 }, (_value, id) => id)}
       .columns=${[{ field: "id", label: "ID" }]}
       .data=${[root]}
     ></lr-data-grid>
   `);
+  // A bounded view must not rebuild the whole source tree for each expanded child.
+  expect(childReads, 'bounded tree child lookups across the initial updates').to.be.below(10_000);
   expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.at.most(65);
   expect(element.shadowRoot!.querySelector('[part="tree-limit"]')).to.exist;
   expect(

@@ -12,12 +12,18 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/activityfeed--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-budget-meter--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-observability-tool-call-block--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-prompt-studio--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-schema-viewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agent-tools-subagent-panel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agentevaldashboard--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agentquestion--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agentrun--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agenttools-backgroundruns--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agenttools-connectormanager--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agenttools-permissiongrant--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agenttools-permissionrules--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/ai-agent-workspace--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/animatedimage--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/animation--docs</loc></url>
@@ -35,6 +41,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/calendarviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/card--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/carousel--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/changereview--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-bar--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-boxplot--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-bubble--docs</loc></url>
@@ -253,6 +260,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/resultcard--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/resultcard-result-field--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/retrieval-compare--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/retrieval-research-progress--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/retrieval-results--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/retrieval-retrieval-trace--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/retrieval-search--docs</loc></url>

@@ -66,7 +66,8 @@ test('release preparation regenerates the component inventory after the bump sta
 test('a lyra-ui release syncs the plugin, repackages, and rebuilds quality evidence before the README', () => {
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-ui', '@aceshooting/lyra-flags']));
   const lastQuality = lines.lastIndexOf('pnpm --filter @aceshooting/lyra-flags --if-present run component-quality');
-  const sync = indexAfter(lines, 'node scripts/sync-plugin-version.mjs', lastQuality);
+  const recipes = indexAfter(lines, 'node scripts/update-framework-recipe-versions.mjs', lastQuality);
+  const sync = indexAfter(lines, 'node scripts/sync-plugin-version.mjs', recipes);
   const pack = indexAfter(lines, './package.sh', sync);
   const rebuild = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui run build', pack);
   const remeasure = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui run component-quality', rebuild);
@@ -76,6 +77,7 @@ test('a lyra-ui release syncs the plugin, repackages, and rebuilds quality evide
 
 test('a companion-only release leaves the lyra-ui plugin untouched', () => {
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-flags']));
+  assert.ok(!lines.includes('node scripts/update-framework-recipe-versions.mjs'));
   assert.ok(!lines.includes('node scripts/sync-plugin-version.mjs'));
   assert.ok(!lines.includes('./package.sh'));
   assert.equal(lines.at(-1), 'node scripts/update-readme-status.mjs');

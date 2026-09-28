@@ -43,7 +43,7 @@ import {
   renderChangesetPackagePlan,
 } from './changeset-release-plan.mjs';
 import { normalizeBrowserInput } from './plan-test-browsers.mjs';
-import { updateReadmeStatusLine } from './update-readme-status.mjs';
+import { updateDocumentationCounts, updateReadmeStatusLine } from './update-readme-status.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sha = '0123456789abcdef0123456789abcdef01234567';
@@ -1968,6 +1968,57 @@ test('updates exactly one narrowly anchored README Status line and fails closed 
   );
 });
 
+test('updates exactly one anchored count in each authored documentation surface', () => {
+  const docsIndex = '# Docs\nLibrary — 296 custom elements across 11 component families.\n';
+  const introduction = '<div><strong>296</strong><span>custom elements</span></div>\n';
+  const updated = updateDocumentationCounts(docsIndex, introduction, {
+    tagCount: 304,
+    familyCount: 11,
+  });
+  assert.equal(
+    updated.docsIndex,
+    '# Docs\nLibrary — 304 custom elements across 11 component families.\n',
+  );
+  assert.equal(
+    updated.introduction,
+    '<div><strong>304</strong><span>custom elements</span></div>\n',
+  );
+  assert.deepEqual(
+    updateDocumentationCounts(updated.docsIndex, updated.introduction, {
+      tagCount: 304,
+      familyCount: 11,
+    }),
+    updated,
+    'running the count updater again must be idempotent',
+  );
+});
+
+test('documentation count updates reject missing or duplicate anchors and invalid counts', () => {
+  const docsIndex = '296 custom elements across 11 component families';
+  const introduction = '<strong>296</strong><span>custom elements</span>';
+  const counts = { tagCount: 304, familyCount: 11 };
+  assert.throws(
+    () => updateDocumentationCounts('No count here.', introduction, counts),
+    /docs\/index\.md catalog count, found 0/u,
+  );
+  assert.throws(
+    () => updateDocumentationCounts(`${docsIndex}\n${docsIndex}`, introduction, counts),
+    /docs\/index\.md catalog count, found 2/u,
+  );
+  assert.throws(
+    () => updateDocumentationCounts(docsIndex, 'No count here.', counts),
+    /Introduction\.mdx count, found 0/u,
+  );
+  assert.throws(
+    () => updateDocumentationCounts(docsIndex, `${introduction}\n${introduction}`, counts),
+    /Introduction\.mdx count, found 2/u,
+  );
+  assert.throws(
+    () => updateDocumentationCounts(docsIndex, introduction, { ...counts, tagCount: 0 }),
+    /custom-element count must be a positive safe integer/u,
+  );
+});
+
 test('release workflows verify tagged-source bytes without exposing protected credentials', () => {
   const reusableVerification = readFileSync(
     path.join(repoRoot, '.github/workflows/release-verification.yml'),
@@ -2616,7 +2667,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/update-framework-recipe-versions.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

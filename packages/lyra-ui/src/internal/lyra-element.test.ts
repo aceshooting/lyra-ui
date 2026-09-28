@@ -1982,7 +1982,7 @@ it("fails closed and retries when owner observation capability accessors are hos
 
 it("canonicalizes a synthetic message locale while exposing a safe effective locale", async () => {
   const locale = `x_synthetic_${Date.now().toString(36)}`;
-  expectLocaleFallback(locale, ['cancel']);
+  expectLocaleFallback(locale.replaceAll('_', '-'), ['cancel']);
   const el = await fixture<DemoLocale>(
     html`<lr-demo-locale locale=${locale}></lr-demo-locale>`
   );

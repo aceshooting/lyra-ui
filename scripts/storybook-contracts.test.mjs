@@ -138,3 +138,55 @@ test('guide pages link deployed files with a raw new-tab anchor, not a Markdown 
   }
   assert.deepEqual(intercepted, []);
 });
+
+test('serves cacheable bundles with their byte length before Chromium starts caching them', async (t) => {
+  const { createServer } = await import('node:http');
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { serve } = await import('./check-storybook.mjs');
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-storybook-response-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await mkdir(join(directory, 'assets'));
+  const body = 'globalThis.componentLabel = "é";';
+  await writeFile(join(directory, 'assets', 'components.js'), body);
+  const server = createServer((request, response) => serve(request, response, directory));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/assets/components.js`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-length'), String(Buffer.byteLength(body)));
+  assert.equal(response.headers.get('transfer-encoding'), null);
+  assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.equal(await response.text(), body);
+});
+
+test('keeps failed bundle diagnostics when the docs wrapper never mounts', async (t) => {
+  const { createServer } = await import('node:http');
+  const { chromium } = await import('playwright');
+  const { auditComponentDocs } = await import('./check-storybook.mjs');
+  const server = createServer((request, response) => {
+    if (request.url.startsWith('/iframe.html')) {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end('<script type="module" src="/missing-components.js"></script>');
+    } else {
+      response.writeHead(404).end('Missing bundle');
+    }
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const browser = await chromium.launch({ headless: true });
+  t.after(() => browser.close());
+  const context = await browser.newContext();
+  await assert.rejects(
+    auditComponentDocs(context, `http://127.0.0.1:${server.address().port}`, [
+      { entry: { id: 'broken--docs' }, expectedTag: 'lr-example' },
+    ]),
+    (error) => {
+      assert.match(error.message, /docs iframe did not mount/);
+      assert.match(error.message, /missing-components\.js/);
+      assert.match(error.message, /404/);
+      return true;
+    },
+  );
+});

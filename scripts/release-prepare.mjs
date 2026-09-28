@@ -63,6 +63,7 @@ export function releasePreparationSteps(releasedPackageNames) {
     }
   }
   if (releasedPackageNames.includes(PRIMARY_PACKAGE)) {
+    steps.push(['node', ['scripts/update-framework-recipe-versions.mjs']]);
     steps.push(['node', ['scripts/sync-plugin-version.mjs']]);
     steps.push(['./package.sh', []]);
     steps.push(['pnpm', ['--filter', PRIMARY_PACKAGE, 'run', 'build']]);

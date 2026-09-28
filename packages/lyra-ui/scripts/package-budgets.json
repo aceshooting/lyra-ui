@@ -10,16 +10,16 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 7652989,
-    "headroomBytes": 34000,
+    "reviewedMeasurementBytes": 7653029,
+    "headroomBytes": 33960,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928
   },
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 34854525,
-    "headroomBytes": 140000,
+    "reviewedMeasurementBytes": 34854812,
+    "headroomBytes": 139713,
     "targetAt25PercentBytes": 28882563,
     "reviewedOn": "2026-09-28"
   },

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -52,6 +52,9 @@ test('validation rejects a recipe that relies on the unstable family directory',
   try {
     for (const framework of FRAMEWORKS) {
       const recipe = join(workspace, framework);
+      const committed = JSON.parse(
+        await readFile(new URL(`examples/frameworks/${framework}/package.json`, root), 'utf8'),
+      );
       await mkdir(join(recipe, 'src'), { recursive: true });
       await writeFile(
         join(recipe, 'package.json'),
@@ -59,7 +62,7 @@ test('validation rejects a recipe that relies on the unstable family directory',
           name: `lyra-framework-recipe-${framework}`,
           private: true,
           scripts: { dev: 'vite', check: 'tool', build: 'tool && vite build' },
-          dependencies: { '@aceshooting/lyra-ui': '^21.0.0' },
+          dependencies: { '@aceshooting/lyra-ui': committed.dependencies['@aceshooting/lyra-ui'] },
         })}\n`,
       );
       await writeFile(join(recipe, 'index.html'), '<main id="app"></main>\n');

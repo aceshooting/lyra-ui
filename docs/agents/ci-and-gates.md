@@ -612,7 +612,7 @@ declarations, CSS, and other required runtime artifacts. Deleting those public a
 weakening their content is not an acceptable package-size fix.
 
 The complete 22.0.0 package produced by normal `pnpm pack` with Node 22.23.2 contains
-7,652,989 packed bytes, 34,854,525 unpacked bytes, and 4,072 files. Published 21.2.0 contains
+7,653,029 packed bytes, 34,854,812 unpacked bytes, and 4,072 files. Published 21.2.0 contains
 9,474,876 packed bytes, 38,652,973 unpacked bytes, and 4,195 files: reductions of 19.2%, 9.8%,
 and 123 files respectively. Package-only filesystem allocation on the same filesystem falls from
 52,895,744 to 47,738,880 bytes; these installed figures exclude dependencies. The final unpacked
@@ -645,8 +645,8 @@ The expanded style system has a separate cost: theme.css grows from 2,902 to 6,9
 the standalone theme bootstrap grows from 3,980 to 6,088 gzip bytes with versioned sparse and nested
 ownership. These increases are reported separately from the package reduction. All figures describe production artifacts, not source-line counts.
 
-The byte ceilings are the exact reviewed measurements plus the existing 34,000 packed and
-140,000 unpacked headroom bytes: 7,686,989 and 34,994,525 bytes respectively. Both ceilings are below
+The byte ceilings are the exact reviewed measurements plus 33,960 packed and
+139,713 unpacked headroom bytes: 7,686,989 and 34,994,525 bytes respectively. Both ceilings are below
 the historical baseline, so the former baseline-overage approvals are no longer needed. The separate
 25%-target required-artifact exceptions remain explicit. `validatePackageBudgets()` rejects a missing
 or renamed exception, an unpacked reviewed measurement that no longer exceeds its target, a packed

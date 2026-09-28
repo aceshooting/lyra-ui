@@ -3,6 +3,10 @@ import { loadScopedRegistry } from './scoped-registry-loader.js';
 import { supportsScopedRegistries } from './scoped-registry.js';
 import type { LyraApprovalQueue } from '../components/agent-tools/approval-queue/approval-queue.class.js';
 
+const { default: { components } } = await import(
+  new URL('../../scripts/fixtures/component-inventory.json', import.meta.url).href
+) as { default: { components: Array<{ tag: string; classModule: string }> } };
+
 describe('optional scoped dependency loader', () => {
   it('rejects unsupported environments without loading or registering components', async () => {
     if (supportsScopedRegistries()) return;
@@ -31,4 +35,25 @@ describe('optional scoped dependency loader', () => {
     try { await loadScopedRegistry(['lr-unknown-component']); } catch (error) { message = String(error); }
     expect(message).to.include('Unknown Lyra scoped tag');
   });
+
+  for (const component of components) {
+    it(`loads the declared ${component.tag} class into an isolated registry`, async function () {
+      if (!supportsScopedRegistries()) this.skip();
+      const before = new Map(components.map(({ tag }) => [tag, customElements.get(tag)]));
+      const scope = await loadScopedRegistry([component.tag]);
+      const Constructor = scope.registry.get(component.tag);
+      expect(typeof Constructor, 'the requested tag is registered in its scope').to.equal('function');
+      const moduleUrl = new URL(`../../${component.classModule}`, import.meta.url);
+      const declaredModule = await import(moduleUrl.href) as Record<string, unknown>;
+      const sourceConstructor = Object.getPrototypeOf(Constructor!.prototype).constructor;
+      expect(Object.values(declaredModule).includes(sourceConstructor), 'the scoped class extends its declared public class').to.equal(true);
+      const element = scope.createElement(component.tag);
+      expect(element.localName).to.equal(component.tag);
+      expect(element instanceof Constructor!, 'construction uses the isolated definition').to.equal(true);
+      expect(element.ownerDocument === document).to.equal(true);
+      for (const { tag } of components) {
+        expect(customElements.get(tag) === before.get(tag), `${tag} remains globally unchanged`).to.equal(true);
+      }
+    });
+  }
 });
