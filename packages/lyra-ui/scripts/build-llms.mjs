@@ -850,6 +850,14 @@ export function buildMigration({ compatibilityContext = readCurrentCompatibility
     inventory.mappings.filter(
       (mapping) => mapping.classification === classification && (!upstream || mapping.upstream === upstream),
     ).length;
+  // These legacy mirror aliases use the original placeholder floor (10.0.0); that floor is not
+  // their removal schedule. Keep the consumer-facing list derived from the same authored
+  // deprecation records rather than maintaining a second policy list in migration prose.
+  const upstreamProtectedAliases = inventory.components.flatMap((component) =>
+    (component.maturity?.deprecations ?? [])
+      .filter((entry) => entry.removalNotBefore === '10.0.0')
+      .map((entry) => ({ tag: component.tag, ...entry })),
+  );
   const automatic = (upstream = null) => count('exact', upstream) + count('rewritten', upstream);
   const manual = (upstream = null) => inventory.mappings.filter(
     (mapping) =>
@@ -972,6 +980,24 @@ export function buildMigration({ compatibilityContext = readCurrentCompatibility
     'rename on a Lyra component. The inventory records these exclusions explicitly.',
     '',
     ...buildLyraRenameReference(renameLedger, inventory, { exportDeprecations, compatibilityContext }),
+    '## Upstream-protected compatibility spellings',
+    '',
+    `These ${upstreamProtectedAliases.length} legacy spellings remain supported while their corresponding Web Awesome or Shoelace surface publishes them. Prefer the current Lyra spelling for new code. Their recorded \`removalNotBefore\` value is a minimum, not an automatic removal date or permission to remove a still-mirrored spelling.`,
+    '',
+    '| Lyra surface | Retained spelling | Preferred spelling for new code |',
+    '|---|---|---|',
+    ...upstreamProtectedAliases.map((entry) => {
+      const retained = entry.kind === 'part'
+        ? `::part(${entry.name})`
+        : entry.kind === 'property'
+          ? `${entry.name} / ${entry.attribute}`
+          : entry.name;
+      const preferred = entry.replacement?.usage ?? entry.replacement?.name ?? 'review the current API';
+      return `| \`<${entry.tag}>\` | \`${escapeCell(retained)}\` | \`${escapeCell(preferred)}\` |`;
+    }),
+    '',
+    'For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit `canvas` value wins. Review selector reach before changing existing `[auto-width]` rules. The migration tool does not blanket-rewrite these protected spellings.',
+    '',
     '## Classification summary',
     '',
     '| Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |',

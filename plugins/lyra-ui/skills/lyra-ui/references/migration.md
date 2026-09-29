@@ -1499,6 +1499,23 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | window-event | `./theme.js#lr-theme-change` | event.detail.style and event.detail.changed | 24.0.0 |
 | window-event | `./theme/presets.js#lr-theme-preset-change` | event.detail.style and event.detail.changed | 24.0.0 |
 
+## Upstream-protected compatibility spellings
+
+These 8 legacy spellings remain supported while their corresponding Web Awesome or Shoelace surface publishes them. Prefer the current Lyra spelling for new code. Their recorded `removalNotBefore` value is a minimum, not an automatic removal date or permission to remove a still-mirrored spelling.
+
+| Lyra surface | Retained spelling | Preferred spelling for new code |
+|---|---|---|
+| `<lr-accordion-item>` | `::part(base)` | `::part(accordion-item)` |
+| `<lr-file-input>` | `::part(base)` | `::part(file-input)` |
+| `<lr-file-input>` | `::part(label)` | `::part(form-control-label)` |
+| `<lr-icon>` | `autoWidth / auto-width` | `canvas="auto"` |
+| `<lr-known-date>` | `::part(label)` | `::part(form-control-label)` |
+| `<lr-qr-code>` | `::part(base)` | `::part(qr-code)` |
+| `<lr-sparkline>` | `::part(base)` | `::part(sparkline)` |
+| `<lr-video-playlist>` | `::part(base)` | `::part(video-playlist)` |
+
+For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit `canvas` value wins. Review selector reach before changing existing `[auto-width]` rules. The migration tool does not blanket-rewrite these protected spellings.
+
 ## Classification summary
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |

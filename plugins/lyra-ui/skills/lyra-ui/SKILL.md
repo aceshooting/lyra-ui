@@ -112,6 +112,12 @@ documented rewrites; manual/warning-required cases (`*-include` sanitization/sam
 differences in both ecosystems, Shoelace alert lifecycle timing and cancellation) need their
 stated follow-up. Coverage of a tag is not a blanket automatic-rewrite guarantee.
 
+Some deprecated Lyra spellings remain supported while the mirrored upstream still publishes them;
+their `removalNotBefore` floor is not an automatic removal date. Prefer the current Lyra spelling
+for new code and see `references/migration.md` for the exact protected list. In particular,
+`lr-icon`'s `autoWidth` is only a CSS-level alias for `canvas="auto"`; explicit `canvas` wins, so
+review selector reach before changing `[auto-width]` rules. Do not blanket-rewrite these aliases.
+
 Read `references/components/<tag>.md` for the target's actual contract. Lyra combobox accepts both
 `clearable` and `with-clear`. A tag absent from the tables has no documented counterpart — check
 `references/index.md` for one covering the same need.

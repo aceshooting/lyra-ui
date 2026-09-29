@@ -735,6 +735,22 @@ Menu's actual +1,608-byte route increase includes shared glass-surface styling a
 reviewed, with a 15,983-byte marginal ceiling. These are acknowledged feature costs, not savings
 from a changed baseline. Time-input's loose 24 KiB ceiling tightens to 22,496 bytes.
 
+The native-modal and overlay correctness changes retain the same measurement options, optional-peer
+exclusions and initial-route shell. Reviewed total gzip measurements are 75,505 bytes for combobox,
+67,512 for select, 139,680 for the overlays family and 139,002 for utility. Their new ceilings use
+`floor(measuredBytes * 1.02)`. These costs cover native modal context and carrier handling, helper
+focus scope, top-layer placement, deferred focus return and shadow-content label updates. Tour
+already imported the overlay manager eagerly; its additional carrier, top-layer escape and focus
+return behavior does not introduce a new third-party dependency.
+
+The six changed initial marginal measurements are tool-call-chip 6,879 bytes, app-rail-item 4,617,
+citation-badge 5,674, entity-chip 5,206, export-button 10,249 and tour 16,530. Their ceilings use the
+same 2% whole-byte allowance; the smaller anchored components share native-aware stack and placement
+logic. Tour's 4,023-byte excess over its previous ceiling is explicitly accepted as correctness
+cost. Every already-passing ceiling remains unchanged, including combobox/select initial routes,
+root/all entries, button, forms and the component P95/maximum canaries. The eight peer-inclusive
+exclusion graphs remain passing; no dependency exclusion or measurement baseline was broadened.
+
 The measured component census grows from 247 to 255 entries. The 95th-percentile boundary changes
 from rag-answer at 111,927 gzip bytes to data-grid at 113,931 bytes; the eight new entries are all
 below that boundary. Data-grid itself grows by 2,058 bytes with shared glass-surface/scroll-layer,
