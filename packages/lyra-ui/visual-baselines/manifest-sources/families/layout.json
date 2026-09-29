@@ -1,0 +1,149 @@
+{
+  "family": "layout",
+  "stories": [
+    {
+      "id": "menu--standalone-mapped-menu",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "lr-menu's dedicated visual story (GearMenu) was removed from menu.stories.ts; this baseline is carried over from that deleted story under the new representative story id and awaits human visual review."
+    },
+    {
+      "id": "apprail--forced-icon-only",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current item now paints its current-indicator bar on its inline-start edge in icon-only mode, where the historical baseline showed none. The current capture awaits human visual review."
+    },
+    {
+      "id": "layout-menu-label--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "layout-menubar--default",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New lr-menubar open-state fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-menubar--narrow",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New lr-menubar 320px wrap fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--open-panel",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--collapsed-expanded",
+      "profile": "forced-colors-state",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-navigation-menu--narrow-long-labels",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New fixture enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "layout-page--desktop",
+      "profile": "standard"
+    },
+    {
+      "id": "layout-page--mobile-drawer",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The decorative navigation-toggle-icon replacement changes the current mobile-drawer capture, which awaits human visual review."
+    },
+    {
+      "id": "layout-split-panel--default",
+      "profile": "standard"
+    },
+    {
+      "id": "responsivepanel--forced-overlay-bottom-sheet",
+      "profile": "standard"
+    },
+    {
+      "id": "multi-split--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "tabs--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture shows the selected tab label losing its --lr-color-brand accent color (falls back to plain text color) while the active-tab-indicator underline stays correctly colored, with no corresponding change in tab/tab-group styles or theme tokens since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
+    {
+      "id": "tabs--element-model-long-content-narrow",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "tab-group.stories.ts's ElementModel story was renamed to ElementModelLongContentNarrow; this baseline is carried over from the pre-rename capture under the new story id and awaits human visual review."
+    },
+    {
+      "id": "card--outlined",
+      "profile": "standard"
+    },
+    {
+      "id": "disclosure-accordion--default",
+      "profile": "standard"
+    }
+  ],
+  "tagCoverage": {
+    "lr-accordion": [
+      "disclosure-accordion--default"
+    ],
+    "lr-app-rail": [
+      "apprail--forced-icon-only"
+    ],
+    "lr-card": [
+      "card--outlined"
+    ],
+    "lr-menu": [
+      "menu--standalone-mapped-menu"
+    ],
+    "lr-menu-label": [
+      "layout-menu-label--default"
+    ],
+    "lr-menubar": [
+      "layout-menubar--default",
+      "layout-menubar--narrow"
+    ],
+    "lr-menubar-item": [
+      "layout-menubar--default"
+    ],
+    "lr-page": [
+      "layout-page--desktop",
+      "layout-page--mobile-drawer"
+    ],
+    "lr-responsive-panel": [
+      "responsivepanel--forced-overlay-bottom-sheet"
+    ],
+    "lr-multi-split": [
+      "multi-split--default"
+    ],
+    "lr-split-panel": [
+      "layout-split-panel--default"
+    ],
+    "lr-tab-group": [
+      "tabs--default",
+      "tabs--element-model-long-content-narrow"
+    ],
+    "lr-navigation-menu": [
+      "layout-navigation-menu--open-panel",
+      "layout-navigation-menu--collapsed-expanded",
+      "layout-navigation-menu--narrow-long-labels"
+    ],
+    "lr-navigation-menu-item": [
+      "layout-navigation-menu--open-panel",
+      "layout-navigation-menu--collapsed-expanded"
+    ]
+  }
+}

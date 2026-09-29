@@ -1,0 +1,541 @@
+{
+  "family": "data",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-funnel"
+    ],
+    "published-stable": [
+      "lr-calendar",
+      "lr-context-meter",
+      "lr-document-library",
+      "lr-env-list",
+      "lr-file-tree",
+      "lr-flow-canvas",
+      "lr-flow-controls",
+      "lr-flow-minimap",
+      "lr-flow-node",
+      "lr-gauge",
+      "lr-graph-query-builder",
+      "lr-heatmap",
+      "lr-pagination",
+      "lr-sequence-strip",
+      "lr-sparkline",
+      "lr-stat",
+      "lr-table",
+      "lr-timeline",
+      "lr-timeline-item",
+      "lr-tree",
+      "lr-word-cloud"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [
+      "lr-data-grid"
+    ],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-condition-builder",
+      "lr-flow-run-status",
+      "lr-tree-item"
+    ]
+  },
+  "deprecations": [
+    {
+      "tag": "lr-context-meter",
+      "kind": "event",
+      "name": "lr-segment-activate",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-segment-activate-request",
+        "usage": "addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-context-meter",
+      "kind": "property",
+      "name": "showLegend",
+      "attribute": "show-legend",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withLegend",
+        "usage": "with-legend"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-control-active-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-control-active-bg",
+        "usage": "--lr-data-grid-control-active-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-control-hover-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-control-hover-bg",
+        "usage": "--lr-data-grid-control-hover-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-page-size-active-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-page-size-active-bg",
+        "usage": "--lr-data-grid-page-size-active-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-row-active-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-row-active-bg",
+        "usage": "--lr-data-grid-row-active-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-sortable-header-active-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-sortable-header-active-bg",
+        "usage": "--lr-data-grid-sortable-header-active-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "css-property",
+      "name": "--lr-data-grid-sortable-header-hover-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-data-grid-sortable-header-hover-bg",
+        "usage": "--lr-data-grid-sortable-header-hover-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-document-library",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-env-list",
+      "kind": "property",
+      "name": "copyable",
+      "attribute": "copyable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCopyButton",
+        "usage": "without-copy-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-env-list",
+      "kind": "property",
+      "name": "revealable",
+      "attribute": "revealable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutReveal",
+        "usage": "without-reveal"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-flow-canvas",
+      "kind": "property",
+      "name": "locked",
+      "attribute": "locked",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "readonly",
+        "usage": "readonly"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-flow-controls",
+      "kind": "property",
+      "name": "hideLock",
+      "attribute": "hide-lock",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutLock",
+        "usage": "without-lock"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-flow-node",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-flow-run-status",
+      "kind": "property",
+      "name": "hideSummary",
+      "attribute": "hide-summary",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSummary",
+        "usage": "without-summary"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-funnel",
+      "kind": "property",
+      "name": "dropoff",
+      "attribute": "dropoff",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutDropoff",
+        "usage": "without-dropoff"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-gauge",
+      "kind": "property",
+      "name": "showValue",
+      "attribute": "show-value",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutValue",
+        "usage": "without-value"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-heatmap",
+      "kind": "css-property",
+      "name": "--lr-heatmap-tooltip-text",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-heatmap-tooltip-color",
+        "usage": "--lr-heatmap-tooltip-color"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-heatmap",
+      "kind": "event",
+      "name": "lr-cell-click",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-cell-activate",
+        "usage": "addEventListener('lr-cell-activate', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Events that fire on pointer and keyboard activation are named `-activate`."
+    },
+    {
+      "tag": "lr-sequence-strip",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-sequence-strip",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-sequence-strip",
+      "kind": "property",
+      "name": "showLegend",
+      "attribute": "show-legend",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withLegend",
+        "usage": "with-legend"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-sparkline",
+      "kind": "css-property",
+      "name": "--lr-sparkline-stroke-width",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--line-width",
+        "usage": "--line-width (the same value, declared on lr-sparkline itself)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "--lr-sparkline-stroke-width predates the mirrored Web Awesome --line-width and is read only as its fallback, so it has no effect wherever --line-width is set. Scope the replacement to lr-sparkline, because the unprefixed --line-width also reaches any other element that reads it. It keeps working through the 22.x line; a stylesheet cannot be observed using it, so it never logs a warning."
+    },
+    {
+      "tag": "lr-sparkline",
+      "kind": "part",
+      "name": "area",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "part",
+        "name": "fill",
+        "usage": "::part(fill)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "area is a Lyra-only alias for the mirrored fill part on the same path; fill is the Web Awesome name. The area token stays on that path through the 22.x line; a stylesheet cannot be observed using a part, so it never logs a warning."
+    },
+    {
+      "tag": "lr-sparkline",
+      "kind": "part",
+      "name": "base",
+      "since": "8.0.0",
+      "replacement": {
+        "kind": "part",
+        "name": "sparkline",
+        "usage": "::part(sparkline)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-stat",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-stat",
+      "kind": "slot",
+      "name": "",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "event",
+      "name": "lr-row-click",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-row-activate",
+        "usage": "addEventListener('lr-row-activate', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Events that fire on pointer and keyboard activation are named `-activate`."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "emptyCompact",
+      "attribute": "empty-compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "emptySize",
+        "usage": "empty-size=\"s\" for compact, empty-size=\"m\" for spacious (remove it to keep each branch default)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "hideColumnsLabel",
+      "attribute": "hide-columns-label",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "columnsHideLabel",
+        "usage": "columns-hide-label"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "noColumnsDescription",
+      "attribute": "no-columns-description",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "emptyColumnsDescription",
+        "usage": "empty-columns-description"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "noColumnsHeading",
+      "attribute": "no-columns-heading",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "emptyColumnsHeading",
+        "usage": "empty-columns-heading"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-word-cloud",
+      "kind": "property",
+      "name": "showLegend",
+      "attribute": "show-legend",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withLegend",
+        "usage": "with-legend"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    }
+  ]
+}

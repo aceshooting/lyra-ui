@@ -1,0 +1,115 @@
+{
+  "family": "charts",
+  "stories": [
+    {
+      "id": "charts-litechart--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "charts-litechart--logarithmic-scale-canary",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new deterministic logarithmic-scale fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "charts-bar--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-line--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-chart--default",
+      "profile": "forced-colors-chart",
+      "forcedColorsProbe": "chart-encodings"
+    },
+    {
+      "id": "charts-chart--annotations-canary",
+      "profile": "forced-colors-chart",
+      "forcedColorsProbe": "chart-encodings",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new deterministic annotations fixture is enrolled as automated evidence pending human visual review."
+    },
+    {
+      "id": "charts-pie--default",
+      "profile": "forced-colors-chart"
+    },
+    {
+      "id": "charts-doughnut--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-radar--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-scatter--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "scatter-chart.stories.ts's Default story changed its x-label/y-label from single letters (\"X\"/\"Y\") to \"X value\"/\"Y value\" -- a rotated single capital letter is inherently illegible (reads as a generic chevron regardless of font), which multi-character labels fix. The current capture reflects that intentional demo-data change and awaits human visual review."
+    },
+    {
+      "id": "charts-polararea--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "chart.class.ts's buildScales() now sets the radial (r) scale's ticks.z: 1 so Chart.js draws ring labels after datasets instead of before, fixing labels (e.g. \"20\"/\"15\") being partly painted over by data wedges. The current capture reflects that fix and awaits human visual review."
+    },
+    {
+      "id": "charts-bubble--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-histogram--default",
+      "profile": "standard"
+    },
+    {
+      "id": "charts-boxplot--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "box-plot.class.ts now applies the resolved --lr-chart-grid-color and --lr-chart-tick-color to the x axis as well as the y axis, replacing Chart.js defaults with the documented theme contract. The current capture reflects that intentional consistency fix and awaits human visual review."
+    }
+  ],
+  "tagCoverage": {
+    "lr-bar-chart": [
+      "charts-bar--default"
+    ],
+    "lr-box-plot": [
+      "charts-boxplot--default"
+    ],
+    "lr-bubble-chart": [
+      "charts-bubble--default"
+    ],
+    "lr-chart": [
+      "charts-chart--default",
+      "charts-chart--annotations-canary"
+    ],
+    "lr-doughnut-chart": [
+      "charts-doughnut--default"
+    ],
+    "lr-histogram": [
+      "charts-histogram--default"
+    ],
+    "lr-line-chart": [
+      "charts-line--default"
+    ],
+    "lr-lite-chart": [
+      "charts-litechart--default",
+      "charts-litechart--logarithmic-scale-canary"
+    ],
+    "lr-pie-chart": [
+      "charts-pie--default"
+    ],
+    "lr-polar-area-chart": [
+      "charts-polararea--default"
+    ],
+    "lr-radar-chart": [
+      "charts-radar--default"
+    ],
+    "lr-scatter-chart": [
+      "charts-scatter--default"
+    ]
+  }
+}

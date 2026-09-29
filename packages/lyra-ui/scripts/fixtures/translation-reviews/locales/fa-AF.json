@@ -1,0 +1,251 @@
+{
+  "locale": "fa-AF",
+  "direction": "rtl",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:e6a0a663d856f3a20599fe0081e11b1c87a4347ae0ab92c471320dcf2324b5eb"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Original AI-assisted fa-AF catalog covers all 1315 English source messages in 12 family slices. Technical identifiers, standard notation, and formatting were retained where appropriate; no upstream translated catalog is claimed. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "AI-assisted independent semantic review read all 1,315 messages across 12 slices and checked Dari terminology, Persian-script use, RTL metadata, meaning, placeholders, plural forms, technical notation, and identical entries. Corrected finite-number wording, untranslated “of” in two flow/media announcements, minimap zoom instructions, and notebook terminology/grammar. This review is not native-speaker certification. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Punctuation-only separator with no natural-language text to translate."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{rate}×”), with no English words."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{context}: {content}”), with no English words."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{position}: {content}”), with no English words."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "Punctuation-only separator with no natural-language text to translate."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {coordinates}”), with no English words."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "Coordinate notation uses conventional x/y axis symbols and placeholders, with no English prose to translate."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "Punctuation-only separator with no natural-language text to translate."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {value}”), with no English words."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {value} ({percentage})”), with no English words."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "Address-layout template consists only of interpolation placeholders and line breaks; it intentionally carries no fixed-language prose."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{value} ({types})”), with no English words."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {summary}”), with no English words."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {count}”), with no English words."
+    },
+    {
+      "messagePath": "durationMilliseconds",
+      "rationale": "Compact duration formatting uses the conventional SI time-unit suffix and a dynamic value."
+    },
+    {
+      "messagePath": "durationSeconds",
+      "rationale": "Compact duration formatting uses the conventional SI time-unit suffix and a dynamic value."
+    },
+    {
+      "messagePath": "elapsedMinutesSecondsTemplate",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{minutes}m {seconds}s”), with no English words."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{name}: {members}”), with no English words."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}, {type}”), with no English words."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "Internationally standardized file-size unit symbol (“B”), which is conventionally retained across localized interfaces."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "Internationally standardized file-size unit symbol (“GB”), which is conventionally retained across localized interfaces."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "Internationally standardized file-size unit symbol (“KB”), which is conventionally retained across localized interfaces."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "Internationally standardized file-size unit symbol (“MB”), which is conventionally retained across localized interfaces."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "Internationally standardized file-size unit symbol (“TB”), which is conventionally retained across localized interfaces."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“+{additions} -{deletions}”), with no English words."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "PDF is the internationally standardized document-format acronym and is conventionally retained across locales."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label} ({size})”), with no English words."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{status}: {count}”), with no English words."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {status}”), with no English words."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{status} — {detail}”), with no English words."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{status} ({duration})”), with no English words."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {value}”), with no English words."
+    },
+    {
+      "messagePath": "generationStatusElapsedSeconds",
+      "rationale": "Compact elapsed-time formatting uses the conventional seconds suffix and a dynamic value, not an English sentence."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label} ({type})”), with no English words."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{date}: {value}”), with no English words."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{name} — {stage}”), with no English words."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "Conventional keyboard key/modifier name (“Alt”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "Conventional keyboard key/modifier name (“Ctrl”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "Conventional keyboard key/modifier name (“Del”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "Conventional keyboard key/modifier name (“Esc”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "Conventional keyboard key/modifier name (“PgDn”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "Conventional keyboard key/modifier name (“PgUp”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "Conventional keyboard key/modifier name (“Shift”); preserving the physical key label avoids changing the key identity for Oromo users."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{relation} ({count})”), with no English words."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "Canonical Jupyter notebook input-prompt syntax; altering it would change a displayed code-format convention rather than localize prose."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "Canonical Jupyter notebook input-prompt syntax; altering it would change a displayed code-format convention rather than localize prose."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{total} {itemLabel}”), with no English words."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "Formatting template combines a dynamic percentage with the internationally standardized percent symbol; it has no words."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}:”), with no English words."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{key}: {value}”), with no English words."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {count}”), with no English words."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“+{count}”), with no English words."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "LLM is the standard technical acronym for a large language model span kind, not English prose."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{trend}, {polarity}”), with no English words."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{label}: {value}”), with no English words."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template consists only of interpolation placeholders and conventional punctuation (“{name} — {status}”), with no English words."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

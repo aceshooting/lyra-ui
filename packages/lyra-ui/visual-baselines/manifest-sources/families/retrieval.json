@@ -1,0 +1,46 @@
+{
+  "family": "retrieval",
+  "stories": [
+    {
+      "id": "graph--default",
+      "profile": "standard"
+    },
+    {
+      "id": "chunk-inspector--default",
+      "profile": "standard"
+    },
+    {
+      "id": "ingestion-queue--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "item-chunk-count/item-embedding-status/item-attempts now carry unicode-bidi: plaintext, fixing RTL word/digit reordering in their status text (e.g. \"26 of 48 chunks embedded\" no longer reordering). The current rtl capture reflects that fix and awaits human visual review."
+    },
+    {
+      "id": "neighbor-list--default",
+      "profile": "standard"
+    },
+    {
+      "id": "retrieval-results--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The composed checkbox target-floor and form-chrome fixes change the current retrieval-row capture, which awaits human visual review."
+    }
+  ],
+  "tagCoverage": {
+    "lr-chunk-inspector": [
+      "chunk-inspector--default"
+    ],
+    "lr-graph": [
+      "graph--default"
+    ],
+    "lr-ingestion-queue": [
+      "ingestion-queue--default"
+    ],
+    "lr-neighbor-list": [
+      "neighbor-list--default"
+    ],
+    "lr-retrieval-results": [
+      "retrieval-results--default"
+    ]
+  }
+}

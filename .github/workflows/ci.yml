@@ -157,6 +157,8 @@ jobs:
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
       # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
       - run: pnpm build
+      - run: pnpm --filter @aceshooting/lyra-ui test:optional-looks
+      - run: pnpm test:theme-builder
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lyra-ui-dist
@@ -761,6 +763,66 @@ jobs:
       - run: pnpm docs:check
       - run: pnpm storybook:check
 
+  docs_theme_builder:
+    name: docs-and-storybook / theme builder / ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    # Runs in the official Playwright image: every OS-level browser dependency and the matching
+    # browser binaries ship inside it, so this job runs no apt transaction and downloads no
+    # browser. Measured on a green run, `playwright install-deps` was 70-90% of each job's wall
+    # time here (746s of this lane's 1795s) and had no upper bound when the Ubuntu mirror
+    # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
+    # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
+    needs: docs_build
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Match the runner's default font resolution
+        run: |
+          cat > /etc/fonts/local.conf <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig><dir>/usr/share/host-fonts</dir></fontconfig>
+          CONF
+          fc-cache -f >/dev/null 2>&1 || true
+          resolved="$(fc-match sans-serif)"
+          echo "sans-serif -> $resolved"
+          case "$resolved" in
+            *DejaVu*) ;;
+            *) echo "::error::sans-serif resolved to '$resolved', not DejaVu -- text-metric tests would measure the wrong typeface"; exit 1 ;;
+          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: storybook-static
+          path: storybook-static
+      - name: Check theme builder in the selected engine
+        env:
+          BUILDER_BROWSER: ${{ matrix.browser }}
+        run: pnpm check:theme-builder --browser "$BUILDER_BROWSER"
+
   docs_show_code:
     name: docs-and-storybook / show-code
     runs-on: ubuntu-latest
@@ -805,14 +867,14 @@ jobs:
       # flow), so a broken `Show code` could sit on main until someone cut a release.
       - run: pnpm docs:check-show-code
 
-  # Keep the stable required-check name while the two independent browser crawls fan out. Both
-  # still consume the exact storybook-static artifact produced above, and either failure makes
-  # this aggregate red rather than silently skipping it.
+  # Keep the stable required-check name while docs crawls and the three-engine theme builder
+  # matrix consume the same Storybook artifact. Any failed or skipped lane fails the aggregate.
   # release-qualification: required
   docs-and-storybook:
     if: ${{ always() }}
     needs:
       - docs_storybook_contract
+      - docs_theme_builder
       - docs_show_code
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -820,12 +882,17 @@ jobs:
       - name: Aggregate docs-and-storybook lanes
         env:
           STORYBOOK_RESULT: ${{ needs.docs_storybook_contract.result }}
+          BUILDER_RESULT: ${{ needs.docs_theme_builder.result }}
           SHOW_CODE_RESULT: ${{ needs.docs_show_code.result }}
         run: |
           set -euo pipefail
           failed=0
           if [[ "$STORYBOOK_RESULT" != "success" ]]; then
             echo "::error::docs_storybook_contract failed with status: $STORYBOOK_RESULT"
+            failed=1
+          fi
+          if [[ "$BUILDER_RESULT" != "success" ]]; then
+            echo "::error::docs_theme_builder failed with status: $BUILDER_RESULT"
             failed=1
           fi
           if [[ "$SHOW_CODE_RESULT" != "success" ]]; then

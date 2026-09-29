@@ -180,8 +180,15 @@ function validateProjectedSince(findings, label, entry, projected) {
   }
 }
 
+function validateRemovedIn(findings, label, entry) {
+  if (!Object.hasOwn(entry, 'removedIn')) return;
+  if (!parseVersion(entry.removedIn) || compareVersions(entry.removedIn, entry.removalNotBefore) < 0) {
+    findings.push(`${label}: removedIn must be a version at or after removalNotBefore`);
+  }
+}
+
 function validateModuleReviewEntry(findings, label, entry, projected) {
-  const unknown = unknownKeys(entry, ['kind', 'module', 'name', ...(projected ? ['replacement', 'since', 'removalNotBefore'] : [])]);
+  const unknown = unknownKeys(entry, ['kind', 'module', 'name', ...(projected ? ['replacement', 'since', 'removalNotBefore', 'removedIn'] : [])]);
   if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
   if (!MODULE_REVIEW_KINDS.includes(entry.kind)) findings.push(`${label}: unsupported module review kind ${entry.kind}`);
   const pathKind = entry.kind === 'entry-point' || entry.kind === 'stylesheet';
@@ -203,6 +210,7 @@ function validateModuleReviewEntry(findings, label, entry, projected) {
   if (projected) {
     if (typeof entry.replacement !== 'string' || !entry.replacement.trim()) findings.push(`${label}: replacement text missing`);
     if (!parseVersion(entry.removalNotBefore)) findings.push(`${label}: removalNotBefore must be a version`);
+    validateRemovedIn(findings, label, entry);
   }
   validateProjectedSince(findings, label, entry, projected);
 }
@@ -307,7 +315,7 @@ function validateSlotContentEntry(findings, label, entry, projected) {
 }
 
 function validateReviewEntry(findings, label, entry, projected) {
-  const allowed = projected ? ['tag', 'kind', 'name', 'replacement', 'removalNotBefore', 'since'] : ['tag', 'kind', 'name'];
+  const allowed = projected ? ['tag', 'kind', 'name', 'replacement', 'removalNotBefore', 'since', 'removedIn'] : ['tag', 'kind', 'name'];
   const unknown = unknownKeys(entry, allowed);
   if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
   if (!REVIEW_KINDS.includes(entry.kind)) {
@@ -320,6 +328,7 @@ function validateReviewEntry(findings, label, entry, projected) {
   if (projected) {
     if (typeof entry.replacement !== 'string' || !entry.replacement) findings.push(`${label}: replacement text missing`);
     if (majorOf(entry.removalNotBefore) === null) findings.push(`${label}: removalNotBefore must be a version`);
+    validateRemovedIn(findings, label, entry);
   }
   validateProjectedSince(findings, label, entry, projected);
 }
@@ -505,12 +514,34 @@ function deprecationRecords(component) {
 }
 
 /** The deprecation record that retires `name`, including an attribute paired with a property record. */
-export function deprecationRecordFor(component, kind, name) {
+function deprecationRecordFor(component, kind, name) {
   const records = deprecationRecords(component);
   if (kind === 'component') return records.find((record) => record.kind === 'component') ?? null;
   const direct = records.find((record) => record.kind === kind && record.name === name);
   if (direct || kind !== 'attribute') return direct ?? null;
   return records.find((record) => record.kind === 'property' && record.attribute === name) ?? null;
+}
+
+// Historical context is verified by the build-only reader. Keep this lookup dependency-free for
+// the packed CLI; a missing context retains the existing current-source validation.
+function historicalMember(context, tag, kind, name) {
+  const key = JSON.stringify(['member', tag, kind, name]);
+  return context?.records?.[key] ?? context?.records?.[context?.aliases?.[key]] ?? null;
+}
+function historicalExport(context, entry) {
+  return context?.records?.[JSON.stringify(['export', entry.kind, entry.module ?? null, entry.name])] ?? null;
+}
+function ownerFor(components, context, tag) {
+  const current = components.get(tag);
+  if (current) return current;
+  return historicalMember(context, tag, 'component', tag)?.state === 'retired' ? context.sourceComponents[tag] : null;
+}
+function policyFor(component, context, tag, kind, name) {
+  return deprecationRecordFor(component, kind, name) ?? historicalMember(context, tag, kind, name)?.policy ?? null;
+}
+function replacementOwner(components, context, tag, kind, name) {
+  const historical = historicalMember(context, tag, kind, name);
+  return components.get(historical?.state === 'retired' ? historical.replacementOwner : tag);
 }
 
 function replacementMatches(component, kind, record, to) {
@@ -574,7 +605,7 @@ export function mirroredMembers(inventory) {
  * so an incomplete ledger fails lint without breaking every build. `sharedTokens` (the canonical
  * token names) keeps document-wide design tokens out of the per-component ledger.
  */
-export function validateRenameLedger(ledger, { inventory, exportDeprecations = [], requireCoverage = false, sharedTokens = null }) {
+export function validateRenameLedger(ledger, { inventory, exportDeprecations = [], requireCoverage = false, sharedTokens = null, compatibilityContext = null }) {
   const findings = validateRenameLedgerShape(ledger);
   if (findings.length) return findings;
   const components = componentMap(inventory);
@@ -627,7 +658,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.renames) {
       const label = entryLabel(origin, 'renames', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) {
         findings.push(`${label}: component is not in the inventory`);
         continue;
@@ -636,18 +667,20 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       checkLyraOnly(label, entry.tag, entry.kind, entry.from);
       checkSharedToken(label, entry.kind, entry.from);
       checkSharedToken(label, entry.kind, entry.to);
-      const from = surfaceEntry(component, entry.kind, entry.from);
-      const to = surfaceEntry(component, entry.kind, entry.to);
+      const retired = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.from)?.state === 'retired';
+      const from = surfaceEntry(retired ? compatibilityContext.sourceComponents[entry.tag] : component, entry.kind, entry.from);
+      const targetOwner = replacementOwner(components, compatibilityContext, entry.tag, entry.kind, entry.from);
+      const to = surfaceEntry(targetOwner, entry.kind, entry.to);
       if (!from) findings.push(`${label}: the deprecated alias ${entry.from} is not on the public surface`);
       else if (!from.deprecated) findings.push(`${label}: the alias ${entry.from} is not marked deprecated in the manifest`);
       if (!to) findings.push(`${label}: the canonical name ${entry.to} is not on the public surface`);
       else if (to.deprecated) findings.push(`${label}: the canonical name ${entry.to} is itself deprecated`);
-      const record = deprecationRecordFor(component, entry.kind, entry.from);
+      const record = policyFor(component, compatibilityContext, entry.tag, entry.kind, entry.from);
       if (!record) {
         findings.push(`${label}: no deprecation record retires ${entry.from}`);
       } else {
         checkRecordWindow(label, record);
-        if (!replacementMatches(component, entry.kind, record, entry.to)) {
+        if (!replacementMatches(targetOwner, entry.kind, record, entry.to)) {
           findings.push(`${label}: its deprecation record names a different replacement than ${entry.to}`);
         }
       }
@@ -676,7 +709,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.reviews) {
       const label = entryLabel(origin, 'reviews', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) {
         findings.push(`${label}: component is not in the inventory`);
         continue;
@@ -684,14 +717,14 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       covered.add(`${entry.tag}\u0000${entry.kind}\u0000${entry.name}`);
       if (entry.kind !== 'component') checkLyraOnly(label, entry.tag, entry.kind, entry.name);
       checkSharedToken(label, entry.kind, entry.name);
-      const record = deprecationRecordFor(component, entry.kind, entry.name);
+      const record = policyFor(component, compatibilityContext, entry.tag, entry.kind, entry.name);
       if (!record) findings.push(`${label}: no deprecation record retires ${JSON.stringify(entry.name)}`);
       else checkRecordWindow(label, record);
     }
 
     for (const entry of profile.detailChanges) {
       const label = entryLabel(origin, 'detailChanges', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) findings.push(`${label}: component is not in the inventory`);
       else if (!surfaceEntry(component, 'event', entry.event)) findings.push(`${label}: the event is not dispatched by ${entry.tag}`);
       else checkLyraOnly(label, entry.tag, 'event', entry.event);
@@ -699,7 +732,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.retiredEvents ?? []) {
       const label = entryLabel(origin, 'retiredEvents', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) findings.push(`${label}: component is not in the inventory`);
       else {
         if (surfaceEntry(component, 'event', entry.event)) findings.push(`${label}: retired event is still dispatched by ${entry.tag}`);
@@ -712,7 +745,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.propertyChanges ?? []) {
       const label = entryLabel(origin, 'propertyChanges', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) findings.push(`${label}: component is not in the inventory`);
       else if (!surfaceEntry(component, 'property', entry.property)) findings.push(`${label}: the property is not on the public surface`);
       else checkLyraOnly(label, entry.tag, 'property', entry.property);
@@ -720,7 +753,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.slotContent) {
       const label = entryLabel(origin, 'slotContent', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) {
         findings.push(`${label}: component is not in the inventory`);
         continue;
@@ -729,7 +762,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       // A `slot-content` deprecation record is migrated by this entry. When the record lists the
       // content that stays, the codemod must keep exactly that list, or its reports would disagree
       // with the documented deprecation.
-      const record = deprecationRecordFor(component, 'slot-content', entry.slot);
+      const record = policyFor(component, compatibilityContext, entry.tag, 'slot-content', entry.slot);
       if (!record) continue;
       covered.add(`${entry.tag}\u0000slot-content\u0000${entry.slot}`);
       if (Array.isArray(record.permittedContent) && JSON.stringify(entry.allow ?? null) !== JSON.stringify(record.permittedContent)) {
@@ -739,7 +772,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
 
     for (const entry of profile.defaults) {
       const label = entryLabel(origin, 'defaults', entry);
-      const component = components.get(entry.tag);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) {
         findings.push(`${label}: component is not in the inventory`);
         continue;
@@ -763,7 +796,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       const label = entryLabel(origin, 'moduleReviews', entry);
       const key = moduleReviewKey(entry);
       coveredModules.add(key);
-      const record = moduleRecords.get(key);
+      const record = moduleRecords.get(key) ?? historicalExport(compatibilityContext, entry)?.policy;
       if (!record) findings.push(`${label}: no canonical exportDeprecations record`);
       else {
         checkRecordWindow(label, record);
@@ -771,7 +804,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       }
     }
     if (!requireCoverage) continue;
-    for (const record of exportDeprecations) {
+    for (const record of [...exportDeprecations, ...Object.values(compatibilityContext?.records ?? {}).filter(entry => entry.state === 'retired' && entry.key.scope === 'export').map(entry => entry.policy)]) {
       if (removalMajorMatches(record) && !coveredModules.has(moduleReviewKey(record))) {
         findings.push(`${origin}: ${record.kind} ${record.module ?? ''} ${record.name} is removed in ${profile.aliasRemovalMajor}.0.0 but has no moduleReviews entry`);
       }
@@ -779,8 +812,14 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
     // Converse direction: a Lyra-only alias scheduled for removal with this profile must be
     // migrated or reported, never silently left for the removal release to break. A mirrored
     // deprecation follows its upstream and is removed only when upstream's is.
-    for (const component of inventory?.components ?? []) {
-      for (const record of deprecationRecords(component)) {
+    const coverageOwners = new Map((inventory?.components ?? []).map(component => [component.tag, deprecationRecords(component)]));
+    for (const entry of Object.values(compatibilityContext?.records ?? {})) {
+      if (entry.state !== 'retired' || entry.key.scope !== 'member') continue;
+      coverageOwners.set(entry.key.tag, [...(coverageOwners.get(entry.key.tag) ?? []), entry.policy]);
+    }
+    for (const [tag, records] of coverageOwners) {
+      const component = { tag };
+      for (const record of records) {
         if (!removalMajorMatches(record)) continue;
         const keys = [[record.kind, record.kind === 'component' ? component.tag : record.name]];
         if (record.kind === 'property' && record.attribute) keys.push(['attribute', record.attribute]);
@@ -805,8 +844,8 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
  * renamed attribute reflects, and which components expose each shared old and new name. The
  * multi-megabyte inventory itself never ships.
  */
-export function projectRenameLedger(ledger, inventory, { exportDeprecations = [] } = {}) {
-  const findings = validateRenameLedger(ledger, { inventory, exportDeprecations });
+export function projectRenameLedger(ledger, inventory, { exportDeprecations = [], compatibilityContext = null } = {}) {
+  const findings = validateRenameLedger(ledger, { inventory, exportDeprecations, compatibilityContext });
   if (findings.length) throw new Error(`Invalid Lyra rename ledger: ${findings.join('; ')}`);
   const components = componentMap(inventory);
   const moduleRecords = new Map(exportDeprecations.map((record) => [moduleReviewKey(record), record]));
@@ -816,16 +855,16 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
       const release = `${profile.toMajor}.0.0`;
       const exposure = Object.fromEntries(EXPOSURE_KINDS.map((kind) => [kind, {}]));
       for (const [kind, names] of requiredExposure(profile)) {
-        for (const name of [...names.keys()].sort(compareText)) exposure[kind][name] = exposingTags(inventory, kind, name);
+        for (const name of [...names.keys()].sort(compareText)) exposure[kind][name] = [...new Set([...exposingTags(inventory, kind, name), ...(compatibilityContext?.exposure?.[kind]?.[name] ?? [])])].sort(compareText);
       }
-      const recordFor = (entry, kind, name) => deprecationRecordFor(components.get(entry.tag), kind, name);
+      const recordFor = (entry, kind, name) => policyFor(components.get(entry.tag), compatibilityContext, entry.tag, kind, name);
       return {
         origin: profile.origin,
         fromMajor: profile.fromMajor,
         toMajor: profile.toMajor,
         aliasRemovalMajor: profile.aliasRemovalMajor,
         renames: profile.renames.map((entry) => {
-          const target = surfaceEntry(components.get(entry.tag), entry.kind, entry.to);
+          const target = surfaceEntry(replacementOwner(components, compatibilityContext, entry.tag, entry.kind, entry.from), entry.kind, entry.to);
           const attribute = entry.kind === 'attribute' ? entry.to : target?.attribute;
           const preservesDefault = entry.polarity === 'inverted' && profile.defaults.some(
             (rule) => rule.tag === entry.tag && rule.attribute === attribute,
@@ -847,19 +886,23 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
         propertyChanges: (profile.propertyChanges ?? []).map((entry) => ({ ...structuredClone(entry), since: release })),
         reviews: profile.reviews.map((entry) => {
           const record = recordFor(entry, entry.kind, entry.name);
+          const retired = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.name);
           return {
             ...structuredClone(entry),
             replacement: String(record.replacement?.usage || record.replacement?.name),
+            ...(retired?.state === 'retired' ? { removedIn: retired.removedIn } : {}),
             removalNotBefore: record.removalNotBefore,
             since: record.since,
           };
         }),
         slotContent: profile.slotContent.map((entry) => ({ ...structuredClone(entry), since: release })),
         moduleReviews: profile.moduleReviews.map((entry) => {
-          const record = moduleRecords.get(moduleReviewKey(entry));
+          const retired = historicalExport(compatibilityContext, entry);
+          const record = moduleRecords.get(moduleReviewKey(entry)) ?? retired?.policy;
           return {
             ...structuredClone(entry),
             replacement: String(record.replacement.usage || record.replacement.name),
+            ...(retired?.state === 'retired' ? { removedIn: retired.removedIn } : {}),
             since: record.since,
             removalNotBefore: record.removalNotBefore,
           };
@@ -920,6 +963,10 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
         if (entry.since !== UNRELEASED_VERSION && compareVersions(entry.since, lyraVersion) <= 0) return true;
         skipped.push({ list, ...entry });
         return false;
+      }).map(entry => {
+        if (!entry.removedIn || lyraVersion === null || compareVersions(lyraVersion, entry.removedIn) >= 0) return entry;
+        const { removedIn, ...beforeRemoval } = entry;
+        return beforeRemoval;
       });
     const data = { ...full, ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, available(list)])) };
     const renamesByOwner = new Map(data.renames.map((entry) => [ownerKey(entry.tag, entry.kind, entry.from), entry]));

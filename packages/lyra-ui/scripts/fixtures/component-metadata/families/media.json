@@ -1,0 +1,427 @@
+{
+  "family": "media",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-drop-zone"
+    ],
+    "published-stable": [
+      "lr-animated-image",
+      "lr-animation",
+      "lr-attachment-chip",
+      "lr-attachment-trigger",
+      "lr-av-player",
+      "lr-avatar",
+      "lr-avatar-group",
+      "lr-file-icon",
+      "lr-file-input",
+      "lr-flag",
+      "lr-image-comparer",
+      "lr-image-viewer",
+      "lr-lightbox",
+      "lr-map",
+      "lr-media-card",
+      "lr-qr-code",
+      "lr-zoomable-frame"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [
+      "lr-video",
+      "lr-video-playlist"
+    ],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-pan-zoom",
+      "lr-sequence-playback"
+    ]
+  },
+  "deprecations": [
+    {
+      "tag": "lr-animated-image",
+      "kind": "property",
+      "name": "respectReducedMotion",
+      "attribute": "respect-reduced-motion",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "ignoreReducedMotion",
+        "usage": "ignore-reduced-motion"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-animation",
+      "kind": "property",
+      "name": "respectReducedMotion",
+      "attribute": "respect-reduced-motion",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "ignoreReducedMotion",
+        "usage": "ignore-reduced-motion"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-attachment-chip",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-attachment-chip",
+      "kind": "property",
+      "name": "previewable",
+      "attribute": "previewable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutPreview",
+        "usage": "without-preview"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-attachment-chip",
+      "kind": "property",
+      "name": "removable",
+      "attribute": "removable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutRemoveButton",
+        "usage": "without-remove-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-attachment-trigger",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "aria-label"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
+    },
+    {
+      "tag": "lr-attachment-trigger",
+      "kind": "part",
+      "name": "menu-trigger__control",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "part",
+        "name": "menu-trigger-control",
+        "usage": "::part(menu-trigger-control)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-attachment-trigger",
+      "kind": "part",
+      "name": "trigger__control",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "part",
+        "name": "trigger-control",
+        "usage": "::part(trigger-control)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-attachment-trigger",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
+    },
+    {
+      "tag": "lr-avatar-group",
+      "kind": "event",
+      "name": "lr-overflow-click",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-overflow-activate",
+        "usage": "addEventListener('lr-overflow-activate', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Events that fire on pointer and keyboard activation are named `-activate`."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "aria-label"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "file-input",
+        "usage": "::part(file-input)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "part",
+      "name": "label",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "form-control-label",
+        "usage": "::part(form-control-label)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-file-input",
+      "kind": "property",
+      "name": "paste",
+      "attribute": "paste",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutPaste",
+        "usage": "without-paste"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-lightbox",
+      "kind": "event",
+      "name": "lr-lightbox-close",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-close",
+        "usage": "Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window."
+    },
+    {
+      "tag": "lr-lightbox",
+      "kind": "property",
+      "name": "showCounter",
+      "attribute": "show-counter",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCounter",
+        "usage": "without-counter"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-map",
+      "kind": "event",
+      "name": "lr-map-legend-panel-toggle",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-legend-panel-toggle-request",
+        "usage": "addEventListener('lr-map-legend-panel-toggle-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Cancelable events that propose a state change are named `lr-<noun>-request` across the library."
+    },
+    {
+      "tag": "lr-map",
+      "kind": "event",
+      "name": "lr-map-legend-toggle",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-map-legend-toggle-request",
+        "usage": "addEventListener('lr-map-legend-toggle-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Cancelable events that propose a state change are named `lr-<noun>-request` across the library."
+    },
+    {
+      "tag": "lr-media-card",
+      "kind": "event",
+      "name": "lr-before-media-download",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-media-download-request",
+        "usage": "addEventListener('lr-media-download-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Renamed to the library's dominant *-request veto-event convention. Both names fire from the same activation of a safe file anchor with an equal { src, filename } detail during the compatibility window, the canonical name first, and either may veto the native download/open. A veto through the alias logs a one-time development warning."
+    },
+    {
+      "tag": "lr-qr-code",
+      "kind": "css-property",
+      "name": "--lr-qr-code-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-qr-code-bg",
+        "usage": "--lr-qr-code-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-qr-code",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "qr-code",
+        "usage": "::part(qr-code)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it."
+    },
+    {
+      "tag": "lr-sequence-playback",
+      "kind": "property",
+      "name": "loop",
+      "attribute": "loop",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutLoop",
+        "usage": "without-loop"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-video-playlist",
+      "kind": "css-property",
+      "name": "--lr-video-playlist-item-current-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-video-playlist-item-current-bg",
+        "usage": "--lr-video-playlist-item-current-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-video-playlist",
+      "kind": "part",
+      "name": "base",
+      "since": "8.0.0",
+      "replacement": {
+        "kind": "part",
+        "name": "video-playlist",
+        "usage": "::part(video-playlist)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-video-playlist",
+      "kind": "property",
+      "name": "autoAdvance",
+      "attribute": "auto-advance",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutAutoAdvance",
+        "usage": "without-auto-advance"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-video",
+      "kind": "css-property",
+      "name": "--lr-video-poster-play-button-hover-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-video-poster-play-button-hover-bg",
+        "usage": "--lr-video-poster-play-button-hover-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-zoomable-frame",
+      "kind": "css-property",
+      "name": "--lr-zoomable-frame-control-hover-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-zoomable-frame-control-hover-bg",
+        "usage": "--lr-zoomable-frame-control-hover-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    }
+  ]
+}

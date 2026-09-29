@@ -1,0 +1,630 @@
+{
+  "family": "retrieval",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-research-progress"
+    ],
+    "published-stable": [
+      "lr-chunk-inspector",
+      "lr-citation-badge",
+      "lr-claim-evidence",
+      "lr-community-card",
+      "lr-embedding-explorer",
+      "lr-entity-card",
+      "lr-entity-chip",
+      "lr-entity-dossier",
+      "lr-graph",
+      "lr-graph-legend",
+      "lr-grounding-summary",
+      "lr-ingestion-queue",
+      "lr-knowledge-base",
+      "lr-knowledge-base-admin",
+      "lr-knowledge-graph-explorer",
+      "lr-memory-panel",
+      "lr-mind-map",
+      "lr-neighbor-list",
+      "lr-node-palette",
+      "lr-path-strip",
+      "lr-provenance-panel",
+      "lr-rag-answer",
+      "lr-rag-eval-dashboard",
+      "lr-retrieval-compare",
+      "lr-retrieval-results",
+      "lr-retrieval-search",
+      "lr-retrieval-trace",
+      "lr-source-card",
+      "lr-source-list",
+      "lr-source-picker"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": []
+  },
+  "deprecations": [
+    {
+      "tag": "lr-chunk-inspector",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-chunk-toggle",
+        "usage": "addEventListener('lr-chunk-toggle', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Toggle notifications report the resulting state as `expanded` across the library."
+    },
+    {
+      "tag": "lr-chunk-inspector",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-claim-evidence",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-community-card",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-entity-card",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-entity-card",
+      "kind": "property",
+      "name": "showFocusButton",
+      "attribute": "show-focus-button",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutFocusButton",
+        "usage": "without-focus-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-entity-dossier",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-chunk-toggle",
+        "usage": "addEventListener('lr-chunk-toggle', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Toggle notifications report the resulting state as `expanded` across the library."
+    },
+    {
+      "tag": "lr-entity-dossier",
+      "kind": "property",
+      "name": "showFocusButton",
+      "attribute": "show-focus-button",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutFocusButton",
+        "usage": "without-focus-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-graph-legend",
+      "kind": "property",
+      "name": "interactive",
+      "attribute": "interactive",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutInteraction",
+        "usage": "without-interaction"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "css-property",
+      "name": "--lr-link-color",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-graph-edge-color",
+        "usage": "--lr-graph-edge-color"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "css-property",
+      "name": "--lr-node-fill",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-graph-node-fill",
+        "usage": "--lr-graph-node-fill"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-community-click",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-community-activate",
+        "usage": "addEventListener('lr-community-activate', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Events that fire on pointer and keyboard activation are named `-activate`."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-activate",
+        "usage": "lr-edge-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-link-enter",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-enter",
+        "usage": "addEventListener('lr-edge-enter', event => { /* Read event.detail.edgeId instead of linkId. */ })"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-link-leave",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-leave",
+        "usage": "addEventListener('lr-edge-leave', event => { /* Read event.detail.edgeId instead of linkId. */ })"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-node-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-node-activate",
+        "usage": "lr-node-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "property",
+      "name": "dimmedLinkIds",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "dimmedEdgeIds",
+        "usage": "dimmedEdgeIds"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "property",
+      "name": "linkDistance",
+      "attribute": "link-distance",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "edgeDistance",
+        "usage": "edge-distance"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "property",
+      "name": "links",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "edges",
+        "usage": "edges"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "property",
+      "name": "selectedLinkIds",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "selectedEdgeIds",
+        "usage": "selectedEdgeIds"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "property",
+      "name": "showEdgeLabels",
+      "attribute": "show-edge-labels",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withEdgeLabels",
+        "usage": "with-edge-labels"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-grounding-summary",
+      "kind": "property",
+      "name": "showClaims",
+      "attribute": "show-claims",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutClaims",
+        "usage": "without-claims"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-knowledge-base-admin",
+      "kind": "property",
+      "name": "hideIngestion",
+      "attribute": "hide-ingestion",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutIngestion",
+        "usage": "without-ingestion"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-knowledge-base",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-knowledge-base",
+      "kind": "property",
+      "name": "hideCreate",
+      "attribute": "hide-create",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCreate",
+        "usage": "without-create"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-knowledge-base",
+      "kind": "property",
+      "name": "hideSummary",
+      "attribute": "hide-summary",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSummary",
+        "usage": "without-summary"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "event",
+      "name": "lr-community-click",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-community-activate",
+        "usage": "addEventListener('lr-community-activate', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Events that fire on pointer and keyboard activation are named `-activate`."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-activate",
+        "usage": "lr-edge-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "event",
+      "name": "lr-node-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-node-activate",
+        "usage": "lr-node-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "property",
+      "name": "links",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "edges",
+        "usage": "edges"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Graph connections are called edges across the graph components."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "property",
+      "name": "searchQuery",
+      "attribute": "search-query",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "query",
+        "usage": "query"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-memory-panel",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-memory-toggle",
+        "usage": "addEventListener('lr-memory-toggle', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Toggle notifications report the resulting state as `expanded` across the library."
+    },
+    {
+      "tag": "lr-provenance-panel",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-chunk-toggle",
+        "usage": "addEventListener('lr-chunk-toggle', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Toggle notifications report the resulting state as `expanded` across the library."
+    },
+    {
+      "tag": "lr-rag-answer",
+      "kind": "property",
+      "name": "showClaims",
+      "attribute": "show-claims",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutClaims",
+        "usage": "without-claims"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-rag-answer",
+      "kind": "property",
+      "name": "showSources",
+      "attribute": "show-sources",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSources",
+        "usage": "without-sources"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-rag-eval-dashboard",
+      "kind": "property",
+      "name": "showChart",
+      "attribute": "show-chart",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutChart",
+        "usage": "without-chart"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-retrieval-results",
+      "kind": "property",
+      "name": "dedupe",
+      "attribute": "dedupe",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutDedupe",
+        "usage": "without-dedupe"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-retrieval-results",
+      "kind": "property",
+      "name": "selectable",
+      "attribute": "selectable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSelection",
+        "usage": "without-selection"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-source-card",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-source-card",
+      "kind": "property",
+      "name": "title",
+      "attribute": "title",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "heading",
+        "usage": "heading"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-source-list",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-source-picker",
+      "kind": "property",
+      "name": "searchable",
+      "attribute": "searchable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSearch",
+        "usage": "without-search"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-source-picker",
+      "kind": "property",
+      "name": "showSelectAll",
+      "attribute": "show-select-all",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutSelectAll",
+        "usage": "without-select-all"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    }
+  ]
+}

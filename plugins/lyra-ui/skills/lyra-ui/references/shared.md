@@ -5687,10 +5687,38 @@ cross shadow roots. Inherited values do cross them.
 
 For design-tool interchange, `@aceshooting/lyra-ui/design-tokens.json` includes
 `$extensions['com.aceshooting.lyra.looks']` with `schemaVersion: 1`, `base: 'lyra'`, and a
-`definitions` map for `lyra`, `material` and `shadcn`. Each entry is a portable `{ id, tokens }`
+`definitions` map for the shipped looks, including `lyra`, `material`, `shadcn`, `data`, `terminal`
+and `high-contrast`. Each entry is a portable `{ id, tokens }`
 definition accepted by `defineLyraLook()`. Sparse and null branches remain sparse; omitted values
 come from the canonical base token tree, and the empty Lyra definition restores that base. Load the
 artifact explicitly only in tooling or flows that need it; ordinary components do not import it.
+
+### Documentation theme builder
+
+The optional [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor)
+composes existing style APIs and portable token maps. It previews both modes, supports individual
+and complete resets, and edits contrast/motion preferences, local-font pairing, shape, elevation
+and categorical/sequential/diverging palettes. The editor is documentation code, not a package
+entry point or a new custom element; importing components never imports the builder.
+
+Import/export uses the existing `LyraLook`, `LyraThemeTokens`, version-2 saved style record and
+`LyraPreferences` formats. Preferences remain separate from the saved style record. Runtime look
+tokens are retained explicitly; `getLyraStyle()` snapshots alone do not contain those tokens.
+Imports validate atomically, are bounded to 256 KiB, and reject network-bearing or executable CSS.
+Errors leave the last valid preview intact. A group reset removes that group's writes; resetting
+one token to its look value removes it from every override group.
+
+Exported look CSS comes from `lyraLookCss()` and requires `theme.css`, the selected optional sheets
+and axis attributes. It is not an export of every axis or preference. Use the complete runtime
+recipe for custom accent derivation, or the separate style/preference files to retain those choices.
+Server-rendered attributes use `lyraStyleAttributes()` and `lyraPreferenceAttributes()`; system mode
+is not falsely resolved on the server. Install the required CSS in each application-owned shadow
+root that contains a local style boundary.
+
+Diagnostics describe measured specimen colors and states, not universal accessibility
+certification. Unknown/dynamic backgrounds remain unmeasured. Chart series keep text and non-color
+cues; color-vision simulation does not replace them. Font availability, physical blur and native
+platform accessibility settings still require evidence on the relevant platform.
 
 ### Optional shape, typography and elevation presets
 

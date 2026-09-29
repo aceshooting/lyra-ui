@@ -1,0 +1,57 @@
+{
+  "family": "media",
+  "stories": [
+    {
+      "id": "map--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The shadow-local MapLibre styling fix changes the current capture, which awaits human visual review."
+    },
+    {
+      "id": "qr-code--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture renders a structurally valid but differently-moduled QR code for the same unchanged story value, with no corresponding qr-code.class.ts/story change since the last baseline refresh (bd4ac0ac) -- likely resolved-version drift in the optional qrcode peer, not a lyra-ui source change. Awaits human visual review."
+    },
+    {
+      "id": "animatedimage--default",
+      "profile": "standard"
+    },
+    {
+      "id": "media-pan-zoom--slotted-content",
+      "profile": "standard"
+    },
+    {
+      "id": "media-video--full-controls",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
+    },
+    {
+      "id": "media-video-playlist--full-controls",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The inherited inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
+    }
+  ],
+  "tagCoverage": {
+    "lr-animated-image": [
+      "animatedimage--default"
+    ],
+    "lr-map": [
+      "map--default"
+    ],
+    "lr-pan-zoom": [
+      "media-pan-zoom--slotted-content"
+    ],
+    "lr-qr-code": [
+      "qr-code--default"
+    ],
+    "lr-video": [
+      "media-video--full-controls"
+    ],
+    "lr-video-playlist": [
+      "media-video-playlist--full-controls"
+    ]
+  }
+}

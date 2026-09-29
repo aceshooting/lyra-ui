@@ -1,0 +1,98 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Optional looks" />
+
+# Optional looks
+
+Choose a starting appearance, then select density, surface treatment, mode and accent independently.
+The default Lyra appearance requires no look import. Each additional look has an optional stylesheet
+and an equivalent portable runtime definition.
+
+| Look | Character | Useful starting point |
+| --- | --- | --- |
+| `data` | Cool neutral surfaces, blue emphasis and small corner radii | Tables, records and operational interfaces |
+| `terminal` | Green emphasis, square corners and local monospace stacks | Command output, code and technical workspaces |
+| `high-contrast` | Black/white surfaces, strong boundaries and a wider focus ring | Interfaces that benefit from emphatic separation |
+
+These are original token definitions. The data look does not automatically make controls compact;
+select `compact`, `comfortable` or `touch` for the space and target sizes your interface needs.
+The terminal look does not load fonts. Installed fonts and the platform's fallback determine glyph
+coverage; combine a script typography preset with your look for multilingual content.
+
+## Stylesheet selection
+
+```js
+import '@aceshooting/lyra-ui/theme.css';
+import '@aceshooting/lyra-ui/density.css';
+import '@aceshooting/lyra-ui/looks/data.css';
+import '@aceshooting/lyra-ui/components/lr-button.js';
+```
+
+```html
+<section data-lr-look="data" data-lr-mode="light" data-lr-density="compact">
+  <lr-button variant="brand">Save record</lr-button>
+</section>
+```
+
+Substitute `terminal.css` or `high-contrast.css` and the corresponding look identifier. Import only
+the looks you offer. Import `surfaces/glass.css` separately when offering `data-lr-surface="glass"`;
+the look itself selects no surface treatment. Real backdrop content affects translucent surfaces,
+so evaluate legibility in the composition where they will appear.
+
+## Portable runtime selection
+
+```js
+import '@aceshooting/lyra-ui/theme.css';
+import '@aceshooting/lyra-ui/density.css';
+import { applyLyraStyleScope } from '@aceshooting/lyra-ui/theme.js';
+import { LYRA_TERMINAL_LOOK } from '@aceshooting/lyra-ui/theme/looks/terminal.js';
+
+applyLyraStyleScope(region, {
+  look: LYRA_TERMINAL_LOOK,
+  mode: 'dark',
+  density: 'comfortable',
+  surface: 'solid',
+});
+
+// Restore values owned by this scope when disposing the view.
+applyLyraStyleScope(region, null);
+```
+
+The matching exports are `LYRA_DATA_LOOK` and `LYRA_HIGH_CONTRAST_LOOK` from their same-named
+`theme/looks/*.js` modules. Runtime definitions carry the same light/dark pairs as their stylesheet.
+Use `lyraLookCss` from `theme/look-css.js` to serialize a validated application-owned definition;
+the builder provides import, editing and export flows using this existing format.
+
+## Accessibility preferences remain independent
+
+```js
+import '@aceshooting/lyra-ui/preferences.css';
+import { applyLyraPreferences } from '@aceshooting/lyra-ui/theme/preferences.js';
+
+applyLyraPreferences(region, { contrast: 'more', motion: 'reduce' });
+```
+
+Increased contrast works with every look, including `high-contrast`. Selecting that look alone does
+not select the preference, override forced colors or claim universal AAA compliance. Operating-system
+reduced motion remains effective when the requested motion preference is `system`. Test your content,
+custom accents, interactive states and local component overrides together.
+
+The optional builder's Quick and Gentle motion choices edit existing duration and easing tokens.
+Fast/normal durations serve discrete transitions; slow/icon durations serve ambient and icon cycles.
+Resetting the motion group restores the look defaults and leaves the accessibility preference intact.
+
+Font pair choices use local system families. Script-specific named fonts retain priority for body
+and headings; a code font keeps its own mono stack. Script line heights and breaking behavior remain
+in the typography preset. Font names indicate fallback choices, not bundled fonts or certified glyph
+coverage.
+
+## Data colors and application chrome
+
+The looks retain the shared categorical palette and provide their own sequential and diverging
+scales. Read live colors with `resolveLyraChartPalette` from `theme/chart-palette.js` for canvas,
+and use the same tokens for SVG. Preserve labels, numeric values and the marker/dash cues from
+`theme/options/charts.js`; magnitude fills are not text colors and cannot communicate meaning alone.
+
+Native application elements can consume `--lr-theme-*` inputs directly. For resolved `--lr-*`
+aliases, import `tokens-root.css` and follow its scoped-token guidance. Component-specific overrides
+such as `--lr-button-radius` remain available when one control needs different geometry.

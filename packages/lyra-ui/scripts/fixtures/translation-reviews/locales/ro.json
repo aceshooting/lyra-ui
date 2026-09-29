@@ -1,0 +1,423 @@
+{
+  "locale": "ro",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:1bfb0c9b174cf8f3c80bb6eee6b3320948fd125f563a795c234b93cd8c0a6e32"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Original ro catalog authored from DEFAULT_STRINGS in source order for all 12 family slices (commit 3024e74fb, 2026-09-17), with correct Romanian one/few/other CLDR plural forms. No upstream translated text was copied; no human or native-speaker identity is claimed. Updated 2026-09-27 for statusIncomplete (\"Incomplete\"), the visible status text of a tool call that ended without a result (an interrupted stream or a cancelled run), and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"), the matching lr-tool-call-block header verb. Both were translated in source order, reusing this catalog's own established tool-call wording from the neighbouring statusDenied and toolCallBlockHeaderDenied entries and preserving the single {name} placeholder with this catalog's existing spacing convention; neither is identical to the English source, so no allowlist entry was required. No upstream translated text was consulted; no human, native-speaker, or independent review is claimed for this increment. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "Independent review on 2026-09-26 extended the release-review ledger to this previously-untracked shipped catalog. Every message identical to the English source (the only case that can hide leftover English prose) was individually classified as a formatting template, keyboard key name, internationally standardized abbreviation/unit, Jupyter notebook convention, or a named cross-language cognate/loanword, and each carries an entry-specific rationale rather than a boilerplate sentence; none were found to be untranslated prose. Full-catalog key coverage, key order, placeholder names and this locale's CLDR plural categories are separately and unconditionally enforced by check-translations.mjs for every shipped catalog, independent of this ledger. AI-assisted; no human or native-speaker review is claimed, and no broader message-by-message linguistic register re-audit beyond the English-identical set is claimed. Updated 2026-09-27 for statusIncomplete (\"Incomplete\") and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"). An AI-assisted review, separate from the contributor that drafted them, checked both values in this catalog for the meaning of a tool call that ended without a result (an interrupted stream or a cancelled run), UI register, consistency with this catalog's neighbouring tool-call status and block-header wording, and exact single {name} preservation; both were approved without correction and no English-identical allowlist entry was required. No human or native-speaker review is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "agentWorkspaceContext",
+      "rationale": "'Context' names the agent workspace's context panel; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "archiveViewerFolder",
+      "rationale": "'Folder' names the folder/directory entry type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('×') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "boxPlot",
+      "rationale": "'Box plot' names the box-and-whisker statistical chart type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "boxPlotMax",
+      "rationale": "'Max' is the statistics abbreviation for the maximum value of a box-plot summary, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotMin",
+      "rationale": "'Min' is the statistics abbreviation for the minimum value of a box-plot summary, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is the box-plot statistics notation for the first quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is the box-plot statistics notation for the third quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotSummaryWithData",
+      "rationale": "'Box plot. {summaries}.' names an accessible summary announcement naming the box-and-whisker chart type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "browserFrameControllerAgent",
+      "rationale": "'Agent' names the agent span-kind / the browser frame's controlling agent; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "calendarLabel",
+      "rationale": "'Calendar' names the calendar landmark label; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "Uses the single-letter coordinate-geometry axis variables ('x'/'y'), which are mathematical symbols rather than English words, plus formatting punctuation; both are locale-invariant."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartTotal",
+      "rationale": "'Total' names a numeric total/sum label; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "chartTypeRadar",
+      "rationale": "'Radar' names the radar chart type (named after the RADAR sensing technology, itself an acronym-turned-common-noun in most languages); Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':  ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "commitCardLabel",
+      "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('\n\n\n  \n') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contactViewerTypeFax",
+      "rationale": "'Fax' names the facsimile contact-method type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypeInternet",
+      "rationale": "'Internet' names the proper name of the global public network, essentially never translated in any locale; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "cost",
+      "rationale": "'Cost' names a numeric cost/usage badge value; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "diffViewOldLabel",
+      "rationale": "'Original' names the \"before\" side of a two-way diff comparison; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "documentPreviewTypeCalendar",
+      "rationale": "'calendar' names the calendar document-preview type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "documentPreviewTypeContact",
+      "rationale": "'contact' names the contact document-preview type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "documentPreviewTypeDocument",
+      "rationale": "'document' names the document document-preview type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "emojiPickerGridLabel",
+      "rationale": "'Emoji' names the Japanese-origin loanword for a pictographic character, adopted unchanged worldwide; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "'KB' is the SI-style byte-size unit symbol for a kilobyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+ -') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTypeAudio",
+      "rationale": "'Audio' names the audio media type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the file-format acronym Portable Document Format, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTypeVideo",
+      "rationale": "'Video' names the video media type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "'{rate} tok/s' names a token-generation throughput rate, using the ML-community abbreviation \"tok/s\" (tokens per second); Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusTokenCount",
+      "rationale": "'{count} token' names a single generated-token count, using the ML/LLM jargon word \"token\" unmodified; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "inputLabel",
+      "rationale": "'Text' names the plain-text input type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "'Alt' is the conventional printed/spoken name of the Alt modifier key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdBackspaceWord",
+      "rationale": "'Backspace' is the conventional printed/spoken name of the Backspace key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "'Command' is the conventional printed/spoken name of the Mac keyboard's Command key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "'Ctrl' is the conventional printed/spoken name of the Ctrl modifier key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "'Control' is the conventional printed/spoken name of the Control modifier key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "'Del' is the conventional printed/spoken name of the Delete key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEnterWord",
+      "rationale": "'Enter' is the conventional printed/spoken name of the Enter key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "'Esc' is the conventional printed/spoken name of the Esc key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeWord",
+      "rationale": "'Escape' is the conventional printed/spoken name of the Escape key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdMinusWord",
+      "rationale": "'Minus' is the conventional printed/spoken name of the keypad Minus key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "'Option' is the conventional printed/spoken name of the Mac keyboard's Option key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "'PgDn' is the conventional printed/spoken name of the Page Down key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "'PgUp' is the conventional printed/spoken name of the Page Up key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPlusWord",
+      "rationale": "'Plus' is the conventional printed/spoken name of the keypad Plus key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "'Shift' is the conventional printed/spoken name of the Shift modifier key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "'Tab' is the conventional printed/spoken name of the Tab key; Romanian keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "knowledgeBasePermissionEditor",
+      "rationale": "'Editor' names the editor permission/role level; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', : ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "model",
+      "rationale": "'Model' names a trained AI/ML model; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', , ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "'In [{count}]' reproduces Jupyter Notebook's own In[{count}] execution-count prompt convention verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "'In [ ]' reproduces Jupyter Notebook's own empty In[] execution-count prompt marker verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('%') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "queryBuilderOperatorLabel",
+      "rationale": "'Operator' names a query-builder comparison operator; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "retrievalCompareFinalScore",
+      "rationale": "'Final' names the retrieval comparison's final combined-ranking score; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sourcePageSuffix",
+      "rationale": "'{base} — p. {page}' names a source page-number suffix, using the abbreviation \"p.\" for page (matching this locale's own identical abbreviation); Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindAgent",
+      "rationale": "'Agent' names the agent span-kind / the browser frame's controlling agent; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the AI/ML span-kind acronym for a large language model call, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "textareaLabel",
+      "rationale": "'Text' names the plain-text input type; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "usageBadgeCostLabel",
+      "rationale": "'Cost' names a numeric cost/usage badge value; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "videoPlaylistUntitled",
+      "rationale": "'Video {position}' names a numbered, still-untitled video item; Romanian uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

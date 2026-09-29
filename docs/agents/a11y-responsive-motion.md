@@ -254,7 +254,11 @@ component and a release blocker for a new one.
   (regenerates the React/Vue/Svelte declarations). Both are blocking — `check:event-types` and
   `check:framework-types` — so skipping them fails `pnpm lint` well after the change looks
   finished. A new `@deprecated` member additionally needs a record in
-  `scripts/fixtures/component-metadata.json#deprecations`, whose `since` may not exceed the current
-  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major. A
+  the owning `scripts/fixtures/component-metadata/families/<family>.json` source. Exported types and
+  entry points use the adjacent `exports.json`. Run `pnpm component-metadata` to refresh the generated
+  `scripts/fixtures/component-metadata.json` facade; never hand-edit that aggregate or its generated
+  `component-metadata/history.json` source. Use `since: 'unreleased'` after the current release tag;
+  the version rollover stamps it. Otherwise `since` may not exceed the current `package.json` version.
+  `removalNotBefore` must clear one whole subsequent major after the notice's actual release. A
   record that retires a Lyra-only name in 23.0.0 also needs its rename-ledger entry in the same
   change (see [upstream-parity.md](upstream-parity.md)).

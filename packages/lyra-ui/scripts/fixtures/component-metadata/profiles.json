@@ -1,0 +1,39 @@
+{
+  "profiles": {
+    "new-component-experimental": {
+      "status": "experimental",
+      "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+      "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification."
+    },
+    "published-stable": {
+      "status": "stable",
+      "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
+      "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract."
+    },
+    "published-experimental": {
+      "status": "experimental",
+      "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+      "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability."
+    },
+    "mapped-experimental": {
+      "status": "experimental",
+      "rationale": "This implementation reinstates an earlier Lyra tag with the experimental Web Awesome 3.11 public surface and remains experimental while production usage is gathered.",
+      "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser behavior, and virtualization edge cases demonstrate sustained reliability."
+    },
+    "introduced-mapped-experimental": {
+      "status": "experimental",
+      "rationale": "This newly introduced Lyra tag mirrors an experimental Web Awesome 3.11 public surface and remains experimental while production compatibility evidence is gathered.",
+      "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser media behavior, and lifecycle edge cases demonstrate sustained reliability."
+    },
+    "compatibility-stable": {
+      "status": "stable",
+      "rationale": "This tag preserves the previously shipped native time-control contract while the primary lr-time-input name provides the segmented control.",
+      "graduationCriteria": "This compatibility surface remains stable while it preserves the Lyra 7 native behavior and has not entered a separately announced deprecation period."
+    },
+    "introduced-stable": {
+      "status": "stable",
+      "rationale": "This tag entered Lyra as a stable public API with documented behavior, accessibility, and cross-browser support.",
+      "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract."
+    }
+  }
+}

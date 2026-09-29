@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { applyComponentMetadataToManifest } from './scripts/component-metadata.mjs';
+import { assembleComponentMetadata, readComponentMetadataSources } from './scripts/component-metadata-source.mjs';
 import { sourceEventTypeContracts } from './scripts/check-event-contracts.mjs';
 
-const componentMetadata = JSON.parse(
-  readFileSync(
-    new URL('./scripts/fixtures/component-metadata.json', import.meta.url),
-    'utf8'
-  )
+const componentMetadata = assembleComponentMetadata(
+  readComponentMetadataSources(fileURLToPath(new URL('.', import.meta.url)))
 );
 const packageVersion = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8')

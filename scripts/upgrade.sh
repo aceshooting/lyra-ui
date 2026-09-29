@@ -167,11 +167,13 @@ echo "==> Regenerating upstream inventory, editor data, and component metadata"
 node packages/lyra-ui/scripts/check-pinned-upstream-manifests.mjs --write-inventory
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 node packages/lyra-ui/scripts/generate-component-metadata.mjs --write
+pnpm --filter @aceshooting/lyra-ui run visual-manifest
 
 echo
 echo "==> Regenerating default-string slices and translation slices"
 node packages/lyra-ui/scripts/generate-default-string-slices.mjs --write
 pnpm --filter @aceshooting/lyra-ui run translation-slices
+pnpm --filter @aceshooting/lyra-ui run translation-review-fixture
 pnpm --filter @aceshooting/lyra-ui run locale-manifest
 
 echo

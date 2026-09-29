@@ -36,8 +36,8 @@ local AI workflows should not need a full catalog or repository-wide document in
   compatibility and migration records. Begin cohesive source/test splits where they unblock the
   current release work. Inventory the largest files by text volume and tokenizer-specific context
   cost; a minified one-line artifact can still be large.
-- **v23:** retire eligible v21 alias implementations and their redundant published metadata, and
-  remove the 21.2 unpacked-budget exception by its existing deadline. Partition authored component
+- **v23:** retire eligible v21 alias implementations and their redundant published metadata while
+  preserving v22's removal of the 21.2 unpacked-budget exception. Partition authored component
   metadata, locale review evidence and contract fixtures by their natural ownership; generate
   aggregate forms only for tools that require them. Preserve migration support for skipped majors.
 - **v24:** complete coherent module and behavioral-test splits, release-specific roadmaps and
@@ -81,11 +81,11 @@ Use a fastest-in-category claim only for the specific workload and versions the 
 
 ## v22 commitments
 
-v22 is the next major release and the current delivery focus. v23/v24 consolidation planning runs
-alongside it to identify prerequisites that must ship now: usable replacements, deprecation notices,
-migration coverage and stable extension points. Any API intended for removal in v24 must enter its
-published deprecation window by v22; later-only editors and application upgrades remain in their
-assigned releases. Beyond the switchable-styling work below, v22 commits to:
+v22.0.0 is published and provides the baseline for v23/v24 consolidation: usable replacements,
+deprecation notices, migration coverage and stable extension points. The current development focus
+is v23. Any API intended for removal in v24 must have entered its published deprecation window by
+v22; later-only editors and application upgrades remain in their assigned releases. The v22
+commitments below remain the reference for its delivered foundation and qualification limits:
 
 - **A Material-inspired look and a Liquid Glass-inspired surface treatment.** Applications can
   choose the Lyra, shadcn or Material look and independently enable the glass surface treatment,
@@ -411,9 +411,10 @@ or a rename onto a name another component already uses, lands in v22.
     trim the metadata of the 21.x deprecated aliases (about 1.7 MB unpacked in 21.2.0): leave
     deprecated members out of `web-types.json` and `vscode-html-data.json` so editors stop suggesting
     old names, compact their entries in `custom-elements.json`, and slim the migration CLI's
-    `migration-contract.json`. Return the unpacked size below the pre-8 baseline, where 21.2.0's
-    reviewed exception lets it sit, and remove that exception in 23.0.0 at the latest, when the
-    aliases go.
+    `migration-contract.json`. Published v22 returned the unpacked size below the pre-8 baseline
+    and removed 21.2.0's above-baseline exception ahead of its v23 deadline. Preserve that reduction
+    as eligible aliases are removed. The separate required-artifact exceptions to the 25% targets
+    remain explicit in the package budget.
 37. Make `LyraElement`'s collection-snapshot support opt-in, and move development-only diagnostics
     behind a `development` export condition.
 38. Also: a shared decorator helper, a faster parallel lint chain, test-title-keyed quality evidence,
@@ -555,9 +556,11 @@ an item to a later heading does not count as completion.
 
 Remove only APIs whose published deprecation records permit removal by `23.0.0` and whose
 replacement has shipped throughout the intervening major. The authoritative inventory remains
-`packages/lyra-ui/scripts/fixtures/component-metadata.json`; do not maintain a second removal list.
-The 21.1 cohort includes the GeoJSON alias routes, the old localization utility entry, the unprefixed
-document registry types and the component aliases covered by the `lyra-v21` migration profile.
+`packages/lyra-ui/scripts/fixtures/component-metadata.json`, generated from its ownership sources.
+Retired policy and surface facts remain bound to immutable published evidence under the adjacent
+`compatibility-history/` directory; do not maintain a second removal list or infer publication from
+an authored `since` value alone. The eligible 21.x cohort includes the GeoJSON alias routes, the
+old localization utility entry, the unprefixed document registry types and the component aliases covered by the `lyra-v21` migration profile.
 
 Before each removal, exercise the old usage through the migration tool, then compile and render the
 migrated fixture against the new API. Automatic rewrites require equivalent reach and behavior;
@@ -576,7 +579,7 @@ The earliest removal window for APIs first deprecated in v22 is v24. Actual remo
 published `since` metadata, a complete intervening major, replacement documentation and executable
 migration coverage. Unreleased declarations do not start the clock.
 
-Prepare a `lyra-v22` migration profile when the v22 APIs and deprecation records are finalized.
+Retain the published `lyra-v22` migration profile and qualify it against the removal candidate.
 Theme migration requires semantic handling: old `surface` means an accent reference color, while
 new `surface` means a material treatment; `auto` maps to `system`; a token map becomes a look or
 explicit overrides. An old CSS color such as `aquamarine` must not silently become a named gemstone.

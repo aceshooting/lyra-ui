@@ -63,7 +63,7 @@ export const MINIMUM_BASELINE_GZIP_BYTES = 100;
  * @returns {string | undefined}
  */
 export function registrationIdentifier(source) {
-  return /registerLyraLocale\(\s*['"][^'"]+['"]\s*,\s*([A-Za-z_$][\w$]*)/.exec(source)?.[1];
+  return /registerLyraLocale(?:Delta)?\(\s*['"][^'"]+['"]\s*,\s*(?:['"][^'"]+['"]\s*,\s*)?([A-Za-z_$][\w$]*)/.exec(source)?.[1];
 }
 
 /**

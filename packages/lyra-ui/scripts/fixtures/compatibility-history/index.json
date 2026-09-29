@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "captures": [
+    {
+      "directory": "22.0.0",
+      "captureSha256": "02f79d81c3812f94fa63aa152d5dce42926e415b94795de112d9867a13c9a36a"
+    }
+  ],
+  "retirements": [],
+  "policyWitnesses": {
+    "file": "policy-witnesses.json.gz",
+    "sha256": "a77e182cf9215fd4abcd6984f04218370b156a6cc2f3ad7bf376d7b5c439930d"
+  },
+  "guidanceTransitions": [
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-enter"
+      },
+      "fromPolicySha256": "596714b2a679ff1aba7e77fb60d5b7898ff2a1f463b2b40aa0faa70a1a91e380",
+      "toPolicySha256": "73cf1f15b76ad7d3e2e6882e5ce3a14dfca9f54d39e2e187e154b990aa9d0178",
+      "rationale": "Published guidance makes the unchanged canonical graph event detail migration explicit."
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-leave"
+      },
+      "fromPolicySha256": "b42a9faad4d09dfc48ee3c9e76b985f1ad703caa81f484724efb14e0110ecc54",
+      "toPolicySha256": "c857dc2a945cf545c49736b0e2114b84c4befb226c64863878357ccf23b4bb05",
+      "rationale": "Published guidance makes the unchanged canonical graph event detail migration explicit."
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/geojson-view/geojson-view.js"
+      },
+      "fromPolicySha256": "59a385b84bc1e69e5d2137ef7fdd19c35c6827404e8753099157d4bf4adb2a03",
+      "toPolicySha256": "04d6393adde5433b663b088cf42be97e62ec49eef4298f688818a679713e7ce4",
+      "rationale": "Published guidance selects the stable registration route for the same canonical GeoJSON viewer."
+    }
+  ]
+}

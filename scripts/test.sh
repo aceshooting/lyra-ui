@@ -154,6 +154,9 @@ lane_webkit() {
 
 lane_visual() {
   pnpm docs:build
+  for builder_browser in chromium firefox webkit; do
+    pnpm check:theme-builder --browser "$builder_browser"
+  done
   pnpm --filter @aceshooting/lyra-ui test:visual
 }
 

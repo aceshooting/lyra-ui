@@ -590,9 +590,33 @@ function exportDeprecationLabel(entry) {
 
 /** The runtime target a package export resolves to, preferring the import/default condition. */
 function exportTarget(value) {
+  if (value === null) return null;
   if (typeof value === 'string') return value;
-  if (value && typeof value === 'object') return exportTarget(value.import ?? value.default ?? null);
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (Object.hasOwn(value, 'import')) return exportTarget(value.import);
+    if (Object.hasOwn(value, 'default')) return exportTarget(value.default);
+  }
+  return undefined;
+}
+
+function resolveExportMapping(exportsMap, specifier) {
+  if (Object.hasOwn(exportsMap, specifier)) return { value: exportsMap[specifier], capture: null };
+  // A more-specific null target blocks broader patterns too.
+  const patterns = Object.keys(exportsMap).filter(key => key.includes('*')).sort((a, b) =>
+    b.indexOf('*') - a.indexOf('*') || b.length - a.length);
+  for (const pattern of patterns) {
+    const [prefix, suffix] = pattern.split('*');
+    if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix) || specifier.length < prefix.length + suffix.length) continue;
+    const capture = specifier.slice(prefix.length, suffix ? -suffix.length : undefined);
+    return { value: exportsMap[pattern], capture };
+  }
   return null;
+}
+
+function resolveExportTarget(exportsMap, specifier) {
+  const mapping = resolveExportMapping(exportsMap, specifier);
+  const target = mapping && exportTarget(mapping.value);
+  return target && mapping.capture !== null ? target.replaceAll('*', mapping.capture) : target;
 }
 
 /**
@@ -608,20 +632,7 @@ function exportSource(label, specifier, subject, { exportsMap, readSource }, fin
     findings.push(`${label}: ${subject} must name one exact export, not a pattern`);
     return null;
   }
-  let target;
-  if (Object.hasOwn(exportsMap, specifier)) target = exportTarget(exportsMap[specifier]);
-  else {
-    // Match Node's most-specific pattern first. A null target blocks broader patterns too.
-    const patterns = Object.keys(exportsMap).filter(key => key.includes('*')).sort((a, b) =>
-      b.indexOf('*') - a.indexOf('*') || b.length - a.length);
-    for (const pattern of patterns) {
-      const [prefix, suffix] = pattern.split('*');
-      if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix) || specifier.length < prefix.length + suffix.length) continue;
-      const capture = specifier.slice(prefix.length, suffix ? -suffix.length : undefined);
-      target = exportTarget(exportsMap[pattern])?.replaceAll('*', capture) ?? null;
-      break;
-    }
-  }
+  const target = resolveExportTarget(exportsMap, specifier);
   if (!target) {
     findings.push(`${label}: ${subject} is not a package export`);
     return null;
@@ -675,6 +686,80 @@ function moduleExportsOrFinding(label, resolved, subject, findings) {
   return exportsByName;
 }
 
+function moduleContainsContract(resolved, name) {
+  const parsed = parseSync(resolved.sourcePath, resolved.source);
+  if (parsed.errors.length) return null;
+  let found = false;
+  const visit = node => {
+    if (!node || typeof node !== 'object' || found) return;
+    if ((node.type === 'Literal' || node.type === 'StringLiteral') && node.value === name) found = true;
+    else for (const [key, value] of Object.entries(node)) {
+      if (key === 'comments') continue;
+      if (Array.isArray(value)) value.forEach(visit);
+      else if (value && typeof value === 'object') visit(value);
+    }
+  };
+  visit(parsed.program);
+  return found;
+}
+
+/**
+ * Inspect a current package contract using the same resolver as deprecation validation.
+ * Missing mapped source or malformed syntax is invalid, never proof that an API was removed.
+ * Entry-point and global-contract notices live in policy; named notices also live in JSDoc.
+ */
+export function inspectExportContract(entry, { packageJson, readSource = defaultReadSource, exportDeprecations = [] }) {
+  const result = { status: 'invalid', sourcePath: null, isType: null, deprecated: null, findings: [] };
+  const label = exportDeprecationLabel(entry);
+  if (!EXPORT_DEPRECATION_KINDS.includes(entry?.kind)) {
+    result.findings.push(`${label}: unsupported export kind`);
+    return result;
+  }
+  const route = entry.kind === 'entry-point' || entry.kind === 'stylesheet';
+  const specifier = route ? entry.name : entry.module;
+  if (typeof specifier !== 'string' || (specifier !== '.' && !specifier.startsWith('./')) || specifier.includes('*') || specifier.split('/').some(part => part === '..')) {
+    result.findings.push(`${label}: must name one exact package export`);
+    return result;
+  }
+  if (typeof entry.name !== 'string' || !entry.name) {
+    result.findings.push(`${label}: contract name is required`);
+    return result;
+  }
+  const global = MODULE_CONTRACT_KINDS.includes(entry.kind);
+  if (global && !(entry.kind === 'window-event' ? /^lr-[a-z0-9]+(?:-[a-z0-9]+)*$/ : /^data-lr-[a-z0-9]+(?:-[a-z0-9]+)*$/).test(entry.name)) {
+    result.findings.push(`${label}: invalid ${entry.kind} name`);
+    return result;
+  }
+  const exportsMap = packageJson?.exports;
+  if (!exportsMap || typeof exportsMap !== 'object' || Array.isArray(exportsMap)) {
+    result.findings.push(`${label}: a current package exports map is required`);
+    return result;
+  }
+  const mapping = resolveExportMapping(exportsMap, specifier);
+  const target = mapping && resolveExportTarget(exportsMap, specifier);
+  if (!mapping || target === null) return { ...result, status: 'absent' };
+  if (typeof target !== 'string' || !target) {
+    result.findings.push(`${label}: package export conditions cannot be resolved`);
+    return result;
+  }
+  const resolved = exportSource(label, specifier, specifier, { exportsMap, readSource }, result.findings, entry.kind === 'stylesheet');
+  if (!resolved) return result;
+  result.sourcePath = resolved.sourcePath;
+  const policyNotice = exportDeprecations.some(record => record.kind === entry.kind && record.name === entry.name && (record.module ?? null) === (entry.module ?? null));
+  if (entry.kind === 'stylesheet') return { ...result, status: 'present', deprecated: policyNotice };
+  if (global) {
+    const present = moduleContainsContract(resolved, entry.name);
+    if (present === null) result.findings.push(`${label}: source ${resolved.sourcePath} does not parse`);
+    else return { ...result, status: present ? 'present' : 'absent', deprecated: present ? policyNotice : null };
+    return result;
+  }
+  const exportsByName = moduleExportsOrFinding(label, resolved, specifier, result.findings);
+  if (!exportsByName) return result;
+  if (route) return { ...result, status: 'present', deprecated: policyNotice };
+  const own = exportsByName.get(entry.name);
+  return own ? { ...result, status: 'present', isType: own.isType, deprecated: own.deprecated || policyNotice } : { ...result, status: 'absent' };
+}
+
 function validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings) {
   exportSource(label, entry.name, entry.name, resolveContext, findings, entry.kind === 'stylesheet');
   const replacement = entry.replacement;
@@ -698,22 +783,11 @@ function validateModuleContractDeprecation(label, entry, resolveContext, finding
     }
     const resolved = exportSource(label, contract.module, subject, resolveContext, findings);
     if (!resolved) return;
-    const parsed = parseSync(resolved.sourcePath, resolved.source);
-    if (parsed.errors.length) {
+    const found = moduleContainsContract(resolved, contract.name);
+    if (found === null) {
       findings.push(`${label}: ${subject} source ${resolved.sourcePath} does not parse`);
       return;
     }
-    let found = false;
-    const visit = node => {
-      if (!node || typeof node !== 'object' || found) return;
-      if ((node.type === 'Literal' || node.type === 'StringLiteral') && node.value === contract.name) found = true;
-      else for (const [key, value] of Object.entries(node)) {
-        if (key === 'comments') continue;
-        if (Array.isArray(value)) value.forEach(visit);
-        else if (value && typeof value === 'object') visit(value);
-      }
-    };
-    visit(parsed.program);
     if (!found) findings.push(`${label}: ${subject} is not declared or used in ${contract.module}`);
   };
   verify(entry, entry.name);

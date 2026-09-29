@@ -4,6 +4,7 @@ import { isMainModule } from './is-main-module.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
 import {
   buildComponentIntegration,
@@ -82,11 +83,12 @@ export function projectQualityMetadata(inventory, qualification, integration) {
 export async function buildQualityArtifacts({
   paths = QUALITY_PATHS,
   packageRoot = packageDir,
+  visualSourceRoot = path.dirname(path.dirname(paths.visual)),
   measureGzip = false,
 } = {}) {
   const inventory = readJson(paths.inventory);
   const exemptions = readJson(paths.exemptions);
-  const visualManifest = readOptionalJson(paths.visual);
+  const visualManifest = assembleVisualManifest(readVisualManifestSources({ packageDir: visualSourceRoot, aggregatePath: paths.visual }));
   const packageJson = readJson(paths.packageJson);
   const previousIntegration = readOptionalJson(paths.integration);
   const ssrSource = fs.readFileSync(paths.ssr, 'utf8');

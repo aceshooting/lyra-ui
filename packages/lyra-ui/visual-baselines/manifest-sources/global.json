@@ -1,0 +1,170 @@
+{
+  "axes": [
+    {
+      "name": "light",
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "dark",
+      "globals": {
+        "theme": "dark",
+        "direction": "ltr"
+      },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "rtl",
+      "globals": {
+        "theme": "light",
+        "direction": "rtl"
+      },
+      "artifactPolicy": "tracked-baseline"
+    },
+    {
+      "name": "forced-colors",
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
+      "emulation": {
+        "forcedColors": "active"
+      },
+      "artifactPolicy": "evidence-only"
+    },
+    {
+      "name": "narrow",
+      "globals": {
+        "theme": "light",
+        "direction": "ltr"
+      },
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "artifactPolicy": "evidence-only"
+    }
+  ],
+  "coverageProfiles": {
+    "standard": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl"
+      ],
+      "exemptions": {
+        "forced-colors": "Targeted forced-colors coverage is assigned to intrinsic-color and chart fixtures.",
+        "narrow": "Targeted narrow-allocation coverage is assigned to a dedicated responsive fixture."
+      }
+    },
+    "forced-colors-intrinsic": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
+      "exemptions": {
+        "narrow": "This fixture covers intrinsic painted colors; narrow allocation is covered separately."
+      }
+    },
+    "forced-colors-chart": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
+      "exemptions": {
+        "narrow": "This fixture covers repeated-system-color chart encodings; narrow allocation is covered separately."
+      }
+    },
+    "forced-colors-evidence": {
+      "axes": [
+        "forced-colors"
+      ],
+      "exemptions": {
+        "light": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "dark": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "rtl": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "narrow": "This fixture covers intrinsic painted colors; narrow allocation is covered separately."
+      }
+    },
+    "narrow-responsive": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "narrow"
+      ],
+      "exemptions": {
+        "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
+      }
+    },
+    "narrow-evidence": {
+      "axes": [
+        "narrow"
+      ],
+      "exemptions": {
+        "light": "This fixture exists only to exercise the component's 320px allocation branch.",
+        "dark": "This fixture exists only to exercise the component's 320px allocation branch.",
+        "rtl": "This fixture exists only to exercise the component's 320px allocation branch.",
+        "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
+      }
+    },
+    "forced-colors-state": {
+      "axes": [
+        "light",
+        "dark",
+        "rtl",
+        "forced-colors"
+      ],
+      "exemptions": {
+        "narrow": "Narrow allocation is covered by the component's dedicated 320px fixture."
+      }
+    }
+  },
+  "untaggedStories": {
+    "styles-native-and-utilities--layout-and-prose": "This fixture exercises authored native-element and utility CSS, not a custom element.",
+    "styles-typography--specimen": "Exercises authored typography utility CSS, not a custom element.",
+    "styles-typography--narrow-allocation": "Exercises authored typography utility CSS, not a custom element."
+  },
+  "provenance": {
+    "generator": "packages/lyra-ui/scripts/visual-regression.mjs",
+    "generatedBy": "automated-coding-agent",
+    "generatedOn": "2026-08-02",
+    "artifactScope": "ephemeral-evidence",
+    "captureCommand": "pnpm --filter @aceshooting/lyra-ui test:visual -- --filter <story-id>",
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "provider": "playwright"
+    },
+    "platform": {
+      "os": "linux",
+      "arch": "x64"
+    },
+    "sourceTree": {
+      "baseCommit": "f9998fd0a9180ca8f641ba9ca871b71d29d3f4fc",
+      "dirty": true
+    },
+    "humanVisualReview": false
+  },
+  "baselineReview": {
+    "status": "pending-human-review",
+    "reviewer": null,
+    "reviewedAt": null,
+    "knownLimitations": [
+      "The current custom-accent contrast correction changes the light/RTL gemstone-accent pixels. Historical review does not approve these new captures; human review remains pending and no baseline was promoted.",
+      "Historical human review on 2026-09-27 covered ONLY the 6 new captures of theming-shadcn--shadcn and theming-shadcn--gemstone-accent across the light, dark and RTL axes: the maintainer reviewed both stories in the deployed 21.0.0 Storybook and approved them, and the promoted files are the harness captures of those same stories, inspected before promotion. The RTL captures intentionally show English text reordered by a forced right-to-left container.",
+      "The three theming-shadcn--shadcn baselines were re-captured on 2026-09-27 on the CI-equivalent Linux host after the first capture rendered with a locally installed Inter/Geist font that CI does not have (the story's look sets its own font stack over the harness pin); the maintainer approved the re-capture of the already-reviewed story.",
+      "The remaining historical light/dark/RTL baselines have NOT received human visual review. That limitation predates this release and is unchanged by it.",
+      "Forced-colors/narrow captures and other evidence captures remain ephemeral evidence, not approved baseline updates.",
+      "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
+      "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
+    ]
+  }
+}

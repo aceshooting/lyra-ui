@@ -30,6 +30,7 @@ import {
 } from './component-metadata.mjs';
 import { generateManifest } from './generate-manifest.mjs';
 import { nextWriteMetadata } from './generate-component-metadata.mjs';
+import * as metadataContracts from './component-metadata.mjs';
 import cemConfig from '../custom-elements-manifest.config.js';
 import { expandManifestDeprecations } from './manifest-compact.mjs';
 import {
@@ -41,6 +42,52 @@ const packageDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..'
 );
+
+test('export inspection distinguishes genuine absence from invalid current source and policy', () => {
+  const source = `
+/** @deprecated Use Current instead. */
+export type Old = string;
+export type Current = string;
+export const live = 'lr-current-event';
+// lr-comment-event and data-lr-comment are only prose.
+export const attribute = 'data-lr-current';
+`;
+  const packageJson = { exports: {
+    './old.js': './dist/old.js', './missing.js': './dist/missing.js',
+    './broken.js': './dist/broken.js', './style.css': './dist/style.css',
+    './patterns/*': './dist/*.js', './patterns/blocked': null,
+    './invalid-target.js': 42, './unknown-conditions.js': { browser: './dist/old.js' },
+    './array-target.js': ['./dist/old.js'], './node-target.js': { node: './dist/old.js' },
+    './blocked-import.js': { import: null, default: './dist/old.js' },
+    './default.js': { default: './dist/old.js' },
+  } };
+  const readSource = file => ({ 'src/old.ts': source, 'src/broken.ts': 'export const = ;', 'src/style.css': ':root {}' })[file] ?? null;
+  const context = { packageJson, readSource, exportDeprecations: [{ kind: 'entry-point', name: './old.js' }] };
+  const inspect = entry => metadataContracts.inspectExportContract(entry, context);
+  assert.deepEqual(inspect({ kind: 'type', module: './old.js', name: 'Old' }), {
+    status: 'present', sourcePath: 'src/old.ts', isType: true, deprecated: true, findings: [],
+  });
+  assert.equal(inspect({ kind: 'type', module: './old.js', name: 'Current' }).deprecated, false);
+  assert.equal(inspect({ kind: 'constant', module: './old.js', name: 'live' }).isType, false);
+  assert.equal(inspect({ kind: 'entry-point', name: './old.js' }).deprecated, true);
+  assert.equal(inspect({ kind: 'stylesheet', name: './style.css' }).status, 'present');
+  assert.equal(inspect({ kind: 'type', module: './old.js', name: 'Gone' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './gone.js' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './patterns/old' }).status, 'present');
+  assert.equal(inspect({ kind: 'entry-point', name: './patterns/blocked' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './blocked-import.js' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './default.js' }).status, 'present');
+  for (const name of ['./missing.js', './broken.js', '../old.js', './patterns/*', './invalid-target.js', './unknown-conditions.js', './array-target.js', './node-target.js']) {
+    const result = inspect({ kind: 'entry-point', name });
+    assert.equal(result.status, 'invalid', name);
+    assert.ok(result.findings.length > 0, name);
+  }
+  for (const [kind, name, status] of [
+    ['window-event', 'lr-current-event', 'present'], ['window-event', 'lr-comment-event', 'absent'],
+    ['root-attribute', 'data-lr-current', 'present'], ['root-attribute', 'data-lr-comment', 'absent'],
+  ]) assert.equal(inspect({ kind, module: './old.js', name }).status, status);
+  assert.equal(inspect({ kind: 'window-event', module: './old.js', name: 'invalid' }).status, 'invalid');
+});
 
 function readJson(relativePath) {
   return JSON.parse(

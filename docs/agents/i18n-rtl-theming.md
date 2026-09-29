@@ -98,8 +98,12 @@ advertise either canonical alias as an additional translated catalog.
 
 ## Catalog review tiers and native-speaker review
 
-`scripts/fixtures/translation-reviews.json` in the library package separates each catalog's
-structural coverage from its linguistic evidence. Schema version 2 records `reviewTier` as
+Author review evidence in `scripts/fixtures/translation-reviews/locales/<source-locale>.json`
+in the library package. The shared `index.json` owns the English source snapshot, upstream
+provenance, release groups and ordered source locale IDs. Keep the authored IDs `tl` and `pnb`;
+their canonical loader identities remain `fil` and `lah`. The existing
+`scripts/fixtures/translation-reviews.json` is a generated aggregate; never edit it directly.
+Its schema version 2 separates structural coverage from linguistic evidence and records `reviewTier` as
 `ai-assisted`, `independent-human`, or `native-speaker`; `reviewer.status` remains a separate
 approval state. Current AI-assisted catalog reviews must stay labeled AI-assisted, even when
 approved. Never infer human or native-speaker review from complete keys, an English-identical
@@ -120,8 +124,10 @@ assistance. Record the reviewer-confirmed scope in `reviewer.evidence`; the inta
 not evidence of completion. Catalog edits invalidate an old human-review hash until reviewed
 again. Do not update that hash mechanically or fabricate reviewers to pass a gate.
 
-Run `pnpm --filter @aceshooting/lyra-ui test:translation-reviews` and `check:translations` after
-review metadata changes. The generated locale manifest reports coverage and review tier/status
+After review metadata changes, run `pnpm --filter @aceshooting/lyra-ui translation-review-fixture`,
+then `test:translation-review-source`, `test:translation-reviews` and `check:translations` with
+the same package filter. Regeneration assembles the recorded evidence; it must not approve a
+review or update its hash automatically. The generated locale manifest reports coverage and review tier/status
 separately; fallback messages must never be counted as translated coverage. The pinned CLDR
 category fixture defines structural requirements without claiming linguistic quality.
 

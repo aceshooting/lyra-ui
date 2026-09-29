@@ -1,0 +1,167 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, cp, readFile, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { checkPublishedCompatibility } from './check-published-compatibility.mjs';
+import { decodeEvidence, encodeEvidence, sha256, jsonBytes, validatePublishedCapture } from './published-compatibility-io.mjs';
+
+const directory = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/compatibility-history');
+
+test('reviewed capture verifies hermetically and preserves exact published profiles', async () => {
+  const result = await checkPublishedCompatibility(directory);
+  assert.equal(result.captures.length, 1);
+  const { capture, facts, publishedMigration } = result.captures[0];
+  assert.equal(capture.sourceVersion, '22.0.0');
+  assert.equal(capture.git.commit, 'cc29151f1c0a4deb2d0dbf03623115e7d56cef9e');
+  assert.deepEqual(publishedMigration.lyraRenames.profiles.map(profile => [profile.origin, profile.toMajor]), [['lyra-v21', 22], ['lyra-v22', 23]]);
+  assert.ok(facts.records.some(entry => entry.policy.since === '21.1.0'));
+});
+
+test('re-extraction rejects changed facts, unrelated input and invalid input/schema identities', async () => {
+  const root = join(directory, '22.0.0');
+  const capture = JSON.parse(await readFile(join(root, 'capture.json'), 'utf8'));
+  const facts = JSON.parse(await readFile(join(root, 'facts.json'), 'utf8'));
+  const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
+  const editedFacts = structuredClone(facts);
+  editedFacts.records[0].policy.rationale = 'Changed publication';
+  assert.throws(() => validatePublishedCapture({ ...capture, factsSha256: sha256(jsonBytes(editedFacts)) }, editedFacts, archive), /facts differ/u);
+  for (const mutate of [
+    (c, a) => { a.payloads.extra = ''; },
+    c => { c.inputs[0].path = '../package.json'; },
+    c => { c.extractorVersion = 99; },
+    c => { c.sourceVersion = '23.0.0'; },
+    c => { c.inputs.push(structuredClone(c.inputs[0])); },
+  ]) {
+    const c = structuredClone(capture); const a = structuredClone(archive); mutate(c, a);
+    assert.throws(() => validatePublishedCapture(c, facts, a));
+  }
+});
+
+test('reviewed descriptor/archive pins fail closed before accepting changed evidence', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'lyra-compatibility-'));
+  try {
+    await cp(directory, temp, { recursive: true });
+    const root = join(temp, '22.0.0');
+    const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
+    archive.schemaVersion = 99;
+    await writeFile(join(root, 'evidence.json.gz'), encodeEvidence(archive));
+    await assert.rejects(checkPublishedCompatibility(temp), /archive hash mismatch/u);
+    const descriptor = JSON.parse(await readFile(join(root, 'capture.json'), 'utf8'));
+    descriptor.evidenceArchiveSha256 = sha256(encodeEvidence(archive));
+    await writeFile(join(root, 'capture.json'), jsonBytes(descriptor));
+    await assert.rejects(checkPublishedCompatibility(temp), /reviewed index pin/u);
+  } finally { await rm(temp, { recursive: true, force: true }); }
+});
+
+test('current source retains every published policy while actual package version remains 22', async () => {
+  const { assembleCompatibilityContext } = await import('./published-compatibility.mjs');
+  const { assembleComponentMetadata, readComponentMetadataSources } = await import('./component-metadata-source.mjs');
+  const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const metadata = assembleComponentMetadata(readComponentMetadataSources(packageRoot));
+  const inventory = JSON.parse(await readFile(join(packageRoot, 'scripts/fixtures/component-inventory.json'), 'utf8'));
+  const packageJson = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+  const verified = await checkPublishedCompatibility(directory);
+  const context = assembleCompatibilityContext({ packageVersion: packageJson.version, currentInventory: inventory,
+    currentExportDeprecations: metadata.exportDeprecations, captures: verified.captures.map(entry => entry.facts), retirementIndex: verified.retirements });
+  assert.ok(Object.values(context.records).every(record => record.state === 'current'));
+});
+
+test('published eligible cohort remains migratable after simulated 23 source removals without changing profile actions', async () => {
+  const { assembleCompatibilityContext, policyKey, compatibilityKey } = await import('./published-compatibility.mjs');
+  const { projectRenameLedger, validateRenameLedger } = await import('./lyra-rename-ledger.mjs');
+  const { buildLyraRenameReference } = await import('./build-llms.mjs');
+  const { buildMigrationContract, migrateText } = await import('./migrate-wa.mjs');
+  const root = join(directory, '22.0.0');
+  const capture = JSON.parse(await readFile(join(root, 'capture.json'), 'utf8'));
+  const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
+  const input = role => JSON.parse(Buffer.from(archive.payloads[capture.inputs.find(entry => entry.origin === 'source' && entry.role === role).sha256], 'base64'));
+  const metadata = input('metadata'); const original = input('inventory'); const ledger = input('renameLedger');
+  const facts = (await checkPublishedCompatibility(directory)).captures[0].facts;
+  const candidate = structuredClone(original);
+  const eligible = facts.records.filter(entry => entry.policy.removalNotBefore === '23.0.0');
+  const sections = { property: 'properties', attribute: 'attributes', event: 'events', part: 'parts', 'css-property': 'cssProperties', slot: 'slots', method: 'methods', 'css-state': 'cssStates' };
+  const retired = new Set(eligible.map(entry => compatibilityKey(entry.key)));
+  for (const { key, policy } of eligible) {
+    if (key.scope !== 'member') continue;
+    const owner = candidate.components.find(component => component.tag === key.tag);
+    if (key.kind === 'component') { candidate.components = candidate.components.filter(component => component !== owner); continue; }
+    if (!owner) continue;
+    owner.maturity.deprecations = owner.maturity.deprecations.filter(record => compatibilityKey(policyKey(record)) !== compatibilityKey(key));
+    if (sections[key.kind]) owner.surface[sections[key.kind]] = owner.surface[sections[key.kind]].filter(member => member.name !== key.name);
+    if (policy.attribute) owner.surface.attributes = owner.surface.attributes.filter(member => member.name !== policy.attribute);
+  }
+  const exports = metadata.exportDeprecations.filter(policy => !retired.has(compatibilityKey(policyKey(policy, 'export'))));
+  const exportSurface = new Map();
+  for (const { key, policy } of facts.records.filter(entry => entry.key.scope === 'export')) {
+    if (!retired.has(compatibilityKey(key))) exportSurface.set(compatibilityKey(key), { key, deprecated: true });
+    const replacement = { ...policy.replacement, module: policy.replacement.module ?? policy.module };
+    const next = policyKey(replacement, 'export');
+    exportSurface.set(compatibilityKey(next), { key: next, deprecated: false });
+  }
+  const context = assembleCompatibilityContext({ packageVersion: '23.0.0', currentInventory: candidate, currentExportDeprecations: exports,
+    currentExportSurface: [...exportSurface.values()], captures: [facts], retirementIndex: eligible.map(entry => ({ key: entry.key, removedIn: '23.0.0', sourceRelease: facts.sourceRelease })) });
+  assert.deepEqual(validateRenameLedger(ledger, { inventory: candidate, exportDeprecations: exports, compatibilityContext: context, requireCoverage: true }), []);
+  const oldProjection = projectRenameLedger(ledger, original, { exportDeprecations: metadata.exportDeprecations });
+  const newProjection = projectRenameLedger(ledger, candidate, { exportDeprecations: exports, compatibilityContext: context });
+  for (const profile of newProjection.profiles) for (const list of ['reviews', 'moduleReviews']) for (const entry of profile[list]) delete entry.removedIn;
+  assert.deepEqual(newProjection, oldProjection);
+  assert.equal(Object.values(context.records).filter(entry => entry.state === 'retired').length, eligible.length);
+  const docs = buildLyraRenameReference(ledger, candidate, { exportDeprecations: exports, compatibilityContext: context }).join('\n');
+  assert.match(docs, /Removed aliases no longer work at runtime/u);
+  assert.match(docs, /Removed in 23\.0\.0/u);
+  assert.ok(docs.includes('LyraGeoJsonViewerEventMap'));
+  const beforeContract = buildMigrationContract(original, { renameLedger: ledger, exportDeprecations: metadata.exportDeprecations });
+  const afterContract = buildMigrationContract(candidate, { renameLedger: ledger, exportDeprecations: exports, compatibilityContext: context });
+  const fixtureRoot = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/lyra-renames');
+  const sample = await readFile(join(fixtureRoot, 'lyra-v21.input.html'), 'utf8');
+  const probe = text => {
+    const before = migrateText(text, beforeContract, { file: 'consumer.html', origin: 'lyra-v21' });
+    const after = migrateText(text, afterContract, { file: 'consumer.html', origin: 'lyra-v21' });
+    assert.equal(after.content, before.content);
+    assert.deepEqual(after.changes, before.changes);
+    const identities = result => result.warnings.map(({ message, ...warning }) => warning);
+    assert.deepEqual(identities(after), identities(before));
+  };
+  probe(sample);
+  probe(`<lr-geojson-view><lr-button></lr-button></lr-geojson-view>
+    <lr-graph exportparts="link:edge"></lr-graph>
+    <style>:root { --lr-graph-background: red; } lr-graph::part(link) { color: red; }</style>
+    <script>document.addEventListener('lr-link-click', listener); document.removeEventListener('lr-link-click', listener);</script>`);
+
+});
+
+test('published notice witnesses use actual minor releases and reject gaps or unreviewed guidance edits', async () => {
+  const { verifyPolicyWitnesses } = await import('./published-compatibility-io.mjs');
+  const verified = await checkPublishedCompatibility(directory);
+  const key = JSON.stringify(['member', 'lr-activity-feed', 'property', 'compact']);
+  assert.equal(verified.observedPublication[key], '21.2.0');
+  const index = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8'));
+  const witnesses = decodeEvidence(await readFile(join(directory, index.policyWitnesses.file)));
+  const gap = structuredClone(witnesses); gap.releases.pop();
+  assert.throws(() => verifyPolicyWitnesses(gap, verified.captures, index.guidanceTransitions), /Missing immutable policy witness/u);
+  assert.throws(() => verifyPolicyWitnesses(witnesses, verified.captures, []), /Unreviewed published guidance transition/u);
+  const changed = structuredClone(witnesses); changed.releases[0].input.data = Buffer.from('{}').toString('base64');
+  assert.throws(() => verifyPolicyWitnesses(changed, verified.captures, index.guidanceTransitions), /source bytes disagree/u);
+});
+
+test('configured repository history cannot silently become an empty compatibility authority', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'lyra-empty-history-'));
+  try {
+    await writeFile(join(temp, 'index.json'), jsonBytes({ schemaVersion: 1, captures: [], retirements: [] }));
+    await assert.rejects(checkPublishedCompatibility(temp), /compatibility index/u);
+  } finally { await rm(temp, { recursive: true, force: true }); }
+});
+
+
+test('ordinary verification works outside a checkout with no Git executable or fetch capability', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'lyra-offline-history-'));
+  try {
+    const moduleUrl = new URL('./check-published-compatibility.mjs', import.meta.url).href;
+    const code = `globalThis.fetch = () => { throw new Error('network forbidden'); }; const { checkPublishedCompatibility } = await import(${JSON.stringify(moduleUrl)}); await checkPublishedCompatibility();`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: temp, env: { ...process.env, PATH: '' }, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  } finally { await rm(temp, { recursive: true, force: true }); }
+});

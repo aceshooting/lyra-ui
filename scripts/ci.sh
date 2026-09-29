@@ -409,8 +409,8 @@ require_primary_toolchain
 if [[ "${CI_SH_SKIP_INSTALL:-0}" != "1" ]]; then
   step "pnpm install --frozen-lockfile"
   pnpm install --frozen-lockfile
-  step "playwright install chromium"
-  pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+  step "playwright install chromium firefox webkit"
+  pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
 fi
 
 step "pnpm lint"
@@ -435,6 +435,10 @@ pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
 # after a build.
 step "pnpm build"
 pnpm build
+
+step "optional look and theme builder contracts"
+pnpm --filter @aceshooting/lyra-ui test:optional-looks
+pnpm test:theme-builder
 
 step "built component-quality evidence"
 pnpm --filter @aceshooting/lyra-ui check:component-quality:built
@@ -529,6 +533,11 @@ pnpm docs:check
 
 step "storybook:check"
 pnpm storybook:check
+
+step "theme builder browser contracts"
+for builder_browser in chromium firefox webkit; do
+  pnpm check:theme-builder --browser "$builder_browser"
+done
 
 step "docs:check-show-code"
 pnpm docs:check-show-code

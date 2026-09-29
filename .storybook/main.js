@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,6 +8,7 @@ import { codecovVitePlugin } from '@codecov/vite-plugin';
 import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
 import { storyTitlePlugin } from './story-title-plugin.js';
+import { builderModulePreload, isDeferredLocaleModule } from './docs-load-boundaries.js';
 
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
@@ -105,6 +106,11 @@ const config = {
     });
     viteConfig.plugins.push(tailwindcss());
     viteConfig.build = viteConfig.build ?? {};
+    const localeManifest = JSON.parse(readFileSync(new URL('../packages/lyra-ui/locales.json', import.meta.url), 'utf8'));
+    const catalogNames = localeManifest.locales
+      .filter(locale => typeof locale.aggregateImport === 'string' && locale.kind !== 'testing-only')
+      .map(locale => locale.aggregateImport.split('/').at(-1).replace(/\.js$/, ''));
+    viteConfig.build.modulePreload = builderModulePreload(viteConfig.build.modulePreload, catalogNames);
     // Vite's default 500kB warning fires on chunks that are already correctly
     // split (one-per-language addon-docs syntax-highlighter chunks, axe-core,
     // MapLibre's own WASM+JS) — none of it ships in the published npm
@@ -136,7 +142,7 @@ const config = {
     // eager.
     const LYRA_SRC = '/packages/lyra-ui/src/';
     viteConfig.build.rollupOptions.output.manualChunks = (id) => {
-      if (id.includes(LYRA_SRC) && !id.includes('.stories.') && !id.endsWith('.mdx')) {
+      if (id.includes(LYRA_SRC) && !id.includes('.stories.') && !id.endsWith('.mdx') && !isDeferredLocaleModule(id)) {
         return 'lyra-components';
       }
       if (id.includes('maplibre-gl')) return 'vendor-maplibre';

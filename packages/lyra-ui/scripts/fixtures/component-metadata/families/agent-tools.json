@@ -1,0 +1,993 @@
+{
+  "family": "agent-tools",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-agent-question",
+      "lr-background-runs",
+      "lr-budget-meter",
+      "lr-change-review",
+      "lr-connector-manager",
+      "lr-permission-grant",
+      "lr-permission-rules",
+      "lr-tool-call-block"
+    ],
+    "published-stable": [
+      "lr-activity-feed",
+      "lr-agent-eval-dashboard",
+      "lr-agent-run",
+      "lr-agent-trace",
+      "lr-approval-queue",
+      "lr-artifact-panel",
+      "lr-browser-frame",
+      "lr-commit-card",
+      "lr-compare-panel",
+      "lr-confirm-bar",
+      "lr-context-inspector",
+      "lr-eval-dataset",
+      "lr-eval-result",
+      "lr-eval-run",
+      "lr-json-schema-viewer",
+      "lr-mcp-app",
+      "lr-policy-summary",
+      "lr-prompt-studio",
+      "lr-result-card",
+      "lr-result-field",
+      "lr-span-waterfall",
+      "lr-stack-trace",
+      "lr-subagent-panel",
+      "lr-task-list",
+      "lr-terminal",
+      "lr-test-results",
+      "lr-thinking-panel",
+      "lr-tool-approval-dialog",
+      "lr-tool-call-chip",
+      "lr-tool-param-form",
+      "lr-tool-result-dialog",
+      "lr-tool-result-view",
+      "lr-tool-select-dialog",
+      "lr-tool-timeline",
+      "lr-trace-tree"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": []
+  },
+  "deprecations": [
+    {
+      "tag": "lr-activity-feed",
+      "kind": "css-property",
+      "name": "--lr-activity-feed-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-activity-feed-bg",
+        "usage": "--lr-activity-feed-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-activity-feed",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-activity-feed",
+      "kind": "property",
+      "name": "showTimestamps",
+      "attribute": "show-timestamps",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withTimestamps",
+        "usage": "with-timestamps"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-eval-dashboard",
+      "kind": "css-property",
+      "name": "--lr-agent-eval-dashboard-active-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-agent-eval-dashboard-active-bg",
+        "usage": "--lr-agent-eval-dashboard-active-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-agent-eval-dashboard",
+      "kind": "property",
+      "name": "showChart",
+      "attribute": "show-chart",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutChart",
+        "usage": "without-chart"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "css-property",
+      "name": "--lr-agent-run-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-agent-run-bg",
+        "usage": "--lr-agent-run-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "property",
+      "name": "showCancel",
+      "attribute": "show-cancel",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCancel",
+        "usage": "without-cancel"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "property",
+      "name": "showRetry",
+      "attribute": "show-retry",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutRetry",
+        "usage": "without-retry"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-trace",
+      "kind": "property",
+      "name": "showBars",
+      "attribute": "show-bars",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutBars",
+        "usage": "without-bars"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-trace",
+      "kind": "property",
+      "name": "showCost",
+      "attribute": "show-cost",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withCost",
+        "usage": "with-cost"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-agent-trace",
+      "kind": "property",
+      "name": "showTokens",
+      "attribute": "show-tokens",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withTokens",
+        "usage": "with-tokens"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-approval-queue",
+      "kind": "event",
+      "name": "lr-approval-decision",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-approval-decision-request",
+        "usage": "addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-approval-queue",
+      "kind": "property",
+      "name": "editable",
+      "attribute": "editable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "readonly",
+        "usage": "readonly"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-browser-frame",
+      "kind": "css-property",
+      "name": "--lr-browser-frame-controller-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-browser-frame-controller-bg",
+        "usage": "--lr-browser-frame-controller-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-browser-frame",
+      "kind": "property",
+      "name": "controls",
+      "attribute": "controls",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutControls",
+        "usage": "without-controls"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-commit-card",
+      "kind": "css-property",
+      "name": "--lr-commit-card-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-commit-card-bg",
+        "usage": "--lr-commit-card-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-commit-card",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-commit-card",
+      "kind": "property",
+      "name": "copyable",
+      "attribute": "copyable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCopyButton",
+        "usage": "without-copy-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-compare-panel",
+      "kind": "css-property",
+      "name": "--lr-compare-panel-selected-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-compare-panel-selected-bg",
+        "usage": "--lr-compare-panel-selected-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-compare-panel",
+      "kind": "event",
+      "name": "lr-vote",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-vote-request",
+        "usage": "addEventListener('lr-vote-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-confirm-bar",
+      "kind": "event",
+      "name": "lr-approve",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-approve-request",
+        "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-confirm-bar",
+      "kind": "event",
+      "name": "lr-deny",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-deny-request",
+        "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-confirm-bar",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-confirm-bar",
+      "kind": "property",
+      "name": "pending",
+      "attribute": "pending",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "pendingAction",
+        "usage": "pending-action"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-eval-run",
+      "kind": "event",
+      "name": "lr-example-tool-approval-decide",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-example-tool-approval-decide-request",
+        "usage": "addEventListener('lr-example-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-error-bg",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-error-bg",
+        "usage": "--lr-json-schema-viewer-error-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-error-border",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-error-border",
+        "usage": "--lr-json-schema-viewer-error-border"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-info-bg",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-info-bg",
+        "usage": "--lr-json-schema-viewer-info-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-info-border",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-info-border",
+        "usage": "--lr-json-schema-viewer-info-border"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-max-indent",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-max-indent",
+        "usage": "--lr-json-schema-viewer-max-indent"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-selected-border",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-selected-border",
+        "usage": "--lr-json-schema-viewer-selected-border"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-warning-bg",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-warning-bg",
+        "usage": "--lr-json-schema-viewer-warning-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-json-schema-viewer",
+      "kind": "css-property",
+      "name": "--lr-schema-viewer-warning-border",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-json-schema-viewer-warning-border",
+        "usage": "--lr-json-schema-viewer-warning-border"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-prompt-studio",
+      "kind": "event",
+      "name": "lr-message-reorder",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-message-reorder-request",
+        "usage": "addEventListener('lr-message-reorder-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Cancelable events that propose a state change are named `lr-<noun>-request` across the library."
+    },
+    {
+      "tag": "lr-result-card",
+      "kind": "css-property",
+      "name": "--lr-result-card-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-result-card-bg",
+        "usage": "--lr-result-card-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-result-card",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-span-waterfall",
+      "kind": "property",
+      "name": "hideAxis",
+      "attribute": "hide-axis",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutAxis",
+        "usage": "without-axis"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-stack-trace",
+      "kind": "css-property",
+      "name": "--lr-stack-trace-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-stack-trace-bg",
+        "usage": "--lr-stack-trace-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-stack-trace",
+      "kind": "property",
+      "name": "collapseInternal",
+      "attribute": "collapse-internal",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "expandInternal",
+        "usage": "expand-internal"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-stack-trace",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-stack-trace",
+      "kind": "property",
+      "name": "copyable",
+      "attribute": "copyable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCopyButton",
+        "usage": "without-copy-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-subagent-panel",
+      "kind": "css-property",
+      "name": "--lr-subagent-panel-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-subagent-panel-bg",
+        "usage": "--lr-subagent-panel-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-subagent-panel",
+      "kind": "css-property",
+      "name": "--lr-subagent-panel-hover-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-subagent-panel-hover-bg",
+        "usage": "--lr-subagent-panel-hover-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-subagent-panel",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-task-list",
+      "kind": "css-property",
+      "name": "--lr-task-list-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-task-list-bg",
+        "usage": "--lr-task-list-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-task-list",
+      "kind": "property",
+      "name": "collapsible",
+      "attribute": "collapsible",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCollapse",
+        "usage": "without-collapse"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-task-list",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-task-list",
+      "kind": "property",
+      "name": "expanded",
+      "attribute": "expanded",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "collapsed",
+        "usage": "collapsed"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Toggle notifications report the resulting state as `expanded` across the library."
+    },
+    {
+      "tag": "lr-task-list",
+      "kind": "property",
+      "name": "label",
+      "attribute": "label",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "heading",
+        "usage": "heading"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-terminal",
+      "kind": "event",
+      "name": "lr-download",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-download-request",
+        "usage": "addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-terminal",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-terminal",
+      "kind": "property",
+      "name": "copyable",
+      "attribute": "copyable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutCopyButton",
+        "usage": "without-copy-button"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-terminal",
+      "kind": "property",
+      "name": "wrap",
+      "attribute": "wrap",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutWrap",
+        "usage": "without-wrap"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-test-results",
+      "kind": "property",
+      "name": "autoExpandFailures",
+      "attribute": "auto-expand-failures",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutAutoExpandFailures",
+        "usage": "without-auto-expand-failures"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-thinking-panel",
+      "kind": "css-property",
+      "name": "--lr-thinking-panel-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-thinking-panel-bg",
+        "usage": "--lr-thinking-panel-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-thinking-panel",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "size=\"s\""
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Sizes use the shared `size` scale."
+    },
+    {
+      "tag": "lr-tool-approval-dialog",
+      "kind": "event",
+      "name": "lr-approve",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-approve-request",
+        "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-tool-approval-dialog",
+      "kind": "event",
+      "name": "lr-deny",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-deny-request",
+        "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-tool-approval-dialog",
+      "kind": "property",
+      "name": "editable",
+      "attribute": "editable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "readonly",
+        "usage": "readonly"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-tool-approval-dialog",
+      "kind": "property",
+      "name": "pending",
+      "attribute": "pending",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "pendingAction",
+        "usage": "pending-action"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-tool-call-block",
+      "kind": "css-property",
+      "name": "--lr-tool-call-block-background",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "css-property",
+        "name": "--lr-tool-call-block-bg",
+        "usage": "--lr-tool-call-block-bg"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
+    },
+    {
+      "tag": "lr-tool-call-block",
+      "kind": "property",
+      "name": "error",
+      "attribute": "error",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "errorText",
+        "usage": "error-text"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-tool-result-dialog",
+      "kind": "event",
+      "name": "lr-maximize-change",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-maximize-change-request",
+        "usage": "addEventListener('lr-maximize-change-request', ...)"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Cancelable events that propose a state change are named `lr-<noun>-request` across the library."
+    },
+    {
+      "tag": "lr-tool-timeline",
+      "kind": "event",
+      "name": "lr-tool-approval-decide",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-tool-approval-decide-request",
+        "usage": "addEventListener('lr-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-tool-timeline",
+      "kind": "property",
+      "name": "approvalEditable",
+      "attribute": "approval-editable",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "approvalReadonly",
+        "usage": "approval-readonly"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "One name per concept across the library."
+    },
+    {
+      "tag": "lr-trace-tree",
+      "kind": "property",
+      "name": "hideBars",
+      "attribute": "hide-bars",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutBars",
+        "usage": "without-bars"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-trace-tree",
+      "kind": "property",
+      "name": "showCost",
+      "attribute": "show-cost",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withCost",
+        "usage": "with-cost"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    },
+    {
+      "tag": "lr-trace-tree",
+      "kind": "property",
+      "name": "showTokens",
+      "attribute": "show-tokens",
+      "since": "21.1.0",
+      "replacement": {
+        "kind": "property",
+        "name": "withTokens",
+        "usage": "with-tokens"
+      },
+      "removalNotBefore": "23.0.0",
+      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
+    }
+  ]
+}
