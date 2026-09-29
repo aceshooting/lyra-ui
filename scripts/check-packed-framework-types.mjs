@@ -109,7 +109,8 @@ async function writeFixture(fixtureDir, tarball) {
   await writeFile(
     join(fixtureDir, 'src', 'react.tsx'),
     `import { createRef } from 'react';
-import type { LyraInput, LyraTable } from '@aceshooting/lyra-ui';
+import type { LyraInput } from '@aceshooting/lyra-ui/components/forms/input/input.class.js';
+import type { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
 import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
 
 const inputRef = createRef<LyraInput>();
@@ -178,7 +179,7 @@ function selectInput(): void {
   await writeFile(
     join(fixtureDir, 'src', 'App.svelte'),
     `<script lang="ts">
-  import type { LyraInput } from '@aceshooting/lyra-ui';
+  import type { LyraInput } from '@aceshooting/lyra-ui/components/forms/input/input.class.js';
   import type {} from '@aceshooting/lyra-ui/svelte';
 
   let input: LyraInput;

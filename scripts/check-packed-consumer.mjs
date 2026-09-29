@@ -137,127 +137,15 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Keep the aggregate barrel budget as an inspectable sum rather than an unexplained moving ceiling.
-// The established baseline remains fixed; named allowances describe the capabilities whose
-// implementation weight is documented on `bundleEntries.core` below.
+// Packed core/all.js on a3d7f307e9486e622c6d81bc9969932ffefdce82 measured 4,834,973 raw
+// bytes across all 15 emitted files, with optional peers externalized (zero eager/bundled peers).
+// Select 16,000 bytes of regression headroom, informed by the historical ~16 KiB practice; this
+// is a new allowance for the reviewed v24 measurement, not retained deprecated-alias weight.
+// The prior additive budget chronology is preserved at:
+// https://github.com/aceshooting/lyra-ui/blob/a3d7f307e9486e622c6d81bc9969932ffefdce82/scripts/check-packed-consumer.mjs#L140-L394
 const coreRawBudget = {
-  establishedBaselineBytes: 3_700_000,
-  stableRootRegistrationAllowanceBytes: 200_000,
-  crossComponentContractAllowanceBytes: 35_000,
-  boundedDataResilienceAllowanceBytes: 10_000,
-  interactionAccessibilityAllowanceBytes: 10_000,
-  // Accessible-name precedence across viewers and controls, hit-area floors, focus-visible pairing,
-  // selected-state declaration ordering, disabled-hover guards, and lr-graph value-based selection
-  // increased the measured bundle to 3867.1 KiB raw, about 4.8 KiB beyond the previous 3862.3 KiB
-  // ceiling. Granular per-entry gzip budgets and the button canary stayed green, so this is Lyra
-  // implementation weight rather than an optional-peer leak.
-  accessibilityStyleCorrectionAllowanceBytes: 25_000,
-  // Per-box chart interactivity, shared forced-colors chart encoding, host-supplied XML highlights,
-  // the context-meter legend, node-palette reordering, retrieval-result grouping, terminal chrome,
-  // and media host focus/blur/click forwarding increased the measured bundle to 3917.6 KiB raw,
-  // about 30.9 KiB beyond the preceding 3886.7 KiB ceiling. Every granular per-entry gzip budget
-  // and the button canary stayed green, and the peer-exclusion graph still externalizes all 29
-  // optional peers. The term therefore records aggregate opt-in capability weight, not a dependency
-  // leak, and is sized to the completed implementation rather than speculative future growth.
-  featureCapabilityAllowanceBytes: 40_000,
-  // Live overlay-anchor identity and interaction ownership, placement-ready focus, host-owned
-  // form-label semantics, progressive slot-presence hydration, and deterministic timer retry
-  // behavior increased the exact packed aggregate from 4,015,834 B to 4,037,334 B: 21,500 B raw
-  // and 5,035 B gzip. The production graph still reports zero eager and zero bundled optional
-  // peers, while every granular gzip budget and the button canary remain green. This narrowly
-  // rounded term records the shared implementation weight and leaves 7,666 B of aggregate headroom.
-  overlayHydrationContractAllowanceBytes: 25_000,
-  // A broad accessibility/correctness remediation sweep across roughly five dozen components
-  // (schema-viewer, chart, chat-viewport, code-block, thread-list, voice-picker, widget-renderer,
-  // calendar, data-grid, heatmap, tree, checkbox, combobox, date-picker, radio-group, select,
-  // switch, dashboard-grid, details, menu, tab-group, widget, avatar-group, file-input, map,
-  // video-playlist, dialog, progress-bar/ring, entity-dossier, node-palette, known-date,
-  // random-content, tour, the csv/dataset/notebook/pdf/spreadsheet viewers, and shared
-  // overlay-manager/scroll-overflow internals) increased the measured bundle to 4533.3 KiB raw,
-  // about 583.1 KiB beyond the previous 3950.2 KiB ceiling. The button canary and every granular
-  // per-entry gzip budget remained green, so this is broad, real implementation weight -- built up
-  // across many prior commits before this term was added -- rather than a dependency leak.
-  crossFamilyRemediationSweepAllowanceBytes: 610_000,
-  // Post-9.0.0 finalization plus the new dev-mode unknown-attribute-warning diagnostic (wired once
-  // into the shared `LyraElement` base every component extends, piggybacking on Lit's own
-  // `litIssuedWarnings` dev-mode signal) increased the measured bundle to 4546.2 KiB raw, about
-  // 12.9 KiB beyond the preceding 4533.3 KiB ceiling. This run's own peer-exclusion graph reported
-  // zero eager and zero bundled optional peers, and the button canary plus every granular per-entry
-  // gzip budget stayed green, so this is shared implementation weight rather than a dependency leak.
-  devModeDiagnosticsAllowanceBytes: 20_000,
-  // The 10.0.0 public-contract pass increased the measured bundle to 4566.0 KiB raw, about 0.6 KiB
-  // beyond the preceding 4565.4 KiB ceiling: `disabled` moved onto the shared popover base; the
-  // progress ring gained `showValue`; the calendar gained a locale-derived week-start resolution
-  // path; the shared search-change detail gained `matchCountExact`; and `lr-add`/`lr-token-edit`
-  // gained the emit-check-then-mutate veto shape `lr-remove` already had. NOTE: this term was
-  // originally justified largely by dual-emit event aliases (every renamed event firing both its
-  // canonical and its deprecated spelling from one gesture). Those aliases were REMOVED later in
-  // the same major, so that weight is gone and this term is now larger than the surface it names --
-  // the slack is left in place deliberately rather than re-cut, because re-attributing bytes
-  // between adjacent terms invites exactly the guesswork these named allowances exist to prevent.
-  publicContractV10AllowanceBytes: 10_000,
-  // The 10.0.0 remediation sweep increased the measured bundle to 4633.0 KiB raw, about 57.8 KiB
-  // beyond the preceding 4575.2 KiB ceiling (measured twice as the sweep landed: 4596.8 KiB at the
-  // halfway point, 4633.0 KiB complete). It is additive correctness work spread across many
-  // families rather than one feature: <lr-pdf-viewer> gained a public `workerSrc` plus URL
-  // validation and worker configuration; the widget resolver gained a string-length ceiling applied
-  // at five admission points; the shiki loader gained a capability guard and fail-closed paths;
-  // nine components now render stateful ARIA explicitly instead of omitting it; sixteen call sites
-  // moved onto the shared `hostAriaLabel()`; scroll-overflow edge tracking moved into the shared
-  // controller with RTL-aware start/end state and its own scroll listener; and several cascade and
-  // forced-colors corrections added selectors. Removing the event aliases and hoisting four
-  // duplicated helpers pulled the other way, so this is the net. This run's peer-exclusion checks
-  // reported no eager and no bundled optional peer, and the button canary plus every granular
-  // per-entry gzip budget stayed green, so it is Lyra implementation weight, not a dependency leak.
-  // A large share of this term WAS CSS comment text rather than rules, and that share is now gone.
-  // `css` tagged templates used to keep their comments all the way through the build -- tsc has no
-  // reason to read a template literal as CSS, and esbuild's minifier must treat a tagged template's
-  // body as opaque because the tag can read `raw` -- so 28% of all emitted style bytes shipped as
-  // explanatory prose no consumer could read. `scripts/build.mjs` now runs `stripCssComments` after
-  // compaction, removing 456,633 B from the `css` templates of 226 of the 1406 emitted modules
-  // while `src/` keeps every comment (several defects here were caught because a comment stated an
-  // invariant the code was violating). The core measurement fell from 4633.0 KiB to 4178.8 KiB raw
-  // / 948.4 KiB gzip: a 454.2 KiB return, about six times this whole allowance. The sweep's
-  // remaining non-comment weight fits inside the terms above, so nothing needs to be reserved here.
-  //
-  // Equivalence was proven rather than sampled. Across all 285 `css` templates in the emitted tree:
-  // every byte outside a template chunk is unchanged (so each `${...}` interpolation is verbatim);
-  // the CSS token streams match once comment and whitespace runs collapse to a single separator;
-  // and Chromium's CSSOM serializes both sides of all 285 templates -- 5,644 top-level rules and
-  // 49,304 declarations -- identically.
-  //
-  // The other named terms are deliberately NOT re-cut to absorb this return, which leaves the
-  // aggregate ceiling 396.4 KiB above the measurement -- looser than this budget has historically
-  // run. Re-attributing bytes between adjacent terms is exactly the guesswork these named
-  // allowances exist to prevent, so the slack is recorded here instead of hidden in a re-baseline.
-  v10RemediationSweepAllowanceBytes: 0,
-  // The 21.0.0 shadcn-parity programme increased the measured bundle to 4676.8 KiB raw, about
-  // 101.6 KiB beyond the preceding 4575.2 KiB ceiling. It is new registered surface rather than a
-  // leak: lr-menubar/-item, lr-toggle/-group, lr-context-menu, lr-navigation-menu/-item and the
-  // tool-call block; the shared keyboard-focus modality gate for hover/focus disclosures; the
-  // trapped-surface top-layer escape (native popover promotion, fixed containing-block detection,
-  // zoom compensation and lease release) shared by every anchored overlay; Markdown GFM task
-  // items and tables, the fenced-code header, left-to-right code segmentation and progressive
-  // streaming; theme presets, typography utilities and the decorative border tier; and the
-  // deferred focus return shared by the app rail, page, responsive panel and dialog. The
-  // peer-exclusion graph still reports zero eager and zero bundled optional peers and every
-  // granular per-entry gzip budget plus the button canary stays green. Maintainer-approved
-  // 2026-09-26.
-  shadcnV21ProgrammeAllowanceBytes: 120_000,
-  // 21.1.0 measured 4693.0 KiB raw, 16.2 KiB past the 21.0.0 measurement and 0.6 KiB past the
-  // ceiling. It is new registered surface, not a leak: lr-map fitBounds and view-change reporting,
-  // tool-call display names and the incomplete status, the popover/dropdown top-layer opt-in, the
-  // app-rail focus fallback, deprecation records and development warnings, script-aware locale
-  // fallback, and right-to-left isolation of formatted chart labels. The peer graph still reports
-  // no eager or bundled optional peer. Sized to the measurement plus the same ~16 KiB headroom
-  // 21.0.0 received (ceiling 4709.0 KiB). Maintainer-approved 2026-09-28.
-  v211ReleaseAllowanceBytes: 17_000,
-  // 21.2.0 measured 4739.0 KiB raw, 30.0 KiB past the 21.1.0 ceiling: the deprecated aliases that
-  // keep every harmonized Lyra-only name working until 23.0.0 (plain reactive fields kept in step
-  // by one shared alias table, plus their canonical replacements and records). No optional peer
-  // became eager or bundled. Sized to the measurement plus ~16 KiB headroom (ceiling 4755.0 KiB);
-  // it reverses when 23.0.0 removes the aliases. Maintainer-approved 2026-09-28.
-  v212AliasHarmonizationAllowanceBytes: 47_000,
+  reviewedV24MeasurementBytes: 4_834_973,
+  selectedRegressionHeadroomBytes: 16_000,
 };
 
 /**
@@ -286,112 +174,11 @@ const SHADCN_THEME_RETENTION_MARKERS = Object.freeze({
 const bundleEntries = {
   core: {
     fixture: 'core',
-    // Measures `@aceshooting/lyra-ui/all.js` -- the entry that registers the full non-optional
-    // component set -- so its raw bundle grows as those implementations gain functionality even
-    // when the tag count is stable.
-    //
-    // Re-pointed here from a bare `import '@aceshooting/lyra-ui'` for 8.0.0's registration split.
-    // The root is now registration-free and absent from package.json#sideEffects, so the old
-    // fixture had stopped measuring anything at all: with nothing imported *from* the root, a
-    // production tree-shaker legitimately emits an EMPTY bundle for it (measured: 0 B raw across
-    // one file, against a 3,600,000 B ceiling). The budget could not have failed, and the 268
-    // registration side effects it was written to weigh had moved to `all.js`. The bare-root
-    // import is not lost -- it is now the `rootBarrel` entry below, where "collapses to nothing"
-    // is the assertion rather than an unnoticed hole.
-    //
-    // The release ceiling deliberately retains the established 3,400,000 B aggregate
-    // baseline instead of re-baselining to the current measurement. The only added term is the
-    // named stable-root registration allowance validated below, keeping future aggregate growth
-    // visible while the `button` gzip canary remains the tighter foreign-dependency signal.
-    //
-    // History below records pre-8.0.0 measurements from when this entry measured the side-effectful
-    // root barrel. It is kept because the growth it records is the same aggregate implementation
-    // weight the entry still measures, just reached through `all.js` now.
-    //
-    // Raised from 2_250_000 after 422 component corrections across 171 directories added real code
-    // (boolean-attribute converters, fail-closed peer-error branches, :hover rules, forwarded
-    // native properties), pushing the barrel ~17 KiB past the
-    // old ceiling. Deliberately re-baselined rather than waived -- the `button` gzip canary below
-    // stayed green through the same change, which is the signal that no foreign dependency leaked
-    // into the shared eager graph; only the barrel's own aggregate implementation weight moved.
-    //
-    // Raised from 2_500_000 after validated behavior and accessibility contracts expanded across
-    // the existing component set. The packed bundle measured 2488.8 KiB across the same 20 output
-    // files, while the granular gzip budgets and
-    // single-button canary remained green, ruling out an accidentally eager optional peer.
-    //
-    // Raised from 2_800_000 for 8.0.0, the first run of this check since that work landed. The
-    // barrel went from 262 to 269 registration imports, and on top of those seven new components
-    // every pre-existing one gained real implementation weight: a pressed state and relocated hover
-    // on each interactive part, setCustomValidity plus Enter-to-submit across the form-associated
-    // controls, the unified style vocabulary, and the typed global event surface. Measured 3023.0
-    // KiB raw across 19 output files with optional peers externalized. Deliberately re-baselined
-    // rather than waived, on the same evidence the earlier bumps used: this fixture externalizes
-    // the optional peers, so none of these bytes can be a peer's, and the barrel's eager static
-    // graph still reaches only `lit`, its directive subpaths and `@floating-ui/dom` -- every
-    // optional peer stays behind a dynamic `import()`. Only lyra's own aggregate weight moved.
-    //
-    // The registration-set expansion then made nine intentional root registrations reachable: alert,
-    // data-grid, flag, native-time-input, page, pan-zoom, split-panel, video, and video-playlist.
-    // Ten obsolete/duplicate registration imports left at the same time, so a tag/import-count
-    // multiplier would model this change incorrectly (the root import count fell 269 -> 268).
-    // A production Vite marginal build measured the added set at 157,626 B raw / 35,460 B gzip:
-    // data-grid accounts for 66,946 B raw, followed by page (18,109 B), split-panel (16,625 B),
-    // video-playlist plus its video dependency (16,388 B), alert (9,606 B), and
-    // native-time-input (812 B); flag and pan-zoom were already retained transitively. Removing
-    // the whole set puts the otherwise-stabilized graph at ~3262.2 KiB on the packed-consumer
-    // scale, below the existing 3320.3 KiB ceiling. The 200,000 B named allowance rounds that
-    // measured expansion up by ~27%; combined with the baseline it leaves ~2.9% total headroom
-    // over the observed 3416.1 KiB bundle. The independently fixed button gzip target below
-    // remains the tighter shared-layer canary, while the core static graph contains only Lit and
-    // Floating UI beyond Lyra itself. This is aggregate implementation weight, not an optional-
-    // peer leak.
-    //
-    // Raised from 3_400_000 after 8.0.0 expanded contracts across every existing component
-    // (824 files, no new tag added) without moving the registration count. Measured 3794.5 KiB
-    // (3,794,490 B) raw across 7 output files with optional peers
-    // externalized; this run's own peer-graph diagnostic reported zero eager or physically-bundled
-    // optional peers, the same evidence prior re-baselines used to rule out a foreign-dependency
-    // leak. Combined with the unchanged 200,000 B root-registration allowance, the new ceiling
-    // leaves ~2.8% headroom over the measured bundle.
-    //
-    // The root fixture measured 3,931,759 B (3839.6 KiB) across the same 268 registrations,
-    // with no eager optional peer. Bounded data alternatives, nonfatal feature
-    // warnings, transcript hardening, and layout/accessibility repairs raise the exact packed
-    // measurement to 3849.1 KiB without introducing a peer or registration. The named 10,000 B
-    // allowance left roughly 3.5 KiB of headroom for that implementation growth without relaxing
-    // any granular consumer budget. The interaction, accessibility, and media contracts add their
-    // documented implementation weight
-    // without introducing a registration or optional peer; the packed measurement is now
-    // 3858.5 KiB. Its separately named 10,000 B allowance raises this aggregate ceiling to
-    // 3862.3 KiB, retaining about 3.8 KiB of headroom while the granular consumer budgets remain
-    // unchanged.
-    //
-    // The measurement then went the other way for the first time in this entry's history. Stripping
-    // CSS comments from the emitted `css` templates (see `v10RemediationSweepAllowanceBytes`) took
-    // the bundle from 4633.0 KiB to 4178.8 KiB raw / 948.4 KiB gzip across the same 7 output files
-    // and 1073 eager modules, with zero eager and zero physically bundled optional peers. That term
-    // is now 0 and every other term is unchanged, so the ceiling was 4,685,000 B (4575.2 KiB)
-    // against a 4178.8 KiB measurement. The 21.0.0 programme term then raises it to 4,805,000 B
-    // (4692.4 KiB) against a 4676.8 KiB measurement, and the 21.1.0 term to 4,822,000 B (4709.0 KiB)
-    // against a 4693.0 KiB measurement, and the 21.2.0 alias term to 4,869,000 B (4754.9 KiB) against
-    // a 4739.0 KiB measurement.
+    // Measures the entire non-optional registration graph from `all.js`; the bare package root
+    // has its separate tree-shaking canary below. The reviewed raw sum includes every emitted file.
     maxRawBytes:
-      coreRawBudget.establishedBaselineBytes +
-      coreRawBudget.stableRootRegistrationAllowanceBytes +
-      coreRawBudget.crossComponentContractAllowanceBytes +
-      coreRawBudget.boundedDataResilienceAllowanceBytes +
-      coreRawBudget.interactionAccessibilityAllowanceBytes +
-      coreRawBudget.accessibilityStyleCorrectionAllowanceBytes +
-      coreRawBudget.featureCapabilityAllowanceBytes +
-      coreRawBudget.overlayHydrationContractAllowanceBytes +
-      coreRawBudget.crossFamilyRemediationSweepAllowanceBytes +
-      coreRawBudget.devModeDiagnosticsAllowanceBytes +
-      coreRawBudget.publicContractV10AllowanceBytes +
-      coreRawBudget.v10RemediationSweepAllowanceBytes +
-      coreRawBudget.shadcnV21ProgrammeAllowanceBytes +
-      coreRawBudget.v211ReleaseAllowanceBytes +
-      coreRawBudget.v212AliasHarmonizationAllowanceBytes,
+      coreRawBudget.reviewedV24MeasurementBytes +
+      coreRawBudget.selectedRegressionHeadroomBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

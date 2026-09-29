@@ -17,54 +17,25 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
-test('models the raw core ceiling as the established baseline plus capability allowances', () => {
+test('caps the packed core raw sum at the reviewed v24 measurement plus selected headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
-  assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable named budget model');
+  assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
   const terms = Object.fromEntries(
     [...block.groups.body.matchAll(/^\s*(?<name>[A-Za-z][A-Za-z0-9]*):\s*(?<value>[\d_]+),$/gmu)]
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
-
   assert.deepEqual(terms, {
-    establishedBaselineBytes: 3_700_000,
-    stableRootRegistrationAllowanceBytes: 200_000,
-    crossComponentContractAllowanceBytes: 35_000,
-    boundedDataResilienceAllowanceBytes: 10_000,
-    interactionAccessibilityAllowanceBytes: 10_000,
-    accessibilityStyleCorrectionAllowanceBytes: 25_000,
-    featureCapabilityAllowanceBytes: 40_000,
-    overlayHydrationContractAllowanceBytes: 25_000,
-    crossFamilyRemediationSweepAllowanceBytes: 610_000,
-    devModeDiagnosticsAllowanceBytes: 20_000,
-    publicContractV10AllowanceBytes: 10_000,
-    v10RemediationSweepAllowanceBytes: 0,
-    shadcnV21ProgrammeAllowanceBytes: 120_000,
-    v211ReleaseAllowanceBytes: 17_000,
-    v212AliasHarmonizationAllowanceBytes: 47_000,
+    reviewedV24MeasurementBytes: 4_834_973,
+    selectedRegressionHeadroomBytes: 16_000,
   });
-  assert.equal(
-      terms.establishedBaselineBytes +
-      terms.stableRootRegistrationAllowanceBytes +
-      terms.crossComponentContractAllowanceBytes +
-      terms.boundedDataResilienceAllowanceBytes +
-      terms.interactionAccessibilityAllowanceBytes +
-      terms.accessibilityStyleCorrectionAllowanceBytes +
-      terms.featureCapabilityAllowanceBytes +
-      terms.overlayHydrationContractAllowanceBytes +
-      terms.crossFamilyRemediationSweepAllowanceBytes +
-      terms.devModeDiagnosticsAllowanceBytes +
-      terms.publicContractV10AllowanceBytes +
-      terms.v10RemediationSweepAllowanceBytes +
-      terms.shadcnV21ProgrammeAllowanceBytes +
-      terms.v211ReleaseAllowanceBytes +
-      terms.v212AliasHarmonizationAllowanceBytes,
-    4_869_000,
-  );
+  const ceiling = terms.reviewedV24MeasurementBytes + terms.selectedRegressionHeadroomBytes;
+  assert.equal(ceiling, 4_850_973);
+  assert.ok(ceiling < 4_869_000, 'the v24 core ceiling must tighten the prior allowance');
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*\+\s*coreRawBudget\.publicContractV10AllowanceBytes\s*\+\s*coreRawBudget\.v10RemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.shadcnV21ProgrammeAllowanceBytes\s*\+\s*coreRawBudget\.v211ReleaseAllowanceBytes\s*\+\s*coreRawBudget\.v212AliasHarmonizationAllowanceBytes\s*,/u,
-    'the core bundle entry must use every named term instead of a second unexplained ceiling',
+    /maxRawBytes:\s*coreRawBudget\.reviewedV24MeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
+    'the core bundle entry must use the exact reviewed measurement and selected headroom',
   );
 });
 
