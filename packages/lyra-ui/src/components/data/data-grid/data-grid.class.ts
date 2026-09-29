@@ -3314,6 +3314,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private measureRenderedItems(): void {
     const rowHeightChanged = this.recordMeasurementRowHeight();
     if (rowHeightChanged) this.invalidateRowMeasurements();
+    const estimate = this.measurementRowHeight ?? this.resolvedRowHeight;
     const grouped = new Map<string, HTMLElement[]>();
     this.renderRoot
       .querySelectorAll<HTMLElement>(
@@ -3353,7 +3354,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       }
       if (!measurable || !Number.isFinite(height) || height <= 0) continue;
       const previous = this.measuredItemHeights.get(key);
-      const estimate = this.resolvedRowHeight;
       // A one-pixel row divider is not content height. Keeping that fixed border out of the cache
       // preserves the authored estimate for ordinary one-line rows while still capturing real
       // wrapping/detail growth.

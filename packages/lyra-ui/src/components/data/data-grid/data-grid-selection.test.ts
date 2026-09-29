@@ -1352,7 +1352,7 @@ it("bounds deep and cyclic public tree models without rejecting the update", asy
   // A bounded view must not rebuild the whole source tree for each expanded child.
   expect(childReads, 'bounded tree child lookups across the initial updates').to.be.below(10_000);
   expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.at.most(65);
-  expect(element.shadowRoot!.querySelector('[part="tree-limit"]')).to.exist;
+  expect(element.shadowRoot!.querySelector('[part="tree-limit"]') !== null).to.be.true;
   expect(
     element.shadowRoot!.querySelector('[part="table"]')!.getAttribute(
       "data-tree-truncated"

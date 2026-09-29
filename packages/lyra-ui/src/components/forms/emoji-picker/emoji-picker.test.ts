@@ -1540,7 +1540,10 @@ describe('emoji interaction-state cssprops', () => {
     );
     // A non-active, non-hovered emoji keeps its transparent resting background.
     const inactive = el.shadowRoot!.querySelector('[part="emoji"]:not([data-active])') as HTMLElement;
-    expect(getComputedStyle(inactive).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    await waitUntil(
+      () => getComputedStyle(inactive).backgroundColor === 'rgba(0, 0, 0, 0)',
+      'inactive emoji background never settled to transparent',
+    );
   });
 
   it('is accessible with the active prop themed', async () => {

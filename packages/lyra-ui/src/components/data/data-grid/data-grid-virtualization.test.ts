@@ -1119,6 +1119,54 @@ it('invalidates offscreen measured heights when row-height metrics change', asyn
   expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
 });
 
+it('keeps CSS-math row-height probe work bounded as rendered rows grow', async () => {
+  const countProbes = async (count: number): Promise<number> => {
+    const data = Array.from({ length: count }, (_value, index) => ({
+      id: index,
+      name: `Person ${index}`,
+      team: 'Compiler',
+      score: index,
+    }));
+    const element = await dataGrid<Person>(html`
+      <lr-data-grid
+        label="CSS math probe count"
+        row-key="id"
+        style="--row-height: max(calc(2em), 24px)"
+        .columns=${columns}
+        .data=${data}
+      ></lr-data-grid>
+    `);
+    const state = measurementAccess(element);
+    const root = element.shadowRoot!;
+    const observer = new MutationObserver(() => {});
+    observer.observe(root, { childList: true });
+    let records: MutationRecord[];
+    try {
+      expect(
+        root.querySelectorAll('[data-virtual-item-key]').length,
+        `rendered rows for ${count}-row fixture`,
+      ).to.equal(count);
+      state.measureRenderedItems();
+      records = observer.takeRecords();
+    } finally {
+      observer.disconnect();
+    }
+    return records
+      .flatMap((record) => Array.from(record.addedNodes))
+      .filter(
+        (node): node is HTMLSpanElement =>
+          node instanceof HTMLSpanElement &&
+          node.getAttribute('aria-hidden') === 'true' &&
+          node.style.translate !== '',
+      ).length;
+  };
+
+  const smallProbeCount = await countProbes(3);
+  const largeProbeCount = await countProbes(20);
+  expect(smallProbeCount).to.be.greaterThan(0);
+  expect(largeProbeCount - smallProbeCount).to.equal(0);
+});
+
 it('updates cached virtual-row metrics from CSS math token heights', async () => {
   const element = await dataGrid<Person>(html`
     <lr-data-grid label="Computed row metrics" style="--row-height: 20px" .columns=${columns} .data=${rows}></lr-data-grid>
