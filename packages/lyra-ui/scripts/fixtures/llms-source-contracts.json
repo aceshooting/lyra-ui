@@ -2194,7 +2194,7 @@
       "module": "src/components/agent-tools/task-list/task-list.class.ts",
       "exportName": "TaskItem",
       "kind": "interface",
-      "fingerprint": "31ea7bc850d010470fff",
+      "fingerprint": "a0be99ded850c848d002",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2729,7 +2729,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "LyraSpan",
       "kind": "interface",
-      "fingerprint": "742435d1e8b276353638",
+      "fingerprint": "653b7428158364111020",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-trace/agent-trace.class.ts",
@@ -2759,7 +2759,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "LyraSpanProjection",
       "kind": "interface",
-      "fingerprint": "3e98685e0655d2a19ad4",
+      "fingerprint": "2c8ac86395e115a1dddf",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2805,7 +2805,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpans",
       "kind": "function",
-      "fingerprint": "77369b3541cf1bd3faa4",
+      "fingerprint": "f1966fa09ea52d2b443f",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2828,7 +2828,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpanStatus",
       "kind": "function",
-      "fingerprint": "25dd8085569bfb5691c8",
+      "fingerprint": "1008d961686b9133cfa6",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -3495,7 +3495,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartInstance",
       "kind": "interface",
-      "fingerprint": "7a3d3c92e57d0b266d4e",
+      "fingerprint": "004ac6fa465a08ef0d3d",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -14577,7 +14577,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "c2c7d556a3a8a17e721c",
+      "fingerprint": "96473e53ad410eed1c40",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15508,7 +15508,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "a259a8a547146d1215dd",
+      "fingerprint": "cbf152b232f49a054399",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15649,7 +15649,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "08c4b0ed76a1e1811e09",
+      "fingerprint": "14852aa3b04d991097e6",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15739,7 +15739,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "activateOverlay",
       "kind": "function",
-      "fingerprint": "8ae162f5182227c7eb3f",
+      "fingerprint": "ad95b064a272cee0d1b0",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"
@@ -15756,7 +15756,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "OverlayActivationOptions",
       "kind": "interface",
-      "fingerprint": "ca72d38bb3fb9d1db876",
+      "fingerprint": "322a6888ddb29e5ee4a8",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"
@@ -16254,7 +16254,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "ae230a53fb9684047dd7",
+      "fingerprint": "f663b92cb3aa25b92ed5",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16270,7 +16270,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "b22b78b2d22ebacf4f9b",
+      "fingerprint": "a39728c11c65e4efd1d6",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16286,7 +16286,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "31da784117c67b24d6b7",
+      "fingerprint": "2d1c3d912d906fe8b954",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16935,7 +16935,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "8aa4e23ea989c19fbb7c",
+      "fingerprint": "30169bc78842b9aa76b5",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16952,7 +16952,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "22172325e391ce6a7e14",
+      "fingerprint": "7f006b2d46888668fa48",
       "routes": [
         "src/vue.ts"
       ],
@@ -17333,7 +17333,7 @@
       "module": "src/components/retrieval/research-progress/research-progress.class.ts",
       "exportName": "ResearchStep",
       "kind": "interface",
-      "fingerprint": "41985c4ac8dd11e041b6",
+      "fingerprint": "ed1aaf0ed34c123eaac6",
       "routes": [
         "src/all.ts",
         "src/components/lr-research-progress.ts",
@@ -17379,7 +17379,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "48cb25e60a3dce08846d",
+      "fingerprint": "e5e40d1d248cda8f7cc5",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17404,7 +17404,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "eb80248953152e418202",
+      "fingerprint": "8839e349b269ac074fc8",
       "routes": [
         "src/localization.ts"
       ],

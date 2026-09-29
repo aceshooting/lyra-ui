@@ -446,6 +446,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.nativeModal.prepare();
       this.requestUpdate();
       this.activateOverlay();
+      // The shadow panel survives a same-document reparent, so restore focus before the pending
+      // Lit update. Waiting for updateComplete leaves focus on <body> for a microtask turn.
+      this.overlay?.focusInitial();
       void this.updateComplete.then(() => {
         if (!this.open || !this.isConnected) return;
         this.nativeModal.show();

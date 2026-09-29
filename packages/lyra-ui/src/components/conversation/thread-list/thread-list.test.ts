@@ -4525,7 +4525,11 @@ describe("row-action overlays escape the virtual viewport", () => {
   it("passes axe with a promoted row menu open", async () => {
     const { el } = await mountList();
     const { dropdown } = await openRowMenu(el, "r0");
+    const row = dataRow(el, "r0");
+    const timestamp = row.shadowRoot!.querySelector<HTMLElement>('[part="timestamp"]')!;
     await expect(el).to.be.accessible();
+    row.style.setProperty("--lr-color-text", "rgb(0, 0, 0)");
+    expect(getComputedStyle(timestamp).color).to.equal("rgb(0, 0, 0)");
     await dropdown.hide({ focusTrigger: false });
   });
 

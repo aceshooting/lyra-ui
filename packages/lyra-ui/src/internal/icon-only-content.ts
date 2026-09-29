@@ -14,7 +14,7 @@ import { tag } from './prefix.js';
  * Returns `false` with no window (SSR): nothing is painted there, so the client's first update is
  * the authority and guessing would make the server and client disagree.
  */
-export function isVisuallyHidden(element: Element): boolean {
+function isVisuallyHidden(element: Element): boolean {
   if (element.localName === tag('visually-hidden')) return true;
   const view = element.ownerDocument.defaultView;
   if (!view) return false;

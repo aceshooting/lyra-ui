@@ -9,6 +9,7 @@ import {
   setLyraLocale,
   subscribeLyraLocale,
 } from './localization-runtime.js';
+import { LYRA_DEFAULT_STRINGS } from './localization.js';
 
 it('loads the matching parent family before a sparse regional slice and lazily completes both catalogs without selecting either', async () => {
   const active = getLyraLocale();
@@ -25,7 +26,7 @@ it('loads the matching parent family before a sparse regional slice and lazily c
   expect(loadLyraLocale('DE-CH') === first).to.equal(true);
   await first;
   expect(getLyraLocale()).to.equal(active);
-  expect(getRegisteredLyraLocaleKeys('de').length).to.equal(1384);
+  expect(getRegisteredLyraLocaleKeys('de').length).to.equal(Object.keys(LYRA_DEFAULT_STRINGS).length);
   expect(getRegisteredLyraLocaleKeys('de-CH').length).to.equal(34);
   expect(resolveLyraString(host, 'close')).to.equal('Schliessen');
   expect(getRegisteredLyraLocales().includes('de-AT')).to.equal(false);

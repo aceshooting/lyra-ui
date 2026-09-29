@@ -91,9 +91,18 @@ export const styles = css`
     );
   }
 
+  /* The thread-list row retains this tint while its actions menu is open. The tint's contrast is
+     too close to quiet text for the timestamp, so promote secondary text for the same held state. */
+  :host(:hover) [part='excerpt'],
+  :host(:hover) [part='timestamp'],
+  [part~='base-menu-open'] [part='excerpt'],
+  [part~='base-menu-open'] [part='timestamp'] {
+    color: var(--lr-color-text);
+  }
   /* text-quiet on brand-quiet is ~4.25:1, under the WCAG AA 4.5:1 floor for normal-size text,
      though it passes against the plain non-active background. Same fix as lr-attachment-chip's
-     [part='size'] and lr-chat-message's [part='footer']: full-strength text color once active. */
+     [part='size'] and lr-chat-message's [part='footer']: full-strength text color once active.
+     Keep this after hover/menu-open so the explicit active-color hook retains precedence. */
   :host([active]) [part='excerpt'],
   :host([active]) [part='timestamp'] {
     color: var(--lr-conversation-item-active-color, var(--lr-color-text));

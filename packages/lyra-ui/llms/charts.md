@@ -1650,6 +1650,8 @@ These named interfaces and helper signatures are available to typed integrations
     setDatasetVisibility(index: number, visible: boolean): void;
     getDataVisibility?(index: number): boolean;
     toggleDataVisibility?(index: number): void;
+    getZoomedScaleBounds?(): Record<string, { min: number; max: number } | undefined>;
+    zoomScale?(id: string, range: { min: number; max: number }, mode?: string): void;
   }`
   Import: `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`.
   `LyraChartPlugin {

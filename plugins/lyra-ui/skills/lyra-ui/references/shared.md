@@ -3375,7 +3375,7 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   a visible exit animation can hold the lock until that animation actually finishes rather than the
   instant it starts closing; it is ignored (returns `undefined`) when the entry never requested
   `lockScroll`.
-  `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `modal`, `lockScroll`,
+  `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `auxiliaryRoots`, `modal`, `lockScroll`,
   `suspendWhenUnrendered`, `onEscape`, `onBackdrop`, `preferredInitialFocus`,
   `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, and `onTab`. `OverlayHandle` exposes
   `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`,
@@ -3386,8 +3386,10 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   `deactivate({ restoreFocus: false })` on the topmost entry hands focus to the overlay now on top
   only when the closing panel held focus or that overlay traps focus (a modal); focus that sat
   elsewhere, such as a field the user moved to while a hover panel was open, stays put.
+  `auxiliaryRoots` resolves additional component-owned roots to include in a modal's interactive
+  allowance and focus traversal; initial focus still targets the primary panel.
   Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
-null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
+null; modalRoot?: () => HTMLElement | null; auxiliaryRoots?: () => readonly HTMLElement[]; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
 restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
 void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {

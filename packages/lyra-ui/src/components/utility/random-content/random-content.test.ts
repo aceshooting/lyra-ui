@@ -1535,7 +1535,7 @@ it('keeps a rotated-out candidate hidden against an author display rule', async 
 
 it('renders no next button by default and a localized icon action with with-next', async () => {
   const plain = (await fixture(html`<lr-random-content><div>One</div><div>Two</div></lr-random-content>`)) as LyraRandomContent;
-  expect(plain.shadowRoot!.querySelector('[part="next-button"]')).to.equal(null);
+  expect(plain.shadowRoot!.querySelector('[part="next-button"]') === null).to.equal(true);
 
   const el = (await fixture(html`
     <lr-random-content with-next .strings=${{ randomContentNext: 'Another one' }}>
@@ -1546,7 +1546,7 @@ it('renders no next button by default and a localized icon action with with-next
   const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
   expect(button.getAttribute('aria-label')).to.equal('Another one');
   expect(button.querySelector('lr-icon')?.getAttribute('name')).to.equal('refresh');
-  expect(el.shadowRoot!.querySelector('[part="pause-button"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="pause-button"]') === null).to.equal(true);
   expect(button.getBoundingClientRect().height).to.be.greaterThan(0);
 });
 
