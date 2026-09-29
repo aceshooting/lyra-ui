@@ -27,13 +27,6 @@ import {
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-assert.equal(
-  deriveExplicitUtilityExports()['./utilities/localization.js'],
-  undefined,
-  'the retired localization utility route must not be generated',
-);
-
-
 const inventory = {
   schemaVersion: 1,
   components: [
@@ -234,19 +227,6 @@ function sourceExportContract(sourceModule) {
     readFileSync(join(packageDir, sourceModule), 'utf8'),
     sourceModule
   );
-}
-
-// Retiring a type removes its source export, while the canonical contract remains available.
-for (const [source, retired, canonical] of [
-  ['src/components/retrieval/graph/graph-model.ts', 'LyraGraphLink', 'LyraGraphEdge'],
-  ['src/components/retrieval/graph/graph.class.ts', 'LyraGraphLink', 'LyraGraphEdge'],
-  ['src/components/viewers/document-viewer/registry.ts', 'DocumentFile', 'LyraDocumentFile'],
-  ['src/components/viewers/document-viewer/registry.ts', 'DocumentRendererDefinition', 'LyraDocumentRendererDefinition'],
-  ['src/lyra.ts', 'LyraGeojsonViewEventMap', 'LyraGeoJsonViewerEventMap'],
-]) {
-  const contract = sourceExportContract(source);
-  assert.ok(!contract.types.includes(retired), `${source} must not export ${retired}`);
-  assert.ok(contract.types.includes(canonical), `${source} must retain ${canonical}`);
 }
 
 assert.deepEqual(
@@ -641,7 +621,7 @@ try {
   ]);
   const routes = generatePackageExports(fixtureRoot);
   assert.ok(routes.componentRoutes.includes('./components/lr-alpha.js'));
-  assert.ok(!routes.utilityRoutes.includes('./utilities/localization.js'));
+  assert.ok(routes.utilityRoutes.includes('./utilities/localization.js'));
   assert.deepEqual(checkPackageExports(fixtureRoot).findings, []);
 
   const first = readFileSync(join(fixtureRoot, 'package.json'), 'utf8');
@@ -665,7 +645,7 @@ try {
   );
   assert.equal(
     pkg.exports['./utilities/localization.js'],
-    undefined
+    './dist/utilities/localization.js'
   );
   assert.equal(pkg.exports['./ai'], './dist/ai/index.js');
   assert.equal(

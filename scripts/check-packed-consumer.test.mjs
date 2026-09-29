@@ -278,9 +278,3 @@ test('packed migration inventory requires the complete split runtime and rejects
     await assert.rejects(check([...files, extra]), /Packed migration runtime must contain only/u, extra);
   }
 });
-
-test('declares Lit directly for consumer-authored migration templates', () => {
-  assert.match(checkerSource, /lit:\s*uiPackageJson\.dependencies\.lit/u);
-  assert.match(checkerSource, /const uiTarball = await pack\(uiPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
-  assert.match(checkerSource, /const flagsTarball = await pack\(flagsPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
-});

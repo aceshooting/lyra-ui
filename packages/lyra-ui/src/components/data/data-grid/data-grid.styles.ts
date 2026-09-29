@@ -164,12 +164,15 @@ export const styles = css`
   [part="filter-panel-clear"]:hover {
     background: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
   /* Pressed-fill counterpart to the :hover rule above, reusing the same
@@ -179,12 +182,15 @@ export const styles = css`
   [part="filter-panel-clear"]:active {
     background: var(
       --lr-data-grid-control-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
   [part="search-clear"]:focus-visible,
@@ -197,12 +203,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 
@@ -210,12 +219,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-control-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
 
@@ -252,12 +264,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 
@@ -265,12 +280,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-control-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
 
@@ -348,24 +366,30 @@ export const styles = css`
   [part~="header-cell"][data-sortable]:hover {
     background: var(
       --lr-data-grid-sortable-header-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-sortable-header-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 
   [part~="header-cell"][data-sortable]:active {
     background: var(
       --lr-data-grid-sortable-header-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-sortable-header-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
 
@@ -426,12 +450,15 @@ export const styles = css`
   [part~="row"]:active {
     background: var(
       --lr-data-grid-row-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-row-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
 
@@ -536,12 +563,15 @@ export const styles = css`
   [part="resize-handle"]:hover:not(:where([data-resizing])) {
     background: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 
@@ -549,12 +579,15 @@ export const styles = css`
   [part="resize-handle"]:where([data-resizing]) {
     background: var(
       --lr-data-grid-control-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-active),
           transparent
         )
+      )
     );
   }
 
@@ -702,12 +735,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
+      var(
+        --lr-data-grid-control-hover-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 
@@ -715,12 +751,15 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-page-size-active-bg,
-      color-mix(
+      var(
+        --lr-data-grid-page-size-active-background,
+        color-mix(
           in srgb,
           var(--accent-color, var(--_lr-data-grid-accent-color))
             var(--lr-color-mix-hover),
           transparent
         )
+      )
     );
   }
 

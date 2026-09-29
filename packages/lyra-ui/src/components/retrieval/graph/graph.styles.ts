@@ -77,7 +77,7 @@ export const styles = css`
     display: none;
   }
   [part="link"] {
-    stroke: var(--lr-graph-edge-color, var(--lr-color-border));
+    stroke: var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border)));
     fill: none;
     cursor: pointer;
   }
@@ -112,14 +112,14 @@ export const styles = css`
   [part="link"]:hover {
     stroke: color-mix(
       in oklab,
-      var(--lr-graph-edge-color, var(--lr-color-border)),
+      var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
   [part="link"]:active {
     stroke: color-mix(
       in oklab,
-      var(--lr-graph-edge-color, var(--lr-color-border)),
+      var(--lr-graph-edge-color, var(--lr-link-color, var(--lr-color-border))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
@@ -136,23 +136,23 @@ export const styles = css`
   }
   [part="node"] {
     /* --lr-graph-node-fill is set inline per node (see graph.ts) from LyraGraphNode.color, falling
-       back to the brand token. An inline style declaration
+       back to the deprecated --lr-node-fill and then the brand token. An inline style declaration
        always wins the cascade over this selector, so fill has to be set here, not via the
        presentation attribute, for a per-node color to apply. */
-    fill: var(--lr-graph-node-fill, var(--lr-color-brand));
+    fill: var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand)));
     cursor: pointer;
   }
   [part="node"]:hover {
     fill: color-mix(
       in oklab,
-      var(--lr-graph-node-fill, var(--lr-color-brand)),
+      var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand))),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
   }
   [part="node"]:active {
     fill: color-mix(
       in oklab,
-      var(--lr-graph-node-fill, var(--lr-color-brand)),
+      var(--lr-graph-node-fill, var(--lr-node-fill, var(--lr-color-brand))),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

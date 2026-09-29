@@ -476,16 +476,3 @@ export const BoundaryAlignedAxisLabels: Story = {
   },
 };
 
-
-export const NamedLegendAndTable: Story = {
-  parameters: {
-    docs: { description: { story: 'The native host aria-label names the SVG. with-legend opts into its static legend, with-data-table reveals the numbers, and without-zero-baseline lets the value axis follow their range.' } },
-  },
-  render: () => html`
-    <lr-lite-chart with-legend with-data-table without-zero-baseline
-      aria-label="Quarterly revenue" height="12rem" style="inline-size:24rem;max-inline-size:100%"
-      .labels=${['Q1', 'Q2', 'Q3']}
-      .datasets=${[{ label: 'Revenue', data: [90, 95, 100] }]}
-    ></lr-lite-chart>
-  `,
-};

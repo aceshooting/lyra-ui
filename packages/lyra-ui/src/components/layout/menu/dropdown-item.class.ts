@@ -31,7 +31,10 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * @event lr-menu-item-change-request - Cancelable proposal shared with `<lr-menu-item>`: a
  * `type="checkbox"` dropdown item was activated, or an unchecked `type="radio"` one was.
  * `detail: { value, checked }` carries the item's `value` and the proposed next `checked` value;
- * prevent it to keep the current `checked` value.
+ * prevent it to keep the current `checked` value. Fires before `lr-menu-item-change`.
+ * @event lr-menu-item-change - Deprecated cancelable alias of `lr-menu-item-change-request` on a
+ * dropdown item, fired right after it with an equal `detail: { value, checked }`; either event may
+ * veto. Removal not before 23.0.0.
  * @event focus - Native, non-bubbling, composed, non-cancelable `FocusEvent` emitted by the
  * focusable host when it gains focus.
  * @event blur - Native, non-bubbling, composed, non-cancelable `FocusEvent` emitted by the
@@ -48,6 +51,8 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * @csspart suffix - Shoelace-compatible trailing-content wrapper.
  * @csspart spinner - Loading spinner.
  * @csspart spinner-base - Second name for the loading spinner node.
+ * @csspart spinner__base - Deprecated alias of `spinner-base` on the same node; removal not before
+ *   23.0.0.
  * @csspart submenu-icon - Submenu chevron wrapper.
  * @csspart submenu - Submenu panel/wrapper.
  * @cssprop --lr-overlay-surface - Shared floating-surface fill. Advertised here because this tag
@@ -217,9 +222,9 @@ export class LyraDropdownItem extends LyraMenuItem {
     this.syncSubmenuAttributes(this.submenuOpen);
   }
 
-  /** @internal Adds the mapped `spinner-base` name. */
+  /** @internal Adds the hyphenated `spinner-base` name beside the deprecated `spinner__base`. */
   protected override get spinnerParts(): string {
-    return 'spinner spinner-base';
+    return 'spinner spinner-base spinner__base';
   }
 }
 

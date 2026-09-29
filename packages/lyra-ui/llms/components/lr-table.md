@@ -9,7 +9,12 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated attribute** `accessible-label` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
 - **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated event** `lr-row-click` since `21.1.0`; use event `addEventListener('lr-row-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecated property** `emptyCompact` / `empty-compact` since `21.1.0`; use property `empty-size="s" for compact, empty-size="m" for spacious (remove it to keep each branch default)`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `hideColumnsLabel` / `hide-columns-label` since `21.1.0`; use property `columns-hide-label`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `noColumnsDescription` / `no-columns-description` since `21.1.0`; use property `empty-columns-description`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `noColumnsHeading` / `no-columns-heading` since `21.1.0`; use property `empty-columns-heading`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 46 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -379,21 +384,27 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
   no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
-  including `''`, renders verbatim.
+  including `''`, renders verbatim. Deprecated alias: `no-columns-heading`/`noColumnsHeading` (use
+  `empty-columns-heading`; removed in 23.0.0)
 - `emptyColumnsDescription: string = ''` (attribute `empty-columns-description`) — description of
-  the built-in no-columns state.
+  the built-in no-columns state. Deprecated alias: `no-columns-description`/`noColumnsDescription`
+  (use `empty-columns-description`; removed in 23.0.0)
 - `emptySize?: LyraSize` (attribute `empty-size`) — size of the built-in `[part='empty']` state on
   the shared size ladder: `s` and the steps below it render it compact, `m` and above spacious.
   Leave it unset (the default) to keep each empty branch's own built-in default — the two
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
-  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
+  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled. Deprecated
+  alias: `empty-compact`/`emptyCompact` (use `empty-size="s"` for compact or `empty-size="m"` for
+  spacious; removed in 23.0.0) — its presence still renders like `empty-size="s"`,
+  `empty-compact="false"` like `empty-size="m"`, and removing it restores each branch's default
 - `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
   while `priority`-hidden columns are hidden; omission renders localized
   `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
-
+  Deprecated alias: `hide-columns-label`/`hideColumnsLabel` (use `columns-hide-label`; removed in
+  23.0.0)
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
   Priority-hidden columns hide their header, body, and footer cells together at the same measured
@@ -462,7 +473,9 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
-(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more` (fired on the "load more" button),
+(a row was activated by pointer or Enter/Space, `detail: { row }`; its deprecated alias
+`lr-row-click` still fires right after it from the same activation with an equal detail — use
+`lr-row-activate`; removed in 23.0.0), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the

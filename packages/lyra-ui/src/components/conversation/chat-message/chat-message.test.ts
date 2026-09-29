@@ -5,6 +5,7 @@ import "../../utility/live-region/live-region.js";
 import "../markdown/markdown-core.js";
 import type { LyraChatMessage } from "./chat-message.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 function liveRegionText(el: LyraChatMessage): string {
@@ -1050,6 +1051,95 @@ describe("attachments-placement", () => {
       html`<lr-chat-message attachments-placement="before"></lr-chat-message>`
     )) as LyraChatMessage;
     expect(el.attachmentsPlacement).to.equal("before");
+  });
+});
+
+describe("deprecated -position aliases", () => {
+  it('actions-position="outside" equals actions-placement="outside" and warns once', async () => {
+    const usage = { tag: "lr-chat-message", kind: "property", name: "actionsPosition" } as const;
+    let el!: LyraChatMessage;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(
+        html`<lr-chat-message actions-position="outside"
+          ><button slot="actions">Copy</button>hi</lr-chat-message
+        >`
+      )) as LyraChatMessage;
+      await fixture(html`<lr-chat-message actions-position="outside">hi</lr-chat-message>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-chat-message:property:actionsPosition",
+    ]);
+    expect(el.actionsPlacement).to.equal("outside");
+    expect(el.actionsPosition).to.equal("outside");
+    expect(el.getAttribute("actions-placement")).to.equal("outside");
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    expect(bubble.contains(actions)).to.be.false;
+    expect(getComputedStyle(actions).marginBlockStart).to.not.equal("0px");
+  });
+
+  it('attachments-position="before" equals attachments-placement="before" and warns once', async () => {
+    const usage = { tag: "lr-chat-message", kind: "property", name: "attachmentsPosition" } as const;
+    let el!: LyraChatMessage;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(html`
+        <lr-chat-message attachments-position="before"
+          ><span slot="attachments">file.png</span>Hello</lr-chat-message
+        >
+      `)) as LyraChatMessage;
+      el.attachmentsPosition = "after";
+      await el.updateComplete;
+      el.attachmentsPosition = "before";
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.attachmentsPlacement).to.equal("before");
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
+    const parts = Array.from(bubble.children).map((c) => c.getAttribute("part"));
+    expect(parts.indexOf("attachments")).to.be.lessThan(parts.indexOf("body"));
+  });
+
+  it("lets the last write win when both spellings are authored", async () => {
+    let canonicalLast!: LyraChatMessage;
+    let aliasLast!: LyraChatMessage;
+    await captureDeprecationWarnings(
+      [
+        { tag: "lr-chat-message", kind: "property", name: "actionsPosition" },
+        { tag: "lr-chat-message", kind: "property", name: "attachmentsPosition" },
+      ],
+      async () => {
+        canonicalLast = (await fixture(html`
+          <lr-chat-message
+            actions-position="outside"
+            actions-placement="inside"
+            attachments-position="before"
+            attachments-placement="after"
+          >hi</lr-chat-message>
+        `)) as LyraChatMessage;
+        aliasLast = (await fixture(html`
+          <lr-chat-message
+            actions-placement="inside"
+            actions-position="outside"
+            attachments-placement="after"
+            attachments-position="before"
+          >hi</lr-chat-message>
+        `)) as LyraChatMessage;
+      }
+    );
+    expect(canonicalLast.actionsPlacement).to.equal("inside");
+    expect(canonicalLast.attachmentsPlacement).to.equal("after");
+    expect(aliasLast.actionsPlacement).to.equal("outside");
+    expect(aliasLast.attachmentsPlacement).to.equal("before");
+  });
+
+  it("syncs both aliases back from the canonical -placement properties", async () => {
+    const el = (await fixture(html`<lr-chat-message>hi</lr-chat-message>`)) as LyraChatMessage;
+    el.actionsPlacement = "outside";
+    el.attachmentsPlacement = "before";
+    await el.updateComplete;
+    expect(el.actionsPosition).to.equal("outside");
+    expect(el.getAttribute("actions-position")).to.equal("outside");
+    expect(el.attachmentsPosition).to.equal("before");
   });
 });
 

@@ -7,6 +7,7 @@ import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/number
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './span-waterfall.styles.js';
@@ -15,6 +16,7 @@ import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../t
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from '../trace-tree/span.js';
 
@@ -176,6 +178,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideAxis: 'withoutAxis',
+  };
+
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
    *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
    *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
@@ -189,6 +195,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
   /** Hides the time-ruler row (`[part="axis"]`). */
   @property({ type: Boolean, attribute: 'without-axis' }) withoutAxis = false;
+  /** Hides the time-ruler row (`[part="axis"]`).
+   *  @deprecated Use `without-axis`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
   @property() label = '';
 
   private focusedId: string | null = null;

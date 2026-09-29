@@ -3,12 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadVisualStory } from './visual-story-readiness.mjs';
-import { validateVisualQualificationManifest } from './qualification-ledger.mjs';
-import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
 const manifestPath = fileURLToPath(new URL('../visual-baselines/manifest.json', import.meta.url));
-const manifest = assembleVisualManifest(readVisualManifestSources());
-assert.equal(`${JSON.stringify(manifest, null, 2)}\n`, await readFile(manifestPath, 'utf8'));
+const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const runner = await readFile(new URL('./visual-regression.mjs', import.meta.url), 'utf8');
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const componentInventory = JSON.parse(
@@ -49,18 +46,73 @@ const subagentPanelStories = await readFile(
   'utf8',
 );
 
-assert.deepEqual(validateVisualQualificationManifest(manifest, componentInventory), []);
+assert.equal(manifest.schemaVersion, 1);
+assert.ok(Array.isArray(manifest.axes));
+assert.ok(Array.isArray(manifest.stories));
 assert.ok(manifest.stories.length >= 80);
 
 const axes = new Map(manifest.axes.map((axis) => [axis.name, axis]));
+assert.equal(axes.size, manifest.axes.length, 'visual axis names must be unique');
 assert.equal(axes.get('forced-colors')?.emulation?.forcedColors, 'active');
 assert.ok(axes.get('narrow')?.viewport?.width <= 320);
 assert.ok(axes.get('narrow')?.viewport?.height >= 640);
+for (const axis of axes.values()) {
+  assert.ok(
+    ['tracked-baseline', 'evidence-only'].includes(axis.artifactPolicy),
+    `${axis.name} must declare whether its pixels are tracked or ephemeral evidence`,
+  );
+}
 assert.equal(axes.get('forced-colors')?.artifactPolicy, 'evidence-only');
 assert.equal(axes.get('narrow')?.artifactPolicy, 'evidence-only');
 
 const profiles = manifest.coverageProfiles;
-const storyIds = new Set(manifest.stories.map((story) => story.id));
+assert.equal(typeof profiles, 'object');
+for (const [name, profile] of Object.entries(profiles)) {
+  assert.ok(Array.isArray(profile.axes) && profile.axes.length > 0);
+  const covered = new Set(profile.axes);
+  const exempted = new Set(Object.keys(profile.exemptions ?? {}));
+  for (const axis of [...covered, ...exempted]) {
+    assert.ok(axes.has(axis), `coverage profile ${name} names unknown axis ${axis}`);
+  }
+  for (const axis of axes.keys()) {
+    assert.ok(
+      covered.has(axis) || exempted.has(axis),
+      `coverage profile ${name} neither captures nor exempts ${axis}`,
+    );
+  }
+}
+
+const ids = manifest.stories.map((story) => story.id);
+assert.equal(new Set(ids).size, ids.length, 'visual story ids must be unique');
+const storyIds = new Set(ids);
+for (const story of manifest.stories) {
+  assert.ok(profiles[story.profile], `${story.id} names unknown profile ${story.profile}`);
+  if (story.forcedColorsProbe) {
+    assert.ok(
+      ['intrinsic-color', 'swatch-colors', 'chart-encodings'].includes(story.forcedColorsProbe),
+      `${story.id} names unknown forced-colors pixel probe ${story.forcedColorsProbe}`,
+    );
+    assert.ok(
+      profiles[story.profile].axes.includes('forced-colors'),
+      `${story.id}'s painted-pixel probe is never exercised by its profile`,
+    );
+  }
+  if (story.narrowProbe) {
+    assert.equal(story.narrowProbe, 'viewport-fit', `${story.id} names an unknown narrow probe`);
+    assert.ok(
+      profiles[story.profile].axes.includes('narrow'),
+      `${story.id}'s narrow-allocation probe is never exercised by its profile`,
+    );
+  }
+  if (story.comparisonPolicy === 'evidence-only') {
+    assert.ok(
+      typeof story.comparisonReason === 'string' && story.comparisonReason.trim().length > 0,
+      `${story.id}'s evidence-only comparison policy needs a review reason`,
+    );
+  } else {
+    assert.equal(story.comparisonPolicy, undefined, `${story.id} names an unknown comparison policy`);
+  }
+}
 assert.ok(manifest.stories.some((story) => profiles[story.profile].axes.includes('forced-colors')));
 assert.ok(manifest.stories.some((story) => profiles[story.profile].axes.includes('narrow')));
 assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'intrinsic-color'));
@@ -68,6 +120,27 @@ assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'swatch-c
 assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'chart-encodings'));
 assert.ok(manifest.stories.some((story) => story.narrowProbe === 'viewport-fit'));
 assert.ok(manifest.stories.some((story) => story.comparisonPolicy === 'evidence-only'));
+
+const knownTags = new Set(componentInventory.components.map((component) => component.tag));
+const taggedStories = new Set();
+for (const [tag, coveredStoryIds] of Object.entries(manifest.tagCoverage)) {
+  assert.ok(knownTags.has(tag), `visual tag coverage names unknown component ${tag}`);
+  assert.ok(Array.isArray(coveredStoryIds) && coveredStoryIds.length > 0);
+  for (const storyId of coveredStoryIds) {
+    assert.ok(storyIds.has(storyId), `${tag} visual coverage names unknown story ${storyId}`);
+    taggedStories.add(storyId);
+  }
+}
+for (const [storyId, reason] of Object.entries(manifest.untaggedStories ?? {})) {
+  assert.ok(storyIds.has(storyId), `untagged visual exemption names unknown story ${storyId}`);
+  assert.ok(typeof reason === 'string' && reason.trim().length > 0);
+}
+for (const storyId of storyIds) {
+  assert.ok(
+    taggedStories.has(storyId) || manifest.untaggedStories?.[storyId],
+    `${storyId} has neither deterministic tag coverage nor an untagged reason`,
+  );
+}
 
 const task47Canaries = [
   {
@@ -231,6 +304,16 @@ assert.match(messagePartsStories, /export const ContentModeFallback: Story/);
 assert.match(messagePartsStories, /content-mode="unsupported-mode"/);
 assert.equal(storyIds.has('message-parts--content-mode-fallback'), false);
 
+assert.ok(['pending-human-review', 'complete'].includes(manifest.baselineReview.status));
+if (manifest.baselineReview.status === 'pending-human-review') {
+  assert.equal(manifest.baselineReview.reviewer, null);
+  assert.equal(manifest.baselineReview.reviewedAt, null);
+  assert.equal(manifest.provenance.humanVisualReview, false);
+} else {
+  assert.ok(typeof manifest.baselineReview.reviewer === 'string' && manifest.baselineReview.reviewer.length > 0);
+  assert.match(manifest.baselineReview.reviewedAt, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(manifest.provenance.humanVisualReview, true);
+}
 assert.ok(Array.isArray(manifest.baselineReview.knownLimitations));
 assert.ok(manifest.baselineReview.knownLimitations.length > 0);
 assert.equal(manifest.provenance.generator, 'packages/lyra-ui/scripts/visual-regression.mjs');

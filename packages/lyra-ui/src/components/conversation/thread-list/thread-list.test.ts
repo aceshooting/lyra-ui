@@ -11,6 +11,7 @@ import "../../layout/menu/menu.js";
 import "../../layout/menu/menu-item.js";
 import "../../overlays/overlay/dropdown.js";
 import type { LyraThreadList } from "./thread-list.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 import type { LyraConversationItem } from "../conversation-item/conversation-item.class.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import type { LyraDropdown } from "../../overlays/overlay/dropdown.class.js";
@@ -647,6 +648,67 @@ describe("data mode", () => {
     ]);
   });
 
+  it('keeps the deprecated show-archived alias equal to with-archived, warning once', async () => {
+    let el!: LyraThreadList;
+    let withArchivedWhileAliased = false;
+    let archivedRowWhileAliased = false;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-thread-list', kind: 'property', name: 'showArchived' }],
+      async () => {
+        el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            .threads=${threads}
+            show-archived
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        await nextFrame();
+        withArchivedWhileAliased = el.withArchived;
+        archivedRowWhileAliased = el.itemElement('a1') !== null;
+        // The capture restores the dedupe store afterwards, so a later alias write would warn
+        // again outside it; writing here also proves the warning is issued only once.
+        el.showArchived = false;
+        await el.updateComplete;
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      'lyra-deprecated:lr-thread-list:property:showArchived',
+    ]);
+    expect(withArchivedWhileAliased, 'show-archived sets with-archived').to.equal(true);
+    expect(archivedRowWhileAliased, 'show-archived shows the archived row').to.equal(true);
+    expect(el.withArchived, 'writing the alias false clears with-archived').to.equal(false);
+    expect(el.showArchived).to.equal(false);
+  });
+
+  it('syncs show-archived back from with-archived and lets the last write win', async () => {
+    let el!: LyraThreadList;
+    let both!: LyraThreadList;
+    let reversed!: LyraThreadList;
+    await captureDeprecationWarnings(
+      [{ tag: 'lr-thread-list', kind: 'property', name: 'showArchived' }],
+      async () => {
+        el = (await fixture(html`<lr-thread-list></lr-thread-list>`)) as LyraThreadList;
+        both = (await fixture(
+          html`<lr-thread-list with-archived show-archived></lr-thread-list>`
+        )) as LyraThreadList;
+        both.withArchived = false;
+        await both.updateComplete;
+        reversed = (await fixture(
+          html`<lr-thread-list show-archived with-archived></lr-thread-list>`
+        )) as LyraThreadList;
+        reversed.showArchived = false;
+        await reversed.updateComplete;
+      }
+    );
+    el.withArchived = true;
+    await el.updateComplete;
+    expect(el.showArchived).to.equal(true);
+    expect(el.hasAttribute('show-archived')).to.equal(true);
+    expect(both.showArchived, 'the later canonical write wins').to.equal(false);
+    expect(reversed.withArchived, 'the later alias write wins').to.equal(false);
+  });
+
   it("uses the same controlled collapse model for built-in date groups", async () => {
     const el = (await fixture(
       html`<lr-thread-list
@@ -1146,6 +1208,63 @@ describe("data mode", () => {
     await nextFrame();
     row = dataRow(el, "t1");
     expect(row.withoutRename).to.be.true;
+  });
+
+  it('keeps the deprecated renamable="false" alias equal to without-rename, warning once and only for the list', async () => {
+    let el!: LyraThreadList;
+    let both!: LyraThreadList;
+    const warnings = await captureDeprecationWarnings(
+      [
+        { tag: "lr-thread-list", kind: "property", name: "renamable" },
+        { tag: "lr-conversation-item", kind: "property", name: "renamable" },
+      ],
+      async () => {
+        el = (await fixture(
+          html`<lr-thread-list
+            style="block-size:400px"
+            .threads=${threads}
+            renamable="false"
+          ></lr-thread-list>`
+        )) as LyraThreadList;
+        both = (await fixture(
+          html`<lr-thread-list renamable without-rename></lr-thread-list>`
+        )) as LyraThreadList;
+        await el.updateComplete;
+        await nextFrame();
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-thread-list:property:renamable",
+    ]);
+    expect(el.withoutRename).to.be.true;
+    expect(el.renamable).to.be.false;
+    const row = dataRow(el, "t1");
+    expect(row.withoutRename).to.be.true;
+    expect(both.withoutRename, "the later without-rename attribute wins").to.be.true;
+    expect(both.renamable).to.be.false;
+  });
+
+  it("forwards a renamable write, syncs back from without-rename, and lets the last write win", async () => {
+    let el!: LyraThreadList;
+    let both!: LyraThreadList;
+    await captureDeprecationWarnings(
+      [{ tag: "lr-thread-list", kind: "property", name: "renamable" }],
+      async () => {
+        el = (await fixture(html`<lr-thread-list></lr-thread-list>`)) as LyraThreadList;
+        el.renamable = false;
+        await el.updateComplete;
+        both = (await fixture(
+          html`<lr-thread-list without-rename renamable></lr-thread-list>`
+        )) as LyraThreadList;
+      }
+    );
+    expect(el.withoutRename).to.be.true;
+    expect(el.hasAttribute("without-rename")).to.be.true;
+    el.withoutRename = false;
+    await el.updateComplete;
+    expect(el.renamable).to.be.true;
+    expect(both.withoutRename, "the later renamable attribute wins").to.be.false;
+    expect(both.renamable).to.be.true;
   });
 
   it("renders row actions with controlled pin/archive/delete events carrying the requested state", async () => {
@@ -2678,7 +2797,7 @@ it("themes renderExcerpt marks through component-scoped custom properties", asyn
   expect(computed.paddingRight).to.equal("5px");
 });
 
-it("ignores retired excerpt tokens and themes rendered marks through the canonical names", async () => {
+it("still themes renderExcerpt marks through the deprecated -background/-foreground aliases, below the canonical names", async () => {
   const el = (await fixture(
     html`<div>
       <lr-thread-list
@@ -2710,8 +2829,8 @@ it("ignores retired excerpt tokens and themes rendered marks through the canonic
   await nextFrame();
   const markOf = (list: LyraThreadList) =>
     dataRows(list)[0]!.querySelector<HTMLElement>('[data-testid="highlight"]')!;
-  expect(getComputedStyle(markOf(alias!)).backgroundColor).to.not.equal("rgb(1, 2, 3)");
-  expect(getComputedStyle(markOf(alias!)).color).to.not.equal("rgb(4, 5, 6)");
+  expect(getComputedStyle(markOf(alias!)).backgroundColor).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(markOf(alias!)).color).to.equal("rgb(4, 5, 6)");
   expect(getComputedStyle(markOf(both!)).backgroundColor).to.equal("rgb(7, 8, 9)");
   expect(getComputedStyle(markOf(both!)).color).to.equal("rgb(10, 11, 12)");
 });
@@ -4146,7 +4265,7 @@ describe("sticky group headers", () => {
 });
 
 describe("compact forwarding", () => {
-  it("forwards compact as canonical small size onto every data-mode row", async () => {
+  it("forwards compact onto every data-mode row", async () => {
     const el = (await fixture(
       html`<lr-thread-list
         style="block-size:400px"
@@ -4158,6 +4277,7 @@ describe("compact forwarding", () => {
     await nextFrame();
     const rows = dataRows(el);
     expect(rows.length).to.be.greaterThan(0);
+    expect(rows.filter((r) => r.compact).length).to.equal(rows.length);
     expect(rows.filter((r) => r.getAttribute("size") === "s").length).to.equal(
       rows.length
     );
@@ -4221,8 +4341,9 @@ describe("compact forwarding", () => {
     ];
     expect(slotted.length).to.equal(2);
     // The host owns its own items' density here, exactly as it owns every other row property.
-    expect(slotted[0]!.size).to.equal("m");
-    expect(slotted[1]!.size).to.equal("s");
+      expect(slotted[0]!.size).to.equal("m");
+      expect(slotted[0]!.compact).to.be.false;
+      expect(slotted[1]!.compact).to.be.true;
   });
 });
 

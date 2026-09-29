@@ -2,9 +2,6 @@ import { html } from 'lit';
 import '../packages/lyra-ui/src/theme.css';
 import '../packages/lyra-ui/src/looks/shadcn.css';
 import '../packages/lyra-ui/src/looks/material.css';
-import '../packages/lyra-ui/src/looks/data.css';
-import '../packages/lyra-ui/src/looks/terminal.css';
-import '../packages/lyra-ui/src/looks/high-contrast.css';
 import '../packages/lyra-ui/src/density.css';
 import '../packages/lyra-ui/src/accents.css';
 import '../packages/lyra-ui/src/surfaces/glass.css';
@@ -28,7 +25,7 @@ export default {
 const panelStyle = 'padding:var(--lr-theme-space-l,1rem);display:grid;gap:var(--lr-theme-space-m,1rem);align-content:start;background:var(--lr-theme-color-surface-default);color:var(--lr-theme-color-text-normal);font-family:var(--lr-theme-font-family-body);min-inline-size:0';
 const rowStyle = 'display:flex;flex-wrap:wrap;gap:var(--lr-theme-space-s,0.5rem);align-items:center';
 const axisOptions = {
-  look: ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast'],
+  look: ['lyra', 'shadcn', 'material'],
   surface: ['solid', 'glass'],
   density: ['compact', 'comfortable', 'touch'],
   mode: ['light', 'dark', 'system'],
@@ -83,7 +80,6 @@ function sample() {
 export const Playground = {
   render: () => html`<section data-style-demo data-lr-look="shadcn" data-lr-surface="glass" data-lr-density="comfortable" data-lr-mode="light" data-lr-accent="none" style=${panelStyle}>
     <h1 style="margin:0">Compose a style</h1>
-    <a href="?path=/story/theming-theme-builder--editor">Open the full theme builder</a>
     <p>Change one choice at a time. The controls and content keep the same markup.</p>
     ${controls()}
     ${sample()}

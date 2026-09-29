@@ -1630,17 +1630,77 @@ it('tiles awkward totals exactly and maps every selectable item into its own ran
   }
 });
 
-describe('lr-sequence-strip legend visibility', () => {
+describe('lr-sequence-strip deprecated show-legend alias', () => {
   const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-sequence-strip', kind: 'property', name: 'showLegend' }];
+  const legendLabels = (el: LyraSequenceStrip): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
+
+  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
+    const canonical = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+    let aliased!: LyraSequenceStrip;
+    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      aliased = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      const second = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+      await second.updateComplete;
+    });
+    await canonical.updateComplete;
+    await aliased.updateComplete;
+    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
+    expect(legendLabels(aliased).length).to.be.greaterThan(0);
+    expect(aliased.withLegend).to.equal(true);
+    expect(aliased.showLegend).to.equal(true);
+    expect(aliased.hasAttribute('with-legend')).to.equal(true);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-sequence-strip:property:showLegend']);
+    expect(warnings[0]!.message).to.contain('with-legend');
+  });
+
   it('never warns for with-legend or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
       const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip></lr-sequence-strip>`);
+      expect(el.showLegend).to.equal(false);
       el.withLegend = true;
       await el.updateComplete;
     });
     expect(warnings).to.deep.equal([]);
   });
 
+  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      expect(el.withLegend).to.equal(true);
+      el.removeAttribute('show-legend');
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(false);
+      expect(el.hasAttribute('with-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+      el.showLegend = true;
+      await el.updateComplete;
+      expect(el.withLegend).to.equal(true);
+      expect(legendLabels(el).length).to.be.greaterThan(0);
+      el.withLegend = false;
+      await el.updateComplete;
+      expect(el.showLegend).to.equal(false);
+      expect(el.hasAttribute('show-legend')).to.equal(false);
+      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
+
+  it('lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
+      const aliasLast = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip with-legend show-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      aliasLast.showLegend = false;
+      await aliasLast.updateComplete;
+      expect(aliasLast.withLegend).to.equal(false);
+      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+
+      const canonicalLast = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend with-legend .items=${items} .categories=${categories}></lr-sequence-strip>`);
+      canonicalLast.removeAttribute('with-legend');
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.showLegend).to.equal(false);
+      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
+      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
+    });
+  });
 });
 
 it('lets host aria-label presence override the compatibility name, including empty', async () => {

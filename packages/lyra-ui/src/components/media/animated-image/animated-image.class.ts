@@ -7,12 +7,16 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './animated-image.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_animatedImageDefaultAlt, LYRA_DEFAULT_pauseWithContext, LYRA_DEFAULT_playWithContext } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MAX_FROZEN_FRAME_DIMENSION = 8192;
 const MAX_FROZEN_FRAME_PIXELS = 16_777_216;
@@ -114,6 +118,9 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    respectReducedMotion: ['ignoreReducedMotion', invertAlias, invertAlias],
+  };
 
   /** The path to the image to load. Always re-validated against a
    *  safe-scheme allowlist before use -- see the class doc. */
@@ -131,6 +138,20 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
    *  keeps playback frozen and disables `[part="play-button"]` regardless of `play`. */
   @property({ type: Boolean, reflect: true, attribute: 'ignore-reduced-motion' })
   ignoreReducedMotion = false;
+
+  /** When `true` (default) and the platform reports
+   *  `prefers-reduced-motion: reduce`, playback stays frozen and
+   *  `[part="play-button"]` is disabled regardless of `play`. Set to `false`
+   *  to let `play` take effect even under a reduced-motion preference -- a
+   *  deliberate, page-author-level override.
+   *  @deprecated Use `ignore-reduced-motion` (inverted); removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: 'respect-reduced-motion',
+    converter: trueDefaultBooleanConverter,
+  })
+  respectReducedMotion = true;
 
   /** Accessible-name override for `[part="play-button"]`. Maps to the
    *  host's `aria-label` attribute and, once set, wins verbatim over the

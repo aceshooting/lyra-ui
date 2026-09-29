@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generate, generateFrameworkTypes } from './generate-framework-types.mjs';
+import { generateFrameworkTypes } from './generate-framework-types.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(scriptsDir, '..');
@@ -386,39 +386,6 @@ assert.match(
 );
 assert.doesNotMatch(inheritedShared, /LyraSampleNumberFieldEventMap/);
 
-const privateShared = structuredClone(inherited);
-privateShared.modules.push({ path: 'src/components/forms/sample-field/field-shared.ts', declarations: [{
-  kind: 'class', name: 'LyraFieldShared', events: structuredClone(fixture.modules[1].declarations[0].events),
-}] });
-for (const module of privateShared.modules) {
-  for (const declaration of module.declarations ?? []) {
-    if (['lr-sample-field', 'lr-sample-number-field'].includes(declaration.tagName)) {
-      declaration.superclass = { name: 'LyraFieldShared', module: '/src/components/forms/sample-field/field-shared.js' };
-    }
-  }
-}
-const sharedReference = { name: 'LyraSampleFieldEventMap', module: 'src/components/forms/sample-field/field-shared.ts' };
-const eventMapReferences = new Map([
-  ['lr-sample-field', { ...sharedReference, exportedFrom: 'src/components/forms/sample-field/sample-field.class.ts' }],
-  ['lr-sample-number-field', sharedReference],
-]);
-const sharedBaseOutput = generateFrameworkTypes(privateShared, { eventMapReferences }).get('src/framework-types.ts');
-assert.match(sharedBaseOutput, /'lr-sample-number-field': \{[\s\S]*?events: LyraSampleFieldEventMap;/);
-assert.doesNotMatch(sharedBaseOutput, /LyraSampleNumberFieldEventMap|from '\.\/components\/forms\/sample-field\/field-shared\.js'/);
-assert.deepEqual([...generateFrameworkTypes({ ...privateShared, modules: [...privateShared.modules].reverse() }, { eventMapReferences })],
-  [...generateFrameworkTypes(privateShared, { eventMapReferences })], 'source-bound map ownership is independent of manifest order');
-assert.throws(() => generateFrameworkTypes(privateShared), /exported source EventMap reference/);
-for (const malformed of [
-  { ...sharedReference, name: 'Bad Map' },
-  { ...sharedReference, module: '../outside.ts' },
-  { ...sharedReference, exportedFrom: '../outside.ts' },
-]) {
-  const invalid = new Map(eventMapReferences);
-  invalid.set('lr-sample-number-field', malformed);
-  assert.throws(() => generateFrameworkTypes(privateShared, { eventMapReferences: invalid }),
-    /exported source EventMap reference|must be a TypeScript module below src/);
-}
-
 const duplicate = structuredClone(fixture);
 duplicate.modules[1].declarations[0].tagName = 'lr-sample-table';
 assert.throws(
@@ -434,14 +401,6 @@ assert.throws(
 );
 
 const currentManifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
-const sourceBoundShared = generate({ write: false }).get('src/framework-types.ts');
-assert.doesNotMatch(sourceBoundShared, /LyraNativeTimeInputEventMap/, 'native-time must not import an invented EventMap');
-assert.match(sourceBoundShared, /'lr-native-time-input': \{[\s\S]*?events: LyraInputEventMap;/,
-  'native-time retains its existing shared input EventMap');
-assert.match(sourceBoundShared, /import type \{ LyraInput, LyraInputEventMap \} from '\.\/components\/forms\/input\/input\.class\.js';/,
-  'the input EventMap keeps its public class-module route');
-assert.doesNotMatch(sourceBoundShared, /from '\.\/components\/forms\/input\/input-shared\.js'/,
-  'the framework surface does not need a private shared implementation import');
 const flowCanvas = currentManifest.modules
   .flatMap(({ declarations = [] }) => declarations)
   .find(({ tagName }) => tagName === 'lr-flow-canvas');

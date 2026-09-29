@@ -202,13 +202,16 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract content: string;
   abstract tabSize: number;
   abstract htmlMode: MarkdownHtmlMode;
+  abstract gfm: boolean;
   abstract withoutGfm: boolean;
   abstract linkTarget: string | null;
   abstract internalLinkPrefix: string;
   abstract headingOffset: number;
   abstract streaming: boolean;
   abstract streamingRender: MarkdownStreamingRenderMode;
+  abstract codeBlockChrome: boolean;
   abstract codeBlockHeader: boolean;
+  abstract highlightCode: boolean;
   abstract withoutSyntaxHighlighting: boolean;
   abstract languages?: Readonly<Record<string, ShikiLanguageSource>>;
   abstract headingAnchors: boolean;
@@ -268,6 +271,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private rememberedFocus?: { node: HTMLElement; index: number; selector: string };
   private readonly codeHeader: MarkdownCodeHeaderController;
   private codeBlocks: MarkdownCodeBlockRecord[] = [];
+
 
   private readonly handleKatexResolved = (): void => {
     if (!this.isConnected) return;

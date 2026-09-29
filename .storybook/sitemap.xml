@@ -106,6 +106,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-contactviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-csvviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-datasetviewer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-geojsonview-legacy-tag--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-geojsonviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-highlightlayer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-htmlviewer--docs</loc></url>
@@ -168,8 +169,6 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-getting-started--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-localization-and-rtl--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-migrating-from-web-awesome-or-shoelace--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-optional-looks--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-theme-builder--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-theming--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/handoffdivider--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/heatmap--docs</loc></url>

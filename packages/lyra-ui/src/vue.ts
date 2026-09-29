@@ -281,6 +281,8 @@ export type LyraGaugeVueProps = LyraVueCustomElement<'lr-gauge'>;
 
 export type LyraGenerationMetricsVueProps = LyraVueCustomElement<'lr-generation-metrics'>;
 
+export type LyraGeojsonViewVueProps = LyraVueCustomElement<'lr-geojson-view'>;
+
 export type LyraGeoJsonViewerVueProps = LyraVueCustomElement<'lr-geojson-viewer'>;
 
 export type LyraGraphVueProps = LyraVueCustomElement<'lr-graph'>;
@@ -764,6 +766,7 @@ export interface LyraVueGlobalComponents {
   'lr-funnel': LyraFunnelVueProps;
   'lr-gauge': LyraGaugeVueProps;
   'lr-generation-metrics': LyraGenerationMetricsVueProps;
+  'lr-geojson-view': LyraGeojsonViewVueProps;
   'lr-geojson-viewer': LyraGeoJsonViewerVueProps;
   'lr-graph': LyraGraphVueProps;
   'lr-graph-legend': LyraGraphLegendVueProps;

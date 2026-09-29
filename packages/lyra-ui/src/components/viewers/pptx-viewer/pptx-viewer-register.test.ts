@@ -2,14 +2,14 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './pptx-viewer-register.js';
 import { PPTX_VIEWER_TAG } from './pptx-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const pptx: LyraDocumentFile = {
+const pptx: DocumentFile = {
   name: 'deck.pptx',
   mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   src: 'https://example.test/deck.pptx',

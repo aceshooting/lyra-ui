@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./carousel.js";
 import "./carousel-item.js";
@@ -24,8 +23,9 @@ import {
 // strict-console platform lanes treat as fatal -- see that test for detail.
 import "../../../translations/ar/layout.js";
 
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-carousel', 'accessible-label');
+// Two tests below pin the deprecated `accessible-label` attribute's behavior, which must keep
+// working until its removal.
+expectDeprecatedUsage('lr-carousel', 'attribute', 'accessible-label');
 
 async function carousel(
   template = html`
@@ -2065,7 +2065,7 @@ it("is accessible and supports a consumer supplied accessible label", async () =
   await expect(el).to.be.accessible();
 });
 
-it("keeps an explicitly empty programmatic name distinct from an omitted one", async () => {
+it("keeps an explicitly empty accessible-label distinct from an omitted one", async () => {
   const omitted = await carousel(html`
     <lr-carousel>
       <div>One</div>
@@ -2078,7 +2078,7 @@ it("keeps an explicitly empty programmatic name distinct from an omitted one", a
   ).to.equal("Carousel");
 
   const explicitEmpty = await carousel(html`
-    <lr-carousel .accessibleLabel=${""}>
+    <lr-carousel accessible-label="">
       <div>One</div>
       <div>Two</div>
     </lr-carousel>
@@ -2107,7 +2107,7 @@ describe('lr-carousel: host aria-label and the deprecated accessible-label attri
     expect(regionName(el)).to.equal('Product screenshots');
   });
 
-  it('ignores accessible-label and keeps the localized carousel name', async () => {
+  it('keeps the accessible-label alias naming the carousel, and warns once naming aria-label', async () => {
     const names: (string | null)[] = [];
     const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       for (let index = 0; index < 2; index += 1) {
@@ -2117,8 +2117,11 @@ describe('lr-carousel: host aria-label and the deprecated accessible-label attri
         names.push(regionName(el));
       }
     });
-    expect(names).to.deep.equal(['Carousel', 'Carousel']);
-    expect(warnings).to.have.length(0);
+    expect(names).to.deep.equal(['Product screenshots', 'Product screenshots']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-carousel:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
   });
 
   it('lets the host aria-label win over the accessible-label alias', async () => {
@@ -2131,7 +2134,7 @@ describe('lr-carousel: host aria-label and the deprecated accessible-label attri
     expect(regionName(el)).to.equal('New');
     el.removeAttribute('aria-label');
     await el.updateComplete;
-    expect(regionName(el)).to.equal('Carousel');
+    expect(regionName(el)).to.equal('Old');
   });
 
   it('does not warn for a property-only accessibleLabel assignment', async () => {

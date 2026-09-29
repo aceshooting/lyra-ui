@@ -7,9 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated part** `copy-button__control` since `21.1.0`; use part `::part(copy-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,7 +56,9 @@ highlighted markup.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
 - `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
-  copy-to-clipboard button, which is shown by default.
+  copy-to-clipboard button, which is shown by default. Deprecated alias: `copyable` (use
+  `without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
+  `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -122,7 +125,8 @@ property write is needed).
 `copy-button` (the copy control, a composed `<lr-icon-button>` as of 16.0.0; it also carries
 `copy-button-text` or `copy-button-icon` for the active `copyAppearance`, so match it by token —
 `[part~="copy-button"]` — not by exact value), `copy-button-text` / `copy-button-icon` (the copy
-control in each appearance), `copy-button-control` (the copy control's own native `<button>`),
+control in each appearance), `copy-button-control` (the copy control's own native `<button>`;
+deprecated alias: `copy-button__control`, use `copy-button-control`, removed in 23.0.0),
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),

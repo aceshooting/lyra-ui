@@ -18,6 +18,7 @@ import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
@@ -291,6 +292,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    locked: 'readonly',
+  };
 
   private _nodes: readonly FlowNode[] = Object.freeze([]);
   /** Controlled node model, deeply snapshotted and frozen at assignment, bounded to the first
@@ -342,6 +346,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   /** Freezes pan/zoom/edit gestures and viewport-mutating methods. Enabling it live cancels and
    * rolls back every active gesture before retiring its global listeners. */
   @property({ type: Boolean, reflect: true }) readonly = false;
+  /**
+   * Deprecated alias of `readonly`, with identical behavior. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `readonly`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, reflect: true }) locked = false;
 
   private _selectedNodeIds: readonly string[] = Object.freeze([]);
   /** The last-assigned candidate ids, syntactically sanitized (capped/deduped/nonblank) but not

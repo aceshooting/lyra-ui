@@ -9,6 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-approve` since `22.0.0`; use event `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated event** `lr-deny` since `22.0.0`; use event `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `pending` / `pending` since `21.1.0`; use property `pending-action`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -51,8 +53,8 @@ from a stacked `display: block` card into a single tightly-padded inline row, fo
 that has to live inside an existing container: a table cell, a card's action row, a toolbar. The
 host becomes `inline-flex`, and the narrow-allocation `@container` treatment is switched off — a
 dense bar is _expected_ to be narrow, so stretching the buttons to fill would be exactly wrong. It
-is a density knob only: the border, corner radius and background stay. Retune it through
-`--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
+is a density knob only: the border, corner radius and background stay. Deprecated alias: `compact`
+(use `size="s"`; removed in 23.0.0). Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
 event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
 heading label. `frame: LyraFrame = 'card'` (reflected) — `'card' | 'plain'`, imported from the
 library's shared container-frame vocabulary and behaving exactly as it does on `lr-agent-run`,
@@ -65,7 +67,7 @@ both are set. Before 9.0.0 the density knob alone did both jobs; a bar that reli
 is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
 `.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
-state.
+state. Deprecated alias: `pending` (use `pending-action`; removed in 23.0.0).
 `waitUntil(promise)` in the event detail is the declarative form of that same state machine and
 needs no `preventDefault()`: the bar sets `pendingAction` itself, and the promise's settlement
 finalizes `decision` or clears `pendingAction` and returns focus to the control that can retry.

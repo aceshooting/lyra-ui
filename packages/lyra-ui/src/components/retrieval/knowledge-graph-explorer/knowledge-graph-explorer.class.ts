@@ -3,6 +3,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -20,6 +21,7 @@ import type {
   LyraGraphRenderer,
   LyraGraph,
   LyraGraphEdge,
+  LyraGraphLink,
   LyraGraphNode,
 } from '../graph/graph.class.js';
 import {
@@ -136,6 +138,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   /** Bubbles unchanged from the composed `lr-graph`. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;
+  /** @deprecated Use `lr-community-activate`; removal not before 23.0.0. Bubbles unchanged from the
+   *  composed `lr-graph` right after it. */
+  'lr-community-click': CustomEvent<{ communityId: string }>;
   'lr-relation-activate': CustomEvent<{
     relation: string;
     sourceNodeId?: string;
@@ -225,7 +230,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   itself, only forwards the request; a host fetches/generates the expansion and assigns updated
  *   `nodes`/`edges` back.
  * @event lr-community-activate - Bubbles straight through from the composed `lr-graph`, unmodified.
- *   `detail: { communityId }`.
+ *   `detail: { communityId }`. Fires before `lr-community-click`.
+ * @event lr-community-click - Deprecated alias of `lr-community-activate`, bubbling straight through
+ *   from the composed `lr-graph` right after it, unmodified. Removal not before 23.0.0.
  * @event lr-relation-activate - Bubbles straight through from the composed `lr-path-strip`, unmodified.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
@@ -273,6 +280,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
     'edges',
+    'links',
     'nodeTypes',
     'communities',
     'entityDetails',
@@ -282,6 +290,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  // Each array alias (`links`, and on lr-graph the id lists) is declared before its canonical
+  // property: initialized second, it would find the canonical default already synced in and warn
+  // as though authored.
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    links: 'edges',
+    searchQuery: 'query',
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-pin-change',
     'lr-hidden-types-change',
@@ -289,6 +304,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   /** Nodes forwarded to the composed graph and search experience. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
+  /** Links forwarded to the composed graph and path interactions.
+   *  @deprecated Use `edges`; removal not before 23.0.0. */
+  @property({ attribute: false }) links: readonly LyraGraphLink[] = [];
   /** Edges forwarded to the composed graph and path interactions. */
   @property({ attribute: false }) edges: readonly LyraGraphEdge[] = [];
   /** Labels, colors, and shapes for the graph's node-type vocabulary. */
@@ -356,6 +374,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  Removing the attribute uses this empty-filter behavior while retaining null property
    *  readback. */
   @property() query = '';
+  /** The search filter applied to the visible node set. A node matches when the query appears in
+   *  any name it can be known by -- its `id`, its `label` or its `accessibleLabel` -- each folded
+   *  with the active locale, so a node named only through `accessibleLabel` is findable by the
+   *  very name the results, chips and popover display for it. Presettable (e.g. to restore a query
+   *  from a URL on load) as well as self-managed on every keystroke in the toolbar's search box.
+   *  `''` (the default) renders no search-result list at all and applies no search dimming.
+   *  Removing the attribute uses this empty-filter behavior while retaining null property
+   *  readback.
+   *  @deprecated Use `query`; removal not before 23.0.0. */
+  @property({ attribute: 'search-query' }) searchQuery = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
    *  `onGraphNodeEnter`/`onGraphNodeLeave`) -- read by `computedDimmedNodeIds`. */

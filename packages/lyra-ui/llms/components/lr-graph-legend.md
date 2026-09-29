@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated property** `interactive` / `interactive` since `21.1.0`; use property `without-interaction`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -32,7 +32,9 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
 - `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
-  non-interactive rows instead of the default toggle `<button>` rows.
+  non-interactive rows instead of the default toggle `<button>` rows. Deprecated alias:
+  `interactive` (use `without-interaction`; `interactive="false"` equals `without-interaction`;
+  removed in 23.0.0)
 - `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper

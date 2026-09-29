@@ -1,45 +1,149 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-mutation-observer', 'attributes');
-expectStaleAttribute('lr-mutation-observer', 'character-data');
-expectStaleAttribute('lr-mutation-observer', 'subtree');
-describe('<lr-mutation-observer> retired option aliases', () => {
-  it('ignores attributes and observeAttributes while preserving narrow canonical filters', async () => {
-    const legacy = await fixture<LyraMutationObserver>(
-      html`<lr-mutation-observer attributes><div data-state="before"></div></lr-mutation-observer>`,
-    );
-    Reflect.set(legacy, 'observeAttributes', true);
-    await legacy.updateComplete;
-    await aTimeout(0);
-    let legacyFired = false;
-    legacy.addEventListener('lr-mutation', () => { legacyFired = true; });
-    legacy.querySelector('div')!.setAttribute('data-state', 'after');
-    await aTimeout(20);
-    expect(legacyFired, 'the retired spelling alone must not enable observation').to.equal(false);
+// The compatibility-alias tests below deliberately set the deprecated `attributes` and
+// `character-data` spellings, which must keep working until their removal.
+expectDeprecatedUsage('lr-mutation-observer', 'property', 'observeAttributes');
+expectDeprecatedUsage('lr-mutation-observer', 'property', 'characterData');
 
-    const filtered = await fixture<LyraMutationObserver>(html`
-      <lr-mutation-observer attr="data-state" attr-old-value><div data-state="before" data-other="x"></div></lr-mutation-observer>
-    `);
-    await filtered.updateComplete;
-    await aTimeout(0);
-    const target = filtered.querySelector('div')!;
-    let mutationCount = 0;
-    filtered.addEventListener('lr-mutation', () => { mutationCount += 1; });
-    target.setAttribute('data-other', 'y');
-    await aTimeout(20);
-    expect(mutationCount, 'the canonical filter excludes data-other').to.equal(0);
-    const eventPromise = oneEvent(filtered, 'lr-mutation');
-    target.setAttribute('data-state', 'after');
-    const event = await eventPromise as CustomEvent<{ records: readonly MutationRecord[]; mutationList: readonly MutationRecord[] }>;
-    expect(event.detail.records).to.have.length(1);
-    expect(event.detail.records[0]!.attributeName).to.equal('data-state');
-    expect(event.detail.records[0]!.oldValue).to.equal('before');
-    expect(event.detail.records).to.equal(event.detail.mutationList);
-    expect(mutationCount).to.equal(1);
+const OBSERVER_ALIAS_USAGES: readonly DeprecatedUsage[] = [
+  { tag: 'lr-mutation-observer', kind: 'property', name: 'observeAttributes' },
+  { tag: 'lr-mutation-observer', kind: 'property', name: 'characterData' },
+];
+
+describe('<lr-mutation-observer> deprecated observer aliases', () => {
+  it('warns once when the attributes alias is authored, naming attr="*", and still observes attributes', async () => {
+    let records = 0;
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`,
+      );
+      await el.updateComplete;
+      await aTimeout(0);
+      const event = oneEvent(el, 'lr-mutation');
+      el.querySelector('div')!.setAttribute('data-x', '1');
+      records = ((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length;
+    });
+    expect(records).to.be.greaterThan(0);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:observeAttributes',
+    ]);
+    expect(warnings[0]!.message).to.contain('attr="*"');
+    expect(warnings[0]!.message).to.contain('attributeFilter');
+  });
+
+  it('warns when observeAttributes is set as a property, once per page', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const first = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      const second = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      first.observeAttributes = true;
+      second.observeAttributes = true;
+      await first.updateComplete;
+      await second.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:observeAttributes',
+    ]);
+  });
+
+  it('warns once when the character-data alias is authored, naming char-data, and still observes text', async () => {
+    let records = 0;
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer character-data><div>Before</div></lr-mutation-observer>`,
+      );
+      await el.updateComplete;
+      await aTimeout(0);
+      const event = oneEvent(el, 'lr-mutation');
+      el.querySelector('div')!.firstChild!.textContent = 'After';
+      records = ((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length;
+    });
+    expect(records).to.be.greaterThan(0);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:characterData',
+    ]);
+    expect(warnings[0]!.message).to.contain('char-data');
+  });
+
+  it('warns when characterData is set as a property', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      el.characterData = true;
+      await el.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-mutation-observer:property:characterData',
+    ]);
+  });
+
+  it('never warns for the mirrored attr and char-data spellings, or for an alias left false', async () => {
+    const warnings = await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      const mirrored = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer attr="*" char-data><div>Text</div></lr-mutation-observer>`,
+      );
+      await mirrored.updateComplete;
+      const unset = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      unset.observeAttributes = false;
+      unset.characterData = false;
+      await unset.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps character-data and char-data in step, the last write winning in either direction', async () => {
+    let canonicalLast!: LyraMutationObserver;
+    let aliasLast!: LyraMutationObserver;
+    await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      canonicalLast = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      canonicalLast.characterData = true;
+      canonicalLast.charData = false;
+      aliasLast = await fixture<LyraMutationObserver>(html`<lr-mutation-observer></lr-mutation-observer>`);
+      aliasLast.charData = true;
+      aliasLast.characterData = false;
+      await canonicalLast.updateComplete;
+      await aliasLast.updateComplete;
+    });
+    expect(canonicalLast.charData, 'the later char-data write wins').to.equal(false);
+    expect(canonicalLast.characterData).to.equal(false);
+    expect(aliasLast.charData, 'the later characterData write wins').to.equal(false);
+    expect(aliasLast.characterData).to.equal(false);
+
+    canonicalLast.charData = true;
+    await canonicalLast.updateComplete;
+    expect(canonicalLast.characterData, 'characterData syncs back from charData').to.equal(true);
+    expect(canonicalLast.getAttribute('character-data')).to.equal('');
+  });
+
+  it('documents why attributes is not a mechanical attr="*" rename: attr ignores attributeFilter', async () => {
+    const observed = async (template: ReturnType<typeof html>): Promise<string[]> => {
+      const el = await fixture<LyraMutationObserver>(template);
+      el.attributeFilter = ['data-a'];
+      await el.updateComplete;
+      await aTimeout(0);
+      const names: string[] = [];
+      el.addEventListener('lr-mutation', (event) => {
+        for (const record of event.detail.records) names.push(record.attributeName ?? '');
+      });
+      const target = el.querySelector('div')!;
+      target.setAttribute('data-b', '1');
+      target.setAttribute('data-a', '1');
+      await aTimeout(20);
+      return names;
+    };
+    let alias: string[] = [];
+    let mirrored: string[] = [];
+    await captureDeprecationWarnings(OBSERVER_ALIAS_USAGES, async () => {
+      alias = await observed(html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`);
+      mirrored = await observed(html`<lr-mutation-observer attr="*"><div></div></lr-mutation-observer>`);
+    });
+    expect(alias, 'attributes keeps honoring attributeFilter').to.deep.equal(['data-a']);
+    expect(mirrored, 'attr="*" replaces attributeFilter').to.deep.equal(['data-b', 'data-a']);
   });
 });
 
@@ -246,7 +350,7 @@ describe('<lr-mutation-observer>', () => {
       );
       expect(el.childList).to.equal(false);
       expect(el.withoutSubtree).to.equal(false);
-      expect(Reflect.has(el, 'subtree')).to.equal(false);
+      expect(el.subtree).to.equal(true);
     });
 
     it('without-subtree excludes a nested-descendant mutation that the default includes (unset regression)', async () => {
@@ -279,52 +383,76 @@ describe('<lr-mutation-observer>', () => {
       expect(result.detail.records.length).to.be.greaterThan(0);
     });
 
-    it('ignores subtree="false" while without-subtree remains the canonical opt-out', async () => {
-      const legacy = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer child-list subtree="false"><div><span></span></div></lr-mutation-observer>`,
-      );
-      await legacy.updateComplete;
-      await aTimeout(0);
-      let descendantMutationObserved = false;
-      legacy.addEventListener('lr-mutation', () => { descendantMutationObserved = true; });
-      legacy.querySelector('span')!.append(document.createElement('em'));
-      await aTimeout(20);
-      expect(descendantMutationObserved, 'the retired subtree spelling leaves the true default in effect').to.equal(true);
-
-      const canonical = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer child-list without-subtree><div><span></span></div></lr-mutation-observer>`,
-      );
-      await canonical.updateComplete;
-      await aTimeout(0);
+    it('keeps the deprecated subtree alias working: subtree="false" equals without-subtree and warns once', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
       let fired = false;
-      canonical.addEventListener('lr-mutation', () => { fired = true; });
-      canonical.querySelector('span')!.append(document.createElement('em'));
+      let scoped!: LyraMutationObserver;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        scoped = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list subtree="false"><div><span></span></div></lr-mutation-observer>`,
+        );
+        await scoped.updateComplete;
+        scoped.subtree = false;
+        await scoped.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-mutation-observer:property:subtree']);
+      expect(scoped.subtree).to.equal(false);
+      expect(scoped.withoutSubtree).to.equal(true);
+      await aTimeout(0);
+      scoped.addEventListener('lr-mutation', () => {
+        fired = true;
+      });
+      scoped.querySelector('span')!.append(document.createElement('em'));
       await aTimeout(20);
-      expect(fired).to.equal(false);
+      expect(fired, 'the alias must scope observation exactly as without-subtree does').to.equal(false);
+
+      // Setting the alias back to true restores descendant observation.
+      await captureDeprecationWarnings([usage], async () => {
+        scoped.subtree = true;
+        await scoped.updateComplete;
+      });
+      expect(scoped.withoutSubtree).to.equal(false);
+      await aTimeout(0);
+      const event = oneEvent(scoped, 'lr-mutation');
+      scoped.querySelector('span')!.append(document.createElement('em'));
+      expect(((await event) as CustomEvent<{ records: MutationRecord[] }>).detail.records.length).to.be.greaterThan(0);
     });
 
-    it('ignores character-data while char-data remains the canonical text observer option', async () => {
-      const legacy = await fixture<LyraMutationObserver>(html`
-        <lr-mutation-observer character-data><div>before</div></lr-mutation-observer>
-      `);
-      Reflect.set(legacy, 'characterData', true);
-      await legacy.updateComplete;
-      await aTimeout(0);
-      let legacyFired = false;
-      legacy.addEventListener('lr-mutation', () => { legacyFired = true; });
-      legacy.querySelector('div')!.firstChild!.textContent = 'after';
-      await aTimeout(20);
-      expect(legacyFired, 'the retired spelling must not enable character-data observation').to.equal(false);
+    it('never warns for the default or the canonical without-subtree', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const plain = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list without-subtree><div></div></lr-mutation-observer>`,
+        );
+        await plain.updateComplete;
+        const defaulted = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`,
+        );
+        await defaulted.updateComplete;
+      });
+      expect(warnings).to.have.length(0);
+    });
 
-      const canonical = await fixture<LyraMutationObserver>(html`
-        <lr-mutation-observer char-data><div>before</div></lr-mutation-observer>
-      `);
-      await canonical.updateComplete;
-      await aTimeout(0);
-      const event = oneEvent(canonical, 'lr-mutation');
-      canonical.querySelector('div')!.firstChild!.textContent = 'after';
-      const result = await event as CustomEvent<{ records: readonly MutationRecord[] }>;
-      expect(result.detail.records[0]?.type).to.equal('characterData');
+    it('keeps subtree and without-subtree in step, the last write winning in either direction', async () => {
+      const usage = { tag: 'lr-mutation-observer', kind: 'property', name: 'subtree' } as const;
+      let canonicalLast!: LyraMutationObserver;
+      let aliasLast!: LyraMutationObserver;
+      await captureDeprecationWarnings([usage], async () => {
+        canonicalLast = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list subtree without-subtree><div></div></lr-mutation-observer>`,
+        );
+        aliasLast = await fixture<LyraMutationObserver>(
+          html`<lr-mutation-observer child-list without-subtree subtree><div></div></lr-mutation-observer>`,
+        );
+      });
+      expect(canonicalLast.withoutSubtree, 'the later without-subtree attribute wins').to.equal(true);
+      expect(canonicalLast.subtree).to.equal(false);
+      expect(aliasLast.withoutSubtree, 'the later subtree attribute wins').to.equal(false);
+      expect(aliasLast.subtree).to.equal(true);
+
+      aliasLast.withoutSubtree = true;
+      await aliasLast.updateComplete;
+      expect(aliasLast.subtree, 'subtree syncs back from without-subtree').to.equal(false);
     });
 
     it('enables child-list from its plain HTML boolean attribute', async () => {
@@ -334,7 +462,7 @@ describe('<lr-mutation-observer>', () => {
 
     it('an observer with child-list="false" ignores child mutations but still reports attribute mutations', async () => {
       const el = await fixture<LyraMutationObserver>(
-        html`<lr-mutation-observer attr="*"><div></div></lr-mutation-observer>`,
+        html`<lr-mutation-observer attributes><div></div></lr-mutation-observer>`,
       );
       await el.updateComplete;
       const target = el.querySelector('div')!;
@@ -354,6 +482,52 @@ describe('<lr-mutation-observer>', () => {
       expect(result.detail.records.length).to.be.greaterThan(0);
     });
 
+    it('enables attribute observation from the observeAttributes alias set as a property, not just its attributes HTML attribute', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
+      );
+      el.observeAttributes = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const target = el.querySelector('div')!;
+
+      const event = oneEvent(el, 'lr-mutation');
+      target.setAttribute('data-x', '1');
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('enables character-data observation from the characterData alias set as a property', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div>Before</div></lr-mutation-observer>`,
+      );
+      el.characterData = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const target = el.querySelector('div')!;
+
+      const event = oneEvent(el, 'lr-mutation');
+      target.firstChild!.textContent = 'After';
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('reflects the observeAttributes and characterData aliases to their attributes, like every other mapped observer attribute on this element', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
+      );
+      el.observeAttributes = true;
+      el.characterData = true;
+      await el.updateComplete;
+      expect(el.getAttribute('attributes')).to.equal('');
+      expect(el.getAttribute('character-data')).to.equal('');
+
+      el.observeAttributes = false;
+      el.characterData = false;
+      await el.updateComplete;
+      expect(el.hasAttribute('attributes')).to.equal(false);
+      expect(el.hasAttribute('character-data')).to.equal(false);
+    });
   });
 
   it('supports attr/attr-old-value and char-data/char-data-old-value mapped aliases', async () => {

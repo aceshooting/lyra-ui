@@ -2,13 +2,13 @@
 export * from './email-loader.js';
 export * from './email-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
-import { registerDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 import { LyraEmailViewer } from './email-viewer.class.js';
 defineElement('email-viewer', LyraEmailViewer);
 
 registerDocumentRenderer('message/rfc822', {
-  matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.eml'),
-  render: (file: LyraDocumentFile) => {
+  matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.eml'),
+  render: (file: DocumentFile) => {
     const element = document.createElement('lr-email-viewer');
     element.src = file.src;
     element.name = file.name;

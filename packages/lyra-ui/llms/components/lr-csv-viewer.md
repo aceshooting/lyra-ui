@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated property** `hasHeaderRow` / `has-header-row` since `21.1.0`; use property `without-header-row`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `papaparse` — see `llms/peers.md`
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,7 +26,9 @@ mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `withoutHeaderRow: boolean = false`
 (attribute `without-header-row`) renders the first parsed row as an ordinary data row instead of the
-persistent header above the virtualized row scrollport.
+persistent header above the virtualized row scrollport. Deprecated alias: `has-header-row`
+(`hasHeaderRow`; use `without-header-row`; `has-header-row="false"` equals `without-header-row`;
+removed in 23.0.0).
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —

@@ -590,33 +590,9 @@ function exportDeprecationLabel(entry) {
 
 /** The runtime target a package export resolves to, preferring the import/default condition. */
 function exportTarget(value) {
-  if (value === null) return null;
   if (typeof value === 'string') return value;
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    if (Object.hasOwn(value, 'import')) return exportTarget(value.import);
-    if (Object.hasOwn(value, 'default')) return exportTarget(value.default);
-  }
-  return undefined;
-}
-
-function resolveExportMapping(exportsMap, specifier) {
-  if (Object.hasOwn(exportsMap, specifier)) return { value: exportsMap[specifier], capture: null };
-  // A more-specific null target blocks broader patterns too.
-  const patterns = Object.keys(exportsMap).filter(key => key.includes('*')).sort((a, b) =>
-    b.indexOf('*') - a.indexOf('*') || b.length - a.length);
-  for (const pattern of patterns) {
-    const [prefix, suffix] = pattern.split('*');
-    if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix) || specifier.length < prefix.length + suffix.length) continue;
-    const capture = specifier.slice(prefix.length, suffix ? -suffix.length : undefined);
-    return { value: exportsMap[pattern], capture };
-  }
+  if (value && typeof value === 'object') return exportTarget(value.import ?? value.default ?? null);
   return null;
-}
-
-function resolveExportTarget(exportsMap, specifier) {
-  const mapping = resolveExportMapping(exportsMap, specifier);
-  const target = mapping && exportTarget(mapping.value);
-  return target && mapping.capture !== null ? target.replaceAll('*', mapping.capture) : target;
 }
 
 /**
@@ -632,7 +608,20 @@ function exportSource(label, specifier, subject, { exportsMap, readSource }, fin
     findings.push(`${label}: ${subject} must name one exact export, not a pattern`);
     return null;
   }
-  const target = resolveExportTarget(exportsMap, specifier);
+  let target;
+  if (Object.hasOwn(exportsMap, specifier)) target = exportTarget(exportsMap[specifier]);
+  else {
+    // Match Node's most-specific pattern first. A null target blocks broader patterns too.
+    const patterns = Object.keys(exportsMap).filter(key => key.includes('*')).sort((a, b) =>
+      b.indexOf('*') - a.indexOf('*') || b.length - a.length);
+    for (const pattern of patterns) {
+      const [prefix, suffix] = pattern.split('*');
+      if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix) || specifier.length < prefix.length + suffix.length) continue;
+      const capture = specifier.slice(prefix.length, suffix ? -suffix.length : undefined);
+      target = exportTarget(exportsMap[pattern])?.replaceAll('*', capture) ?? null;
+      break;
+    }
+  }
   if (!target) {
     findings.push(`${label}: ${subject} is not a package export`);
     return null;
@@ -686,78 +675,134 @@ function moduleExportsOrFinding(label, resolved, subject, findings) {
   return exportsByName;
 }
 
-function moduleContainsContract(resolved, name) {
-  const parsed = parseSync(resolved.sourcePath, resolved.source);
-  if (parsed.errors.length) return null;
-  let found = false;
-  const visit = node => {
-    if (!node || typeof node !== 'object' || found) return;
-    if ((node.type === 'Literal' || node.type === 'StringLiteral') && node.value === name) found = true;
-    else for (const [key, value] of Object.entries(node)) {
-      if (key === 'comments') continue;
-      if (Array.isArray(value)) value.forEach(visit);
-      else if (value && typeof value === 'object') visit(value);
-    }
+/** Audit every root constructor, including mixed and renamed re-exports, against exact policy. */
+export function validateRootComponentClassDeprecations(
+  metadata,
+  { manifest, packageJson, readSource = defaultReadSource },
+) {
+  const findings = [];
+  if (manifest?.schemaVersion !== '1.0.0' || !Array.isArray(manifest.modules) || manifest.modules.some(module =>
+    typeof module.path !== 'string' || !Array.isArray(module.declarations))) {
+    return ['root component classes: invalid component manifest'];
+  }
+  const resolveContext = { exportsMap: packageJson?.exports ?? {}, readSource };
+  const root = exportSource('root component classes', '.', 'root module', resolveContext, findings);
+  if (!root) return findings;
+  const declarations = new Set(manifest.modules.flatMap(module => module.declarations
+    .filter(declaration => declaration.kind === 'class').map(declaration => JSON.stringify([module.path, declaration.name]))));
+  const classes = new Map(manifest.modules.flatMap(module =>
+    (module.declarations ?? []).filter(declaration => declaration.kind === 'class' && declaration.customElement)
+      .map(declaration => [JSON.stringify([module.path, declaration.name]), declaration.tagName])));
+  const cache = new Map();
+  const active = new Set();
+  const fail = message => { throw new Error(message); };
+  const relativeModule = (file, specifier) => {
+    if (!specifier.startsWith('.')) fail(`unsupported non-relative re-export ${specifier} in ${file}`);
+    const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)).replace(/\.js$/, '.ts');
+    if (!target.startsWith('src/')) fail(`re-export escapes source: ${specifier} in ${file}`);
+    return target;
   };
-  visit(parsed.program);
-  return found;
-}
-
-/**
- * Inspect a current package contract using the same resolver as deprecation validation.
- * Missing mapped source or malformed syntax is invalid, never proof that an API was removed.
- * Entry-point and global-contract notices live in policy; named notices also live in JSDoc.
- */
-export function inspectExportContract(entry, { packageJson, readSource = defaultReadSource, exportDeprecations = [] }) {
-  const result = { status: 'invalid', sourcePath: null, isType: null, deprecated: null, findings: [] };
-  const label = exportDeprecationLabel(entry);
-  if (!EXPORT_DEPRECATION_KINDS.includes(entry?.kind)) {
-    result.findings.push(`${label}: unsupported export kind`);
+  const exportsFor = file => {
+    if (cache.has(file)) return cache.get(file);
+    if (active.has(file)) fail(`cyclic re-export in ${file}`);
+    const source = readSource(file);
+    if (typeof source !== 'string') fail(`missing re-export source ${file}`);
+    const parsed = parseSync(file, source);
+    if (parsed.errors.length) fail(`cannot parse re-export source ${file}`);
+    active.add(file);
+    const imports = new Map();
+    const localClasses = new Set();
+    for (const statement of parsed.program.body) {
+      const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
+      if (declaration?.type === 'ClassDeclaration' && declaration.id) localClasses.add(declaration.id.name);
+      if (statement.type !== 'ImportDeclaration' || statement.importKind === 'type') continue;
+      for (const specifier of statement.specifiers) {
+        if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type') {
+          imports.set(specifier.local.name, { source: statement.source.value, name: specifier.imported.name ?? specifier.imported.value });
+        } else if (specifier.type !== 'ImportSpecifier') {
+          imports.set(specifier.local.name, { unsupported: true });
+        }
+      }
+    }
+    for (const statement of parsed.program.body) {
+      if (statement.type !== 'ExportNamedDeclaration' || statement.source || statement.exportKind === 'type') continue;
+      for (const specifier of statement.specifiers) {
+        if (specifier.exportKind !== 'type' && imports.get(specifier.local.name)?.unsupported) {
+          fail(`unsupported imported re-export ${specifier.local.name} in ${file}`);
+        }
+      }
+    }
+    const result = new Map();
+    const entries = parsed.module.staticExports.flatMap(statement => statement.entries).filter(entry => !entry.isType);
+    const explicit = new Set(entries.map(entry => entry.exportName?.name).filter(Boolean));
+    const from = (specifier, name) => {
+      const target = relativeModule(file, specifier);
+      const exports = exportsFor(target);
+      if (!exports.has(name)) fail(`unresolved runtime re-export ${name} from ${target}`);
+      return exports.get(name);
+    };
+    for (const entry of entries) {
+      const name = entry.exportName?.name;
+      if (!name) {
+        if (entry.importName.kind !== 'AllButDefault') fail(`unsupported export shape in ${file}`);
+        const target = relativeModule(file, entry.moduleRequest.value);
+        for (const [exported, identity] of exportsFor(target)) {
+          if (exported === 'default' || explicit.has(exported)) continue;
+          if (result.has(exported) && result.get(exported) !== identity) fail(`ambiguous star export ${exported} in ${file}`);
+          result.set(exported, identity);
+        }
+        continue;
+      }
+      let identity = null;
+      if (entry.moduleRequest) {
+        if (!entry.importName.name) fail(`unsupported namespace re-export ${name} in ${file}`);
+        identity = from(entry.moduleRequest.value, entry.importName.name);
+      } else {
+        const local = entry.localName.name;
+        const imported = imports.get(local);
+        if (imported?.unsupported) fail(`unsupported imported re-export ${local} in ${file}`);
+        if (imported) identity = from(imported.source, imported.name);
+        else if (localClasses.has(local)) {
+          const key = JSON.stringify([file, local]);
+          if (file.startsWith('src/components/') && !declarations.has(key)) fail(`component class ${local} in ${file} is absent from the manifest`);
+          if (classes.has(key)) identity = key;
+        }
+      }
+      result.set(name, identity);
+    }
+    active.delete(file);
+    cache.set(file, result);
     return result;
+  };
+  try {
+    for (const [name, identity] of exportsFor(root.sourcePath)) {
+      if (!identity) continue;
+      const records = (metadata.exportDeprecations ?? []).filter(record => record.kind === 'class' && record.module === '.' && record.name === name);
+      if (records.length !== 1) {
+        findings.push(`root component class ${name}: expected exactly one class deprecation policy`);
+        continue;
+      }
+      const record = records[0];
+      validateNamedExportDeprecation(`root component class ${name}`, record, resolveContext, findings);
+      if (record.replacement?.kind !== 'class') {
+        findings.push(`root component class ${name}: replacement must be a component class`);
+        continue;
+      }
+      const replacement = exportSource(`root component class ${name}`, record.replacement.module ?? '.', 'replacement', resolveContext, findings);
+      if (replacement) {
+        const target = exportsFor(replacement.sourcePath).get(record.replacement.name);
+        if (!target) findings.push(`root component class ${name}: replacement is not a component constructor`);
+        else if (target !== identity && !(metadata.deprecations ?? []).some(policy =>
+          policy.kind === 'component' && policy.tag === classes.get(identity) &&
+          policy.replacement?.kind === 'component' && policy.replacement.name === classes.get(target))) {
+          findings.push(`root component class ${name}: replacement changes constructor without a component alias policy`);
+        }
+      }
+    }
+  } catch (error) {
+    findings.push(`root component classes: ${error.message}`);
   }
-  const route = entry.kind === 'entry-point' || entry.kind === 'stylesheet';
-  const specifier = route ? entry.name : entry.module;
-  if (typeof specifier !== 'string' || (specifier !== '.' && !specifier.startsWith('./')) || specifier.includes('*') || specifier.split('/').some(part => part === '..')) {
-    result.findings.push(`${label}: must name one exact package export`);
-    return result;
-  }
-  if (typeof entry.name !== 'string' || !entry.name) {
-    result.findings.push(`${label}: contract name is required`);
-    return result;
-  }
-  const global = MODULE_CONTRACT_KINDS.includes(entry.kind);
-  if (global && !(entry.kind === 'window-event' ? /^lr-[a-z0-9]+(?:-[a-z0-9]+)*$/ : /^data-lr-[a-z0-9]+(?:-[a-z0-9]+)*$/).test(entry.name)) {
-    result.findings.push(`${label}: invalid ${entry.kind} name`);
-    return result;
-  }
-  const exportsMap = packageJson?.exports;
-  if (!exportsMap || typeof exportsMap !== 'object' || Array.isArray(exportsMap)) {
-    result.findings.push(`${label}: a current package exports map is required`);
-    return result;
-  }
-  const mapping = resolveExportMapping(exportsMap, specifier);
-  const target = mapping && resolveExportTarget(exportsMap, specifier);
-  if (!mapping || target === null) return { ...result, status: 'absent' };
-  if (typeof target !== 'string' || !target) {
-    result.findings.push(`${label}: package export conditions cannot be resolved`);
-    return result;
-  }
-  const resolved = exportSource(label, specifier, specifier, { exportsMap, readSource }, result.findings, entry.kind === 'stylesheet');
-  if (!resolved) return result;
-  result.sourcePath = resolved.sourcePath;
-  const policyNotice = exportDeprecations.some(record => record.kind === entry.kind && record.name === entry.name && (record.module ?? null) === (entry.module ?? null));
-  if (entry.kind === 'stylesheet') return { ...result, status: 'present', deprecated: policyNotice };
-  if (global) {
-    const present = moduleContainsContract(resolved, entry.name);
-    if (present === null) result.findings.push(`${label}: source ${resolved.sourcePath} does not parse`);
-    else return { ...result, status: present ? 'present' : 'absent', deprecated: present ? policyNotice : null };
-    return result;
-  }
-  const exportsByName = moduleExportsOrFinding(label, resolved, specifier, result.findings);
-  if (!exportsByName) return result;
-  if (route) return { ...result, status: 'present', deprecated: policyNotice };
-  const own = exportsByName.get(entry.name);
-  return own ? { ...result, status: 'present', isType: own.isType, deprecated: own.deprecated || policyNotice } : { ...result, status: 'absent' };
+  return findings;
 }
 
 function validateEntryPointDeprecation(label, entry, deprecatedEntryPoints, resolveContext, findings) {
@@ -783,11 +828,22 @@ function validateModuleContractDeprecation(label, entry, resolveContext, finding
     }
     const resolved = exportSource(label, contract.module, subject, resolveContext, findings);
     if (!resolved) return;
-    const found = moduleContainsContract(resolved, contract.name);
-    if (found === null) {
+    const parsed = parseSync(resolved.sourcePath, resolved.source);
+    if (parsed.errors.length) {
       findings.push(`${label}: ${subject} source ${resolved.sourcePath} does not parse`);
       return;
     }
+    let found = false;
+    const visit = node => {
+      if (!node || typeof node !== 'object' || found) return;
+      if ((node.type === 'Literal' || node.type === 'StringLiteral') && node.value === contract.name) found = true;
+      else for (const [key, value] of Object.entries(node)) {
+        if (key === 'comments') continue;
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (value && typeof value === 'object') visit(value);
+      }
+    };
+    visit(parsed.program);
     if (!found) findings.push(`${label}: ${subject} is not declared or used in ${contract.module}`);
   };
   verify(entry, entry.name);

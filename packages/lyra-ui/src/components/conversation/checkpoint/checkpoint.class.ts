@@ -1,15 +1,18 @@
 import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_checkpointConfirmPrompt, LYRA_DEFAULT_checkpointLabel, LYRA_DEFAULT_checkpointRestore, LYRA_DEFAULT_checkpointRestoreWithContext, LYRA_DEFAULT_checkpointRestoring, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface CheckpointRestoreDetail {
   checkpointId: string;
@@ -43,6 +46,12 @@ function bookmarkIcon(): SVGTemplateResult {
 function defaultFormatTimestamp(date: Date, locale: string): string {
   return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Shared by the deprecated `restorable` and
+ *  `confirmRestore` aliases, which have the identical `true`-default parsing need. */
 
 /**
  * `<lr-checkpoint>` — an inline conversation restore point: a labeled marker between messages
@@ -87,6 +96,10 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    restorable: ['withoutRestore', invertAlias, invertAlias],
+    confirmRestore: ['withoutRestoreConfirmation', invertAlias, invertAlias],
+  };
 
   /** Opaque id echoed in the `lr-restore` event detail. */
   @property({ attribute: 'checkpoint-id' }) checkpointId = '';
@@ -105,9 +118,27 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
    *  checkpoint. */
   @property({ type: Boolean, attribute: 'without-restore' }) withoutRestore = false;
 
+  /**
+   * Deprecated inverted alias of `without-restore` (`withoutRestore`): `restorable="false"` equals
+   * `without-restore`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-restore`; removal not before 23.0.0.
+   */
+  @property({ converter: trueDefaultBooleanConverter }) restorable = true;
+
   /** Skips the inline confirm step: Restore fires `lr-restore` immediately. */
   @property({ type: Boolean, attribute: 'without-restore-confirmation' })
   withoutRestoreConfirmation = false;
+
+  /**
+   * Deprecated inverted alias of `without-restore-confirmation` (`withoutRestoreConfirmation`):
+   * `confirm-restore="false"` equals `without-restore-confirmation`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-restore-confirmation`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'confirm-restore', converter: trueDefaultBooleanConverter }) confirmRestore = true;
 
   /** Host-set busy state: the Restore button becomes `aria-disabled="true"` with a spinner beside
    *  the localized "Restoring…" text. */

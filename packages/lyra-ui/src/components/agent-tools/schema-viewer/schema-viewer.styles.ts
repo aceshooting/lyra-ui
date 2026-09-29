@@ -7,7 +7,7 @@ export const styles = css`
   [part~='node'] {
     --_lr-schema-indent: min(
       calc(var(--_lr-schema-depth, 0) * var(--lr-space-s)),
-      var(--lr-json-schema-viewer-max-indent, var(--lr-size-12rem))
+      var(--lr-json-schema-viewer-max-indent, var(--lr-schema-viewer-max-indent, var(--lr-size-12rem)))
     );
     min-inline-size: 0;
     border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
@@ -19,7 +19,7 @@ export const styles = css`
     box-sizing: border-box;
   }
   [part~='node-selected'] {
-    border-inline-start-color: var(--lr-json-schema-viewer-selected-border, var(--lr-color-brand));
+    border-inline-start-color: var(--lr-json-schema-viewer-selected-border, var(--lr-schema-viewer-selected-border, var(--lr-color-brand)));
   }
   [part='node-trigger'] {
     display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); align-items: center; inline-size: 100%; min-block-size: var(--lr-icon-button-size);
@@ -40,23 +40,23 @@ export const styles = css`
   [part='issue'] {
     padding: var(--lr-space-xs);
     border-inline-start: var(--lr-border-width-thick) solid
-      var(--lr-json-schema-viewer-error-border, var(--lr-color-danger));
-    background: var(--lr-json-schema-viewer-error-bg, var(--lr-color-danger-quiet));
+      var(--lr-json-schema-viewer-error-border, var(--lr-schema-viewer-error-border, var(--lr-color-danger)));
+    background: var(--lr-json-schema-viewer-error-bg, var(--lr-schema-viewer-error-bg, var(--lr-color-danger-quiet)));
   }
   [part='issue'][data-severity='warning'] {
-    border-inline-start-color: var(--lr-json-schema-viewer-warning-border, var(--lr-color-warning));
-    background: var(--lr-json-schema-viewer-warning-bg, var(--lr-color-warning-quiet));
+    border-inline-start-color: var(--lr-json-schema-viewer-warning-border, var(--lr-schema-viewer-warning-border, var(--lr-color-warning)));
+    background: var(--lr-json-schema-viewer-warning-bg, var(--lr-schema-viewer-warning-bg, var(--lr-color-warning-quiet)));
   }
   [part='issue'][data-severity='info'] {
-    border-inline-start-color: var(--lr-json-schema-viewer-info-border, var(--lr-color-brand));
-    background: var(--lr-json-schema-viewer-info-bg, var(--lr-color-brand-quiet));
+    border-inline-start-color: var(--lr-json-schema-viewer-info-border, var(--lr-schema-viewer-info-border, var(--lr-color-brand)));
+    background: var(--lr-json-schema-viewer-info-bg, var(--lr-schema-viewer-info-bg, var(--lr-color-brand-quiet)));
   }
   [part='constraints'] { display: flex; flex-flow: row wrap; gap: var(--lr-space-xs); padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-xs); }
   @container (max-inline-size: 319.98px) {
     [part~='node'] {
       --_lr-schema-indent: min(
         calc(var(--_lr-schema-depth, 0) * var(--lr-space-xs)),
-        var(--lr-json-schema-viewer-max-indent, var(--lr-size-12rem))
+        var(--lr-json-schema-viewer-max-indent, var(--lr-schema-viewer-max-indent, var(--lr-size-12rem)))
       );
     }
   }

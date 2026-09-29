@@ -111,6 +111,9 @@ corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
+Deprecated aliases: `--lr-export-button-background`, `--lr-export-button-hover-background` and
+`--lr-export-button-active-background` (use the `-bg` names; removed in 23.0.0).
+
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
@@ -295,6 +298,7 @@ the built-in button. Exactly one named icon is rendered at a time.
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
 - `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
   `background`/`border`/`padding` through `::part(base)` moves here, or onto the token.
+  Deprecated alias: `base__control` (use `base-control`; removed in 23.0.0).
 - `base-success` — added to the button's part list while the confirmation shows
   (`part="base button base-success"`).
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).
@@ -460,10 +464,16 @@ space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `ch
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
 mapped attributes reflect. Plus `withoutSubtree: boolean = false` (attribute `without-subtree`;
 observes only the slotted elements themselves, not their descendants), and programmatic
-`attributeFilter: string[] = []` (neither reflects). The native subtree option defaults to true;
-set `without-subtree` to observe only the slotted elements themselves. Attribute observation is
-enabled by `attr`, `attr-old-value` or `attributeFilter`; `attr="*"` selects all attributes.
+`attributeFilter: string[] = []` (neither reflects). Deprecated alias: `subtree` (use
+`without-subtree`; `subtree="false"` equals `without-subtree`; removed in 23.0.0).
 
+**Deprecated aliases** (still functional and still reflecting until their removal, no earlier than
+23.0.0; setting either logs a one-time development warning): `observeAttributes` (`attributes`)
+turns on attribute observation, and `characterData` (`character-data`) is identical to `charData`.
+Replace `character-data` with `char-data`. Replace `attributes` with `attr="*"` only when `attr`,
+`attr-old-value` and `attributeFilter` are all unset; otherwise just remove it. Those already turn
+attribute observation on, and a non-null `attr` ignores `attributeFilter`, so adding `attr="*"` next
+to a filter would widen the observer to every attribute.
 
 The browser capability is optional. A missing or throwing owner-window lookup, or an unavailable or
 throwing constructor, leaves that rebuild inert rather than leaking an exception. Individual
@@ -505,7 +515,8 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
 - `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
-  means nothing auto-collapses
+  means nothing auto-collapses. Deprecated alias: `collapsed-depth` (`collapsedDepth`; use
+  `expand-depth`, same value and meaning; removed in 23.0.0)
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
@@ -513,10 +524,12 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `query: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+  highlighted and their ancestors auto-expanded. Deprecated alias: `search` (use `query`; removed in
+  23.0.0)
 
 **Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
-resolving the match count. `searchNext()`/`searchPrevious()`
+resolving the match count — named distinctly from `search` because a class member can't share a name
+with a reactive property (the deprecated `search` alias). `searchNext()`/`searchPrevious()`
 advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
 mark it as the active `aria-current` result, announce its position, and scroll it into view;
@@ -1270,6 +1283,11 @@ consumer can compute or unit-test the same alignment without instantiating the e
 - `--lr-diff-view-remove-color` — Removed-line text color.
 - `--lr-diff-view-fold-color` — Fold-marker text color.
 - `--lr-diff-view-fold-bg` — Fold-marker background.
+- Deprecated aliases: `--lr-diff-view-add-background`, `--lr-diff-view-remove-background`,
+  `--lr-diff-view-fold-background`, `--lr-diff-view-highlight-accent-background`,
+  `--lr-diff-view-highlight-success-background`, `--lr-diff-view-highlight-warning-background`,
+  `--lr-diff-view-highlight-danger-background` and `--lr-diff-view-highlight-neutral-background`
+  (use the matching `-bg` names; removed in 23.0.0).
 
 ---
 
@@ -1322,6 +1340,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected, deprecated; removal not before
+  23.0.0) — widens the icon _box_ to `--lr-icon-fixed-width` while the glyph's svg is pinned to
+  `--lr-icon-size` (1em by default) and centres inside it, so a column of differently-shaped icons
+  lines its labels up. It keeps working unchanged, and setting it logs a one-time development
+  warning. Omit it: the default canvas already gives every icon the same 1.25em box. For the wider
+  1.5em box set `lr-icon { inline-size: var(--lr-size-1-5em); }` on the host instead. One geometry
+  difference: a glyph wider than 1em keeps its intrinsic width (up to the box) instead of being
+  squeezed to 1em.
 
 **Events:**
 
@@ -1356,6 +1382,9 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`; deprecated together with `fixed-width`,
+  removal not before 23.0.0) — inline size of the box while `fixed-width` is set. Set `inline-size`
+  on the host instead.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
@@ -1961,7 +1990,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
-  dots.
+  dots. Deprecated alias: `show-progress` (`showProgress`; use `without-progress`;
+  `show-progress="false"` equals `without-progress`; removed in 23.0.0)
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
@@ -1989,7 +2019,9 @@ ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(
 **Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
-departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
+departure from `lr-carousel`'s non-cancelable `lr-slide-change`). Deprecated alias:
+`lr-tour-step-change` (use `lr-tour-step-change-request`; still fires right after it with an equal
+detail and can still veto; removal not before 23.0.0); `lr-tour-end-request`
 (`detail: { reason }`, cancelable before ordinary completion); `lr-tour-end`
 (`detail: { reason }`, non-cancelable after closing). Forced removal still notifies with reason
 `unmount`, without a request because removal cannot be vetoed. Migrate old raw-detail reads to

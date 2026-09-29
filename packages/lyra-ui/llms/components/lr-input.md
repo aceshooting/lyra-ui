@@ -350,7 +350,7 @@ submission must never shadow it: `lr-textarea` and `lr-code-editor` insert a new
 whole point of a multi-line surface; `lr-select`'s `role="combobox"` trigger opens the listbox (and
 then commits the active option), per the ARIA pattern; and `lr-date-picker` selects the focused day
 in the calendar grid. The controls that _do_ wire it are `lr-input` (and its `lr-number-input`/
-`lr-native-time-input` shared implementations), the separate segmented `lr-time-input`, `lr-combobox`,
+`lr-native-time-input` subclasses), the separate segmented `lr-time-input`, `lr-combobox`,
 `lr-date-input`, `lr-phone-input`, `lr-token-input` and `lr-otp-input`.
 
 ### Exact-height hatches — the one rule that applies to all of them

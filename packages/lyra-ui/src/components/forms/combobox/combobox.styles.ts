@@ -178,7 +178,7 @@ export const styles = css`
       var(--lr-combobox-border-color, var(--_lr-combobox-border-color));
     border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));
     background: var(--lr-combobox-fill, var(--_lr-combobox-fill));
-    color: var(--lr-combobox-color, var(--_lr-combobox-text-color));
+    color: var(--lr-combobox-color, var(--lr-combobox-text-color, var(--_lr-combobox-text-color)));
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
   }

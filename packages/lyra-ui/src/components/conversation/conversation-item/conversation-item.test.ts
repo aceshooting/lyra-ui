@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./conversation-item.js";
+import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 import type {
   LyraConversationItem,
   LyraConversationItemEventMap,
@@ -610,6 +611,39 @@ describe("inline rename", () => {
     expect(
       notEditable.shadowRoot!.querySelector('[part="rename-button"]') == null
     ).to.be.true;
+  });
+
+  it('keeps the deprecated renamable="false" alias equal to without-rename, warning once', async () => {
+    let el!: LyraConversationItem;
+    let both!: LyraConversationItem;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "renamable" }],
+      async () => {
+        el = (await fixture(
+          html`<lr-conversation-item
+            label="A"
+            renamable="false"
+          ></lr-conversation-item>`
+        )) as LyraConversationItem;
+        both = (await fixture(
+          html`<lr-conversation-item label="A" without-rename renamable></lr-conversation-item>`
+        )) as LyraConversationItem;
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-conversation-item:property:renamable",
+    ]);
+    expect(el.withoutRename).to.be.true;
+    expect(el.renamable).to.be.false;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="rename-button"]')
+    ).to.have.lengthOf(0);
+    expect(both.withoutRename, "the later renamable attribute wins").to.be.false;
+    expect(both.renamable).to.be.true;
+    both.withoutRename = true;
+    await both.updateComplete;
+    expect(both.renamable, "the alias syncs back from the canonical").to.be.false;
+    expect(both.hasAttribute("renamable"), "the alias keeps its presence reflection").to.be.false;
   });
 
   it("gives the rename button the shared minimum hit area", async () => {
@@ -1443,6 +1477,52 @@ describe("dense size tier", () => {
 
     // ...and the dense size still tightened the box.
     expect(rowChrome(both).paddingTop).to.equal("4px");
+  });
+
+  it("keeps the deprecated compact alias equal to size=\"s\", warning once", async () => {
+    let el!: LyraConversationItem;
+    let both!: LyraConversationItem;
+    let aliasLast!: LyraConversationItem;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "compact" }],
+      async () => {
+        el = await fixtureItem(
+          html`<lr-conversation-item compact label="Session" excerpt="Last message"></lr-conversation-item>`
+        );
+        both = await fixtureItem(
+          html`<lr-conversation-item compact size="xs" label="Session"></lr-conversation-item>`
+        );
+        aliasLast = await fixtureItem(
+          html`<lr-conversation-item size="l" compact label="Session"></lr-conversation-item>`
+        );
+      }
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-conversation-item:property:compact",
+    ]);
+    const canonical = await fixtureItem(
+      html`<lr-conversation-item size="s" label="Session" excerpt="Last message"></lr-conversation-item>`
+    );
+    expect(el.size).to.equal("s");
+    expect(el.compact).to.be.true;
+    expect(rowChrome(el)).to.deep.equal(rowChrome(canonical));
+    expect(both.size, "the later size attribute wins").to.equal("xs");
+    expect(both.compact, "xs reads as compact").to.be.true;
+    expect(aliasLast.size, "the later compact attribute wins").to.equal("s");
+    both.size = "m";
+    await both.updateComplete;
+    expect(both.compact, "the alias syncs back from size").to.be.false;
+    expect(both.hasAttribute("compact")).to.be.false;
+
+    await captureDeprecationWarnings(
+      [{ tag: "lr-conversation-item", kind: "property", name: "compact" }],
+      async () => {
+        el.compact = false;
+        await el.updateComplete;
+      }
+    );
+    expect(el.size).to.equal("m");
+    expect(rowChrome(el).paddingTop).to.equal("8px");
   });
 
   it("is accessible in a populated dense state", async () => {

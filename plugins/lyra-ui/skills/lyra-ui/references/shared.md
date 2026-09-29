@@ -153,11 +153,11 @@ The entry points, then:
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
 - **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 288
-  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
+  root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer` and `lr-geojson-viewer`. Those always need their own subpath import,
+  `lr-knowledge-graph-explorer`, `lr-geojson-view`, and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
   isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.
@@ -2230,8 +2230,9 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `LyraPluralMessage`, `LyraPluralCategory`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
 The package root continues to re-export the runtime for compatibility and remains registration-free;
 use the dedicated entry when the application only needs locale setup and the narrower import graph.
-The former `@aceshooting/lyra-ui/utilities/localization.js` entry point was removed in 23.0.0.
-Change that import specifier to `@aceshooting/lyra-ui/localization.js`; the helper contracts are unchanged.
+The `@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not
+before 23.0.0: every name it exports is exported here as the identical binding, so change the import
+specifier to `@aceshooting/lyra-ui/localization.js` and nothing else.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
@@ -3426,8 +3427,9 @@ release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, ti
 number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
   `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
-  Import these helpers from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry.
-  The former `utilities/localization.js` route was removed in 23.0.0. The extensionless `@aceshooting/lyra-ui/utilities`
+  **This `utilities/localization.js` entry point is deprecated**, with removal not before 23.0.0:
+  import every name below from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry,
+  which exports the identical bindings and types. The extensionless `@aceshooting/lyra-ui/utilities`
   barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
   `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered
@@ -4075,6 +4077,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelReactProps;
   'lr-gauge': LyraGaugeReactProps;
   'lr-generation-metrics': LyraGenerationMetricsReactProps;
+  'lr-geojson-view': LyraGeojsonViewReactProps;
   'lr-geojson-viewer': LyraGeoJsonViewerReactProps;
   'lr-graph': LyraGraphReactProps;
   'lr-graph-legend': LyraGraphLegendReactProps;
@@ -4503,6 +4506,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraComponentTypeMap['lr-funnel']['element'];
   'lr-gauge': LyraComponentTypeMap['lr-gauge']['element'];
   'lr-generation-metrics': LyraComponentTypeMap['lr-generation-metrics']['element'];
+  'lr-geojson-view': LyraComponentTypeMap['lr-geojson-view']['element'];
   'lr-geojson-viewer': LyraComponentTypeMap['lr-geojson-viewer']['element'];
   'lr-graph': LyraComponentTypeMap['lr-graph']['element'];
   'lr-graph-legend': LyraComponentTypeMap['lr-graph-legend']['element'];
@@ -4808,6 +4812,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelSvelteProps;
   'lr-gauge': LyraGaugeSvelteProps;
   'lr-generation-metrics': LyraGenerationMetricsSvelteProps;
+  'lr-geojson-view': LyraGeojsonViewSvelteProps;
   'lr-geojson-viewer': LyraGeoJsonViewerSvelteProps;
   'lr-graph': LyraGraphSvelteProps;
   'lr-graph-legend': LyraGraphLegendSvelteProps;
@@ -5229,6 +5234,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelVueProps;
   'lr-gauge': LyraGaugeVueProps;
   'lr-generation-metrics': LyraGenerationMetricsVueProps;
+  'lr-geojson-view': LyraGeojsonViewVueProps;
   'lr-geojson-viewer': LyraGeoJsonViewerVueProps;
   'lr-graph': LyraGraphVueProps;
   'lr-graph-legend': LyraGraphLegendVueProps;
@@ -5681,38 +5687,10 @@ cross shadow roots. Inherited values do cross them.
 
 For design-tool interchange, `@aceshooting/lyra-ui/design-tokens.json` includes
 `$extensions['com.aceshooting.lyra.looks']` with `schemaVersion: 1`, `base: 'lyra'`, and a
-`definitions` map for the shipped looks, including `lyra`, `material`, `shadcn`, `data`, `terminal`
-and `high-contrast`. Each entry is a portable `{ id, tokens }`
+`definitions` map for `lyra`, `material` and `shadcn`. Each entry is a portable `{ id, tokens }`
 definition accepted by `defineLyraLook()`. Sparse and null branches remain sparse; omitted values
 come from the canonical base token tree, and the empty Lyra definition restores that base. Load the
 artifact explicitly only in tooling or flows that need it; ordinary components do not import it.
-
-### Documentation theme builder
-
-The optional [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor)
-composes existing style APIs and portable token maps. It previews both modes, supports individual
-and complete resets, and edits contrast/motion preferences, local-font pairing, shape, elevation
-and categorical/sequential/diverging palettes. The editor is documentation code, not a package
-entry point or a new custom element; importing components never imports the builder.
-
-Import/export uses the existing `LyraLook`, `LyraThemeTokens`, version-2 saved style record and
-`LyraPreferences` formats. Preferences remain separate from the saved style record. Runtime look
-tokens are retained explicitly; `getLyraStyle()` snapshots alone do not contain those tokens.
-Imports validate atomically, are bounded to 256 KiB, and reject network-bearing or executable CSS.
-Errors leave the last valid preview intact. A group reset removes that group's writes; resetting
-one token to its look value removes it from every override group.
-
-Exported look CSS comes from `lyraLookCss()` and requires `theme.css`, the selected optional sheets
-and axis attributes. It is not an export of every axis or preference. Use the complete runtime
-recipe for custom accent derivation, or the separate style/preference files to retain those choices.
-Server-rendered attributes use `lyraStyleAttributes()` and `lyraPreferenceAttributes()`; system mode
-is not falsely resolved on the server. Install the required CSS in each application-owned shadow
-root that contains a local style boundary.
-
-Diagnostics describe measured specimen colors and states, not universal accessibility
-certification. Unknown/dynamic backgrounds remain unmeasured. Chart series keep text and non-color
-cues; color-vision simulation does not replace them. Font availability, physical blur and native
-platform accessibility settings still require evidence on the relevant platform.
 
 ### Optional shape, typography and elevation presets
 
@@ -5904,12 +5882,12 @@ This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
 On `lr-attachment-trigger`, `lr-callout`, `lr-carousel`, `lr-dialog`, `lr-drawer`, `lr-file-input`,
 `lr-lite-chart`, `lr-progress-bar`, `lr-progress-ring` and `lr-reorder-item`, the older
-`accessible-label` attribute was removed in 23.0.0 and no longer supplies an accessible name.
-Their `accessibleLabel` properties remain supported as deprecated fallbacks, with removal no
-earlier than 24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and
-`accessibleLabel` remain supported with removal no earlier than 24.0.0. These retained
-compatibility inputs can issue one-time development notices; use the native host name for new
-code. The migration reference lists each attribute and property independently.
+`accessible-label` attribute is deprecated with removal no earlier than 23.0.0. Their
+`accessibleLabel` properties have a separate deprecation window, with removal no earlier than
+24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and `accessibleLabel` are
+deprecated with removal no earlier than 24.0.0. These compatibility names remain functional during
+their respective windows and can issue one-time development notices; use the native host name for
+new code. The migration reference lists each attribute and property independently.
 
 `lr-message-parts` retains a deprecated nullable `accessibleLabel` property, with removal no earlier
 than 24.0.0. It maps to the current `aria-label` attribute: authoring that attribute updates the

@@ -10,7 +10,7 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
@@ -32,6 +32,7 @@ import {
   getNumberFormat,
   resolveIntlLocale,
 } from '../../../internal/intl-cache.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -433,8 +434,12 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @cssprop [--lr-thread-list-row-action-active-color=var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))] - Row-action pressed foreground.
  * @cssprop [--lr-thread-list-excerpt-highlight-bg=var(--lr-color-warning-quiet)] -
  *   Background of `<mark>` descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-background=var(--lr-color-warning-quiet)] - Deprecated alias of
+ *   `--lr-thread-list-excerpt-highlight-bg`; removal not before 23.0.0.
  * @cssprop [--lr-thread-list-excerpt-highlight-color=inherit] - Foreground of `<mark>`
  *   descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-foreground=inherit] - Deprecated alias of
+ *   `--lr-thread-list-excerpt-highlight-color`; removal not before 23.0.0.
  * @cssprop [--lr-thread-list-excerpt-highlight-radius=var(--lr-radius-xs)] - Corner radius of
  *   `<mark>` descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
@@ -479,6 +484,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
   protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showArchived: 'withArchived',
+    renamable: ['withoutRename', invertAlias, invertAlias],
     compact: ['size', (value) => value ? 's' : 'm', (value) => ['2xs', 'xs', 's'].includes(normalizeSize(value as LyraSize))],
   };
 
@@ -608,8 +615,31 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ type: Boolean, attribute: 'with-archived', reflect: true })
   withArchived = false;
 
+  /**
+   * Deprecated alias of `with-archived` (`withArchived`), with identical behavior. Setting it logs a
+   * one-time development warning.
+   *
+   * @deprecated Use `with-archived`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'show-archived', reflect: true })
+  showArchived = false;
+
   /** Forwarded to each data-mode row: turns off its inline rename. */
   @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
+
+  /**
+   * Deprecated inverted alias of `without-rename` (`withoutRename`): `renamable="false"` equals
+   * `without-rename`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-rename`; removal not before 23.0.0.
+   */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  renamable = true;
 
   /** Compatibility density alias: true selects `size="s"`, false selects `size="m"`. The shared
    * size applies to the built-in search field and data-mode rows; slotted rows retain their own size.

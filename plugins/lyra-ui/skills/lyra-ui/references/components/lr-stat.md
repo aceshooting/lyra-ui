@@ -7,7 +7,8 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated slot** default slot since `21.1.0`; use slot `slot="start"`; removal not before `23.0.0` — start is the library-wide adornment slot and already takes precedence when both are filled; retiring the unnamed icon alias stops an unnamed child from silently becoming the leading icon. lr-stat has no upstream counterpart, so no mirrored slot is affected.
 - **Optional peers** none
 - **Themeable via** 14 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -80,7 +81,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
   density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
-  and removes the attribute.
+  and removes the attribute. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it
+  still renders exactly like `size="s"`; the two stay in step, the last write wins, and `compact`
+  reads `true` whenever `size` is `s` or smaller
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
@@ -97,7 +100,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 
 **Events:** none.
 
-**Slots:** `start` (leading icon), `caption` (rich caption content —
+**Slots:** `start` (canonical leading icon), default (deprecated leading-icon alias, removal not
+before 23.0.0: it still renders while `start` is empty and `start` takes precedence when both are
+filled; move the icon to `slot="start"`), `caption` (rich caption content —
 overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content

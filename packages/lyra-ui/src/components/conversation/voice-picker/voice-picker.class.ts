@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import type { LyraSize } from '../../../internal/variants.js';
@@ -26,7 +27,7 @@ import {
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -39,6 +40,15 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+/**
+ * `true`-defaulting boolean attribute converter for the deprecated `preview`. Lit's built-in `type: Boolean`
+ * converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ * maps to `true`, so a plain-markup consumer writing the literal `preview="false"` would actually
+ * get `true` (this property's default) -- the same bug class `spellcheckConverter` above and
+ * `<lr-checkpoint>`'s deprecated `restorable`/`confirmRestore` alias converters document and fix.
+ */
 
 /** A catalog row: a selectable TTS voice. */
 export interface LyraVoiceCatalogEntry extends LyraCatalogEntry {
@@ -334,6 +344,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    preview: ['withoutPreview', invertAlias, invertAlias],
+  };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -382,6 +395,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    *  preview icons. */
   @property({ type: Boolean, attribute: 'without-preview', reflect: true }) withoutPreview = false;
 
+  /**
+   * Deprecated inverted alias of `without-preview` (`withoutPreview`): `preview="false"` equals
+   * `without-preview`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-preview`; removal not before 23.0.0.
+   */
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) preview = true;
   /** Visible label text. The `label` slot appends custom label content to the same native label. */
   @property() label = '';
   @property() hint = '';

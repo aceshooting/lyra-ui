@@ -8,6 +8,22 @@ import {
 } from '../../media/av-player/av-metadata.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 
+/**
+ * A file supplied to a document renderer.
+ * @deprecated Use the structurally identical `LyraDocumentFile`; each is assignable to the other.
+ * Exported signatures keep this name until its removal, no earlier than 23.0.0.
+ */
+export interface DocumentFile {
+  readonly name: string;
+  readonly mimeType: string;
+  readonly src: string;
+  /** A string is a highlight id in `highlights`. */
+  readonly anchor?: LyraAnchor | string;
+  readonly highlights?: readonly LyraHighlight[];
+  /** Media alt text for image-like renderers. */
+  readonly alt?: string;
+}
+
 /** Immutable file data wrapped by a `LyraDocumentRendererPayload`. */
 export interface LyraDocumentFile {
   readonly name: string;
@@ -98,7 +114,7 @@ const factoryAdapters = new WeakMap<object, LyraDocumentRendererAdapter>();
 export interface LyraDocumentRendererAdapter {
   readonly kind: LyraDocumentRendererPayloadKind;
   readonly [DOCUMENT_RENDERER_ADAPTER]: true;
-  adapt(file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
+  adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
   capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined;
   render(payload: LyraDocumentRendererPayload): unknown;
 }
@@ -109,7 +125,7 @@ export interface LyraDocumentRendererAdapterDefinition<
 > {
   readonly kind: K;
   readonly adapt: (
-    file: LyraDocumentFile,
+    file: DocumentFile,
     supplied?: LyraDocumentRendererPayload,
   ) => LyraDocumentRendererPayloadFor<K>;
   readonly capabilities: (
@@ -120,13 +136,13 @@ export interface LyraDocumentRendererAdapterDefinition<
 
 interface DocumentRendererDefinitionBase {
   /** Matches files that do not have an exact normalized MIME-type registration. */
-  readonly matches?: (file: LyraDocumentFile) => boolean;
+  readonly matches?: (file: DocumentFile) => boolean;
 }
 
 /** A renderer whose implementation is already available. */
 export interface DirectDocumentRendererDefinition extends DocumentRendererDefinitionBase {
   /** Renders the file as Lit-compatible content, a DOM node, or plain text. */
-  readonly render: (file: LyraDocumentFile) => unknown;
+  readonly render: (file: DocumentFile) => unknown;
   /** Static legacy capability declaration. Payload adapters derive capabilities instead. */
   readonly capabilities?: AnchorTargetCapabilities;
   readonly adapter?: never;
@@ -157,11 +173,19 @@ export interface LazyDocumentRendererDefinition extends DocumentRendererDefiniti
   >;
 }
 
-/** A validated renderer definition with exactly one of `render`, `adapter`, and `load`. */
-export type LyraDocumentRendererDefinition =
+/**
+ * A validated renderer definition. Exactly one of `render`, `adapter`, and `load` is present.
+ * @deprecated Use `LyraDocumentRendererDefinition`, the same union under the library's prefixed
+ * name. Exported signatures keep this name until its removal, no earlier than 23.0.0.
+ */
+export type DocumentRendererDefinition =
   | DirectDocumentRendererDefinition
   | LyraAdaptedDocumentRendererDefinition
   | LazyDocumentRendererDefinition;
+
+/** Canonical prefixed name for authored renderer definitions: a validated renderer definition in
+ *  which exactly one of `render`, `adapter`, and `load` is present. */
+export type LyraDocumentRendererDefinition = DocumentRendererDefinition;
 
 /** One payload-bound renderer invocation and its truthful, immutable capabilities. */
 export interface LyraAdaptedDocumentRenderer {
@@ -171,11 +195,11 @@ export interface LyraAdaptedDocumentRenderer {
 }
 
 /** Immutable MIME/key-to-renderer registry accepted by `<lr-document-viewer>`. */
-export type DocumentRendererRegistry = ReadonlyMap<string, LyraDocumentRendererDefinition>;
+export type DocumentRendererRegistry = ReadonlyMap<string, DocumentRendererDefinition>;
 
-const builtInDefinitions = new Map<string, LyraDocumentRendererDefinition>();
-let loadCache = new WeakMap<LyraDocumentRendererDefinition, Promise<LyraResolvedDocumentRendererDefinition>>();
-let validatedDefinitionCache = new WeakMap<object, LyraDocumentRendererDefinition>();
+const builtInDefinitions = new Map<string, DocumentRendererDefinition>();
+let loadCache = new WeakMap<DocumentRendererDefinition, Promise<LyraResolvedDocumentRendererDefinition>>();
+let validatedDefinitionCache = new WeakMap<object, DocumentRendererDefinition>();
 
 function normalizeRegistryKey(key: string): string {
   const normalized = key.trim().toLowerCase();
@@ -235,7 +259,7 @@ export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayl
   const adapter = Object.freeze({
     [DOCUMENT_RENDERER_ADAPTER]: true as const,
     kind,
-    adapt(file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload {
+    adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload {
       return assertKind(snapshotLyraDocumentRendererPayload(adapt(file, supplied)));
     },
     capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined {
@@ -268,13 +292,13 @@ function resolveDocumentRendererAdapter(value: unknown): LyraDocumentRendererAda
   }
 }
 
-function validateDefinition(value: unknown): LyraDocumentRendererDefinition {
+function validateDefinition(value: unknown): DocumentRendererDefinition {
   if (typeof value !== 'object' || value === null) {
     throw new TypeError('A document renderer definition must be an object.');
   }
   const cached = validatedDefinitionCache.get(value);
   if (cached) return cached;
-  const candidate = value as Partial<LyraDocumentRendererDefinition> & {
+  const candidate = value as Partial<DocumentRendererDefinition> & {
     render?: unknown;
     load?: unknown;
     adapter?: unknown;
@@ -299,7 +323,7 @@ function validateDefinition(value: unknown): LyraDocumentRendererDefinition {
   }
   const capabilities = freezeCapabilities(candidate.capabilities);
   const base = {
-    ...(candidate.matches ? { matches: candidate.matches as (file: LyraDocumentFile) => boolean } : {}),
+    ...(candidate.matches ? { matches: candidate.matches as (file: DocumentFile) => boolean } : {}),
   };
   const validated = adapter
     ? Object.freeze({
@@ -310,7 +334,7 @@ function validateDefinition(value: unknown): LyraDocumentRendererDefinition {
       ? Object.freeze({
         ...base,
         ...(capabilities ? { capabilities } : {}),
-        render: candidate.render as (file: LyraDocumentFile) => unknown,
+        render: candidate.render as (file: DocumentFile) => unknown,
       })
       : Object.freeze({
         ...base,
@@ -328,7 +352,7 @@ function validateDefinition(value: unknown): LyraDocumentRendererDefinition {
  */
 export function adaptDocumentRenderer(
   candidate: LyraResolvedDocumentRendererDefinition,
-  file: LyraDocumentFile,
+  file: DocumentFile,
   supplied?: LyraDocumentRendererPayload,
 ): LyraAdaptedDocumentRenderer {
   const definition = validateDefinition(candidate);
@@ -360,10 +384,10 @@ export function adaptDocumentRenderer(
 }
 
 /** Read-only wrapper rather than a frozen `Map` (whose mutator methods remain callable). */
-class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocumentRendererDefinition> {
-  readonly #entries: Map<string, LyraDocumentRendererDefinition>;
+class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, DocumentRendererDefinition> {
+  readonly #entries: Map<string, DocumentRendererDefinition>;
 
-  constructor(entries: Iterable<readonly [string, LyraDocumentRendererDefinition]>) {
+  constructor(entries: Iterable<readonly [string, DocumentRendererDefinition]>) {
     this.#entries = new Map(entries);
     rememberDocumentRendererRegistry(this, this.#entries);
   }
@@ -372,7 +396,7 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocum
     return this.#entries.size;
   }
 
-  get(key: string): LyraDocumentRendererDefinition | undefined {
+  get(key: string): DocumentRendererDefinition | undefined {
     return this.#entries.get(normalizeRegistryKey(key));
   }
 
@@ -380,7 +404,7 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocum
     return this.#entries.has(normalizeRegistryKey(key));
   }
 
-  entries(): MapIterator<[string, LyraDocumentRendererDefinition]> {
+  entries(): MapIterator<[string, DocumentRendererDefinition]> {
     return this.#entries.entries();
   }
 
@@ -388,22 +412,22 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocum
     return this.#entries.keys();
   }
 
-  values(): MapIterator<LyraDocumentRendererDefinition> {
+  values(): MapIterator<DocumentRendererDefinition> {
     return this.#entries.values();
   }
 
   forEach(
     callbackfn: (
-      value: LyraDocumentRendererDefinition,
+      value: DocumentRendererDefinition,
       key: string,
-      map: ReadonlyMap<string, LyraDocumentRendererDefinition>,
+      map: ReadonlyMap<string, DocumentRendererDefinition>,
     ) => void,
     thisArg?: unknown,
   ): void {
     for (const [key, value] of this.#entries) callbackfn.call(thisArg, value, key, this);
   }
 
-  [Symbol.iterator](): MapIterator<[string, LyraDocumentRendererDefinition]> {
+  [Symbol.iterator](): MapIterator<[string, DocumentRendererDefinition]> {
     return this.entries();
   }
 }
@@ -413,7 +437,7 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocum
  * per-instance overrides. Later module registrations cannot mutate an existing snapshot.
  */
 export function createDocumentRendererRegistry(
-  overrides: Iterable<readonly [string, LyraDocumentRendererDefinition]> = [],
+  overrides: Iterable<readonly [string, DocumentRendererDefinition]> = [],
 ): DocumentRendererRegistry {
   const entries = new Map(builtInDefinitions);
   for (const [key, definition] of overrides) {
@@ -426,7 +450,7 @@ export function createDocumentRendererRegistry(
  * Adds or replaces a built-in definition for registries created after this call. Registration
  * modules use this during module evaluation; existing viewer instances remain isolated snapshots.
  */
-export function registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void {
+export function registerDocumentRenderer(key: string, definition: DocumentRendererDefinition): void {
   builtInDefinitions.set(normalizeRegistryKey(key), validateDefinition(definition));
 }
 
@@ -437,9 +461,9 @@ export function getDefaultDocumentRendererRegistry(): DocumentRendererRegistry {
 
 /** Finds an exact normalized MIME essence, then the first matching shape-based renderer. */
 export function findDocumentRenderer(
-  file: LyraDocumentFile,
+  file: DocumentFile,
   registry: DocumentRendererRegistry = createDocumentRendererRegistry(),
-): LyraDocumentRendererDefinition | undefined {
+): DocumentRendererDefinition | undefined {
   const exact = registry.get(normalizeRegistryKey(file.mimeType));
   if (exact) return validateDefinition(exact);
   for (const candidate of registry.values()) {
@@ -464,10 +488,10 @@ export function loadDocumentRenderer(
   candidate: LyraAdaptedDocumentRendererDefinition,
 ): Promise<LyraAdaptedDocumentRendererDefinition>;
 export function loadDocumentRenderer(
-  candidate: LyraDocumentRendererDefinition,
+  candidate: DocumentRendererDefinition,
 ): Promise<LyraResolvedDocumentRendererDefinition>;
 export function loadDocumentRenderer(
-  candidate: LyraDocumentRendererDefinition,
+  candidate: DocumentRendererDefinition,
 ): Promise<LyraResolvedDocumentRendererDefinition> {
   const definition = validateDefinition(candidate);
   if (!('load' in definition) || !definition.load) return Promise.resolve(definition);

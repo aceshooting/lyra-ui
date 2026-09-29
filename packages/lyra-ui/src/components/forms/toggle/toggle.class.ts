@@ -147,12 +147,18 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  * @cssprop [--lr-toggle-gap=var(--lr-form-control-gap)] - Gap between the adornments and the label.
  * @cssprop [--lr-toggle-color=var(--lr-color-text)] - Text and icon colour while unpressed.
  * @cssprop [--lr-toggle-bg=transparent] - Fill while unpressed.
+ * @cssprop [--lr-toggle-background=transparent] - Deprecated alias of `--lr-toggle-bg`, read only
+ *   as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-toggle-border-color=transparent] - Border colour while unpressed. The built-in
  *   default is transparent for `plain` and `var(--lr-color-border)` for `outlined`.
  * @cssprop [--lr-toggle-hover-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  *   Fill of an unpressed toggle under the pointer.
+ * @cssprop [--lr-toggle-hover-background=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Deprecated alias of `--lr-toggle-hover-bg`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-toggle-pressed-bg=var(--lr-color-fill-quiet)] - Fill while pressed, from the
  *   `variant` row of the semantic colour grid.
+ * @cssprop [--lr-toggle-pressed-background=var(--lr-color-fill-quiet)] - Deprecated alias of
+ *   `--lr-toggle-pressed-bg`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-toggle-pressed-color=var(--lr-color-on-quiet)] - Text and icon colour while pressed.
  * @cssprop [--lr-toggle-pressed-border-color=var(--lr-color-border-loud)] - Border colour while
  *   pressed. It is the pressed state's 3:1 non-text indicator; a quiet fill alone would not meet

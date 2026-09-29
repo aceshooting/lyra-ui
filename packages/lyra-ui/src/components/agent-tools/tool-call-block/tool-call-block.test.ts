@@ -6,6 +6,7 @@ import { registerToolRenderer } from '../tool-result-view/registry.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', ['durationSeconds', 'toolCallBlockHeaderPending']);
@@ -800,6 +801,65 @@ describe('<lr-tool-call-block>', () => {
   });
 });
 
+describe('lr-tool-call-block deprecated error alias', () => {
+  const ERROR: readonly DeprecatedUsage[] = [{ tag: 'lr-tool-call-block', kind: 'property', name: 'error' }];
+  const errorText = (el: Block): string | null => {
+    const section = part(el, 'error');
+    return section === null ? null : text(section.querySelector('p'));
+  };
+
+  it('renders error-text without a deprecation warning', async () => {
+    let shown: string | null = null;
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      shown = errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error-text="boom"></lr-tool-call-block>`));
+    });
+    expect(shown).to.equal('boom');
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps the error attribute and property working as error-text, warning once', async () => {
+    let attribute: string | null = null;
+    let property: string | null = null;
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      const aliased = await fixture<Block>(html`<lr-tool-call-block name="t" expanded error="boom"></lr-tool-call-block>`);
+      attribute = errorText(aliased);
+      const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded></lr-tool-call-block>`);
+      el.error = 'bang';
+      await el.updateComplete;
+      property = errorText(el);
+      reads = [aliased.error, aliased.errorText, el.error, el.errorText];
+    });
+    expect(attribute).to.equal('boom');
+    expect(property).to.equal('bang');
+    expect(reads).to.deep.equal(['boom', 'boom', 'bang', 'bang']);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-call-block:property:error']);
+  });
+
+  it('applies the last authored spelling when error and error-text are both present', async () => {
+    let shown: (string | null)[] = [];
+    await captureDeprecationWarnings(ERROR, async () => {
+      shown = [
+        errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error="old" error-text="new"></lr-tool-call-block>`)),
+        errorText(await fixture<Block>(html`<lr-tool-call-block name="t" expanded error-text="new" error="old"></lr-tool-call-block>`)),
+      ];
+    });
+    expect(shown).to.deep.equal(['new', 'old']);
+  });
+
+  it('syncs error back from the canonical errorText without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ERROR, async () => {
+      const el = await fixture<Block>(html`<lr-tool-call-block name="t" expanded></lr-tool-call-block>`);
+      reads.push(el.error);
+      el.errorText = 'boom';
+      await el.updateComplete;
+      reads.push(el.error);
+    });
+    expect(reads).to.deep.equal([undefined, 'boom']);
+    expect(warnings).to.have.length(0);
+  });
+});
 
 describe('lr-tool-call-block deprecated --lr-tool-call-block-background alias', () => {
   it('paints from --lr-tool-call-block-bg, still honours the old name, and lets the canonical name win', async () => {
@@ -808,7 +868,7 @@ describe('lr-tool-call-block deprecated --lr-tool-call-block-background alias', 
       return getComputedStyle(part(el, 'base')!).backgroundColor;
     };
     expect(await fill('--lr-tool-call-block-bg: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
-    expect(await fill('--lr-tool-call-block-background: rgb(1, 2, 3)')).to.not.equal('rgb(1, 2, 3)');
+    expect(await fill('--lr-tool-call-block-background: rgb(1, 2, 3)')).to.equal('rgb(1, 2, 3)');
     expect(await fill('--lr-tool-call-block-bg: rgb(4, 5, 6); --lr-tool-call-block-background: rgb(1, 2, 3)')).to.equal('rgb(4, 5, 6)');
   });
 });

@@ -3,7 +3,10 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -66,6 +69,10 @@ export interface LyraMutationObserverEventMap {
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    characterData: 'charData',
+    subtree: ['withoutSubtree', invertAlias, invertAlias],
+  };
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -84,9 +91,34 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   @property({ type: Boolean, attribute: 'attr-old-value', reflect: true }) attrOldValue = false;
   @property({ type: Boolean, attribute: 'char-data', reflect: true }) charData = false;
   @property({ type: Boolean, attribute: 'char-data-old-value', reflect: true }) charDataOldValue = false;
+  /**
+   * Deprecated Lyra compatibility alias that turns on attribute observation. On its own it
+   * matches `attr="*"` (every attribute); unlike `attr`, it keeps honoring `attributeFilter`. It
+   * still reflects and still enables observation until its removal, and setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `attr="*"`, or remove `attributes` when `attr`, `attr-old-value` or
+   * `attributeFilter` is also set (they already enable attribute observation, and `attr` would
+   * replace an `attributeFilter`); removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'attributes', reflect: true }) observeAttributes = false;
+  /**
+   * Deprecated Lyra compatibility alias for `charData`, with identical behavior. It still reflects
+   * and still enables character-data observation until its removal, and setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `char-data` (`charData`); removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'character-data', reflect: true }) characterData = false;
   /** Observes only the slotted elements themselves, not their descendants (the native
    *  `subtree: false` option). */
   @property({ type: Boolean, attribute: 'without-subtree' }) withoutSubtree = false;
+  /**
+   * Observes the slotted elements' descendants too (the native `subtree` option).
+   *
+   * @deprecated Use `without-subtree`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) subtree = true;
   @property({ attribute: false }) attributeFilter: string[] = [];
 
   private observer?: MutationObserver;
@@ -118,6 +150,20 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     this.disconnect();
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // Guarded on the value, not just the change: every defaulted property is in the first
+    // update's change set, and an alias left false is not a use of it.
+    if (changed.has('observeAttributes') && this.observeAttributes === true) {
+      warnDeprecatedUsage(
+        this,
+        'property',
+        'observeAttributes',
+        'attr="*" (or nothing with attr/attributeFilter)'
+      );
+    }
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
@@ -128,6 +174,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
         'attrOldValue',
         'charData',
         'charDataOldValue',
+        'observeAttributes',
         'withoutSubtree',
         'attributeFilter',
       ].some((key) => changed.has(key))
@@ -172,10 +219,11 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     const attrOldValue = this.attrOldValue === true;
     const charData = this.charData === true;
     const charDataOldValue = this.charDataOldValue === true;
+    const observeAttributes = this.observeAttributes === true;
     const subtree = this.withoutSubtree !== true;
     const attributeFilter = attr === null ? normalizedAttributeFilter(this.attributeFilter) : Object.freeze([]);
     const observesAttributes =
-      mappedAttributes || attrOldValue || attributeFilter.length > 0;
+      mappedAttributes || attrOldValue || observeAttributes || attributeFilter.length > 0;
     const observesCharacterData = charData || charDataOldValue;
     if (disabled || !this.isConnected || !MutationObserverCtor) return;
     let targets: Element[];

@@ -3,6 +3,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type {
   Citation,
@@ -16,6 +17,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -95,6 +97,10 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showSources: ['withoutSources', invertAlias, invertAlias],
+    showClaims: ['withoutClaims', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-claim-select',
@@ -133,6 +139,24 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Stops claim-level details from reaching the grounding summary. */
   @property({ type: Boolean, attribute: 'without-claims', reflect: true })
   withoutClaims = false;
+  /** Whether the source section is rendered when source data or slotted content exists.
+   *  @deprecated Use `without-sources`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    attribute: 'show-sources',
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  showSources = true;
+  /** Whether claim-level details are forwarded to the grounding summary.
+   *  @deprecated Use `without-claims`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    attribute: 'show-claims',
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  showClaims = true;
   /** Visible answer label and fallback article name, used when omitted; falls back to the
    *  localized `ragAnswerLabel`. An explicitly empty override stays empty. */
   @property() label?: string;

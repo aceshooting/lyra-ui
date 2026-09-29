@@ -31,8 +31,12 @@ import {
   forcedColorsActive,
   type ForcedColorEncodingName,
 } from './chart-forced-colors.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -56,6 +60,7 @@ import type {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_liteChartBarLabel, LYRA_DEFAULT_liteChartCustomMarkSummary, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraLiteChartSeries {
   readonly label: string;
@@ -449,6 +454,14 @@ export interface LyraLiteChartEventMap {
     label: string | undefined;
     value: number | null;
   }>;
+  /** @deprecated Use `lr-point-activate`; removal not before 23.0.0. Fired right after it, from
+   *  the same activation, with an identical detail. */
+  'lr-point-click': CustomEvent<{
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: number | null;
+  }>;
 }
 /**
  * `<lr-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM
@@ -525,6 +538,8 @@ export interface LyraLiteChartEventMap {
  *   Enter/Space while focused). `detail: { datasetIndex: number, index:
  *   number, label: string | undefined, value: number | null }` — same shape
  *   as `lr-chart`'s `lr-point-activate`.
+ * @event lr-point-click - Deprecated alias of `lr-point-activate`, fired right after it from the
+ *   same activation with an identical detail; removal not before 23.0.0.
  * @csspart base - The host's flex layout wrapper.
  * @csspart description - The visually hidden accessible chart description, when set.
  * @csspart grid-line - Each horizontal gridline.
@@ -612,6 +627,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    legend: 'withLegend',
+    beginAtZero: ['withoutZeroBaseline', invertAlias, invertAlias],
+    showDataTable: 'withDataTable',
+  };
+
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: readonly string[] = [];
@@ -633,6 +655,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   @property({ type: Boolean, attribute: 'with-legend' }) withLegend = false;
 
+  /**
+   * Deliberately opt-in (default `false`), unlike `lr-chart`'s negative-polarity `withoutLegend`
+   * (legend shown by default): `lr-lite-chart`'s typical single-series sparkline-adjacent usage is
+   * more often legend-redundant than `lr-chart`'s typical multi-dataset case.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean }) legend = false;
   /** Logical placement for the optional DOM legend. Deliberately `'bottom'`, unlike `lr-chart`'s
    *  `'top'` default -- shared with `lr-box-plot` via `chart-chrome.ts`'s
    *  `normalizeChartChromeLegendPosition()` default. */
@@ -651,6 +681,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Lets the value axis start at the data minimum instead of always including zero. */
   @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
 
+  /** Deprecated inverted alias of `without-zero-baseline` (`withoutZeroBaseline`).
+   * @deprecated Use `without-zero-baseline`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Stacks each category's bars into one segmented bar. Ignored for `type="line"`. */
   @property({ type: Boolean }) stacked = false;
   /** Formats a y-axis tick value for display (e.g. `(v) => \`$${v.toFixed(2)}\``). Falls back to the
@@ -671,6 +704,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * @default false
    */
   @property({ type: Boolean, attribute: 'with-data-table' }) withDataTable = false;
+
+  /**
+   * Makes the generated data table visible; it stays screen-reader available when false. Same
+   * meaning as `<lr-chart>`'s property of the same name.
+   * @default false
+   * @deprecated Use `with-data-table`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * Render a disclosure button above the accessible data table so a sighted reader can reveal the
@@ -846,12 +887,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
+  @property({ attribute: 'accessible-label' })
   get accessibleLabel(): string | undefined {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
     this.legacyAccessibleLabel = value;
   }
 
@@ -961,6 +1004,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    if (name === 'accessible-label' && value != null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
     super.attributeChangedCallback(name, oldValue, value);
     if (oldValue !== value && (name === 'style' || name === 'class')) {
       this.fitAxisTitles();
@@ -1836,6 +1882,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       value,
     });
     this.emit('lr-point-activate', { datasetIndex, index, label, value });
+    this.emit('lr-point-click', { datasetIndex, index, label, value });
   }
 
   private emitNearestLinePoint(

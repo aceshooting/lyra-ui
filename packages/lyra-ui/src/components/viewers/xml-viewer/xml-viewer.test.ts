@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './xml-viewer.js';
 import type { LyraXmlViewer } from './xml-viewer.js';
@@ -6,9 +5,7 @@ import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/loca
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-xml-viewer', 'collapsed-depth');
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // Search locale changes use explicit UI messages rather than triggering fallback warnings.
 registerLyraLocale('fr', LYRA_DEFAULT_STRINGS);
@@ -507,27 +504,69 @@ describe('expandDepth and toggling', () => {
     expect(toggles.every((toggle) => toggle.getAttribute('aria-expanded') === 'true')).to.equal(true);
   });
 
-  describe('retired collapsed-depth alias', () => {
+  describe('deprecated collapsed-depth alias', () => {
+    const usage = { tag: 'lr-xml-viewer', kind: 'property', name: 'collapsedDepth' } as const;
     const expandedStates = (el: LyraXmlViewer): (string | null)[] =>
       [...el.shadowRoot!.querySelectorAll('[part="toggle"]')].map((toggle) => toggle.getAttribute('aria-expanded'));
 
-    it('ignores retired collapsed-depth inputs while canonical expand-depth still controls nested rows', async () => {
-      const baseline = (await fixture(
-        html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`,
-      )) as LyraXmlViewer;
-      const legacy = (await fixture(
-        html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0"></lr-xml-viewer>`,
-      )) as LyraXmlViewer;
-      Reflect.set(legacy, 'collapsedDepth', 0);
-      await legacy.updateComplete;
-      expect(legacy.expandDepth).to.equal(undefined);
-      expect(expandedStates(legacy)).to.deep.equal(expandedStates(baseline));
-
+    it('collapsed-depth renders exactly as expand-depth with the same value, and warns once', async () => {
       const canonical = (await fixture(
         html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1"></lr-xml-viewer>`,
       )) as LyraXmlViewer;
-      expect(canonical.expandDepth).to.equal(1);
+      let alias!: LyraXmlViewer;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        alias = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="1"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+        // A markup value on an alias with no default initializer is indistinguishable from
+        // initialization, so the warning comes from the later property writes.
+        alias.collapsedDepth = 0;
+        alias.collapsedDepth = 1;
+        await alias.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        'lyra-deprecated:lr-xml-viewer:property:collapsedDepth',
+      ]);
+      expect(alias.expandDepth).to.equal(1);
+      expect(alias.collapsedDepth).to.equal(1);
+      expect(expandedStates(alias)).to.deep.equal(expandedStates(canonical));
       expect(expandedStates(canonical)).to.deep.equal(['true', 'false', 'false']);
+    });
+
+    it('a property write forwards to expandDepth and re-renders', async () => {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        el.collapsedDepth = 0;
+        await el.updateComplete;
+      });
+      expect(el.expandDepth).to.equal(0);
+      expect(expandedStates(el)[0]).to.equal('false');
+    });
+
+    it('never warns for the canonical name, syncs the alias back, and follows the last write', async () => {
+      let synced: (number | undefined)[] = [];
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const el = (await fixture(html`<lr-xml-viewer expand-depth="2"></lr-xml-viewer>`)) as LyraXmlViewer;
+        synced.push(el.collapsedDepth);
+        el.expandDepth = 3;
+        synced.push(el.collapsedDepth);
+      });
+      expect(warnings).to.have.length(0);
+      expect(synced).to.deep.equal([2, 3]);
+
+      let aliasLast!: LyraXmlViewer;
+      let canonicalLast!: LyraXmlViewer;
+      await captureDeprecationWarnings([usage], async () => {
+        aliasLast = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1" collapsed-depth="0"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+        canonicalLast = (await fixture(
+          html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0" expand-depth="1"></lr-xml-viewer>`,
+        )) as LyraXmlViewer;
+      });
+      expect(aliasLast.expandDepth).to.equal(0);
+      expect(canonicalLast.expandDepth).to.equal(1);
+      expect(canonicalLast.collapsedDepth).to.equal(1);
     });
   });
 
@@ -1544,9 +1583,8 @@ describe('host-supplied highlights', () => {
       expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
     });
 
-    it('ignores the retired -background spellings while canonical paint remains available', async () => {
-      expect(await paints(declarations('background', 50))).to.deep.equal(await paints(''));
-      expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+    it('still honors the deprecated -background spellings with the same result', async () => {
+      expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
     });
 
     it('lets the canonical -bg property win when both spellings are set', async () => {

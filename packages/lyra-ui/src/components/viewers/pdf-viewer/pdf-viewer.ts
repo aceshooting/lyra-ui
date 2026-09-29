@@ -6,15 +6,15 @@ import { defineElement } from '../../../internal/prefix.js';
 import '../highlight-layer/highlight-layer.js';
 import '../../layout/virtual-list/virtual-list.js';
 import '../../overlays/skeleton/skeleton.js';
-import { registerDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
 defineElement('pdf-viewer', LyraPdfViewer);
 
 registerDocumentRenderer('application/pdf', {
-  matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.pdf'),
+  matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.pdf'),
   capabilities: { anchors: ['page', 'text-quote', 'region'], textSelect: true, search: true },
   load: async () => ({
-    render: (file: LyraDocumentFile) => html`<lr-pdf-viewer
+    render: (file: DocumentFile) => html`<lr-pdf-viewer
       src=${file.src}
       name=${file.name}
       .anchor=${file.anchor ?? null}

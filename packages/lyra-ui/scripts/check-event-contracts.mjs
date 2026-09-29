@@ -1713,21 +1713,11 @@ function effectiveInterfaceEventTypes(graph, resolved, seen = new Set()) {
 }
 
 function resolveBaseClass(graph, module, classDeclaration) {
-  let base = classDeclaration.superClass;
-  if (
-    base?.type === 'CallExpression' &&
-    base.callee.type === 'Identifier' &&
-    RUNTIME_EVENT_MIXINS.has(base.callee.name) &&
-    base.arguments.length === 1 &&
-    base.arguments[0]?.type === 'Identifier'
-  ) {
-    base = base.arguments[0];
-  }
-  if (base?.type !== 'Identifier') return undefined;
+  if (classDeclaration.superClass?.type !== 'Identifier') return undefined;
   return resolveNamedDeclaration(
     graph,
     module,
-    base.name,
+    classDeclaration.superClass.name,
     'classes',
   );
 }
@@ -1746,7 +1736,6 @@ function eventMapForClass(graph, module, classDeclaration, seen = new Set()) {
   if (own && own.module.file === module.file) {
     return {
       name: ownName,
-      reference: own,
       direct: directInterfaceEvents(own.declaration),
       effective: effectiveInterfaceEvents(graph, own),
       directTypes: directInterfaceEventTypes(own.module, own.declaration),
@@ -1765,7 +1754,6 @@ function eventMapForClass(graph, module, classDeclaration, seen = new Set()) {
     if (explicit) {
       return {
         name: explicit.name,
-        reference: explicit,
         direct: explicit.module.file === module.file
           ? directInterfaceEvents(explicit.declaration)
           : new Set(),
@@ -1826,51 +1814,6 @@ export function sourceEventTypeContracts(manifest, root = packageDir) {
     }
   }
   return contracts;
-}
-
-function exportsEventMap(module, reference) {
-  return module.program.body.some((statement) => {
-    if (statement.type !== 'ExportNamedDeclaration') return false;
-    if (module.file === reference.module.file && statement.declaration === reference.declaration) return true;
-    const target = statement.source
-      ? resolveImportFile(module.file, statement.source.value)
-      : module.file;
-    return target === reference.module.file && (statement.specifiers ?? []).some((specifier) =>
-      specifier.type === 'ExportSpecifier' &&
-      propertyName(specifier.local) === reference.name &&
-      propertyName(specifier.exported) === reference.name,
-    );
-  });
-}
-
-/** Exported source identity for framework event maps inherited through private shared classes. */
-export function sourceEventMapReferences(manifest, root = packageDir) {
-  const graph = moduleGraph();
-  const references = new Map();
-  for (const moduleDoc of manifest.modules ?? []) {
-    for (const declaration of moduleDoc.declarations ?? []) {
-      if (!declaration.customElement || !declaration.tagName || !declaration.events?.length) continue;
-      const relative = String(moduleDoc.path ?? '').replace(/^\/+/, '');
-      const file = path.resolve(root, relative);
-      if (!relative.startsWith('src/') || path.relative(root, file).startsWith('..') || !existsSync(file)) {
-        throw new Error(`${declaration.tagName}: source EventMap module is unresolved`);
-      }
-      const module = graph.get(file);
-      const owner = module.classes.get(declaration.name);
-      const eventMap = owner && eventMapForClass(graph, module, owner);
-      const reference = eventMap?.reference;
-      if (!reference || !exportsEventMap(reference.module, reference)) {
-        throw new Error(`${declaration.tagName}: source EventMap must resolve to an exported interface`);
-      }
-      const sourcePath = path.relative(root, reference.module.file).split(path.sep).join('/');
-      references.set(declaration.tagName, {
-        name: reference.name,
-        module: sourcePath,
-        exportedFrom: exportsEventMap(module, reference) ? relative : undefined,
-      });
-    }
-  }
-  return references;
 }
 
 function jsDocBlockForClass(module, classDeclaration) {

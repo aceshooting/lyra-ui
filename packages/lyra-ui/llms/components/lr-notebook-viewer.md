@@ -7,9 +7,13 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-notebook-viewer-highlight-accent-background` since `21.1.0`; use css-property `--lr-notebook-viewer-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-notebook-viewer-highlight-danger-background` since `21.1.0`; use css-property `--lr-notebook-viewer-highlight-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-notebook-viewer-highlight-neutral-background` since `21.1.0`; use css-property `--lr-notebook-viewer-highlight-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-notebook-viewer-highlight-success-background` since `21.1.0`; use css-property `--lr-notebook-viewer-highlight-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-notebook-viewer-highlight-warning-background` since `21.1.0`; use css-property `--lr-notebook-viewer-highlight-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 21 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -124,7 +128,13 @@ the element or on any ancestor.
 `--lr-notebook-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are
 each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-outline` (default
 `var(--lr-focus-ring-color)`) outlines the highlighted cell whose highlight `id` equals
-`activeHighlightId`.
+`activeHighlightId`. Deprecated aliases: `--lr-notebook-viewer-highlight-accent-background`,
+`--lr-notebook-viewer-highlight-success-background`,
+`--lr-notebook-viewer-highlight-warning-background`,
+`--lr-notebook-viewer-highlight-danger-background` and
+`--lr-notebook-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in
+23.0.0).
+
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
 `text/plain`).

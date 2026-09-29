@@ -4,7 +4,8 @@ import { property, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame, LyraVariant, LyraSize } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraVariant, type LyraSize } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -72,6 +73,12 @@ export interface LyraActivityFeedEventMap {
 /** Close enough to the body's own max scroll position to count as anchored there -- identical
  *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /** The variant dot's `part` list: the shared `variant-dot` name plus a variant-specific one. Shadow
  *  Parts forbids an attribute selector after `::part()`, so
@@ -196,6 +203,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   hook it computes to the UA default link blue. Set `revert` for the UA default.
  * @cssprop [--lr-activity-feed-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-activity-feed-background=var(--lr-color-surface)] - Deprecated alias of `--lr-activity-feed-bg`; removal not before 23.0.0.
  * @cssprop [--lr-activity-feed-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-activity-feed-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -229,6 +237,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+    showTimestamps: 'withTimestamps',
+  };
 
   /** Append-only: stable ids, new entries at the end. Entries never change state once added.
    *  Empty/blank ids are omitted and duplicates normalize first-wins before summary,
@@ -278,6 +291,12 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    */
   @property({ reflect: true }) size: LyraSize = 'm';
 
+  /** Tighter header and entry-row padding and gap for dense transcript contexts. Defaults to
+   *  `false`, preserving the regular-density treatment. This changes density only; the outer
+   *  border and surface remain, so use `frame="plain"` to remove card chrome.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
    *  and corner radius so a feed nested inside existing message chrome does not double it. Plain
@@ -286,6 +305,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
   @property({ type: Boolean, attribute: 'with-timestamps' }) withTimestamps = false;
+
+  /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`.
+   *  @deprecated Use `with-timestamps`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
 
   /** Overrides the default `hour:minute` rendering of every entry's `timestamp`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;

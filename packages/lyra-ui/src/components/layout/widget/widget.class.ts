@@ -3,7 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { type LyraSize } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import {
   activateOverlay,
@@ -32,6 +33,7 @@ import { sanitizeCssInset } from '../../../internal/safe-css.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface LyraWidgetView {
   /** Stable, unique business identity for this view. */
@@ -274,6 +276,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    // `compact` reads true while `size` is `s` or smaller; writing it applies `s` or restores `m`.
+    compact: [
+      'size',
+      (value) => (value ? 's' : 'm'),
+      (value) => ['s', 'xs', '2xs'].includes(normalizeSize(value as LyraSize)),
+    ],
+  };
 
   // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
   // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
@@ -351,6 +361,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    */
   @property({ reflect: true }) size: LyraSize = 'm';
 
+  /** Tighter header/body padding for constrained spaces.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
   private effectiveViews: readonly Readonly<LyraWidgetView>[] = Object.freeze([]);
 
   /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen

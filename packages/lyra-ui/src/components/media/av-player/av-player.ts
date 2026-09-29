@@ -7,8 +7,8 @@ import { defineElement } from '../../../internal/prefix.js';
 import {
   createDocumentRendererAdapter,
   registerDocumentRenderer,
-  type LyraDocumentFile,
-  type LyraDocumentRendererDefinition,
+  type DocumentFile,
+  type DocumentRendererDefinition,
 } from '../../viewers/document-viewer/registry.js';
 import { hasSearchableLyraAvCues } from './av-metadata.js';
 
@@ -49,8 +49,8 @@ const avRendererAdapter = createDocumentRendererAdapter({
   ></lr-av-player>`,
 });
 
-const avRendererDef: LyraDocumentRendererDefinition = {
-  matches: (file: LyraDocumentFile) =>
+const avRendererDef: DocumentRendererDefinition = {
+  matches: (file: DocumentFile) =>
     file.mimeType.startsWith('audio/') ||
     file.mimeType.startsWith('video/') ||
     AV_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),

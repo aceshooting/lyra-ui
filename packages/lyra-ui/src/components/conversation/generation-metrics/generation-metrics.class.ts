@@ -1,6 +1,15 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './generation-metrics.styles.js';
@@ -9,6 +18,7 @@ import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
@@ -86,6 +96,25 @@ function formatThroughput(value: number, locale: string): string {
   const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
   return getNumberFormat(locale, { maximumFractionDigits: clamped < 10 ? 1 : 0 }).format(rounded);
 }
+
+/**
+ * String-aware boolean attribute converter for the deprecated `show-stop`. Lit's built-in
+ * `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-
+ * markup consumer writing the literal `show-stop="false"` would actually get
+ * the button *shown*, the opposite of what that string reads as (the same
+ * bug class `<lr-streaming-text>`'s `optionalBooleanConverter` and
+ * `<lr-line-chart>`'s `WithoutBeginAtZero` story both document). Unlike
+ * `<lr-streaming-text>`'s tri-state converter, this property's default is
+ * `true`, not "unset" -- so this one only needs two states: attribute absent
+ * (or removed) -> `true` (the default); `show-stop="false"` -> `false`;
+ * anything else present (no value, `="true"`, ...) -> `true`.
+ */
+const showStopConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+};
 
 export interface LyraGenerationMetricsEventMap {
   'lr-stop': CustomEvent<null>;
@@ -177,6 +206,9 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showStop: ['withoutStop', invertAlias, invertAlias],
+  };
 
   private _status: GenerationMetricsStatus = 'idle';
 
@@ -213,6 +245,15 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
 
   /** Hides the built-in Stop button. */
   @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;
+
+  /**
+   * Deprecated inverted alias of `without-stop` (`withoutStop`): `show-stop="false"` equals
+   * `without-stop`, and removing it restores the default. Setting it logs a one-time development
+   * warning.
+   *
+   * @deprecated Use `without-stop`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'show-stop', converter: showStopConverter }) showStop = true;
 
   // Recomputed on activation and on every ~1s tick; frozen (not reset) once
   // `status` becomes complete -- see the class doc's "ticker" paragraph.
@@ -445,6 +486,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

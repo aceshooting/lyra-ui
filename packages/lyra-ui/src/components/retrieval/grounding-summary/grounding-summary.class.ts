@@ -3,6 +3,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -25,6 +26,7 @@ import type {
   GroundingAssessment,
 } from '../../../ai/types.js';
 import { styles } from './grounding-summary.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import '../claim-evidence/claim-evidence.class.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 import {
@@ -467,6 +469,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showClaims: ['withoutClaims', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-claim-select',
@@ -502,6 +507,15 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** Omits the `assessment.claims` detail that otherwise renders through `<lr-claim-evidence>`. */
   @property({ type: Boolean, attribute: 'without-claims', reflect: true })
   withoutClaims = false;
+  /** Renders `assessment.claims` through `<lr-claim-evidence>` when available.
+   *  @deprecated Use `without-claims`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    attribute: 'show-claims',
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  showClaims = true;
 
   /** Semantic level of the warnings and evidence section headings. Use `none` to keep the visual
    *  heading text without exposing it to heading navigation. Invalid untyped values use level 3. */

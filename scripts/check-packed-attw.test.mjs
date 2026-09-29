@@ -21,8 +21,8 @@ const manifest = JSON.parse(
 
 test('derives every non-CSS package export and partitions it exhaustively once', () => {
   const entrypoints = attwEntrypoints(manifest);
-  // Compared with published 22.0.0: three typed look presets added and four retired routes removed.
-  assert.equal(entrypoints.length, 2729, 'the reviewed package has 2729 typed exports');
+  // Reviewed 22.0.0 surface, including exact locale declaration redirects.
+  assert.equal(entrypoints.length, 2730, 'the reviewed package has 2730 typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -32,7 +32,7 @@ test('derives every non-CSS package export and partitions it exhaustively once',
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [171, 171, 171, 171, 171, 171, 171, 171, 171, 170, 170, 170, 170, 170, 170, 170]);
+  assert.deepEqual(shards.map((shard) => shard.length), [171, 171, 171, 171, 171, 171, 171, 171, 171, 171, 170, 170, 170, 170, 170, 170]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });

@@ -78,11 +78,3 @@ test('review snapshots fail closed when a shipped catalog changes after review',
   });
   assert.ok(errors.some((error) => error.includes('.catalog.sha256 is stale')));
 });
-
-test('delta coverage counts only actual inherited keys that are not overridden', () => {
-  assert.deepEqual(countCoverage({
-    locale: 'de-CH', ownKeys: ['one'], sourceKeys: ['one', 'two', 'three'],
-    parent: 'de', parentKeys: ['one', 'two'],
-  }), { translatedOwnKeyCount: 1, inheritedKeyCount: 1, missingKeyCount: 1 });
-  assert.throws(() => countCoverage({ locale: 'de-CH', ownKeys: [], sourceKeys: ['one'], parent: 'de' }), /parent.*keys|parent.*coverage/u);
-});

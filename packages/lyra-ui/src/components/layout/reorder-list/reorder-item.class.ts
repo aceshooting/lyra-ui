@@ -52,8 +52,12 @@ function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
  *   hover/press mixes, focus ring and hit-area floor now come from `--lr-icon-button-*`.
  * @csspart move-up-button-control - The move-up control's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `move-up-button`.
+ * @csspart move-up-button__control - Deprecated alias of `move-up-button-control` on the same
+ *   node; removal not before 23.0.0.
  * @csspart move-down-button - The move-down control, likewise a composed `<lr-icon-button>`.
  * @csspart move-down-button-control - The move-down control's own native `<button>`.
+ * @csspart move-down-button__control - Deprecated alias of `move-down-button-control` on the same
+ *   node; removal not before 23.0.0.
  * @csspart content - Wrapper around the default slot.
  * @cssstate at-start - This is the first valid item in its owning list.
  * @cssstate at-end - This is the last valid item in its owning list.
@@ -92,6 +96,9 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     newValue: string | null
   ): void {
     super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
   }
 
   private readonly reorderInternals = attachInternalsSafely(this);
@@ -120,12 +127,14 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
+  @property({ attribute: 'accessible-label' })
   get accessibleLabel(): string | undefined {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
     this.legacyAccessibleLabel = value;
   }
 
@@ -324,7 +333,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         <span id=${this.itemLabelId} hidden>${itemLabel}</span>
         <lr-icon-button
           part="move-up-button"
-          exportparts="button:move-up-button-control"
+          exportparts="button:move-up-button-control, button:move-up-button__control"
           aria-labelledby=${`${this.moveUpLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveUpDisabled}
           @click=${this.onMoveUpClick}
@@ -333,7 +342,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         </lr-icon-button>
         <lr-icon-button
           part="move-down-button"
-          exportparts="button:move-down-button-control"
+          exportparts="button:move-down-button-control, button:move-down-button__control"
           aria-labelledby=${`${this.moveDownLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveDownDisabled}
           @click=${this.onMoveDownClick}

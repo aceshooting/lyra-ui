@@ -2123,6 +2123,7 @@ it('contains a long menu-item label in exact 320px LTR and RTL allocations', asy
   }
 });
 
+
 /**
  * Regression: a row's accessible name is derived from its own visible label and must not depend on
  * whether the menu is currently displayed. An overlay popup is `visibility: hidden` while closed,
@@ -2472,6 +2473,7 @@ describe('collecting already-slotted icon/details/suffix content without relying
   });
 });
 
+
 it('shows a shadow-rendered keyboard shortcut assigned to details', async () => {
   await import('../../overlays/kbd/kbd.js');
   const el = await fixtureInMenu(html`<lr-menu-item>New tab<lr-kbd slot="details" keys="mod+t"></lr-kbd></lr-menu-item>`);
@@ -2496,7 +2498,7 @@ it('keeps empty forwarding slots and whitespace-only details hidden', async () =
   expect(el.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!.hidden).to.equal(true);
 });
 
-describe('lr-menu-item-change-request and its retired lr-menu-item-change alias', () => {
+describe('lr-menu-item-change-request and its deprecated lr-menu-item-change alias', () => {
   for (const tagName of ['lr-menu-item', 'lr-dropdown-item'] as const) {
     const aliasUsage: readonly DeprecatedUsage[] = [
       { tag: tagName, kind: 'event', name: 'lr-menu-item-change' },
@@ -2515,7 +2517,7 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
       return { menu, item };
     }
 
-    it(`${tagName}: fires only the canonical request with its cancelable detail`, async () => {
+    it(`${tagName}: fires the canonical request first, then the alias, as separate equal cancelable details`, async () => {
       const { item } = await checkboxItem();
       const seen: CustomEvent<{ value: string; checked: boolean }>[] = [];
       const record = (event: Event) =>
@@ -2525,11 +2527,15 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
       item.select();
       expect(seen.map((event) => event.type)).to.deep.equal([
         'lr-menu-item-change-request',
+        'lr-menu-item-change',
       ]);
       expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
         JSON.stringify({ value: 'wrap', checked: true }),
+        JSON.stringify({ value: 'wrap', checked: true }),
       ]);
+      expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
       expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
+        [true, true, true],
         [true, true, true],
       ]);
       expect(item.checked).to.equal(true);
@@ -2544,11 +2550,11 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
       });
       const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
       expect(item.checked).to.equal(false);
-      expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
+      expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
       expect(warnings).to.have.length(0);
     });
 
-    it(`${tagName}: ignores the retired listener during a radio proposal`, async () => {
+    it(`${tagName}: still lets a listener on only the alias veto a radio proposal, and warns once`, async () => {
       const results: boolean[] = [];
       const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
         for (let index = 0; index < 2; index += 1) {
@@ -2560,16 +2566,19 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
           results.push(item.checked);
         }
       });
-      expect(results).to.deep.equal([true, true]);
-      expect(warnings).to.have.length(0);
+      expect(results).to.deep.equal([false, false]);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        `lyra-deprecated:${tagName}:event:lr-menu-item-change`,
+      ]);
+      expect(warnings[0]!.message).to.contain('lr-menu-item-change-request');
     });
 
-    it(`${tagName}: does not notify a retired event listener`, async () => {
+    it(`${tagName}: does not warn when an alias listener only observes`, async () => {
       const { item } = await checkboxItem();
       let observed = 0;
       item.addEventListener('lr-menu-item-change', () => (observed += 1));
       const warnings = await captureDeprecationWarnings(aliasUsage, () => item.select());
-      expect(observed).to.equal(0);
+      expect(observed).to.equal(1);
       expect(item.checked).to.equal(true);
       expect(warnings).to.have.length(0);
     });
@@ -2577,7 +2586,7 @@ describe('lr-menu-item-change-request and its retired lr-menu-item-change alias'
 });
 
 describe('lr-dropdown-item spinner part names', () => {
-  it('names the loading spinner spinner-base without spinner__base', async () => {
+  it('names the loading spinner spinner-base beside its deprecated spinner__base alias', async () => {
     const el = (await fixture(
       html`<lr-dropdown-item loading>Saving</lr-dropdown-item>`
     )) as LyraMenuItem;
@@ -2586,8 +2595,8 @@ describe('lr-dropdown-item spinner part names', () => {
     expect(spinner!.getAttribute('part')!.split(' ')).to.include.members([
       'spinner',
       'spinner-base',
+      'spinner__base',
     ]);
-    expect(spinner!.getAttribute('part')!.split(' ')).to.not.include('spinner__base');
   });
 
   it('keeps lr-menu-item on its mirrored spinner__base name only', async () => {

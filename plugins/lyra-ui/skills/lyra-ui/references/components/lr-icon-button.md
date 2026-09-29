@@ -7,9 +7,11 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-icon-button-background` since `21.1.0`; use css-property `--lr-icon-button-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-icon-button-background-active` since `21.1.0`; use css-property `--lr-icon-button-bg-active`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-icon-button-background-hover` since `21.1.0`; use css-property `--lr-icon-button-bg-hover`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -172,7 +174,10 @@ var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
   `--lr-icon-button-bg-active` (the same mix at the stronger `--lr-color-mix-active` share,
   so a press reads as more than a hover) — the `[part='button']` background in each state. The
   hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
-  icon button on a default page changed nothing at all.
+  icon button on a default page changed nothing at all. Deprecated aliases:
+  `--lr-icon-button-background`, `--lr-icon-button-background-hover` and
+  `--lr-icon-button-background-active` (use `--lr-icon-button-bg`, `--lr-icon-button-bg-hover` and
+  `--lr-icon-button-bg-active`; removed in 23.0.0).
 - `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
   `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
   `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.

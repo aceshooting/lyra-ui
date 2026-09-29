@@ -6,6 +6,7 @@ import type { LyraGenerationMetrics } from '../../conversation/generation-metric
 import type { LyraTaskList } from '../task-list/task-list.js';
 import type { AgentRun, AgentStep, AgentStatusKind, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function makeRun(overrides: Partial<AgentRun> = {}): AgentRun {
   return {
@@ -826,6 +827,77 @@ describe('card chrome theming hooks', () => {
   });
 });
 
+describe('lr-agent-run size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-agent-run', kind: 'property', name: 'compact' }];
+  const density = (el: LyraAgentRun): string => JSON.stringify({ padding: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).padding, gap: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).rowGap });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`));
+      dense = density(await fixture<LyraAgentRun>(html`<lr-agent-run size="s" .run=${makeRun({ steps })}></lr-agent-run>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraAgentRun>(html`<lr-agent-run size="s" .run=${makeRun({ steps })}></lr-agent-run>`));
+      const aliased = await fixture<LyraAgentRun>(html`<lr-agent-run compact .run=${makeRun({ steps })}></lr-agent-run>`);
+      alias = density(aliased);
+      const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-agent-run:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraAgentRun>(html`<lr-agent-run compact size="l" .run=${makeRun({ steps })}></lr-agent-run>`);
+      const compactLast = await fixture<LyraAgentRun>(html`<lr-agent-run size="l" compact .run=${makeRun({ steps })}></lr-agent-run>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
 
 describe('lr-agent-run deprecated --lr-agent-run-background alias', () => {
   const fill = (el: LyraAgentRun): string =>
@@ -838,7 +910,83 @@ describe('lr-agent-run deprecated --lr-agent-run-background alias', () => {
       html`<lr-agent-run .run=${makeRun({ steps })} style="--lr-agent-run-bg: rgb(4, 5, 6); --lr-agent-run-background: rgb(1, 2, 3)"></lr-agent-run>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-agent-run deprecated show-cancel/show-retry aliases', () => {
+  const ALIASES: readonly DeprecatedUsage[] = [
+    { tag: 'lr-agent-run', kind: 'property', name: 'showCancel' },
+    { tag: 'lr-agent-run', kind: 'property', name: 'showRetry' },
+  ];
+  const buttons = (el: LyraAgentRun): boolean[] => [
+    el.shadowRoot!.querySelector('[part="cancel-button"]') !== null,
+    el.shadowRoot!.querySelector('[part="retry-button"]') !== null,
+  ];
+
+  it('treats show-cancel="false"/show-retry="false" exactly like without-cancel/without-retry, warning once each', async () => {
+    let canonical: boolean[][] = [];
+    let alias: boolean[][] = [];
+    let property: boolean[][] = [];
+    let reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      for (const kind of ['running', 'error'] as const) {
+        const run = makeRun({ status: { kind } });
+        canonical.push(buttons(await fixture<LyraAgentRun>(html`<lr-agent-run .run=${run} without-cancel without-retry></lr-agent-run>`)));
+        const aliased = await fixture<LyraAgentRun>(
+          html`<lr-agent-run .run=${run} show-cancel="false" show-retry="false"></lr-agent-run>`,
+        );
+        alias.push(buttons(aliased));
+        reads = [aliased.showCancel, aliased.showRetry, aliased.withoutCancel, aliased.withoutRetry];
+        const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${run}></lr-agent-run>`);
+        el.showCancel = false;
+        el.showRetry = false;
+        await el.updateComplete;
+        property.push(buttons(el));
+      }
+    });
+    expect(canonical).to.deep.equal([[false, false], [false, false]]);
+    expect(alias).to.deep.equal(canonical);
+    expect(property).to.deep.equal(canonical);
+    expect(reads).to.deep.equal([false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-agent-run:property:showCancel',
+      'lyra-deprecated:lr-agent-run:property:showRetry',
+    ]);
+  });
+
+  it('keeps a bare show-cancel/show-retry meaning the default, and applies the last write when both spellings are authored', async () => {
+    let bare: boolean[] = [];
+    let canonicalLast: boolean[] = [];
+    let aliasLast: boolean[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      const run = makeRun({ status: { kind: 'running' } });
+      bare = buttons(await fixture<LyraAgentRun>(html`<lr-agent-run .run=${run} show-cancel show-retry></lr-agent-run>`));
+      canonicalLast = buttons(await fixture<LyraAgentRun>(html`<lr-agent-run .run=${run} show-cancel="false" without-cancel></lr-agent-run>`));
+      const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${run} without-cancel></lr-agent-run>`);
+      el.showCancel = true;
+      await el.updateComplete;
+      aliasLast = buttons(el);
+    });
+    expect(bare).to.deep.equal([true, false]);
+    expect(canonicalLast).to.deep.equal([false, false]);
+    expect(aliasLast).to.deep.equal([true, false]);
+  });
+
+  it('syncs show-cancel/show-retry back from the canonical properties without warning', async () => {
+    let reads: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`);
+      el.withoutCancel = true;
+      el.withoutRetry = true;
+      await el.updateComplete;
+      reads = [el.showCancel, el.showRetry];
+      el.withoutCancel = false;
+      await el.updateComplete;
+      reads.push(el.showCancel);
+    });
+    expect(reads).to.deep.equal([false, false, true]);
+    expect(warnings).to.have.length(0);
   });
 });

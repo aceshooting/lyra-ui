@@ -8,7 +8,6 @@ import type {
   LyraExportFormatDescriptor,
 } from './export-button.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
   const element = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -1884,6 +1883,7 @@ describe('trigger -bg custom properties and their deprecated -background aliases
 
   for (const [label, style] of [
     ['canonical --lr-export-button-bg', '--lr-export-button-bg: rgb(1, 2, 3);'],
+    ['deprecated --lr-export-button-background', '--lr-export-button-background: rgb(1, 2, 3);'],
     [
       'canonical property over the deprecated one',
       '--lr-export-button-background: rgb(9, 9, 9); --lr-export-button-bg: rgb(1, 2, 3);',
@@ -1900,38 +1900,6 @@ describe('trigger -bg custom properties and their deprecated -background aliases
       await el.updateComplete;
       expect(getComputedStyle(trigger(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
     });
-  }
-});
-
-it('ignores retired rest, hover, and active background tokens in rendered pointer states', async () => {
-  const el = (await fixture(html`
-    <lr-export-button
-      .rows=${rows}
-      .columns=${columns}
-      style="--lr-transition-fast: 0s; --lr-export-button-background: rgb(1, 2, 3); --lr-export-button-hover-background: rgb(4, 5, 6); --lr-export-button-active-background: rgb(7, 8, 9)"
-    ></lr-export-button>
-  `)) as LyraExportButton;
-  const button = el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
-  try {
-    expect(getComputedStyle(button).backgroundColor).to.not.equal('rgb(1, 2, 3)');
-    await hoverUntilMatched(button, 'the export trigger did not receive hover');
-    expect(getComputedStyle(button).backgroundColor).to.not.equal('rgb(4, 5, 6)');
-    await sendMouse({ type: 'down' });
-    await waitUntil(() => button.matches(':active'));
-    expect(getComputedStyle(button).backgroundColor).to.not.equal('rgb(7, 8, 9)');
-    await resetMouse();
-    el.style.setProperty('--lr-export-button-bg', 'rgb(10, 11, 12)');
-    el.style.setProperty('--lr-export-button-hover-bg', 'rgb(13, 14, 15)');
-    el.style.setProperty('--lr-export-button-active-bg', 'rgb(16, 17, 18)');
-    await el.updateComplete;
-    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(10, 11, 12)');
-    await hoverUntilMatched(button, 'the export trigger did not receive hover after canonical styling');
-    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(13, 14, 15)');
-    await sendMouse({ type: 'down' });
-    await waitUntil(() => button.matches(':active'));
-    expect(getComputedStyle(button).backgroundColor).to.equal('rgb(16, 17, 18)');
-  } finally {
-    await resetMouse();
   }
 });
 

@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecations** none
+- **Deprecated property** `loop` / `loop` since `21.1.0`; use property `without-loop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -30,7 +30,9 @@ feedback.
 - `intervalMs: number = 900` (attribute `interval-ms`)
 - `playing: boolean = false` (reflected)
 - `withoutLoop: boolean = false` (attribute `without-loop`) — stops playback on the last item
-  instead of wrapping back to the first; read on every tick.
+  instead of wrapping back to the first; read on every tick. Deprecated alias: `loop` (use
+  `without-loop`, which `loop="false"` equals; removing `loop` restores the default; removed in
+  23.0.0).
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 

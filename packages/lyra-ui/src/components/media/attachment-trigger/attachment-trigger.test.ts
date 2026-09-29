@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './attachment-trigger.js';
@@ -11,7 +10,12 @@ import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
+  type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+const ACCESSIBLE_LABEL: readonly DeprecatedUsage[] = [
+  { tag: 'lr-attachment-trigger', kind: 'attribute', name: 'accessible-label' },
+];
 
 /** The single-capability control. `[part="trigger"]` is a composed `<lr-icon-button>` as of
  *  16.0.0, which owns the accessible name, the activation API and the part names. */
@@ -206,35 +210,53 @@ it('names the trigger from the accessibleLabel property when the host has no ari
   expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
 });
 
-describe('retired accessible-label attribute', () => {
-  it('ignores old attribute changes while retaining the property warning and host-name precedence', async () => {
-    for (const capabilities of [['files'], ['files', 'image']] as const) {
-      const el = await fixture<LyraAttachmentTrigger>(html`<lr-attachment-trigger accessible-label="Retired"></lr-attachment-trigger>`);
-      el.capabilities = [...capabilities];
-      await el.updateComplete;
-      const name = () => (el.capabilities.length > 1 ? menuTriggerButton(el) : trigger(el)).getAttribute('aria-label');
-      expect(name()).not.to.equal('Retired');
-      const warnings = await captureDeprecationWarnings([
-        { tag: 'lr-attachment-trigger', kind: 'property', name: 'accessibleLabel' },
-      ], async () => {
-        el.accessibleLabel = 'Programmatic';
+describe('the deprecated accessible-label attribute', () => {
+  it('still sets accessibleLabel, exactly like the property, and warns once', async () => {
+    const names: (string | null)[] = [];
+    const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(
+          html`<lr-attachment-trigger accessible-label="Joindre des fichiers"></lr-attachment-trigger>`,
+        )) as LyraAttachmentTrigger;
+        expect(el.accessibleLabel).to.equal('Joindre des fichiers');
+        names.push(trigger(el).getAttribute('aria-label'));
+
+        el.capabilities = ['files', 'image'];
         await el.updateComplete;
-      });
-      expect(warnings.length).to.equal(1);
-      expect(name()).to.equal('Programmatic');
-      el.setAttribute('accessible-label', 'Changed retired');
-      await el.updateComplete;
-      expect(name()).to.equal('Programmatic');
-      el.setAttribute('aria-label', '');
-      await el.updateComplete;
-      expect(name()).to.equal('');
+        names.push(menuTriggerButton(el).getAttribute('aria-label'));
+        expect(menuEl(el).getAttribute('label')).to.equal('Joindre des fichiers');
+      }
+    });
+    expect(names).to.deep.equal(Array(4).fill('Joindre des fichiers'));
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-attachment-trigger:attribute:accessible-label',
+    ]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+  });
+
+  it('loses to a host aria-label, including an explicitly empty one', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const named = (await fixture(html`
+        <lr-attachment-trigger aria-label="Author attachment action" accessible-label="Fallback"></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      expect(trigger(named).getAttribute('aria-label')).to.equal('Author attachment action');
+
+      const empty = (await fixture(html`
+        <lr-attachment-trigger aria-label="" accessible-label="Fallback"></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      expect(trigger(empty).getAttribute('aria-label')).to.equal('');
+    });
+  });
+
+  it('restores the localized default when removed', async () => {
+    await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
+      const el = (await fixture(
+        html`<lr-attachment-trigger accessible-label="Fallback"></lr-attachment-trigger>`,
+      )) as LyraAttachmentTrigger;
       el.removeAttribute('accessible-label');
       await el.updateComplete;
-      expect(name()).to.equal('');
-      el.removeAttribute('aria-label');
-      await el.updateComplete;
-      expect(name()).to.equal('Programmatic');
-    }
+      expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
+    });
   });
 });
 
@@ -915,5 +937,3 @@ it('starts in single-file mode and resets to it after removing explicit multiple
 });
 
 expectDeprecatedUsage('lr-attachment-trigger', 'property', 'accessibleLabel');
-
-expectStaleAttribute('lr-attachment-trigger', 'accessible-label');

@@ -16,6 +16,7 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraSizeAlias, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
@@ -55,6 +56,9 @@ export interface LyraChipEventMap {
   'lr-remove': CustomEvent<ChipRemoveDetail>;
   /** Cancelable proposal of the next `selected` state from the toggle control. */
   'lr-chip-toggle-request': CustomEvent<ChipSelectDetail>;
+  /** @deprecated Use `lr-chip-toggle-request`; removal not before 23.0.0. Fired right after it
+   *  with an equal detail, and still cancelable: preventing either keeps the current state. */
+  'lr-chip-select': CustomEvent<ChipSelectDetail>;
 }
 
 function isComposedWithin(owner: Element, candidate: Element): boolean {
@@ -183,7 +187,10 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @event lr-chip-toggle-request - Fired on click, or Enter/Space while focused, once the chip has
  * opted into toggle mode via `toggleable` and `removable` is not set.
  * `detail: { value, selected }` contains the proposed next state. Cancelable; preventing it keeps
- * the current `selected` state unchanged.
+ * the current `selected` state unchanged. Fires before `lr-chip-select`, from the same activation.
+ * @event lr-chip-select - Deprecated cancelable alias of `lr-chip-toggle-request`, fired right after
+ * it with an equal detail; preventing either event keeps the current `selected` state. Removal not
+ * before 23.0.0.
  * @method focus - Forwards focus to the chip's active remove or toggle button.
  * @method blur - Forwards blur to the chip's active remove or toggle button.
  * @method click - Activates the chip's active remove or toggle button; passive chips retain the
@@ -522,7 +529,17 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       { value: this.value, selected },
       { cancelable: true }
     );
-    if (!request.defaultPrevented) this.selected = selected;
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name still hears every proposal and can still veto it.
+    const deprecatedAlias = this.emit(
+      'lr-chip-select',
+      { value: this.value, selected },
+      { cancelable: true }
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-chip-select', 'lr-chip-toggle-request');
+    }
+    if (!request.defaultPrevented && !deprecatedAlias.defaultPrevented) this.selected = selected;
   };
 
   private get primaryControl(): HTMLButtonElement | null {

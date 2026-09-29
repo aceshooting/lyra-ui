@@ -2,6 +2,7 @@ import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
@@ -11,6 +12,7 @@ import { styles } from './flow-controls.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowControlsLabel, LYRA_DEFAULT_flowLockCanvas, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomToFit } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 interface FlowCanvasLike extends HTMLElement {
   registerCompanion(cb: (snapshot: FlowStructureSnapshot) => void): () => void;
@@ -111,6 +113,9 @@ export class LyraFlowControls extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideLock: 'withoutLock',
+  };
 
   /** Id of the `lr-flow-canvas` this cluster drives. Empty (the default) resolves to the nearest
    *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
@@ -131,6 +136,13 @@ export class LyraFlowControls extends LyraElement {
   /** Omits the lock/unlock toggle button entirely, for canvases that never expose an interaction
    *  lock. */
   @property({ type: Boolean, attribute: 'without-lock' }) withoutLock = false;
+  /**
+   * Deprecated alias of `without-lock`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-lock`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'hide-lock' }) hideLock = false;
 
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating cluster. `'plain'` removes the border, background, shadow,

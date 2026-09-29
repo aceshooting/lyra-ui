@@ -3343,11 +3343,55 @@ for (const tag of ['lr-popover', 'lr-tooltip'] as const) {
         expect(bare.hasAttribute('arrow')).to.be.false;
         const without = await mount('without-arrow');
         expect(arrows(without)).to.equal(0);
-        expect('arrow' in without).to.equal(false);
+        expect(without.arrow).to.be.false;
       });
       expect(warnings).to.have.length(0);
     });
 
+    it('treats arrow="false" exactly like without-arrow and warns once, naming without-arrow', async () => {
+      let aliased!: LyraPopover | LyraTooltip;
+      const warnings = await captureDeprecationWarnings(ARROW, async () => {
+        aliased = await mount('arrow="false"');
+        await mount('arrow="false"');
+      });
+      expect(aliased.withoutArrow).to.be.true;
+      expect(aliased.arrow).to.be.false;
+      expect(arrows(aliased)).to.equal(0);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:property:arrow`]);
+      expect(warnings[0]!.message).to.contain('without-arrow');
+    });
+
+    it('restores the default when the alias is removed or set true, syncs back, and lets the last write win', async () => {
+      await captureDeprecationWarnings(ARROW, async () => {
+        const el = await mount('arrow="false"');
+        el.removeAttribute('arrow');
+        await el.updateComplete;
+        expect(el.withoutArrow).to.be.false;
+        expect(arrows(el)).to.equal(1);
+        el.arrow = false;
+        await el.updateComplete;
+        expect(el.getAttribute('without-arrow')).to.equal('');
+        expect(arrows(el)).to.equal(0);
+        el.arrow = true;
+        await el.updateComplete;
+        expect(arrows(el)).to.equal(1);
+        el.withoutArrow = true;
+        await el.updateComplete;
+        expect(el.arrow).to.be.false;
+        expect(el.getAttribute('arrow')).to.equal('false');
+        el.withoutArrow = false;
+        await el.updateComplete;
+        expect(el.arrow).to.be.true;
+        expect(el.hasAttribute('arrow')).to.be.false;
+        const canonicalLast = await mount('arrow without-arrow');
+        expect(canonicalLast.withoutArrow).to.be.true;
+        expect(canonicalLast.arrow).to.be.false;
+        expect(arrows(canonicalLast)).to.equal(0);
+        const aliasLast = await mount('without-arrow arrow');
+        expect(aliasLast.withoutArrow).to.be.false;
+        expect(arrows(aliasLast)).to.equal(1);
+      });
+    });
   });
 }
 
@@ -3369,19 +3413,19 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
       );
     });
     expect(warnings).to.have.length(0);
-    expect(bare.arrow).to.equal(true);
+    expect(bare.arrow).to.be.true;
     expect(bare.hasAttribute('arrow')).to.equal(false);
     expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
-    expect(opted.arrow).to.equal(false);
+    expect(opted.arrow).to.be.false;
     expect(opted.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
     const arrow = bare.shadowRoot!.querySelector('[part~="arrow"]')!;
-    expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow']);
+    expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow', 'popup__arrow']);
     bare.withoutArrow = true;
     await bare.updateComplete;
     expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
   });
 
-  it('carries popup-popup without popup__popup, while lr-popover keeps its mapped names only', async () => {
+  it('carries popup-popup beside the deprecated popup__popup, while lr-popover keeps its mapped names only', async () => {
     const dropdown = await fixture<LyraDropdown>(
       html`<lr-dropdown open><button slot="trigger">Menu</button><button>Action</button></lr-dropdown>`,
     );
@@ -3390,9 +3434,7 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
     );
     const partsOf = (el: Element, selector: string): string[] =>
       el.shadowRoot!.querySelector(selector)!.getAttribute('part')!.split(/\s+/);
-    expect(partsOf(dropdown, '[part~="popup"]')).to.include.members(['popup-popup']);
-    expect(partsOf(dropdown, '[part~="popup"]')).to.not.include('popup__popup');
-    expect(partsOf(dropdown, '[part~="arrow"]')).to.not.include('popup__arrow');
+    expect(partsOf(dropdown, '[part~="popup"]')).to.include.members(['popup-popup', 'popup__popup']);
     expect(partsOf(popover, '[part~="popup"]')).to.include('popup__popup');
     expect(partsOf(popover, '[part~="popup"]')).to.not.include('popup-popup');
     expect(partsOf(popover, '[part~="arrow"]')).to.not.include('popup-arrow');
@@ -3411,8 +3453,8 @@ describe('lr-tooltip background custom property', () => {
       );
       const popup = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
       const arrow = el.shadowRoot!.querySelector<HTMLElement>('[part~="arrow"]')!;
-      expect(getComputedStyle(popup).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
-      expect(getComputedStyle(arrow).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
+      expect(getComputedStyle(popup).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(arrow).backgroundColor).to.equal('rgb(1, 2, 3)');
     });
   }
 });

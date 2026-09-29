@@ -1178,7 +1178,7 @@ describe('<lr-reorder-list> revertPendingMove({ silent })', () => {
   });
 });
 
-describe('lr-reorder-request and its retired lr-reorder alias', () => {
+describe('lr-reorder-request and its deprecated lr-reorder alias', () => {
   const aliasUsage: readonly DeprecatedUsage[] = [
     { tag: 'lr-reorder-list', kind: 'event', name: 'lr-reorder' },
   ];
@@ -1194,18 +1194,20 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
   const moveMiddleUp = (el: LyraReorderList) =>
     (itemsOf(el)[1]!.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLElement).click();
 
-  it('fires only the canonical request with its frozen cancelable detail', async () => {
+  it('fires the canonical request first, then the alias, as separate equal frozen cancelable details', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const seen: CustomEvent<{ order: readonly string[]; fromIndex: number; toIndex: number }>[] = [];
     const record = (event: Event) => seen.push(event as (typeof seen)[number]);
     el.addEventListener('lr-reorder-request', record);
     el.addEventListener('lr-reorder', record);
     moveMiddleUp(el);
-    expect(seen.map((event) => event.type)).to.deep.equal(['lr-reorder-request']);
+    expect(seen.map((event) => event.type)).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
     const expected = JSON.stringify({ order: ['b', 'a', 'c'], fromIndex: 1, toIndex: 0 });
-    expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([expected]);
+    expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([expected, expected]);
+    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
     expect(seen.every((event) => Object.isFrozen(event.detail) && Object.isFrozen(event.detail.order))).to.equal(true);
     expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
+      [true, true, true],
       [true, true, true],
     ]);
     expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
@@ -1220,11 +1222,11 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
     });
     const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
     expect(itemsOf(el)[1]!.pending).to.equal(true);
-    expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
+    expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
     expect(warnings).to.have.length(0);
   });
 
-  it('ignores the retired listener when committing a move', async () => {
+  it('still lets a listener on only the alias hold the move, and warns once naming lr-reorder-request', async () => {
     const held: boolean[] = [];
     const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       for (let index = 0; index < 2; index += 1) {
@@ -1234,11 +1236,14 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
         held.push(itemsOf(el)[1]!.pending && itemsOf(el)[1]!.value === 'b');
       }
     });
-    expect(held).to.deep.equal([false, false]);
-    expect(warnings).to.have.length(0);
+    expect(held).to.deep.equal([true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-reorder-list:event:lr-reorder',
+    ]);
+    expect(warnings[0]!.message).to.contain('lr-reorder-request');
   });
 
-  it('does not call a retired listener that would resolve a move', async () => {
+  it('lets an alias listener resolve its held move synchronously, like a canonical one', async () => {
     const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       const el = await fixture<LyraReorderList>(threeItems);
       el.addEventListener('lr-reorder', (event) => {
@@ -1248,21 +1253,21 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
       moveMiddleUp(el);
       expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
     });
-    expect(warnings).to.have.length(0);
+    expect(warnings).to.have.length(1);
   });
 
-  it('does not notify a retired event listener', async () => {
+  it('does not warn when an alias listener only observes', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     let observed = 0;
     el.addEventListener('lr-reorder', () => (observed += 1));
     const warnings = await captureDeprecationWarnings(aliasUsage, () => moveMiddleUp(el));
-    expect(observed).to.equal(0);
+    expect(observed).to.equal(1);
     expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['b', 'a', 'c']);
     expect(warnings).to.have.length(0);
   });
 
   for (const resolve of ['finalize', 'revert'] as const) {
-    it(`omits the retired event when a canonical listener resolves the move synchronously (${resolve})`, async () => {
+    it(`still fires the alias after a canonical listener resolves the move synchronously (${resolve})`, async () => {
       const el = await fixture<LyraReorderList>(threeItems);
       const seen: string[] = [];
       el.addEventListener('lr-reorder-request', (event) => {
@@ -1273,7 +1278,7 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
       });
       el.addEventListener('lr-reorder', (event) => seen.push(event.type));
       moveMiddleUp(el);
-      expect(seen).to.deep.equal(['lr-reorder-request']);
+      expect(seen).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
       expect(itemsOf(el).map((item) => item.value)).to.deep.equal(
         resolve === 'finalize' ? ['b', 'a', 'c'] : ['a', 'b', 'c']
       );
@@ -1281,7 +1286,7 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
     });
   }
 
-  it('omits the retired event when a canonical listener removes the list mid-dispatch, and moves nothing', async () => {
+  it('still fires the alias when a canonical listener removes the list mid-dispatch, and moves nothing', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const seen: string[] = [];
     el.addEventListener('lr-reorder-request', (event) => {
@@ -1290,7 +1295,7 @@ describe('lr-reorder-request and its retired lr-reorder alias', () => {
     });
     el.addEventListener('lr-reorder', (event) => seen.push(event.type));
     moveMiddleUp(el);
-    expect(seen).to.deep.equal(['lr-reorder-request']);
+    expect(seen).to.deep.equal(['lr-reorder-request', 'lr-reorder']);
     expect(itemsOf(el).map((item) => item.value)).to.deep.equal(['a', 'b', 'c']);
     expect(itemsOf(el).some((item) => item.pending)).to.equal(false);
   });

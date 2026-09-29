@@ -23,7 +23,7 @@ describe('lr-callout: composed close lr-icon-button', () => {
     await el.updateComplete;
     expect(closeButton(el).localName).to.equal('lr-icon-button');
     expect(closeButton(el).getAttribute('exportparts')).to.contain('button:close-button-control');
-    expect(closeButton(el).getAttribute('exportparts')).to.not.contain('button:close-button__control');
+    expect(closeButton(el).getAttribute('exportparts')).to.contain('button:close-button__control');
   });
 
   it('takes its paint from the shared --lr-icon-button-* contract on an ancestor', async () => {

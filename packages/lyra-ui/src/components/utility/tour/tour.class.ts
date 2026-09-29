@@ -23,7 +23,10 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { styles } from './tour.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
@@ -135,6 +138,15 @@ export interface LyraTourEventMap {
   'lr-tour-start': CustomEvent<{ readonly index: number }>;
   /** Cancelable proposal to move to another step, fired before `activeIndex` changes. */
   'lr-tour-step-change-request': CustomEvent<{
+    readonly index: number;
+    readonly previousIndex: number;
+    readonly step: Readonly<LyraTourStep>;
+    readonly via: 'next' | 'back' | 'goto';
+  }>;
+  /** @deprecated Use `lr-tour-step-change-request`; removal not before 23.0.0. Fired unchanged
+   *  right after it from the same navigation, with an equal detail; either event's
+   *  `preventDefault()` keeps the current step. */
+  'lr-tour-step-change': CustomEvent<{
     readonly index: number;
     readonly previousIndex: number;
     readonly step: Readonly<LyraTourStep>;
@@ -337,7 +349,13 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   calling `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a
  *   real action (e.g. an onboarding step demonstrating "click this button" shouldn't let Next
  *   silently skip past it). This is a deliberate departure from `lr-carousel`'s non-cancelable
- *   `lr-slide-change`.
+ *   `lr-slide-change`. Fires before `lr-tour-step-change`, from the same navigation; either event
+ *   may veto.
+ * @event lr-tour-step-change - Deprecated alias of `lr-tour-step-change-request`, kept firing
+ *   unchanged right after it with an equal `detail: { index, previousIndex, step, via }`.
+ *   Cancelable -- either event may veto, and a veto through this alias logs a one-time development
+ *   warning. Like the canonical event, a deliberate departure from `lr-carousel`'s non-cancelable
+ *   `lr-slide-change`. Removal not before 23.0.0.
  * @event lr-tour-end-request - Cancelable proposal before an ordinary tour end. `detail: { reason }`.
  *   Preventing it keeps the tour open. Removal from the document does not request permission.
  * @event lr-tour-end - Non-cancelable notification after the tour closes. `detail: { reason }`.
@@ -392,6 +410,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showProgress: ['withoutProgress', invertAlias, invertAlias],
+  };
+
   static override properties = {
     steps: { attribute: false, noAccessor: true },
   };
@@ -446,6 +468,18 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   /** Omits the built-in "Step X of Y" progress indicator (dots + text) from the footer. */
   @property({ type: Boolean, attribute: 'without-progress' }) withoutProgress = false;
+
+  /**
+   * Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer.
+   *
+   * @deprecated Use `without-progress`; removal not before 23.0.0.
+   */
+  @property({
+    type: Boolean,
+    attribute: 'show-progress',
+    converter: trueDefaultBooleanConverter,
+  })
+  showProgress = true;
 
   /** Host-level `aria-label` override for every step popover's accessible name -- wins over each
    *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
@@ -656,7 +690,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       Object.freeze({ index, previousIndex, step, via }),
       { cancelable: true },
     );
-    if (request.defaultPrevented) return;
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit(
+      'lr-tour-step-change',
+      Object.freeze({ index, previousIndex, step, via }),
+      { cancelable: true },
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-tour-step-change', 'lr-tour-step-change-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.activeIndex = index;
   }
 

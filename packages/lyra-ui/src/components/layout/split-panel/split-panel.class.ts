@@ -10,6 +10,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 const DEFAULT_POSITION = 50;
 const DEFAULT_SNAP_THRESHOLD = 12;
 const KEYBOARD_STEP_PERCENT = 1;
@@ -205,6 +206,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  *   interaction moves the divider. Not fired when a consumer sets `position` or
  *   `positionInPixels` directly.
  * @csspart base - The component's layout wrapper.
+ * @csspart split-panel - Deprecated alias of `base` on the same layout wrapper (removal not before
+ *   23.0.0); style `::part(base)` instead. Neither mirrored upstream publishes a wrapper part.
  * @csspart panel - Shared part on both pane wrappers.
  * @csspart start - The logical start pane.
  * @csspart end - The logical end pane.
@@ -903,7 +906,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const position = Math.round(this.position);
     return html`
       <div
-        part="base"
+        part="base split-panel"
         data-orientation=${orientation}
         style=${`--_lr-split-panel-start-position: ${startPosition}%`}
       >

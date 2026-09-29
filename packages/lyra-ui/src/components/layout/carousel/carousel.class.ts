@@ -30,6 +30,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 interface SlideSnapshot {
   hidden: boolean | 'until-found';
   inert: boolean;
@@ -245,12 +246,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
+  @property({ attribute: 'accessible-label' })
   get accessibleLabel(): string | undefined {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
     this.legacyAccessibleLabel = value;
   }
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
@@ -328,6 +331,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       return;
     }
     super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
     if (
       name === 'current-slide' &&
       newValue === null &&

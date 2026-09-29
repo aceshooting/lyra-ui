@@ -3,6 +3,7 @@ import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
@@ -264,6 +265,51 @@ describe('timestamps', () => {
     el.formatTimestamp = (date) => `t=${date.getTime()}`;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
+  });
+
+  it('keeps the deprecated show-timestamps alias working, warning once', async () => {
+    let el!: LyraTranscriptFeed;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: 'lr-transcript-feed', kind: 'property', name: 'showTimestamps' }],
+      async () => {
+        el = (await fixture(html`<lr-transcript-feed show-timestamps></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        el.showTimestamps = false;
+        el.showTimestamps = true;
+        el.formatTimestamp = (date) => `t=${date.getTime()}`;
+        el.entries = [{ id: '1', text: 'hi', timestamp: 1700000000000 }];
+        await el.updateComplete;
+      },
+    );
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      'lyra-deprecated:lr-transcript-feed:property:showTimestamps',
+    ]);
+    expect(el.withTimestamps).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
+  });
+
+  it('syncs show-timestamps back from with-timestamps and lets the last write win', async () => {
+    let el!: LyraTranscriptFeed;
+    let both!: LyraTranscriptFeed;
+    let reversed!: LyraTranscriptFeed;
+    await captureDeprecationWarnings(
+      [{ tag: 'lr-transcript-feed', kind: 'property', name: 'showTimestamps' }],
+      async () => {
+        el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        both = (await fixture(
+          html`<lr-transcript-feed show-timestamps with-timestamps></lr-transcript-feed>`,
+        )) as LyraTranscriptFeed;
+        both.withTimestamps = false;
+        await both.updateComplete;
+        reversed = (await fixture(html`<lr-transcript-feed with-timestamps></lr-transcript-feed>`)) as LyraTranscriptFeed;
+        reversed.showTimestamps = false;
+        await reversed.updateComplete;
+      },
+    );
+    el.withTimestamps = true;
+    await el.updateComplete;
+    expect(el.showTimestamps).to.be.true;
+    expect(both.showTimestamps, 'the later canonical write wins').to.be.false;
+    expect(reversed.withTimestamps, 'the later alias write wins').to.be.false;
   });
 
   it('omits non-finite and out-of-TimeClip timestamps without dropping transcript entries', async () => {

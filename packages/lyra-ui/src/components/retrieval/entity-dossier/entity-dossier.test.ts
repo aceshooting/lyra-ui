@@ -148,7 +148,7 @@ it('forwards chunks/thresholds to lr-chunk-inspector, and the same thresholds to
   expect(panel.thresholds).to.deep.equal({ high: 0.9, medium: 0.6 });
 });
 
-it('surfaces the chunk inspector lr-chunk-toggle, without its retired lr-expand alias', async () => {
+it('surfaces the chunk inspector lr-chunk-toggle, then its deprecated lr-expand alias', async () => {
   const el = await populated();
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   const seen: string[] = [];
@@ -161,6 +161,7 @@ it('surfaces the chunk inspector lr-chunk-toggle, without its retired lr-expand 
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
   expect(seen).to.deep.equal([
     'toggle:{"chunkId":"ch1","expanded":true}',
+    'expand:{"chunkId":"ch1","expanded":true}',
   ]);
 });
 
@@ -362,12 +363,12 @@ it("contains the composed lr-tab-group's lr-activate on a real repeat pick of th
   ).to.equal(0);
 });
 
-describe('lr-entity-dossier retired show-focus-button alias', () => {
+describe('lr-entity-dossier deprecated show-focus-button alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-dossier', kind: 'property', name: 'showFocusButton' }];
   const observe = (el: LyraEntityDossier): string => String((el.shadowRoot!.querySelector('lr-entity-card') as LyraEntityCard).withoutFocusButton);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityDossier>(markup);
 
-  it('applies without-focus-button with canonical defaults and no deprecation warning', async () => {
+  it('applies without-focus-button without a deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -376,5 +377,66 @@ describe('lr-entity-dossier retired show-focus-button alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-focus-button="false" equal to without-focus-button, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-dossier .entity=${entity} without-focus-button></lr-entity-dossier>`));
+      alias = observe(await mount(html`<lr-entity-dossier .entity=${entity} show-focus-button="false"></lr-entity-dossier>`));
+      const el = await mount(html`<lr-entity-dossier .entity=${entity}></lr-entity-dossier>`);
+      el.showFocusButton = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutFocusButton, el.showFocusButton, el.hasAttribute('show-focus-button')];
+      // The canonical property syncs back into the alias.
+      el.withoutFocusButton = false;
+      await el.updateComplete;
+      readback.push(el.showFocusButton, el.hasAttribute('show-focus-button'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-entity-dossier:property:showFocusButton',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-focus-button');
+  });
+
+  it('restores the default when show-focus-button is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-entity-dossier .entity=${entity}></lr-entity-dossier>`));
+      const el = await mount(html`<lr-entity-dossier .entity=${entity} show-focus-button="false"></lr-entity-dossier>`);
+      el.showFocusButton = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showFocusButton = false;
+      await el.updateComplete;
+      el.removeAttribute('show-focus-button');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-entity-dossier .entity=${entity} without-focus-button></lr-entity-dossier>`));
+      const el = await mount(html`<lr-entity-dossier .entity=${entity} show-focus-button without-focus-button></lr-entity-dossier>`);
+      expect(el.withoutFocusButton).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-entity-dossier .entity=${entity} without-focus-button show-focus-button></lr-entity-dossier>`);
+      expect(reversed.withoutFocusButton, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
   });
 });

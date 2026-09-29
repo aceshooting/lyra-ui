@@ -7,10 +7,20 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
+- **Deprecated css-property** `--lr-link-color` since `21.1.0`; use css-property `--lr-graph-edge-color`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated css-property** `--lr-node-fill` since `21.1.0`; use css-property `--lr-graph-node-fill`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecated event** `lr-link-enter` since `21.1.0`; use event `addEventListener('lr-edge-enter', event => { /* Read event.detail.edgeId instead of linkId. */ })`; removal not before `23.0.0` — Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId.
+- **Deprecated event** `lr-link-leave` since `21.1.0`; use event `addEventListener('lr-edge-leave', event => { /* Read event.detail.edgeId instead of linkId. */ })`; removal not before `23.0.0` — Graph connections are called edges across the graph components. The legacy event retains linkId; the canonical event uses edgeId.
 - **Deprecated event** `lr-node-click` since `22.0.0`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecated property** `dimmedLinkIds` since `21.1.0`; use property `dimmedEdgeIds`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `linkDistance` / `link-distance` since `21.1.0`; use property `edge-distance`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `selectedLinkIds` since `21.1.0`; use property `selectedEdgeIds`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
+- **Deprecated property** `showEdgeLabels` / `show-edge-labels` since `21.1.0`; use property `with-edge-labels`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,8 +73,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
-  `d3-force`'s own simulation input and from click/keyboard interaction. The graph data type is `LyraGraphEdge`; the old
-  `LyraGraphLink` type was removed in 23.0.0
+  `d3-force`'s own simulation input and from click/keyboard interaction. Deprecated alias: `links`
+  (use `edges`; removed in 23.0.0). The exported `LyraGraphLink` interface is likewise deprecated
+  in favor of the structurally identical `LyraGraphEdge`
 - `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
   `'none'` uses the requested `width`/`height` below, unchanged. `'container'` measures the host's own
   content box and feeds that to the SVG `viewBox`, the layout's centring force,
@@ -89,7 +100,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
   host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
-- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas).
+- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas). Deprecated
+  alias: `link-distance`/`linkDistance` (use `edge-distance`; removed in 23.0.0)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
@@ -104,7 +116,7 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `withEdgeLabels: boolean = false` (attribute `with-edge-labels`) — draws each resolved
   (non-dangling) edge's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
   Off by default: `LyraGraphEdge.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
-  this is set.
+  this is set. Deprecated alias: `show-edge-labels`/`showEdgeLabels` (use `with-edge-labels`; removed in 23.0.0)
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
   not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `withEdgeLabels` is
@@ -156,7 +168,9 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
 right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
 `lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
-remain through v23.
+remain through v23. Older aliases: `lr-link-enter`/`lr-link-leave` (use
+`lr-edge-enter`/`lr-edge-leave` and replace detail.linkId with detail.edgeId; removable from 23.0.0) and `lr-community-click` (use
+`lr-community-activate`; removed in 23.0.0)
 
 **Slots:** none.
 
@@ -180,7 +194,9 @@ host too (through a private, not-directly-settable custom property) — setting
 `--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
 wins over both. `--lr-graph-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-graph-edge-color` (set inline per-edge from
-`LyraGraphEdge.color`, falling back to `--lr-color-border`). Also uses `--lr-color-text` +
+`LyraGraphEdge.color`, falling back to `--lr-color-border`). Deprecated aliases, read as their
+fallbacks: `--lr-node-fill` (use `--lr-graph-node-fill`; removed in 23.0.0) and `--lr-link-color`
+(use `--lr-graph-edge-color`; removed in 23.0.0). Also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
 The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
@@ -316,7 +332,8 @@ of the box with no host styling required); a host typically computes the set fro
 `lr-node-enter`/`lr-edge-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
-
+Deprecated aliases: `selectedLinkIds` (use `selectedEdgeIds`; removed in 23.0.0) and
+`dimmedLinkIds` (use `dimmedEdgeIds`; removed in 23.0.0).
 `nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
 layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow

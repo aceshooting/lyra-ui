@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated property** `preview` / `preview` since `21.1.0`; use property `without-preview`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 18 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -62,7 +62,8 @@ become bounded clone-owned frozen snapshots; create and reassign a new array aft
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
-affordances at all. `label: string = ''`,
+affordances at all (deprecated alias: `preview`, use `without-preview`, removed in 23.0.0; inverted,
+so `preview="false"` equals `without-preview`). `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
 `spellcheck: boolean = true` (string-aware converter, same as `lr-model-select`), `autocapitalize:
 string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,

@@ -1592,9 +1592,8 @@ describe('highlights', () => {
       expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
     });
 
-    it('ignores the retired -background spellings while canonical paint remains available', async () => {
-      expect(await paints(declarations('background', 50))).to.deep.equal(await paints(''));
-      expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+    it('still honors the deprecated -background spellings with the same result', async () => {
+      expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
     });
 
     it('lets the canonical -bg property win when both spellings are set', async () => {

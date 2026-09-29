@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `12.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecations** none
+- **Deprecated property** `dropoff` / `dropoff` since `21.1.0`; use property `without-dropoff`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -44,7 +44,9 @@ list carries the accessible name; a host `aria-label` overrides `label`.
   label)
 - `label: string = ''` (accessible name for the stage list)
 - `withoutDropoff: boolean = false` (attribute `without-dropoff`, reflected) — omits the change
-  from the previous stage otherwise rendered above each later stage.
+  from the previous stage otherwise rendered above each later stage. Deprecated alias:
+  `dropoff`/`dropoff="false"` (use `without-dropoff`; removed in 23.0.0) — `dropoff="false"` still
+  equals `without-dropoff`
 - `sharePrecision: number = 0` (attribute `share-precision`; fraction digits for every share and
   drop-off percentage, clamped to `0`–`20`)
 

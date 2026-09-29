@@ -147,6 +147,80 @@ it("reflects without-copy-button and hides the copy control", async () => {
 describe("deprecated copyable alias", () => {
   const usage = { tag: "lr-code-block", kind: "property", name: "copyable" } as const;
 
+  it('copyable="false" equals without-copy-button and warns once', async () => {
+    let el!: LyraCodeBlock;
+    let other!: LyraCodeBlock;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = (await fixture(
+        html`<lr-code-block copyable="false" .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+      other = (await fixture(
+        html`<lr-code-block copyable="false" .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([
+      "lyra-deprecated:lr-code-block:property:copyable",
+    ]);
+    const canonical = (await fixture(
+      html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    for (const host of [el, other, canonical]) {
+      expect(host.withoutCopyButton).to.be.true;
+      expect(host.copyable).to.be.false;
+      expect(host.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+    }
+  });
+
+  it("the property alias forwards both ways and removing the attribute restores the default", async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    expect(el.copyable).to.be.true;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el.copyable = false;
+      await el.updateComplete;
+      expect(el.withoutCopyButton).to.be.true;
+      expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+      el.setAttribute("copyable", "false");
+      el.removeAttribute("copyable");
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.withoutCopyButton).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
+  });
+
+  it("lets the last write win when both spellings are authored", async () => {
+    let canonicalLast!: LyraCodeBlock;
+    let aliasLast!: LyraCodeBlock;
+    await captureDeprecationWarnings([usage], async () => {
+      canonicalLast = (await fixture(
+        html`<lr-code-block copyable without-copy-button .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+      aliasLast = (await fixture(
+        html`<lr-code-block without-copy-button copyable .code=${jsSample}></lr-code-block>`
+      )) as LyraCodeBlock;
+    });
+    expect(canonicalLast.withoutCopyButton).to.be.true;
+    expect(canonicalLast.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
+    expect(aliasLast.withoutCopyButton).to.be.false;
+    expect(aliasLast.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(1);
+  });
+
+  it("syncs the alias back from the canonical property", async () => {
+    const el = (await fixture(
+      html`<lr-code-block .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    el.withoutCopyButton = true;
+    await el.updateComplete;
+    expect(el.copyable).to.be.false;
+    expect(el.hasAttribute("copyable"), "the alias keeps its presence reflection").to.be.false;
+    el.withoutCopyButton = false;
+    await el.updateComplete;
+    expect(el.copyable).to.be.true;
+    expect(el.getAttribute("copyable")).to.equal("");
+  });
+
   it("never warns for the canonical attribute", async () => {
     const warnings = await captureDeprecationWarnings([usage], async () => {
       await fixture(html`<lr-code-block without-copy-button .code=${jsSample}></lr-code-block>`);

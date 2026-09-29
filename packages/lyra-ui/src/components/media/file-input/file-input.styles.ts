@@ -155,16 +155,22 @@ export const styles = css`
     min-inline-size: 0;
     pointer-events: auto;
   }
-  /* Small-size overrides retain the ordinary size ladder when omitted. */
-  :host(:is([size='s'], [size='small'])) [part~='base'],
-  :host(:is([size='s'], [size='small'])) .dropzone-content {
-    padding: var(--lr-file-input-compact-padding,
-      var(--lr-file-input-dropzone-padding, var(--_lr-file-input-dropzone-padding)));
-    font-size: var(--lr-file-input-compact-font-size,
-      var(--lr-file-input-dropzone-font-size, var(--_lr-file-input-dropzone-font-size)));
+  /* Density escape -- same convention as lr-empty's compact. A --lr-space-l dropzone is unusable in
+     a toolbar or table cell, so compact shrinks the padding, gap and dropzone instruction font. The
+     tuned values sit in inline var() fallbacks, not a :host declaration (re-declared per instance,
+     shadowing ancestor values), so a consumer can retune from outside; the fallbacks preserve
+     today's rendering for an unset dropzone. */
+  :host([compact]) [part~="base"] {
+    padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
+    font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
   }
-  :host(:is([size='s'], [size='small'])) .dropzone-content {
-    gap: var(--lr-file-input-compact-gap, var(--lr-file-input-gap, var(--lr-space-xs)));
+  :host([compact]) .dropzone-content {
+    padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
+    gap: var(
+      --lr-file-input-compact-gap,
+      var(--lr-file-input-gap, var(--lr-space-2xs))
+    );
+    font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
   }
   /* Inline var() fallbacks rather than :host-declared properties (re-declared per instance,
      shadowing ancestor values), so a consumer can retint just this dropzone's drag accept/reject

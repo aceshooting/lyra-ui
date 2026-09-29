@@ -7,10 +7,14 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
+- **Deprecated css-property** `--lr-thread-list-excerpt-highlight-background` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-thread-list-excerpt-highlight-foreground` since `21.1.0`; use css-property `--lr-thread-list-excerpt-highlight-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated property** `compact` / `compact` since `22.0.0`; use property `Use size="s" for compact rows and size="m" for the default row density.`; removal not before `24.0.0` — The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window.
+- **Deprecated property** `renamable` / `renamable` since `21.1.0`; use property `without-rename`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showArchived` / `show-archived` since `21.1.0`; use property `with-archived`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 42 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 42 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,8 +94,10 @@ internal key namespaces, so every public `activeConversationId` remains a raw th
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
-trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off.
+trailing group); deprecated alias: `show-archived`/`showArchived` (use `with-archived`; removed in
+23.0.0). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
+each data-mode row, turning its inline rename off; deprecated alias: `renamable` (use
+`without-rename`; removed in 23.0.0), inverted, so `renamable="false"` equals `without-rename`.
 `compact: boolean = false` (reflected, deprecated; removal not before 24.0.0) — compatibility
 alias of `size="s"` when true and `size="m"` when false. Use `size` for both search and data rows;
 slotted rows retain their own size. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
@@ -235,8 +241,10 @@ lr-thread-list::part(row-actions) {
 ```
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
-`--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-color` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-background`, removed in 23.0.0),
+`--lr-thread-list-excerpt-highlight-color` (default `inherit`; deprecated alias:
+`--lr-thread-list-excerpt-highlight-foreground`, removed in 23.0.0),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
@@ -278,7 +286,8 @@ _internals_. Row density
 in particular lives in `row-item-base`'s padding and `row-item-label`'s font size, so
 `::part(row-item-base)` is the supported way to build a dense sidebar.
 
-For plain row density, use `size="s"` — the list forwards its size to each data-mode row. The `row-item-*` parts remain the lever for tuning beyond it (a different font
+For plain row density, prefer the `compact` property above — it forwards straight to the row item's
+own density knob. The `row-item-*` parts remain the lever for tuning beyond it (a different font
 size, a different padding ratio):
 
 ```css

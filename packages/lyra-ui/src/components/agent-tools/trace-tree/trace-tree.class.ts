@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -15,6 +16,7 @@ import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './sp
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from './span.js';
 
@@ -194,6 +196,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showTokens: 'withTokens',
+    showCost: 'withCost',
+    hideBars: 'withoutBars',
+  };
+
   /**
    * Flat span array. Hierarchy is derived from `parentId`; siblings order by `startMs`.
    * At most 500 unique spans with finite timestamps are rendered. A resolved `activeSpanId` and
@@ -215,6 +223,15 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @property({ type: Boolean, attribute: 'with-cost', reflect: true }) withCost = false;
   /** Suppresses the inline duration bar, for dense/narrow embeddings. */
   @property({ type: Boolean, attribute: 'without-bars', reflect: true }) withoutBars = false;
+  /** Adds tokens-in/tokens-out columns.
+   *  @deprecated Use `with-tokens`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-tokens', reflect: true }) showTokens = false;
+  /** Adds a cost column, rendering `costText` verbatim.
+   *  @deprecated Use `with-cost`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-cost', reflect: true }) showCost = false;
+  /** Suppresses the inline duration bar, for dense/narrow embeddings.
+   *  @deprecated Use `without-bars`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'hide-bars', reflect: true }) hideBars = false;
 
   /** Ids of rows explicitly collapsed by the user. Absence means expanded — every row starts expanded. */
   @state() private collapsedIds = new Set<string>();

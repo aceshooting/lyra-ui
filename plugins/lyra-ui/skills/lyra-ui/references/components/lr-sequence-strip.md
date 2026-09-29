@@ -9,6 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated attribute** `accessible-label` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -93,7 +94,8 @@ readonly color, readonly label? }`; `color`
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
-  once — and it wraps onto further rows in a narrow allocation rather than overflowing.
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing. Deprecated
+  alias: `show-legend`/`showLegend` (use `with-legend`; removed in 23.0.0)
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
   `"Subagent"`). Setting it does two things: with `withLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker

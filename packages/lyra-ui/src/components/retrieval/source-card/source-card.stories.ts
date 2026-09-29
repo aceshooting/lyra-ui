@@ -190,12 +190,3 @@ export const SelectedCitation: Story = {
     </div>
   `,
 };
-
-export const NativeTitle: Story = {
-  name: 'Heading and native tooltip are independent',
-  render: () => html`
-    <lr-source-card heading="annual_report.pdf" title="Open the annual report" size="s">
-      <span slot="excerpt">The heading labels the source; title supplies a native host tooltip.</span>
-    </lr-source-card>
-  `,
-};

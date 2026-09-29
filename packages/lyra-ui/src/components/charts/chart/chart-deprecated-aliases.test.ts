@@ -1,30 +1,42 @@
+import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
-import { sendKeys } from '@web/test-runner-commands';
-import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import './chart.js';
-import './bar-chart.js';
-import './bubble-chart.js';
-import './doughnut-chart.js';
-import './histogram.js';
 import './line-chart.js';
-import './pie-chart.js';
-import './polar-area-chart.js';
-import './radar-chart.js';
-import './scatter-chart.js';
 import './box-plot.js';
 import './lite-chart.js';
 import type { LyraChart } from './chart.js';
-import type { LyraHistogram } from './histogram.js';
 import type { LyraBoxPlot } from './box-plot.js';
 import type { LyraLiteChart } from './lite-chart.js';
+import {
+  captureDeprecationWarnings,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
 
-const chartTags = [
-  'lr-chart', 'lr-bar-chart', 'lr-bubble-chart', 'lr-doughnut-chart', 'lr-histogram',
-  'lr-line-chart', 'lr-pie-chart', 'lr-polar-area-chart', 'lr-radar-chart', 'lr-scatter-chart',
-] as const;
-const LINE = { labels: ['Q1', 'Q2'], datasets: [{ label: 'Revenue', data: [90, 100] }] };
-const BOXES = [{ label: 'Latency', data: [{ min: 10, q1: 12, median: 14, q3: 16, max: 18 }] }];
+// Every deprecated chart-family alias keeps working with the same observable result as its
+// canonical name, warns once in development, stays in step with its canonical partner in both
+// directions, and follows the last write when both spellings are authored.
+
+const property = (tag: string, name: string): DeprecatedUsage => ({ tag, kind: 'property', name });
+
+function keyOf(usage: DeprecatedUsage): string {
+  return `lyra-deprecated:${usage.tag}:${usage.kind}:${usage.name}`;
+}
+
+function tableHidden(el: HTMLElement): boolean {
+  return el.shadowRoot!.querySelector('[part~="data-table"]')!.hasAttribute('data-visually-hidden');
+}
+
+const LINE = { labels: ['Q1', 'Q2', 'Q3'], datasets: [{ label: 'Revenue', data: [90, 95, 100] }] };
+
+async function chartWith(markup: unknown): Promise<LyraChart> {
+  const el = (await fixture(markup as never)) as LyraChart;
+  el.labels = LINE.labels;
+  el.datasets = LINE.datasets;
+  await el.updateComplete;
+  // The generated table renders once the lazily loaded Chart.js peer replaces the skeleton.
+  await waitUntil(() => el.shadowRoot!.querySelector('[part~="data-table"]') !== null);
+  return el;
+}
 
 type ChartConfig = {
   options: {
@@ -33,218 +45,485 @@ type ChartConfig = {
     plugins: { zoom?: unknown; tooltip: { bodyColor: string } };
   };
 };
+
 function configOf(el: HTMLElement): ChartConfig {
   return (el as unknown as { buildConfig(): ChartConfig }).buildConfig();
 }
-function tableHidden(el: HTMLElement): boolean {
-  return el.shadowRoot!.querySelector('[part~="data-table"]')!.hasAttribute('data-visually-hidden');
+
+describe('lr-chart: deprecated aliases', () => {
+  it('shows the data table through with-data-table without any warning', async () => {
+    let el!: LyraChart;
+    const warnings = await captureDeprecationWarnings([], async () => {
+      el = await chartWith(html`<lr-chart with-data-table></lr-chart>`);
+    });
+    expect(warnings).to.have.length(0);
+    expect(tableHidden(el)).to.equal(false);
+    expect(el.showDataTable, 'the alias reads the canonical state').to.equal(true);
+  });
+
+  it('keeps show-data-table working, warning once and naming with-data-table', async () => {
+    const usage = property('lr-chart', 'showDataTable');
+    let el!: LyraChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = await chartWith(html`<lr-chart show-data-table></lr-chart>`);
+      el.showDataTable = false;
+      el.showDataTable = true;
+      await el.updateComplete;
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('with-data-table');
+    expect(el.withDataTable).to.equal(true);
+    expect(tableHidden(el)).to.equal(false);
+
+    await captureDeprecationWarnings([usage], async () => {
+      el.removeAttribute('show-data-table');
+      await el.updateComplete;
+    });
+    expect(el.withDataTable, 'removing the alias restores the default').to.equal(false);
+    expect(tableHidden(el)).to.equal(true);
+  });
+
+  it('warns with the subclass tag and behaves identically on a typed chart', async () => {
+    const usage = property('lr-line-chart', 'showDataTable');
+    let el!: LyraChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = await chartWith(html`<lr-line-chart show-data-table></lr-line-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(tableHidden(el)).to.equal(false);
+  });
+
+  it('treats begin-at-zero="false" exactly like without-zero-baseline', async () => {
+    const usage = property('lr-chart', 'beginAtZero');
+    const canonical = await chartWith(html`<lr-chart type="line" without-zero-baseline></lr-chart>`);
+    let alias!: LyraChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await chartWith(html`<lr-chart type="line" begin-at-zero="false"></lr-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('without-zero-baseline');
+    expect(alias.withoutZeroBaseline).to.equal(true);
+    expect(alias.beginAtZero).to.equal(false);
+    expect(configOf(alias).options.scales['y']!.beginAtZero).to.equal(false);
+    expect(configOf(canonical).options.scales['y']!.beginAtZero).to.equal(false);
+
+    await captureDeprecationWarnings([usage], async () => {
+      alias.removeAttribute('begin-at-zero');
+      await alias.updateComplete;
+    });
+    expect(alias.withoutZeroBaseline, 'removing the alias restores the zero baseline').to.equal(false);
+    expect(configOf(alias).options.scales['y']!.beginAtZero).to.equal(true);
+  });
+
+  it('follows the last write between without-zero-baseline and begin-at-zero', async () => {
+    const usage = property('lr-chart', 'beginAtZero');
+    let aliasLast!: LyraChart;
+    let canonicalLast!: LyraChart;
+    await captureDeprecationWarnings([usage], async () => {
+      aliasLast = await chartWith(html`<lr-chart without-zero-baseline begin-at-zero></lr-chart>`);
+      canonicalLast = await chartWith(html`<lr-chart begin-at-zero="false" without-zero-baseline></lr-chart>`);
+    });
+    expect(aliasLast.withoutZeroBaseline).to.equal(false);
+    expect(canonicalLast.withoutZeroBaseline).to.equal(true);
+    expect(canonicalLast.beginAtZero).to.equal(false);
+  });
+
+  it('syncs every alias back from its canonical property without warning', async () => {
+    const usages = ['showDataTable', 'beginAtZero', 'zoom', 'compact'].map((name) => property('lr-chart', name));
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await chartWith(html`<lr-chart></lr-chart>`);
+      el.withDataTable = true;
+      el.withoutZeroBaseline = true;
+      el.zoomable = true;
+      el.size = 's';
+      await el.updateComplete;
+      reads = [el.showDataTable, el.beginAtZero, el.zoom, el.compact];
+    });
+    expect(warnings).to.have.length(0);
+    expect(reads).to.deep.equal([true, false, true, true]);
+  });
+
+  it('keeps zoom working as an alias of zoomable', async () => {
+    const usage = property('lr-chart', 'zoom');
+    let el!: LyraChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = await chartWith(html`<lr-chart type="line" zoom></lr-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('zoomable');
+    expect(el.zoomable).to.equal(true);
+    expect(el.zoom).to.equal(true);
+    expect(configOf(el).options.plugins.zoom !== undefined, 'the zoom plugin is configured').to.equal(true);
+  });
+
+  it('maps compact onto the s size tier, and size="s" renders the same compact plot', async () => {
+    const usage = property('lr-chart', 'compact');
+    const sized = await chartWith(html`<lr-chart size="s"></lr-chart>`);
+    let alias!: LyraChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await chartWith(html`<lr-chart compact></lr-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('size');
+    expect(alias.size).to.equal('s');
+    expect(alias.compact).to.equal(true);
+    expect(sized.compact, 'the alias reads the canonical tier').to.equal(true);
+    for (const el of [sized, alias]) {
+      const { options } = configOf(el);
+      expect(options.layout).to.deep.equal({ padding: 0, autoPadding: false });
+      expect(options.scales['x']!.display).to.equal(false);
+    }
+
+    await captureDeprecationWarnings([usage], async () => {
+      alias.compact = false;
+      await alias.updateComplete;
+    });
+    expect(alias.size).to.equal('m');
+    expect(configOf(alias).options.layout).to.equal(undefined);
+    expect(configOf(alias).options.scales['x']!.display).to.equal(true);
+  });
+
+  it('follows the last write between size and compact, and reads smaller tiers as compact', async () => {
+    const usage = property('lr-chart', 'compact');
+    let compactLast!: LyraChart;
+    let sizeLast!: LyraChart;
+    await captureDeprecationWarnings([usage], async () => {
+      compactLast = await chartWith(html`<lr-chart size="l" compact></lr-chart>`);
+      sizeLast = await chartWith(html`<lr-chart compact size="l"></lr-chart>`);
+    });
+    expect(compactLast.size).to.equal('s');
+    expect(sizeLast.size).to.equal('l');
+    expect(sizeLast.compact).to.equal(false);
+    sizeLast.size = 'xs';
+    expect(sizeLast.compact).to.equal(true);
+  });
+
+  it('themes the tooltip through --lr-chart-tooltip-color, keeping --lr-chart-tooltip-text as an alias', async () => {
+    const el = await chartWith(html`<lr-chart type="line"></lr-chart>`);
+    await waitUntil(() => (el as unknown as { chart?: unknown }).chart != null);
+    el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
+    expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+    el.style.setProperty('--lr-chart-tooltip-color', 'rgb(1, 2, 3)');
+    expect(configOf(el).options.plugins.tooltip.bodyColor, 'the canonical name wins').to.equal(
+      'rgb(1, 2, 3)',
+    );
+  });
+
+  it('fires lr-point-activate, then the lr-point-click alias with an equal detail and no warning', async () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const order: string[] = [];
+    const details = new Map<string, unknown>();
+    for (const name of ['lr-datum-activate', 'lr-point-activate', 'lr-point-click']) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        details.set(name, (event as CustomEvent).detail);
+      });
+    }
+    const warnings = await captureDeprecationWarnings([], () => {
+      (el as unknown as { activateDatum(value: unknown): void }).activateDatum({
+        datasetIndex: 0,
+        index: 1,
+        label: 'B',
+        value: 2,
+      });
+    });
+    expect(warnings).to.have.length(0);
+    expect(order).to.deep.equal(['lr-datum-activate', 'lr-point-activate', 'lr-point-click']);
+    const detail = { datasetIndex: 0, index: 1, label: 'B', value: 2 };
+    expect(details.get('lr-point-activate')).to.deep.equal(detail);
+    expect(details.get('lr-point-click')).to.deep.equal(detail);
+    expect(
+      details.get('lr-point-activate') === details.get('lr-point-click'),
+      'each event carries its own copy',
+    ).to.equal(false);
+  });
+});
+
+const BOXES = [
+  {
+    label: 'Latency',
+    data: [
+      { min: 10, q1: 12, median: 14, q3: 16, max: 18 },
+      { min: 11, q1: 13, median: 15, q3: 17, max: 19 },
+    ],
+  },
+];
+
+async function boxPlotWith(markup: unknown): Promise<LyraBoxPlot> {
+  const el = (await fixture(markup as never)) as LyraBoxPlot;
+  el.labels = ['A', 'B'];
+  el.datasets = BOXES;
+  await el.updateComplete;
+  return el;
 }
+
 function hasLegend(el: HTMLElement): boolean {
   return el.shadowRoot!.querySelector('[part="legend"]') !== null;
 }
-async function chartWith(tag: string): Promise<LyraChart> {
-  const el = await fixture<LyraChart>(`<${tag}></${tag}>`);
-  if (tag === 'lr-histogram') {
-    (el as LyraHistogram).values = [90, 95, 100];
-    (el as LyraHistogram).bins = 2;
-  } else {
-    // Typed charts retain their writable mirrored type property.
-    el.type = 'line';
-    el.labels = LINE.labels;
-    el.datasets = LINE.datasets;
-  }
+
+describe('lr-box-plot: deprecated aliases', () => {
+  it('syncs every alias back from its canonical property without warning, and follows the last write', async () => {
+    const usages = ['legend', 'beginAtZero', 'showDataTable'].map((name) => property('lr-box-plot', name));
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await boxPlotWith(html`<lr-box-plot></lr-box-plot>`);
+      el.withLegend = true;
+      el.withoutZeroBaseline = true;
+      el.withDataTable = true;
+      await el.updateComplete;
+      reads = [el.legend, el.beginAtZero, el.showDataTable];
+    });
+    expect(warnings).to.have.length(0);
+    expect(reads).to.deep.equal([true, false, true]);
+
+    let lastWrite: unknown[] = [];
+    await captureDeprecationWarnings(usages, async () => {
+      const el = await boxPlotWith(html`<lr-box-plot with-legend legend="" without-zero-baseline></lr-box-plot>`);
+      el.legend = false;
+      el.beginAtZero = true;
+      await el.updateComplete;
+      lastWrite = [el.withLegend, el.withoutZeroBaseline];
+    });
+    expect(lastWrite).to.deep.equal([false, false]);
+  });
+
+  it('renders the legend through with-legend and through the legend alias', async () => {
+    const usage = property('lr-box-plot', 'legend');
+    const canonical = await boxPlotWith(html`<lr-box-plot with-legend></lr-box-plot>`);
+    let alias!: LyraBoxPlot;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await boxPlotWith(html`<lr-box-plot legend></lr-box-plot>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('with-legend');
+    expect(alias.withLegend).to.equal(true);
+    await waitUntil(() => hasLegend(canonical) && hasLegend(alias), 'both legends render');
+
+    await captureDeprecationWarnings([usage], async () => {
+      alias.removeAttribute('legend');
+      await alias.updateComplete;
+    });
+    expect(hasLegend(alias)).to.equal(false);
+  });
+
+  it('treats begin-at-zero="false" exactly like without-zero-baseline', async () => {
+    const usage = property('lr-box-plot', 'beginAtZero');
+    const canonical = await boxPlotWith(html`<lr-box-plot without-zero-baseline></lr-box-plot>`);
+    let alias!: LyraBoxPlot;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await boxPlotWith(html`<lr-box-plot begin-at-zero="false"></lr-box-plot>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(alias.withoutZeroBaseline).to.equal(true);
+    expect(alias.beginAtZero).to.equal(false);
+    await waitUntil(() => (canonical as unknown as { chart?: unknown }).chart != null);
+    await waitUntil(() => (alias as unknown as { chart?: unknown }).chart != null);
+    expect(configOf(alias).options.scales['y']!.beginAtZero).to.equal(false);
+    expect(configOf(canonical).options.scales['y']!.beginAtZero).to.equal(false);
+  });
+
+  it('keeps show-data-table working as an alias of with-data-table', async () => {
+    const usage = property('lr-box-plot', 'showDataTable');
+    const canonical = await boxPlotWith(html`<lr-box-plot with-data-table></lr-box-plot>`);
+    let alias!: LyraBoxPlot;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await boxPlotWith(html`<lr-box-plot show-data-table></lr-box-plot>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(tableHidden(canonical)).to.equal(false);
+    expect(tableHidden(alias)).to.equal(false);
+    expect(alias.withDataTable).to.equal(true);
+  });
+
+  it('themes the canvas tooltip text through --lr-chart-tooltip-color, keeping the -text alias', async () => {
+    const el = await boxPlotWith(html`<lr-box-plot></lr-box-plot>`);
+    await waitUntil(() => (el as unknown as { chart?: unknown }).chart != null);
+    el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
+    expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+    el.style.setProperty('--lr-chart-tooltip-color', 'rgb(1, 2, 3)');
+    expect(configOf(el).options.plugins.tooltip.bodyColor, 'the canonical name wins').to.equal(
+      'rgb(1, 2, 3)',
+    );
+  });
+
+  it('fires lr-point-activate, then the lr-point-click alias with an equal detail', async () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    const order: string[] = [];
+    const details = new Map<string, unknown>();
+    for (const name of ['lr-datum-activate', 'lr-point-activate', 'lr-point-click']) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        details.set(name, (event as CustomEvent).detail);
+      });
+    }
+    const summary = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+    const warnings = await captureDeprecationWarnings([], () => {
+      (el as unknown as { activateBox(value: unknown): void }).activateBox({
+        datasetIndex: 0,
+        index: 0,
+        label: 'A',
+        value: summary,
+      });
+    });
+    expect(warnings).to.have.length(0);
+    expect(order).to.deep.equal(['lr-datum-activate', 'lr-point-activate', 'lr-point-click']);
+    const detail = { datasetIndex: 0, index: 0, label: 'A', value: summary };
+    expect(details.get('lr-point-activate')).to.deep.equal(detail);
+    expect(details.get('lr-point-click')).to.deep.equal(detail);
+  });
+});
+
+async function liteChartWith(markup: unknown): Promise<LyraLiteChart> {
+  const el = (await fixture(markup as never)) as LyraLiteChart;
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'Revenue', data: [90, 100] },
+    { label: 'Cost', data: [92, 98] },
+  ];
+  // Geometry renders once the ResizeObserver has measured the plot.
+  await waitUntil(() => {
+    const chart = el as unknown as { plotWidth: number; plotHeight: number };
+    return chart.plotWidth > 0 && chart.plotHeight > 0;
+  });
   await el.updateComplete;
-  await waitUntil(() => el.shadowRoot!.querySelector('[part~="data-table"]') !== null);
   return el;
 }
-async function smallChartWith(tag: 'lr-box-plot' | 'lr-lite-chart'): Promise<LyraBoxPlot | LyraLiteChart> {
-  if (tag === 'lr-box-plot') {
-    const el = await fixture<LyraBoxPlot>(html`<lr-box-plot></lr-box-plot>`);
-    el.labels = ['Q1'];
-    el.datasets = BOXES;
-    await el.updateComplete;
-    await waitUntil(() => el.shadowRoot!.querySelector('canvas') !== null);
-    return el;
-  }
-  const el = await fixture<LyraLiteChart>(html`<lr-lite-chart></lr-lite-chart>`);
-  el.labels = LINE.labels;
-  el.datasets = LINE.datasets;
-  await el.updateComplete;
-  await waitUntil(() => el.shadowRoot!.querySelector('[part="bar"]') !== null);
-  return el;
+
+function valueTicks(el: LyraLiteChart): string[] {
+  return [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')]
+    .map((label) => label.textContent ?? '')
+    .filter((text) => /^-?\d+(\.\d+)?$/.test(text));
 }
 
-for (const tag of chartTags) {
-  describe(`${tag}: retired aliases`, () => {
-    it('ignores old attributes and property writes while canonical controls still render', async () => {
-      const warnings = await captureDeprecationWarnings([], async () => {
-        const el = await chartWith(tag);
-        for (const name of ['beginAtZero', 'compact', 'showDataTable', 'zoom']) {
-          expect(name in el, name).to.equal(false);
-        }
-        el.setAttribute('begin-at-zero', 'false');
-        el.setAttribute('show-data-table', '');
-        el.setAttribute('compact', '');
-        el.setAttribute('zoom', '');
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size, el.withoutLegend])
-          .to.deep.equal([false, false, false, 'm', false]);
-        expect(tableHidden(el)).to.equal(true);
-        expect(hasLegend(el)).to.equal(true);
-        expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
-        expect(configOf(el).options.plugins.zoom).to.equal(undefined);
-        expect(configOf(el).options.scales['x']!.display).to.equal(true);
-
-        Object.assign(el, { beginAtZero: false, showDataTable: true, compact: true, zoom: true });
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
-          .to.deep.equal([false, false, false, 'm']);
-        el.withoutZeroBaseline = true;
-        el.withDataTable = true;
-        el.zoomable = true;
-        el.size = 's';
-        await el.updateComplete;
-        expect(tableHidden(el)).to.equal(false);
-        expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
-        expect(configOf(el).options.plugins.zoom !== undefined).to.equal(true);
-        expect(configOf(el).options.layout).to.deep.equal({ padding: 0, autoPadding: false });
-        expect(configOf(el).options.scales['x']!.display).to.equal(false);
-
-        Object.assign(el, { beginAtZero: true, showDataTable: false, compact: false, zoom: false });
-        for (const name of ['begin-at-zero', 'show-data-table', 'compact', 'zoom']) el.removeAttribute(name);
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withDataTable, el.zoomable, el.size])
-          .to.deep.equal([true, true, true, 's']);
-        expect(tableHidden(el)).to.equal(false);
-      });
-      expect(warnings).to.have.length(0);
-    });
-
-    it('uses only the canonical tooltip token in painter-facing options', async () => {
-      const el = await chartWith(tag);
-      const fallback = configOf(el).options.plugins.tooltip.bodyColor;
-      el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
-      expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal(fallback);
-      el.style.setProperty('--lr-chart-tooltip-color', 'rgb(1, 2, 3)');
-      expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(1, 2, 3)');
-      el.style.setProperty('--lr-chart-tooltip-text', 'rgb(23, 24, 25)');
-      expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(1, 2, 3)');
-    });
-
-    it('activates a populated chart through the keyboard without the retired notification', async () => {
-      await assertActivation(await chartWith(tag));
-    });
-  });
-}
-
-async function assertActivation(el: LyraChart | LyraBoxPlot | LyraLiteChart): Promise<void> {
-  const events: string[] = [];
-  const details: unknown[] = [];
-  for (const name of ['lr-datum-activate', 'lr-point-activate', 'lr-point-click']) {
-    el.addEventListener(name, (event) => {
-      events.push(name);
-      details.push((event as CustomEvent).detail);
-    });
-  }
-  const target = el.shadowRoot!.querySelector<HTMLElement>('canvas, [part="bar"]')!;
-  await focusByKeyboard(target);
-  await el.updateComplete;
-  await sendKeys({ press: 'Enter' });
-  expect(events).to.deep.equal(['lr-datum-activate', 'lr-point-activate']);
-  const point = details[1] as { datasetIndex: number; index: number; value: unknown };
-  expect(point.datasetIndex).to.equal(0);
-  expect(point.index).to.equal(0);
-  if (el.localName === 'lr-box-plot') expect(point.value).to.deep.equal(BOXES[0]!.data[0]);
-  else if (el.localName !== 'lr-histogram') expect(point.value).to.equal(90);
-  const { kind, ...datum } = details[0] as { kind: string; [key: string]: unknown };
-  expect(['bar', 'point', 'segment', 'slice', 'box']).to.include(kind);
-  expect(datum).to.deep.equal(details[1]);
-}
-
-for (const tag of ['lr-box-plot', 'lr-lite-chart'] as const) {
-  describe(`${tag}: retired aliases`, () => {
-    it('keeps the opt-in legend, table and zero-baseline defaults and canonical controls', async () => {
-      const warnings = await captureDeprecationWarnings([], async () => {
-        const el = await smallChartWith(tag);
-        for (const name of ['beginAtZero', 'legend', 'showDataTable']) expect(name in el, name).to.equal(false);
-        el.setAttribute('begin-at-zero', 'false');
-        el.setAttribute('legend', '');
-        el.setAttribute('show-data-table', '');
-        Object.assign(el, { beginAtZero: false, legend: true, showDataTable: true });
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([false, false, false]);
-        expect(tableHidden(el)).to.equal(true);
-        expect(hasLegend(el)).to.equal(false);
-        if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.include('0');
-        else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(true);
-        el.withoutZeroBaseline = true;
-        el.withLegend = true;
-        el.withDataTable = true;
-        await el.updateComplete;
-        expect(tableHidden(el)).to.equal(false);
-        expect(hasLegend(el)).to.equal(true);
-        if (tag === 'lr-lite-chart') expect(valueTicks(el)).to.not.include('0');
-        else expect(configOf(el).options.scales['y']!.beginAtZero).to.equal(false);
-        Object.assign(el, { beginAtZero: true, legend: false, showDataTable: false });
-        for (const name of ['begin-at-zero', 'legend', 'show-data-table']) el.removeAttribute(name);
-        await el.updateComplete;
-        expect([el.withoutZeroBaseline, el.withLegend, el.withDataTable]).to.deep.equal([true, true, true]);
-        expect(tableHidden(el)).to.equal(false);
-        expect(hasLegend(el)).to.equal(true);
-      });
-      expect(warnings).to.have.length(0);
-    });
-    it('activates populated data through the keyboard without the retired notification', async () => {
-      await assertActivation(await smallChartWith(tag));
-    });
-  });
-}
-function valueTicks(el: HTMLElement): string[] {
-  return [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')].map((label) => label.textContent ?? '');
-}
 function svgName(el: LyraLiteChart): string | null {
   return el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label');
 }
 
-it('box plot uses only the canonical canvas-tooltip color', async () => {
-  const el = await smallChartWith('lr-box-plot');
-  const fallback = configOf(el).options.plugins.tooltip.bodyColor;
-  el.style.setProperty('--lr-chart-tooltip-text', 'rgb(13, 14, 15)');
-  expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal(fallback);
-  el.style.setProperty('--lr-chart-tooltip-color', 'rgb(1, 2, 3)');
-  expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(1, 2, 3)');
+describe('lr-lite-chart: deprecated aliases', () => {
+  it('syncs every alias back from its canonical property without warning, and follows the last write', async () => {
+    const usages = ['legend', 'beginAtZero', 'showDataTable'].map((name) => property('lr-lite-chart', name));
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await liteChartWith(html`<lr-lite-chart></lr-lite-chart>`);
+      el.withLegend = true;
+      el.withoutZeroBaseline = true;
+      el.withDataTable = true;
+      await el.updateComplete;
+      reads = [el.legend, el.beginAtZero, el.showDataTable];
+    });
+    expect(warnings).to.have.length(0);
+    expect(reads).to.deep.equal([true, false, true]);
+
+    let lastWrite: unknown[] = [];
+    await captureDeprecationWarnings(usages, async () => {
+      const el = await liteChartWith(html`<lr-lite-chart with-legend legend="" without-zero-baseline></lr-lite-chart>`);
+      el.legend = false;
+      el.beginAtZero = true;
+      await el.updateComplete;
+      lastWrite = [el.withLegend, el.withoutZeroBaseline];
+    });
+    expect(lastWrite).to.deep.equal([false, false]);
+  });
+
+  it('renders the legend through with-legend and through the legend alias', async () => {
+    const usage = property('lr-lite-chart', 'legend');
+    const canonical = await liteChartWith(html`<lr-lite-chart with-legend></lr-lite-chart>`);
+    let alias!: LyraLiteChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await liteChartWith(html`<lr-lite-chart legend></lr-lite-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(hasLegend(canonical)).to.equal(true);
+    expect(hasLegend(alias)).to.equal(true);
+    expect(alias.withLegend).to.equal(true);
+  });
+
+  it('treats begin-at-zero="false" exactly like without-zero-baseline', async () => {
+    const usage = property('lr-lite-chart', 'beginAtZero');
+    const baseline = await liteChartWith(html`<lr-lite-chart></lr-lite-chart>`);
+    const canonical = await liteChartWith(html`<lr-lite-chart without-zero-baseline></lr-lite-chart>`);
+    let alias!: LyraLiteChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      alias = await liteChartWith(html`<lr-lite-chart begin-at-zero="false"></lr-lite-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(alias.withoutZeroBaseline).to.equal(true);
+    expect(valueTicks(baseline)).to.include('0');
+    expect(valueTicks(canonical)).to.not.include('0');
+    expect(valueTicks(alias)).to.deep.equal(valueTicks(canonical));
+  });
+
+  it('keeps show-data-table working as an alias of with-data-table', async () => {
+    const usage = property('lr-lite-chart', 'showDataTable');
+    let el!: LyraLiteChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = await liteChartWith(html`<lr-lite-chart show-data-table></lr-lite-chart>`);
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(tableHidden(el)).to.equal(false);
+    expect(el.withDataTable).to.equal(true);
+  });
+
+  it('names the chart through the host aria-label, re-rendering when it changes', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart aria-label="Quarterly revenue"></lr-lite-chart>`);
+    expect(svgName(el)).to.equal('Quarterly revenue');
+    el.setAttribute('aria-label', 'Quarterly cost');
+    await el.updateComplete;
+    expect(svgName(el)).to.equal('Quarterly cost');
+  });
+
+  it('keeps the accessible-label attribute naming the chart, warning once and naming aria-label', async () => {
+    const usage: DeprecatedUsage = { tag: 'lr-lite-chart', kind: 'attribute', name: 'accessible-label' };
+    let el!: LyraLiteChart;
+    const warnings = await captureDeprecationWarnings([usage], async () => {
+      el = await liteChartWith(html`<lr-lite-chart accessible-label="Legacy name"></lr-lite-chart>`);
+      el.setAttribute('accessible-label', 'Renamed legacy name');
+      await el.updateComplete;
+    });
+    expect(warnings.map((warning) => warning.key)).to.deep.equal([keyOf(usage)]);
+    expect(warnings[0]!.message).to.contain('aria-label');
+    expect(el.accessibleLabel).to.equal('Renamed legacy name');
+    expect(svgName(el)).to.equal('Renamed legacy name');
+
+    await captureDeprecationWarnings([usage], async () => {
+      el.removeAttribute('accessible-label');
+      await el.updateComplete;
+    });
+    expect(svgName(el), 'removing the alias restores the derived name').to.equal('Revenue and Cost');
+  });
+
+  it('lets the host aria-label win over the accessible-label alias', async () => {
+    const usage: DeprecatedUsage = { tag: 'lr-lite-chart', kind: 'attribute', name: 'accessible-label' };
+    let el!: LyraLiteChart;
+    await captureDeprecationWarnings([usage], async () => {
+      el = await liteChartWith(
+        html`<lr-lite-chart aria-label="New" accessible-label="Old"></lr-lite-chart>`,
+      );
+    });
+    expect(svgName(el)).to.equal('New');
+  });
+
+  it('fires lr-point-activate, then the lr-point-click alias with an equal detail', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart></lr-lite-chart>`);
+    const order: string[] = [];
+    const details = new Map<string, unknown>();
+    for (const name of ['lr-datum-activate', 'lr-point-activate', 'lr-point-click']) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        details.set(name, (event as CustomEvent).detail);
+      });
+    }
+    const warnings = await captureDeprecationWarnings([], () => {
+      el.shadowRoot!.querySelector('[part="bar"]')!.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, composed: true }),
+      );
+    });
+    expect(warnings).to.have.length(0);
+    expect(order).to.deep.equal(['lr-datum-activate', 'lr-point-activate', 'lr-point-click']);
+    expect(details.get('lr-point-click')).to.deep.equal(details.get('lr-point-activate'));
+    expect((details.get('lr-point-activate') as { datasetIndex: number }).datasetIndex).to.equal(0);
+  });
 });
 
-it('lite chart ignores accessible-label while retaining the programmatic fallback and its warning', async () => {
-  const usage = { tag: 'lr-lite-chart', kind: 'property', name: 'accessibleLabel' } as const;
-  let el!: LyraLiteChart;
-  const attributeWarnings = await captureDeprecationWarnings([], async () => {
-    el = await smallChartWith('lr-lite-chart') as LyraLiteChart;
-    el.setAttribute('accessible-label', 'Old attribute');
-    await el.updateComplete;
-    expect(el.accessibleLabel).to.equal(undefined);
-    expect(svgName(el)).to.equal('Revenue');
-  });
-  expect(attributeWarnings).to.have.length(0);
-  const propertyWarnings = await captureDeprecationWarnings([usage], async () => {
-    el.accessibleLabel = 'Retained property';
-    await el.updateComplete;
-  });
-  expect(propertyWarnings.map((warning) => warning.key)).to.deep.equal([
-    'lyra-deprecated:lr-lite-chart:property:accessibleLabel',
-  ]);
-  expect(svgName(el)).to.equal('Retained property');
-  el.setAttribute('accessible-label', 'Changed old attribute');
-  await el.updateComplete;
-  expect(svgName(el)).to.equal('Retained property');
-  el.setAttribute('aria-label', 'Native name');
-  await el.updateComplete;
-  expect(svgName(el)).to.equal('Native name');
-  el.setAttribute('aria-label', '');
-  await el.updateComplete;
-  expect(svgName(el)).to.equal('');
-  el.removeAttribute('aria-label');
-  el.removeAttribute('accessible-label');
-  await el.updateComplete;
-  expect(svgName(el)).to.equal('Retained property');
-});
+expectDeprecatedUsage('lr-lite-chart', 'property', 'accessibleLabel');

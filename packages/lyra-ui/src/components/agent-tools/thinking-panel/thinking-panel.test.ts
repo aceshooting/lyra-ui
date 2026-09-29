@@ -7,6 +7,7 @@ import '../../conversation/markdown/markdown.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-thinking-panel', 'appearance');
@@ -1143,6 +1144,77 @@ describe('header text contrast at rest, hover and press', () => {
   }
 });
 
+describe('lr-thinking-panel size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-thinking-panel', kind: 'property', name: 'compact' }];
+  const density = (el: LyraThinkingPanel): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, body: getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`));
+      dense = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="s" expanded></lr-thinking-panel>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="s" expanded></lr-thinking-panel>`));
+      const aliased = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel compact expanded></lr-thinking-panel>`);
+      alias = density(aliased);
+      const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-thinking-panel:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored or set', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel compact size="l" expanded></lr-thinking-panel>`);
+      const compactLast = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel size="l" compact expanded></lr-thinking-panel>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel expanded></lr-thinking-panel>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
 
 describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', () => {
   const fill = (el: LyraThinkingPanel): string =>
@@ -1155,7 +1227,7 @@ describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', ()
       html`<lr-thinking-panel expanded style="--lr-thinking-panel-bg: rgb(4, 5, 6); --lr-thinking-panel-background: rgb(1, 2, 3)"></lr-thinking-panel>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });

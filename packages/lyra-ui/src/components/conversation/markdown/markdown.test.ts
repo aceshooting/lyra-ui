@@ -13,6 +13,7 @@ import type { LyraMarkdown, MarkdownHeadingItem } from "./markdown.js";
 import { LyraMarkdown as LyraMarkdownClass } from "./markdown.class.js";
 import { loadMarkdownDeps } from "./markdown-loader.js";
 import { inMarkdownCodeBlock, renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import { supportsCustomHighlights } from "../../../internal/text-highlights.js";
 import type { KatexApi } from "./katex-loader.js";
 import {
@@ -403,6 +404,35 @@ it("implements getMarked() and updateAll() with the shared compatibility parser"
   }
 });
 
+it("forwards gfm and highlightCode writes, syncs them back from the canonical names, and lets the last write win", async () => {
+  let el!: LyraMarkdown;
+  let both!: LyraMarkdown;
+  await captureDeprecationWarnings(
+    [
+      { tag: "lr-markdown", kind: "property", name: "gfm" },
+      { tag: "lr-markdown", kind: "property", name: "highlightCode" },
+    ],
+    async () => {
+      el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+      el.gfm = false;
+      el.highlightCode = false;
+      await el.updateComplete;
+      both = (await fixture(
+        html`<lr-markdown without-gfm gfm without-syntax-highlighting highlight-code></lr-markdown>`
+      )) as LyraMarkdown;
+    }
+  );
+  expect(el.withoutGfm).to.equal(true);
+  expect(el.withoutSyntaxHighlighting).to.equal(true);
+  el.withoutGfm = false;
+  el.withoutSyntaxHighlighting = false;
+  await el.updateComplete;
+  expect(el.gfm).to.equal(true);
+  expect(el.highlightCode).to.equal(true);
+  expect(both.withoutGfm, "the later gfm attribute wins").to.equal(false);
+  expect(both.withoutSyntaxHighlighting, "the later highlight-code attribute wins").to.equal(false);
+});
+
 it("does not recognize a GFM table while without-gfm is set", async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   el.withoutGfm = true;
@@ -413,6 +443,32 @@ it("does not recognize a GFM table while without-gfm is set", async () => {
       (el as unknown as { renderedHtml: string | null }).renderedHtml !== null
   );
   expect(el.shadowRoot!.querySelector('[part="table"]') == null).to.be.true;
+});
+
+it('keeps the deprecated gfm="false" alias equal to without-gfm, warning once', async () => {
+  let el!: LyraMarkdown;
+  let both!: LyraMarkdown;
+  const warnings = await captureDeprecationWarnings(
+    [{ tag: "lr-markdown", kind: "property", name: "gfm" }],
+    async () => {
+      el = (await fixture(html`<lr-markdown gfm="false"></lr-markdown>`)) as LyraMarkdown;
+      both = (await fixture(html`<lr-markdown gfm without-gfm></lr-markdown>`)) as LyraMarkdown;
+    }
+  );
+  expect(warnings.map((warning) => warning.key)).to.deep.equal([
+    "lyra-deprecated:lr-markdown:property:gfm",
+  ]);
+  expect(el.withoutGfm).to.equal(true);
+  expect(el.gfm).to.equal(false);
+  expect(both.withoutGfm, "the later without-gfm attribute wins").to.equal(true);
+  expect(both.gfm).to.equal(false);
+  el.content = "| a | b |\n| --- | --- |\n| 1 | 2 |\n";
+  await el.updateComplete;
+  await waitUntil(
+    () =>
+      (el as unknown as { renderedHtml: string | null }).renderedHtml !== null
+  );
+  expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(0);
 });
 
 it("strips inline event-handler attributes in the default sanitize HTML mode", async () => {
@@ -1870,6 +1926,31 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
       html`<lr-markdown></lr-markdown>`
     )) as LyraMarkdown;
     el.withoutSyntaxHighlighting = true;
+    internalsOf(el).highlightCache.set(
+      markdownHighlightKey("ts", "const x = 1;\n"),
+      '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n'
+    );
+    el.content = "```ts\nconst x = 1;\n```";
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector(
+      '[part="code-block"]'
+    ) as HTMLElement;
+    expect(pre.querySelectorAll("span").length).to.equal(0);
+  });
+
+  it('never consults the cache under the deprecated highlight-code="false" alias, which warns once', async () => {
+    let el!: LyraMarkdown;
+    const warnings = await captureDeprecationWarnings(
+      [{ tag: "lr-markdown", kind: "property", name: "highlightCode" }],
+      async () => {
+        el = (await fixture(
+          html`<lr-markdown highlight-code="false"></lr-markdown>`
+        )) as LyraMarkdown;
+      }
+    );
+    expect(warnings).to.have.lengthOf(1);
+    expect(el.withoutSyntaxHighlighting).to.equal(true);
+    expect(el.highlightCode).to.equal(false);
     internalsOf(el).highlightCache.set(
       markdownHighlightKey("ts", "const x = 1;\n"),
       '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n'

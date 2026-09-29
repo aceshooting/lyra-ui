@@ -7,9 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated part** `copy-button__control` since `21.1.0`; use part `::part(copy-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -57,7 +58,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
 - `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
-  copy-to-clipboard button.
+  copy-to-clipboard button. Deprecated alias: `copyable` (use `without-copy-button`; removed in
+  23.0.0) — inverted, so `copyable="false"` equals `without-copy-button`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
@@ -105,7 +107,8 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
-`copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
+`copy-button-icon`, `copy-button-control` (deprecated alias: `copy-button__control`, removed in
+23.0.0), `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
 identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`

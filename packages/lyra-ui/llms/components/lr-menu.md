@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated slot-content** default-slot content other than `<hr>`, `<lr-divider>`, `<lr-dropdown-item>`, `<lr-menu-item>`, `<lr-menu-label>` since `21.1.0`; use slot `slot="header" (or slot="footer")`; removal not before `23.0.0` — Content other than items, labels and separators renders inside role="menu" without a menu-item role and is skipped by roving focus; the header and footer slots render the same content outside the list with its native keyboard behavior. Content that lr-dropdown forwards into its own menu is not covered: it mirrors sl-dropdown's free-form default slot.
 - **Optional peers** none
 - **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
@@ -66,8 +66,9 @@ is neutral. This is also the composition used for direct `<lr-dropdown-item>` ch
 **Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and
 `<hr>`/`<lr-divider>` separators), `header`, and `footer`. Header and footer are composed controls
 or explanatory regions outside the `role="menu"` list, so filters, counts, or footer actions do not
-violate the menu required-child contract. Other default-slot content is unsupported: native slot projection does not grant it menu
-semantics or keyboard navigation. Put arbitrary content in `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
+violate the menu required-child contract. Any other default-slot content is deprecated (removal not
+before 23.0.0): it still renders, but inside `role="menu"` without a menu-item role and skipped by
+keyboard navigation, so move it to `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
 forwards into its own menu is not covered: its default slot mirrors `sl-dropdown`'s free-form
 content.
 
@@ -190,7 +191,9 @@ item the same owning `<lr-menu>` owns directly whose `group` matches is unchecke
 **Events:**
 
 - `lr-menu-item-change-request` — cancelable checkbox/radio-state proposal; never fired when
-  activating an already-checked radio.
+  activating an already-checked radio. Deprecated alias: `lr-menu-item-change` (use
+  `lr-menu-item-change-request`; removed in 23.0.0) — it still fires right after the request with an
+  equal detail, and either event may veto.
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -289,7 +292,7 @@ while a link opening a new context can never lose the guard.
 the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **CSS parts:** the shared menu-item parts, except that the loading spinner is `spinner-base` (beside
-`spinner`).
+`spinner`). Deprecated alias: `spinner__base` (use `spinner-base`; removed in 23.0.0).
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
 `--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and

@@ -56,7 +56,7 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-typing-indicator-gap, var(--_lr-typing-gap-default));
+    gap: var(--lr-typing-indicator-gap, var(--lr-typing-gap, var(--_lr-typing-gap-default)));
   }
 
   /* label-placement="after": renders the accessible label visibly next to the shape, mirroring
@@ -70,18 +70,18 @@ export const styles = css`
 
   /* -- dots -------------------------------------------------------------- */
   [part='dot'] {
-    inline-size: var(--lr-typing-indicator-dot-size, var(--_lr-typing-dot-size-default));
-    block-size: var(--lr-typing-indicator-dot-size, var(--_lr-typing-dot-size-default));
+    inline-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
+    block-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: var(--_lr-motion-animation, lr-typing-dot-bounce var(--lr-typing-indicator-duration, var(--_lr-typing-duration-default)) infinite);
+    animation: var(--_lr-motion-animation, lr-typing-dot-bounce var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   [part='dot']:nth-child(2) {
-    animation-delay: var(--lr-typing-indicator-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default));
+    animation-delay: var(--lr-typing-indicator-dot-stagger-1, var(--lr-typing-dot-stagger-1, var(--_lr-typing-dot-stagger-1-default)));
   }
   [part='dot']:nth-child(3) {
-    animation-delay: var(--lr-typing-indicator-dot-stagger-2, var(--_lr-typing-dot-stagger-2-default));
+    animation-delay: var(--lr-typing-indicator-dot-stagger-2, var(--lr-typing-dot-stagger-2, var(--_lr-typing-dot-stagger-2-default)));
   }
   @keyframes lr-typing-dot-bounce {
     0%,
@@ -99,13 +99,13 @@ export const styles = css`
   /* -- pulse --------------------------------------------------------------
      A single breathing dot, meant for tighter spaces than three dots allow. */
   [part='pulse'] {
-    inline-size: var(--lr-typing-indicator-dot-size, var(--_lr-typing-dot-size-default));
-    block-size: var(--lr-typing-indicator-dot-size, var(--_lr-typing-dot-size-default));
+    inline-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
+    block-size: var(--lr-typing-indicator-dot-size, var(--lr-typing-dot-size, var(--_lr-typing-dot-size-default)));
     border-radius: 50%;
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: var(--_lr-motion-animation, lr-typing-pulse var(--lr-typing-indicator-duration, var(--_lr-typing-duration-default)) infinite);
+    animation: var(--_lr-motion-animation, lr-typing-pulse var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   @keyframes lr-typing-pulse {
     0%,
@@ -129,7 +129,7 @@ export const styles = css`
     background: currentColor;
     border-radius: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
     opacity: 1;
-    animation: var(--_lr-motion-animation, lr-typing-cursor-blink var(--lr-typing-indicator-duration, var(--_lr-typing-duration-default)) infinite);
+    animation: var(--_lr-motion-animation, lr-typing-cursor-blink var(--lr-typing-indicator-duration, var(--lr-typing-duration, var(--_lr-typing-duration-default))) infinite);
   }
   @keyframes lr-typing-cursor-blink {
     0%,

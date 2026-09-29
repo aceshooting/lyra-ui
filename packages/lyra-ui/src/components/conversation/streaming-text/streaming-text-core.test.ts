@@ -177,6 +177,66 @@ describe('lr-streaming-text-core rendering', () => {
     expect(markdown.maxHeight).to.equal('10rem');
   });
 
+  it('syncs the deprecated gfm/highlightCode aliases back from their canonical names, the last write winning', async () => {
+    let el!: LyraStreamingTextCore;
+    let both!: LyraStreamingTextCore;
+    await captureDeprecationWarnings(
+      [
+        { tag: 'lr-streaming-text-core', kind: 'property', name: 'gfm' },
+        { tag: 'lr-streaming-text-core', kind: 'property', name: 'highlightCode' },
+      ],
+      async () => {
+        el = await fixture<LyraStreamingTextCore>(html`<lr-streaming-text-core content-mode="markdown"></lr-streaming-text-core>`);
+        el.gfm = false;
+        el.highlightCode = false;
+        await el.updateComplete;
+        both = await fixture<LyraStreamingTextCore>(
+          html`<lr-streaming-text-core without-gfm gfm without-syntax-highlighting highlight-code></lr-streaming-text-core>`,
+        );
+      },
+    );
+    expect(el.withoutGfm).to.equal(true);
+    expect(el.withoutSyntaxHighlighting).to.equal(true);
+    el.withoutGfm = false;
+    el.withoutSyntaxHighlighting = false;
+    await el.updateComplete;
+    expect(el.gfm).to.equal(true);
+    expect(el.highlightCode).to.equal(true);
+    expect(both.withoutGfm, 'the later gfm attribute wins').to.equal(false);
+    expect(both.withoutSyntaxHighlighting, 'the later highlight-code attribute wins').to.equal(false);
+  });
+
+  it('keeps the deprecated gfm/highlight-code="false" aliases working, forwarding the canonical names and warning once each', async () => {
+    let el!: HTMLElement & { withoutGfm: boolean; withoutSyntaxHighlighting: boolean; gfm: boolean; highlightCode: boolean };
+    const warnings = await captureDeprecationWarnings(
+      [
+        { tag: 'lr-streaming-text-core', kind: 'property', name: 'gfm' },
+        { tag: 'lr-streaming-text-core', kind: 'property', name: 'highlightCode' },
+        { tag: 'lr-markdown-core', kind: 'property', name: 'gfm' },
+        { tag: 'lr-markdown-core', kind: 'property', name: 'highlightCode' },
+      ],
+      async () => {
+        el = (await fixture(
+          html`<lr-streaming-text-core content-mode="markdown" gfm="false" highlight-code="false"></lr-streaming-text-core>`,
+        )) as unknown as typeof el;
+      },
+    );
+    expect(warnings.map((warning) => warning.key).sort()).to.deep.equal([
+      'lyra-deprecated:lr-streaming-text-core:property:gfm',
+      'lyra-deprecated:lr-streaming-text-core:property:highlightCode',
+    ]);
+    expect(el.withoutGfm).to.equal(true);
+    expect(el.withoutSyntaxHighlighting).to.equal(true);
+    expect(el.gfm).to.equal(false);
+    expect(el.highlightCode).to.equal(false);
+    const markdown = el.shadowRoot!.querySelector('lr-markdown-core') as unknown as {
+      withoutGfm: boolean;
+      withoutSyntaxHighlighting: boolean;
+    };
+    expect(markdown.withoutGfm).to.equal(true);
+    expect(markdown.withoutSyntaxHighlighting).to.equal(true);
+  });
+
   it('a forwarded non-default linkTarget still gets the composed lr-markdown-core\'s rel="noopener noreferrer" guard, and never a bare "opener"', async () => {
     const el = (await fixture(
       html`<lr-streaming-text-core
@@ -502,19 +562,61 @@ function aTimeoutMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe('canonical code-block-header spelling', () => {
+describe('deprecated code-block-chrome spelling', () => {
   type InnerMarkdown = HTMLElement & {
+    codeBlockChrome: boolean;
     codeBlockHeader: boolean;
     updateComplete: Promise<unknown>;
   };
+  const usages = [
+    { tag: 'lr-streaming-text-core', kind: 'property', name: 'codeBlockChrome' },
+    { tag: 'lr-markdown-core', kind: 'property', name: 'codeBlockChrome' },
+  ] as const;
   const fenced = '```js\nconst answer = 42;\n```';
   const innerMarkdown = (el: LyraStreamingTextCore): InnerMarkdown =>
     el.shadowRoot!.querySelector('lr-markdown-core') as InnerMarkdown;
   const headerCount = (el: LyraStreamingTextCore): number =>
     innerMarkdown(el)?.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0;
 
+  it('warns once for this element only and forwards the header to lr-markdown-core as code-block-header', async () => {
+    let forwarded = { chrome: true, header: false };
+    const warnings = await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-chrome .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+      const inner = innerMarkdown(el);
+      forwarded = { chrome: inner.codeBlockChrome, header: inner.codeBlockHeader };
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-streaming-text-core:property:codeBlockChrome',
+    ]);
+    expect(warnings[0]!.message).to.contain('code-block-header');
+    // The inner Markdown element receives only the canonical codeBlockHeader; its own deprecated
+    // codeBlockChrome follows silently.
+    expect(forwarded).to.deep.equal({ chrome: true, header: true });
+  });
+
+  it('keeps code-block-chrome and code-block-header in step, the last write winning', async () => {
+    let el!: LyraStreamingTextCore;
+    await captureDeprecationWarnings(usages, async () => {
+      el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+      el.codeBlockChrome = false;
+      await el.updateComplete;
+    });
+    expect(el.codeBlockHeader, 'the later alias write wins').to.equal(false);
+    await waitUntil(() => headerCount(el) === 0, 'the alias write never removed the header', { timeout: 5000 });
+    el.codeBlockHeader = true;
+    await el.updateComplete;
+    expect(el.codeBlockChrome, 'a canonical write syncs back to the alias').to.equal(true);
+    await waitUntil(() => headerCount(el) === 1, 'the canonical write never restored the header', { timeout: 5000 });
+  });
+
   it('never warns for code-block-header', async () => {
-    const warnings = await captureDeprecationWarnings([], async () => {
+    const warnings = await captureDeprecationWarnings(usages, async () => {
       const el = await fixture<LyraStreamingTextCore>(
         html`<lr-streaming-text-core content-mode="markdown" code-block-header .content=${fenced}></lr-streaming-text-core>`
       );
@@ -523,4 +625,18 @@ describe('canonical code-block-header spelling', () => {
     expect(warnings).to.have.length(0);
   });
 
+  it('removes the header again when code-block-chrome is removed', async () => {
+    let after = -1;
+    await captureDeprecationWarnings(usages, async () => {
+      const el = await fixture<LyraStreamingTextCore>(
+        html`<lr-streaming-text-core content-mode="markdown" code-block-chrome .content=${fenced}></lr-streaming-text-core>`
+      );
+      await waitUntil(() => headerCount(el) === 1, 'the code-block header never rendered', { timeout: 5000 });
+      el.removeAttribute('code-block-chrome');
+      await el.updateComplete;
+      await waitUntil(() => headerCount(el) === 0, 'the code-block header was never removed', { timeout: 5000 });
+      after = headerCount(el);
+    });
+    expect(after).to.equal(0);
+  });
 });

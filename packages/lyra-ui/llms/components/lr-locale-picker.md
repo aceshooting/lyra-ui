@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated property** `showFlags` / `show-flags` since `21.1.0`; use property `without-flags`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 15 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -51,7 +51,9 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
 - `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
   `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
-  when the entry sets `country`) and the trigger flag entirely (not just visually).
+  when the entry sets `country`) and the trigger flag entirely (not just visually). Deprecated
+  alias: `show-flags`/`showFlags` (use `without-flags`, inverted: `show-flags="false"` is `without-flags`;
+  kept in step, last write wins; removed in 23.0.0).
 - `triggerDisplay: LyraLocaleTriggerDisplay = 'flag-label'` (attribute `trigger-display`) —
   `'flag' | 'label' | 'flag-label'`. The default keeps the flag, label and chevron. `label`
   omits only the trigger flag; the menu keeps its flags and endonyms. `flag` centers the flag in

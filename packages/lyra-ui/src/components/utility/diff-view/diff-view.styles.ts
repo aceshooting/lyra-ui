@@ -73,14 +73,14 @@ export const styles = css`
   [part="line"][data-type="add"] {
     background: var(
       --lr-diff-view-add-bg,
-      var(--_lr-diff-view-add-background)
+      var(--lr-diff-view-add-background, var(--_lr-diff-view-add-background))
     );
     color: var(--lr-diff-view-add-color, var(--_lr-diff-view-add-color));
   }
   [part="line"][data-type="remove"] {
     background: var(
       --lr-diff-view-remove-bg,
-      var(--_lr-diff-view-remove-background)
+      var(--lr-diff-view-remove-background, var(--_lr-diff-view-remove-background))
     );
     color: var(--lr-diff-view-remove-color, var(--_lr-diff-view-remove-color));
   }
@@ -88,7 +88,7 @@ export const styles = css`
     color: var(--lr-diff-view-fold-color, var(--_lr-diff-view-fold-color));
     background: var(
       --lr-diff-view-fold-bg,
-      var(--_lr-diff-view-fold-background)
+      var(--lr-diff-view-fold-background, var(--_lr-diff-view-fold-background))
     );
     text-align: center;
   }
@@ -110,32 +110,32 @@ export const styles = css`
   [part="line"][data-highlight] {
     --_lr-diff-view-highlight-background: var(
       --lr-diff-view-highlight-accent-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-diff-view-highlight-accent-background, var(--lr-color-brand-quiet))
     );
     background: var(--_lr-diff-view-highlight-background);
   }
   [part="line"][data-highlight="success"] {
     --_lr-diff-view-highlight-background: var(
       --lr-diff-view-highlight-success-bg,
-      var(--lr-color-success-quiet)
+      var(--lr-diff-view-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   [part="line"][data-highlight="warning"] {
     --_lr-diff-view-highlight-background: var(
       --lr-diff-view-highlight-warning-bg,
-      var(--lr-color-warning-quiet)
+      var(--lr-diff-view-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   [part="line"][data-highlight="danger"] {
     --_lr-diff-view-highlight-background: var(
       --lr-diff-view-highlight-danger-bg,
-      var(--lr-color-danger-quiet)
+      var(--lr-diff-view-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   [part="line"][data-highlight="neutral"] {
     --_lr-diff-view-highlight-background: var(
       --lr-diff-view-highlight-neutral-bg,
-      var(--lr-color-surface-raised)
+      var(--lr-diff-view-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   [part="line"][data-active-highlight] {

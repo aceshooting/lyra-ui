@@ -65,13 +65,16 @@ space-separated samples restores the attribute-driven path.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
-extension-mode rectangle.
+extension-mode rectangle. `area` is a deprecated alias of `fill` on the same path (removal not
+before 23.0.0); use `::part(fill)`.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
-default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back to
-`--lr-border-width-medium`. Declare `--line-width` on the sparkline itself because this unprefixed name can also reach other elements that read it.
-No canvas bridge or manual refresh is needed.
+default to the selected `trend`'s semantic Lyra tokens and `--line-width` falls back through the
+deprecated `--lr-sparkline-stroke-width` (removal not before 23.0.0) to `--lr-border-width-medium`.
+Replace that alias with `--line-width` scoped to the element (`lr-sparkline { --line-width: 2px; }`),
+since the unprefixed name also reaches any other element that reads it. No canvas bridge or manual
+refresh is needed. Styling hooks cannot be observed, so neither deprecated alias logs a warning.
 
 **Optional peer deps:** none.
 
@@ -177,7 +180,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density (tighter padding and gap for constrained spaces); `m` and above keep the default
   density, and leaving it unset renders exactly as before. An unsupported value normalizes to unset
-  and removes the attribute.
+  and removes the attribute. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it
+  still renders exactly like `size="s"`; the two stay in step, the last write wins, and `compact`
+  reads `true` whenever `size` is `s` or smaller
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` keeps the bordered, filled, padded box that stretches to fill its
   parent; `'plain'` removes the border, background, padding, corner radius **and** the
@@ -194,7 +199,9 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 
 **Events:** none.
 
-**Slots:** `start` (leading icon), `caption` (rich caption content —
+**Slots:** `start` (canonical leading icon), default (deprecated leading-icon alias, removal not
+before 23.0.0: it still renders while `start` is empty and `start` takes precedence when both are
+filled; move the icon to `slot="start"`), `caption` (rich caption content —
 overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
@@ -582,7 +589,11 @@ rows; and `--lr-data-grid-sortable-header-hover-bg` and
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
 `--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
 uses the hover mix), so an accent override remains coherent while each surface can still be
-overridden independently.
+overridden independently. Deprecated aliases: `--lr-data-grid-control-hover-background`,
+`--lr-data-grid-control-active-background`, `--lr-data-grid-page-size-active-background`,
+`--lr-data-grid-row-active-background`, `--lr-data-grid-sortable-header-hover-background` and
+`--lr-data-grid-sortable-header-active-background` (use the same names ending in `-bg`; removed in
+23.0.0). Each is still read as the fallback of its `-bg` name.
 
 ```html
 <lr-data-grid
@@ -973,21 +984,27 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
   no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
-  including `''`, renders verbatim.
+  including `''`, renders verbatim. Deprecated alias: `no-columns-heading`/`noColumnsHeading` (use
+  `empty-columns-heading`; removed in 23.0.0)
 - `emptyColumnsDescription: string = ''` (attribute `empty-columns-description`) — description of
-  the built-in no-columns state.
+  the built-in no-columns state. Deprecated alias: `no-columns-description`/`noColumnsDescription`
+  (use `empty-columns-description`; removed in 23.0.0)
 - `emptySize?: LyraSize` (attribute `empty-size`) — size of the built-in `[part='empty']` state on
   the shared size ladder: `s` and the steps below it render it compact, `m` and above spacious.
   Leave it unset (the default) to keep each empty branch's own built-in default — the two
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
-  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
+  unsupported value normalizes to unset. Has no effect once the `empty` slot is filled. Deprecated
+  alias: `empty-compact`/`emptyCompact` (use `empty-size="s"` for compact or `empty-size="m"` for
+  spacious; removed in 23.0.0) — its presence still renders like `empty-size="s"`,
+  `empty-compact="false"` like `empty-size="m"`, and removing it restores each branch's default
 - `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
   while `priority`-hidden columns are hidden; omission renders localized
   `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `columnsHideLabel?: string` (attribute `columns-hide-label`) — the same button's label once
   the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim.
-
+  Deprecated alias: `hide-columns-label`/`hideColumnsLabel` (use `columns-hide-label`; removed in
+  23.0.0)
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
   Priority-hidden columns hide their header, body, and footer cells together at the same measured
@@ -1056,7 +1073,9 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
-(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more` (fired on the "load more" button),
+(a row was activated by pointer or Enter/Space, `detail: { row }`; its deprecated alias
+`lr-row-click` still fires right after it from the same activation with an equal detail — use
+`lr-row-activate`; removed in 23.0.0), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the
@@ -1671,7 +1690,8 @@ explicitly empty labels remain empty and later labels render normally.
   `part="value"` caption, the same way an empty `label` already omits `part="label"`.
   `aria-valuenow`/`aria-valuetext` and the host's accessible name are unaffected either way, since
   the caption itself is always `aria-hidden`. The caption shows by default because a gauge's whole
-  purpose is showing the reading it announces.
+  purpose is showing the reading it announces. Deprecated alias: `show-value`/`showValue` (use
+  `without-value`; removed in 23.0.0) — `show-value="false"` still equals `without-value`
 - `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
   `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
   whenever `thresholds` is empty or matches nothing.
@@ -1807,7 +1827,9 @@ list carries the accessible name; a host `aria-label` overrides `label`.
   label)
 - `label: string = ''` (accessible name for the stage list)
 - `withoutDropoff: boolean = false` (attribute `without-dropoff`, reflected) — omits the change
-  from the previous stage otherwise rendered above each later stage.
+  from the previous stage otherwise rendered above each later stage. Deprecated alias:
+  `dropoff`/`dropoff="false"` (use `without-dropoff`; removed in 23.0.0) — `dropoff="false"` still
+  equals `without-dropoff`
 - `sharePrecision: number = 0` (attribute `share-precision`; fraction digits for every share and
   drop-off percentage, clamped to `0`–`20`)
 
@@ -1963,7 +1985,8 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   sequence and records are frozen; reassign `legend` after changes.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
-  activation or palette selection.
+  activation or palette selection. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`;
+  removed in 23.0.0)
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on).
@@ -2416,7 +2439,9 @@ For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and us
 For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
 **Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-activate` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode; its
+deprecated alias `lr-cell-click` still fires right after it from the same activation with an equal
+detail — use `lr-cell-activate`; removed in 23.0.0),
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
@@ -2475,7 +2500,8 @@ dedicated token distinct from both the focus ring and the annotation ring so a h
 independently). `--lr-heatmap-tooltip-bg` (default
 `var(--lr-color-surface)`) and `--lr-heatmap-tooltip-color` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+directly, no `getComputedStyle` bridging needed. Deprecated alias: `--lr-heatmap-tooltip-text` (use
+`--lr-heatmap-tooltip-color`; removed in 23.0.0), still read as its fallback. `--lr-heatmap-sticky-label-bg` (default
 `var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
@@ -2667,7 +2693,8 @@ readonly color, readonly label? }`; `color`
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
-  once — and it wraps onto further rows in a narrow allocation rather than overflowing.
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing. Deprecated
+  alias: `show-legend`/`showLegend` (use `with-legend`; removed in 23.0.0)
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` _means_ (e.g.
   `"Subagent"`). Setting it does two things: with `withLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
@@ -3195,7 +3222,8 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit.
+  window pointer listeners so a later release cannot commit. Deprecated alias: `locked` (use
+  `readonly`; removed in 23.0.0)
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
@@ -3380,7 +3408,10 @@ owns none of that.
   compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
   and palette previews; the border, background, shadow and the `selected`/`status="running"`
   treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
-  before. An unsupported value normalizes to unset and removes the attribute.
+  before. An unsupported value normalizes to unset and removes the attribute. Deprecated alias:
+  `compact` (use `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like
+  `size="s"`; the two stay in step, the last write wins, and `compact` reads `true` whenever
+  `size` is `s` or smaller
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins
@@ -3550,7 +3581,7 @@ otherwise available direction.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
-
+  Deprecated alias: `hide-lock`/`hideLock` (use `without-lock`; removed in 23.0.0)
 - `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
   floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws
@@ -3614,7 +3645,8 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
   record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
   canvas; invalid statuses and records with unreadable `status`, `progress`, `durationMs` or `detail` fields are omitted independently, retaining valid neighbors, and consumers reassign the record after changes
 - `withoutSummary: boolean = false` (attribute `without-summary`) — omits the "{done} of {total}
-  steps complete" strip, keeping only the decoration push.
+  steps complete" strip, keeping only the decoration push. Deprecated alias:
+  `hide-summary`/`hideSummary` (use `without-summary`; removed in 23.0.0)
 - `label: string = ''` — accessible name for the summary strip
 - `frame: 'card'|'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` removes the border, background, shadow, padding and radius, so a summary
@@ -3701,7 +3733,8 @@ boolean }[]`. `value` is an _absolute_
   `lr-sequence-strip`'s `withLegend` rather than the interactive `lr-graph-legend`. The whole
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
-  being clipped.
+  being clipped. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`; removed in
+  23.0.0)
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
   legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
   property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding
@@ -4093,7 +4126,9 @@ changes), `withoutReveal: boolean = false` (attribute `without-reveal`, reflecte
 secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButton: boolean = false`
 (attribute `without-copy-button`, reflected; omits every entry's copy button), and
 `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
-empty. A host `aria-label` wins by attribute presence, including when empty.
+empty. A host `aria-label` wins by attribute presence, including when empty. Deprecated aliases:
+`revealable` (use `without-reveal`; removed in 23.0.0) and `copyable` (use `without-copy-button`;
+removed in 23.0.0) — `revealable="false"`/`copyable="false"` still equal the `without-` attributes.
 
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal

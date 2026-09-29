@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated property** `submitOnEnter` / `submit-on-enter` since `21.1.0`; use property `without-enter-submit`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -27,7 +27,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`
 (attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and
 `maxLength?: number` (attribute `maxlength`);
-`withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
+`withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`; deprecated alias:
+`submit-on-enter`/`submitOnEnter`, use `without-enter-submit`, removed in 23.0.0, inverted so
+`submit-on-enter="false"` equals `without-enter-submit`);
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,

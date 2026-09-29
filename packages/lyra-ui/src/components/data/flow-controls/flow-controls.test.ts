@@ -4,6 +4,7 @@ import '../flow-canvas/flow-canvas.js';
 import './flow-controls.js';
 import type { LyraFlowControls } from './flow-controls.js';
 import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const nodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }];
 
@@ -189,6 +190,69 @@ it('without-lock omits the lock button entirely', async () => {
   expect((el.shadowRoot!.querySelector('[part="lock"]')) == null).to.be.true;
 });
 
+describe('deprecated hide-lock alias', () => {
+  const HIDE_LOCK: readonly DeprecatedUsage[] = [
+    { tag: 'lr-flow-controls', kind: 'property', name: 'hideLock' },
+  ];
+
+  it('still omits the lock button and warns once, naming without-lock', async () => {
+    let lockCount = -1;
+    let el!: LyraFlowControls;
+    const warnings = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      el = await fixture<LyraFlowControls>(html`<lr-flow-controls hide-lock></lr-flow-controls>`);
+      const second = await fixture<LyraFlowControls>(html`<lr-flow-controls hide-lock></lr-flow-controls>`);
+      await second.updateComplete;
+      lockCount = el.shadowRoot!.querySelectorAll('[part="lock"]').length;
+    });
+    expect(lockCount).to.equal(0);
+    expect(el.withoutLock).to.be.true;
+    expect(el.hideLock).to.be.true;
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-flow-controls:property:hideLock',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-lock');
+  });
+
+  it('forwards property writes and never warns for the canonical name', async () => {
+    let el!: LyraFlowControls;
+    const canonical = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      el = await fixture<LyraFlowControls>(html`<lr-flow-controls without-lock></lr-flow-controls>`);
+    });
+    expect(canonical).to.deep.equal([]);
+    const warnings = await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      const aliased = await fixture<LyraFlowControls>(html`<lr-flow-controls></lr-flow-controls>`);
+      aliased.hideLock = true;
+      await aliased.updateComplete;
+      expect(aliased.withoutLock).to.be.true;
+      expect(aliased.shadowRoot!.querySelector('[part=\"lock\"]') == null).to.be.true;
+    });
+    expect(warnings).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('[part=\"lock\"]') == null).to.be.true;
+  });
+
+  it('syncs the alias back from without-lock and lets the last write win in both directions', async () => {
+    await captureDeprecationWarnings(HIDE_LOCK, async () => {
+      const aliasLast = await fixture<LyraFlowControls>(
+        html`<lr-flow-controls without-lock hide-lock></lr-flow-controls>`,
+      );
+      aliasLast.removeAttribute('hide-lock');
+      await aliasLast.updateComplete;
+      expect(aliasLast.withoutLock).to.be.false;
+      expect(aliasLast.shadowRoot!.querySelectorAll('[part="lock"]').length).to.equal(1);
+
+      const canonicalLast = await fixture<LyraFlowControls>(
+        html`<lr-flow-controls hide-lock without-lock></lr-flow-controls>`,
+      );
+      canonicalLast.withoutLock = false;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.hideLock).to.be.false;
+      expect(canonicalLast.shadowRoot!.querySelectorAll('[part="lock"]').length).to.equal(1);
+      canonicalLast.withoutLock = true;
+      await canonicalLast.updateComplete;
+      expect(canonicalLast.hideLock).to.be.true;
+    });
+  });
+});
 
 it('the default slot appends extra host buttons to the cluster', async () => {
   const el = (await fixture(

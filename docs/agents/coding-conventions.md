@@ -331,12 +331,6 @@
   interpolation. All three are handled today, but a "documented CSS part is not rendered
   statically" false positive on a new legitimate pattern means extending the checker, not
   assuming the component is wrong.
-  A subclass can inherit JavaScript members while rendering a different set of CSS parts.
-  For an explicitly verified complete part list, the CEM projection sets the Lyra extension
-  `lyraCssPartsComplete: true` with an own `cssParts` array (which may be empty). Manifest
-  expansion then preserves that list without adding superclass parts; all other API inheritance
-  remains intact. Require rendered coverage and checks that the parent still exposes its parts.
-  Unmarked historical manifests retain their existing sparse-list inheritance behavior.
 - **Lean/full split.** A component with a meaningfully size-costly full feature set may ship as a
   pair: a bundle-size-lean default (`x.class.ts`) and a full variant (`x-core.class.ts`), e.g.
   `code-block`/`code-block-core` and `markdown`/`markdown-core`. Private render/helper logic

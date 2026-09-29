@@ -7,9 +7,9 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-cell-size` since `21.1.0`; use css-property `--lr-date-picker-cell-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 38 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -170,6 +170,7 @@ while its range is the current value),
 **Themeable custom properties:** `--lr-date-picker-cell-size` (default `2.25rem`, controls
 day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
 `m` keeps the default). An inherited or direct public value remains authoritative in every tier.
+Deprecated alias: `--lr-cell-size` (use `--lr-date-picker-cell-size`; removed in 23.0.0).
 
 **Optional peer deps:** none.
 
@@ -332,7 +333,8 @@ Inherited or direct public values win. `pill` changes the private radius default
 `--lr-radius-pill`; a public `--lr-date-input-radius` still wins. `--lr-date-input-color`
 (default `inherit`) recolors the row's own text; `appearance="accent"` defaults it instead to
 `var(--lr-color-on-brand)`, keeping the placeholder and clear/calendar actions readable on the loud
-brand fill.
+brand fill. Deprecated alias: `--lr-date-input-text-color` (use `--lr-date-input-color`; removed in
+23.0.0).
 
 Calendar and clear actions fit inside the selected row height while retaining at least 24×24
 CSS-pixel targets. At the default root size, rows measure 30/40/48/56px for s/m/l/xl; 2xs and xs

@@ -1277,17 +1277,16 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
   });
 
   for (const part of ['base-control', 'base__control']) {
-    it(`styles the nested native control through the ${part} part selector`, async () => {
+    it(`reaches the same composed control directly through the forwarded ${part} part`, async () => {
       const style = document.createElement('style');
-      style.textContent = `lr-copy-button.dense::part(${part}) { border-color: rgb(1, 2, 3); border-style: solid; }`;
+      style.textContent = `lr-copy-button.dense::part(${part}) { min-inline-size: 24px; min-block-size: 24px; }`;
       document.head.append(style);
       try {
         const el = (await fixture(
           html`<lr-copy-button class="dense" value="hello"></lr-copy-button>`,
         )) as LyraCopyButton;
-        const color = getComputedStyle(paintedControl(el)).borderTopColor;
-        if (part === 'base-control') expect(color).to.equal('rgb(1, 2, 3)');
-        else expect(color).to.not.equal('rgb(1, 2, 3)');
+        expect(paintedControl(el).getBoundingClientRect().width).to.equal(24);
+        expect(paintedControl(el).getBoundingClientRect().height).to.equal(24);
       } finally {
         style.remove();
       }

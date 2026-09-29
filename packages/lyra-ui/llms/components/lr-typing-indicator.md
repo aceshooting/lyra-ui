@@ -7,9 +7,13 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-typing-dot-size` since `21.1.0`; use css-property `--lr-typing-indicator-dot-size`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-dot-stagger-1` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-1`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-dot-stagger-2` since `21.1.0`; use css-property `--lr-typing-indicator-dot-stagger-2`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-duration` since `21.1.0`; use css-property `--lr-typing-indicator-duration`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-typing-gap` since `21.1.0`; use css-property `--lr-typing-indicator-gap`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -77,7 +81,10 @@ the compound duration/timing-function token every variant uses as its animation 
 `--lr-typing-indicator-duration` is a dedicated alias: it defaults to the library-wide
 `--lr-transition-ambient` token (shared by every other ambient-looping component), but overriding
 it retimes only this component, leaving `--lr-transition-ambient` itself — and anything else keyed
-off it — untouched.
+off it — untouched. Deprecated aliases: `--lr-typing-dot-size`, `--lr-typing-gap`,
+`--lr-typing-dot-stagger-1`, `--lr-typing-dot-stagger-2` and `--lr-typing-duration` (use the
+`--lr-typing-indicator-*` name of each; removed in 23.0.0) — each is still read as its namespaced
+name's fallback.
 
 **Optional peer deps:** none.
 

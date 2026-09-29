@@ -7,9 +7,11 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-button-active-background` since `21.1.0`; use css-property `--lr-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-button-hover-background` since `21.1.0`; use css-property `--lr-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-button-quiet-text` since `21.1.0`; use css-property `--lr-button-quiet-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 9 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -246,6 +248,7 @@ block of its own — the ones marked variant-independent are the exceptions:
   and press states keep moving away from what is actually painted.
 - `--lr-button-quiet-color` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
   `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, variant-independent too.
+  Deprecated alias: `--lr-button-quiet-text` (use `--lr-button-quiet-color`; removed in 23.0.0).
 
 Hover and press are **colour mixes, not a filter** — `--lr-button-hover-base` (default
 `--lr-color-surface`) is the colour both move away from, and each painted tier re-points it at the
@@ -254,7 +257,9 @@ for `accent`); the chrome-less tiers paint nothing, so they mix from the page su
 `--lr-button-hover-bg` (default `color-mix(in oklab, var(--lr-button-hover-base),
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
 `--lr-button-active-bg` the same mix at the stronger `--lr-color-mix-active` share, so a
-press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
+press reads as more than a hover. Deprecated aliases: `--lr-button-hover-background` and
+`--lr-button-active-background` (use `--lr-button-hover-bg`/`--lr-button-active-bg`; removed in
+23.0.0). `appearance="link"` moves its text colour by those two shares
 instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
 `--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by

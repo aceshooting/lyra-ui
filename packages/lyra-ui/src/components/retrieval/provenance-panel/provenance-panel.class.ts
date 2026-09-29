@@ -97,6 +97,8 @@ export interface LyraProvenancePanelEventMap
  *   `detail: { chunkId, sourceId, anchor? }`.
  * @event lr-chunk-toggle - Surfaced unchanged from an embedded chunk inspector.
  *   `detail: { chunkId, expanded }`.
+ * @event lr-expand - Deprecated alias of `lr-chunk-toggle`, surfaced unchanged from an embedded
+ *   chunk inspector right after it. `detail: { chunkId, expanded }`. Removal not before 23.0.0.
  * @csspart base - The root wrapper.
  * @csspart section - One section's wrapper.
  * @csspart header - A section's disclosure `<button>`.

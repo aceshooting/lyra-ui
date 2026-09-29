@@ -18,6 +18,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 const DEFAULT_SIZE = 128;
 const MIN_SIZE = 1;
 /**
@@ -215,6 +216,8 @@ function resolveQrColor(
  *   transition is announced through the shared light-DOM assertive region.
  * @cssprop --lr-qr-code-fill - Optional alias for host `color`, used by foreground modules.
  * @cssprop --lr-qr-code-bg - Optional alias for host `background-color`, used by the canvas background.
+ * @cssprop --lr-qr-code-background - Deprecated alias of `--lr-qr-code-bg`; removal not before
+ *   23.0.0.
  * @status stable
  * @since 4.0.0
  */

@@ -278,8 +278,12 @@ export const styles = css`
   :host([prose]) [part='unit'] {
     display: none;
   }
-  /* Small density uses the shared size ladder. Keep one :host([x]) selector per spelling so
-     plain-frame padding and the horizontal column gap win by source order. */
+  /* The compact density: size s and the steps below it. The deprecated compact alias sets size s
+     once upgraded; its own selector only covers server-rendered markup before hydration, while no
+     size is authored (a :where() qualifier, adding no specificity). One :host([x]) selector per
+     spelling keeps every branch at the specificity the ordering below relies on, so
+     frame='plain' and the horizontal column-gap win by source order. */
+  :host([compact]:where(:not([size]))) [part='base'],
   :host([size='2xs']) [part='base'],
   :host([size='xs']) [part='base'],
   :host([size='s']) [part='base'],
@@ -287,6 +291,7 @@ export const styles = css`
     padding: var(--lr-stat-padding, var(--lr-space-s));
     gap: var(--lr-stat-gap, var(--lr-size-0-125rem));
   }
+  :host([compact]:where(:not([size]))) .linked-content,
   :host([size='2xs']) .linked-content,
   :host([size='xs']) .linked-content,
   :host([size='s']) .linked-content,

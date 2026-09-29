@@ -144,10 +144,10 @@ for (const entry of missingPublicSupportTypes(publicSupportTypes, rootBarrelExpo
 for (const message of unresolvableSpecs) errors.push(message);
 
 // --- Sanity cross-check against the optional-peer allowlist. ---
-// Components in ROOT_BARREL_OPTIONAL_PEER_TAGS (chart/map/graph/geojson-viewer
+// Components in ROOT_BARREL_OPTIONAL_PEER_TAGS (chart/map/graph/geojson-view
 // and friends) are deliberately NOT side-effect-imported/registered by the
 // root barrel so importing it stays free of optional peer dependencies -- but
-// per the current convention (see `LyraGeoJsonViewerEventMap`,
+// per the current convention (see `LyraGeojsonViewEventMap`,
 // `LyraChartEventMap`, `LyraMapEventMap`, `LyraGraphEventMap`,
 // `LyraLiteChartEventMap` in src/lyra.ts) their EventMap *types* are still
 // exported directly. The loop above already enforces that generically; this

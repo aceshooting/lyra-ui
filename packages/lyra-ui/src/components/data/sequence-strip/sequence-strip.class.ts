@@ -8,11 +8,13 @@ import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface SequenceStripItem {
   readonly id: string;
@@ -218,6 +220,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showLegend: 'withLegend',
+  };
 
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
@@ -301,6 +306,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     super.attributeChangedCallback(name, previous, value);
     if (name === 'accessible-label' && value !== null) warnDeprecatedUsage(this, 'attribute', name, 'aria-label');
   }
+
 
   /**
    * Index of the currently selected item, or `-1` (the default) for none — the controlled selection
@@ -411,6 +417,14 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    *  strip is a presentational aggregate, and the key describes the scheme, not the current data
    *  (a category with no matching item still gets a row). */
   @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /** Names what a cell's `marker` means (e.g. `"Subagent"`). Set it to key the marker in the legend
    *  — with `withLegend` on it adds one trailing `[part="legend-item"]` whose swatch reproduces the

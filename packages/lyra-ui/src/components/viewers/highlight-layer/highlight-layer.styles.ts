@@ -14,7 +14,7 @@ export const styles = css`
   [part='rect'] {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-accent-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-highlight-layer-accent-background, var(--lr-color-brand-quiet))
     );
     --_lr-highlight-layer-outline: var(
       --lr-highlight-layer-accent-outline,
@@ -49,7 +49,7 @@ export const styles = css`
   [part='rect']:where([data-tone='success']) {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-success-bg,
-      var(--lr-color-success-quiet)
+      var(--lr-highlight-layer-success-background, var(--lr-color-success-quiet))
     );
     --_lr-highlight-layer-outline: var(
       --lr-highlight-layer-success-outline,
@@ -59,7 +59,7 @@ export const styles = css`
   [part='rect']:where([data-tone='warning']) {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-warning-bg,
-      var(--lr-color-warning-quiet)
+      var(--lr-highlight-layer-warning-background, var(--lr-color-warning-quiet))
     );
     --_lr-highlight-layer-outline: var(
       --lr-highlight-layer-warning-outline,
@@ -69,7 +69,7 @@ export const styles = css`
   [part='rect']:where([data-tone='danger']) {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-danger-bg,
-      var(--lr-color-danger-quiet)
+      var(--lr-highlight-layer-danger-background, var(--lr-color-danger-quiet))
     );
     --_lr-highlight-layer-outline: var(
       --lr-highlight-layer-danger-outline,
@@ -79,7 +79,7 @@ export const styles = css`
   [part='rect']:where([data-tone='neutral']) {
     --_lr-highlight-layer-background: var(
       --lr-highlight-layer-neutral-bg,
-      var(--lr-color-surface-raised)
+      var(--lr-highlight-layer-neutral-background, var(--lr-color-surface-raised))
     );
     --_lr-highlight-layer-outline: var(
       --lr-highlight-layer-neutral-outline,
@@ -126,7 +126,7 @@ export const styles = css`
   [part='rect']:where([data-flash]) {
     background: var(
       --lr-highlight-layer-flash-bg,
-      var(--lr-color-brand)
+      var(--lr-highlight-layer-flash-background, var(--lr-color-brand))
     );
     animation: var(--_lr-motion-animation, lr-highlight-layer-flash var(--lr-transition-ambient));
   }

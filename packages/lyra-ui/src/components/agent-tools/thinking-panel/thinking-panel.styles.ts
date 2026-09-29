@@ -18,7 +18,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-thinking-panel-border-color, var(--lr-color-border));
     border-radius: var(--lr-thinking-panel-radius, var(--lr-radius));
-    background: var(--lr-thinking-panel-bg, var(--lr-color-surface));
+    background: var(--lr-thinking-panel-bg, var(--lr-thinking-panel-background, var(--lr-color-surface)));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune

@@ -45,7 +45,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part~='remove-button']:hover {
-    background: var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background));
+    background: var(--lr-tag-remove-hover-bg, var(--lr-tag-remove-hover-background, var(--_lr-tag-remove-hover-background)));
   }
   /* Pressed deepens the hover's own scrim: currentColor mixed in again at the shared
      --lr-color-mix-active share, roughly doubling the hover tint. Toward currentColor rather than
@@ -56,7 +56,7 @@ export const styles = css`
      lighten while pressing darkened. Layering on the hover custom property also gives a retinted
      hover a matching press. */
   [part~='remove-button']:active {
-    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background)));
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-bg, var(--lr-tag-remove-hover-background, var(--_lr-tag-remove-hover-background))));
   }
   [part~='remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -15,8 +15,9 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -278,6 +279,12 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
   }
 }
 
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
+
 /**
  * `<lr-claim-evidence>` — a controlled claim-by-claim grounding audit. It relates generated
  * claims to complete citation records, exposes assessment status/confidence, and tolerates
@@ -355,6 +362,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-claim-select',
     'lr-citation-select',
@@ -382,6 +392,12 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
    * the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Tighter claim-trigger padding and column gap, for dense evidence lists -- same convention as
+   *  `lr-source-card`'s/`lr-entity-card`'s `compact`. Defaults to `false`, i.e. the full
+   *  claim-trigger padding. Purely a density knob: each claim's border and background stay, so use
+   *  `frame="plain"` to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each
    *  claim's bordered, filled box. `'plain'` removes the border, background, and corner radius from

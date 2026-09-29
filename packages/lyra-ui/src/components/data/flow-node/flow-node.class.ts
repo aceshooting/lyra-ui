@@ -5,6 +5,7 @@ import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-u
 import type { FlowHandle } from '../flow-canvas/flow-types.js';
 import { normalizeFlowStatus, snapshotFlowHandles } from '../flow-canvas/flow-model.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   normalizeReflectedOptionalSize,
@@ -21,6 +22,10 @@ import { styles } from './flow-node.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** The sizes that select the compact density, which the deprecated `compact` alias reads back. */
+const COMPACT_SIZES: ReadonlySet<unknown> = new Set(['2xs', 'xs', 's', 'small']);
+const isCompactSize = (size: unknown): boolean => COMPACT_SIZES.has(size);
 
 const DEFAULT_INPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'in' })]);
 const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'out' })]);
@@ -103,6 +108,9 @@ export class LyraFlowNode extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (compact) => (compact ? 's' : undefined), isCompactSize],
+  };
 
   /** This card's identity inside `lr-flow-canvas`, matched against a `nodes` entry's `id`. It
    *  reflects because the canvas adopts light-DOM children by reading the `node-id` *attribute*: a
@@ -155,6 +163,14 @@ export class LyraFlowNode extends LyraElement {
     this._size = normalized;
     this.requestUpdate('size', old);
   }
+  /**
+   * Deprecated spelling of the compact density: `compact` sets `size="s"`, clearing it removes
+   * the size, and any `size` at or below `s` reads back as `compact`. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `size="s"`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, reflect: true }) compact = false;
   private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
   /** Frozen snapshot of at most the first 10,000 input handles. Reassign to update. */
   @property({ attribute: false })

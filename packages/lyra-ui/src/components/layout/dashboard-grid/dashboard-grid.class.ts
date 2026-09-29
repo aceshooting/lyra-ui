@@ -9,6 +9,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
@@ -272,6 +273,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { locked: 'readonly' };
 
   private authoredLayout: readonly DashboardAuthoredCellSnapshot[] =
     Object.freeze([]);
@@ -328,6 +330,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
    *  `cells-resizable` or a cell's own `locked`. */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
+  /** Disables every drag/resize gesture grid-wide, regardless of `cells-draggable`/
+   *  `cells-resizable` or a cell's own `locked`.
+   *  @deprecated Use `readonly`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) locked = false;
   /** Overrides the grid region's accessible name; falls back to a generic localized label. Fed
    *  only by a host `aria-label`, matching `lr-flow-canvas`'s own host-override pattern. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

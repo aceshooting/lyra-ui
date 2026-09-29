@@ -569,7 +569,7 @@ describe('header text contrast at rest, hover and press', () => {
   }
 });
 
-describe('lr-source-list size and the retired compact alias', () => {
+describe('lr-source-list size and the deprecated compact alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-list', kind: 'property', name: 'compact' }];
   const observe = (el: LyraSourceList): string => {
     const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]')!);
@@ -578,7 +578,7 @@ describe('lr-source-list size and the retired compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceList>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" without a deprecation warning', async () => {
     let dense = '';
     let regular = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -587,5 +587,47 @@ describe('lr-source-list size and the retired compact alias', () => {
     });
     expect(dense).to.not.equal(regular);
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-list size="s" expanded></lr-source-list>`));
+      alias = observe(await mount(html`<lr-source-list compact expanded></lr-source-list>`));
+      const el = await mount(html`<lr-source-list expanded></lr-source-list>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-list:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-source-list expanded></lr-source-list>`));
+      const el = await mount(html`<lr-source-list compact expanded></lr-source-list>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-source-list compact size="m" expanded></lr-source-list>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
   });
 });

@@ -1069,28 +1069,22 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
     )
   );
   assert.deepEqual(
-    controls.map(({ tagName, name }) => tagName ?? name).sort(),
+    controls.map(({ tagName }) => tagName).sort(),
     [
-      'LyraInputShared',
       'lr-chat-composer',
       'lr-code-editor',
       'lr-color-picker',
       'lr-date-input',
       'lr-emoji-picker',
+      'lr-input',
       'lr-known-date',
       'lr-otp-input',
       'lr-phone-input',
       'lr-textarea',
       'lr-time-input',
     ],
-    'every direct FormAssociated implementation owner is covered explicitly'
+    'every live FormAssociated consumer is covered explicitly'
   );
-  for (const tagName of ['lr-input', 'lr-number-input', 'lr-native-time-input']) {
-    const declaration = liveManifest.modules.flatMap((module) => module.declarations ?? [])
-      .find((entry) => entry.tagName === tagName);
-    assert.ok(declaration, `${tagName} public declaration remains present`);
-    controls.push(declaration);
-  }
   for (const control of controls) {
     const fields = new Map(
       control.members.map((candidate) => [candidate.name, candidate])
@@ -1101,22 +1095,22 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
     assert.equal(
       fields.get('defaultValue')?.default,
       "''",
-      `${control.tagName ?? control.name} defaultValue`
+      `${control.tagName} defaultValue`
     );
     assert.equal(
       attributes.get('value')?.default,
       "''",
-      `${control.tagName ?? control.name} value attribute`
+      `${control.tagName} value attribute`
     );
     assert.equal(
       fields.get('form')?.attribute,
       'form',
-      `${control.tagName ?? control.name} form field`
+      `${control.tagName} form field`
     );
     assert.equal(
       attributes.get('form')?.fieldName,
       'form',
-      `${control.tagName ?? control.name} form attribute`
+      `${control.tagName} form attribute`
     );
   }
 });
@@ -2081,6 +2075,13 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
       ],
       ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
       [
+        'lr-geojson-view',
+        {
+          sourceTag: 'lr-geojson-viewer',
+          events: ['lr-anchor-result'],
+        },
+      ],
+      [
         'lr-tag',
         {
           sourceTag: 'lr-badge',
@@ -2091,305 +2092,293 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
     ]
   );
 
-  // Exercise event repair without keeping a retired production tag in the reviewed map.
-  const targetTag = 'lr-test-event-target';
-  assert.equal(INHERITED_PUBLIC_MEMBER_CONTRACTS.has(targetTag), false);
-  INHERITED_PUBLIC_MEMBER_CONTRACTS.set(targetTag, {
-    sourceTag: 'lr-test-event-source',
-    events: ['lr-anchor-result'],
-  });
-  try {
-    const synthetic = {
-      modules: [
-        {
-          path: 'internal/lyra-element.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraElement',
-              members: [
-                {
-                  kind: 'field',
-                  name: 'locale',
-                  type: { text: 'string' },
-                  attribute: 'locale',
-                  reflects: true,
-                },
-                {
-                  kind: 'field',
-                  name: 'strings',
-                  type: { text: 'LyraLocaleStrings' },
-                },
-              ],
-              attributes: [
-                {
-                  name: 'locale',
-                  fieldName: 'locale',
-                  type: { text: 'string' },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'archive-viewer.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraArchiveViewer',
-              tagName: 'lr-archive-viewer',
-              members: [],
-              attributes: [],
-            },
-          ],
-        },
-        {
-          path: 'dialog.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraDialog',
-              tagName: 'lr-dialog',
-              members: [
-                {
-                  kind: 'field',
-                  name: 'modal',
-                  readonly: true,
-                  type: { text: 'LyraDialogModalController' },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'drawer.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraDrawer',
-              tagName: 'lr-drawer',
-              members: [],
-            },
-          ],
-        },
-        {
-          path: 'badge.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraBadge',
-              tagName: 'lr-badge',
-              members: [
-                {
-                  kind: 'field',
-                  name: 'size',
-                  type: { text: 'BadgeSize' },
-                  attribute: 'size',
-                },
-                {
-                  kind: 'field',
-                  name: 'variant',
-                  type: { text: 'BadgeVariant' },
-                  attribute: 'variant',
-                },
-              ],
-              attributes: [
-                { name: 'size', fieldName: 'size', type: { text: 'BadgeSize' } },
-                {
-                  name: 'variant',
-                  fieldName: 'variant',
-                  type: { text: 'BadgeVariant' },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'tag.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'LyraTag',
-              tagName: 'lr-tag',
-              members: [],
-              attributes: [],
-            },
-          ],
-        },
-        {
-          path: 'event-source.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'SyntheticEventSource',
-              tagName: 'lr-test-event-source',
-              events: [
-                {
-                  name: 'lr-anchor-result',
-                  type: { text: 'CustomEvent<AnchorResultDetail>' },
-                  description: 'Reports whether the anchor was found.',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'event-target.class.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'SyntheticEventTarget',
-              tagName: 'lr-test-event-target',
-              superclass: {
-                name: 'SyntheticEventSource',
-                module: 'event-source.class.ts',
+  const synthetic = {
+    modules: [
+      {
+        path: 'internal/lyra-element.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraElement',
+            members: [
+              {
+                kind: 'field',
+                name: 'locale',
+                type: { text: 'string' },
+                attribute: 'locale',
+                reflects: true,
               },
-              events: [
-                {
-                  name: 'lr-anchor-result',
-                  inheritedFrom: {
-                    name: 'SyntheticEventSource',
-                    module: 'event-source.class.ts',
-                  },
+              {
+                kind: 'field',
+                name: 'strings',
+                type: { text: 'LyraLocaleStrings' },
+              },
+            ],
+            attributes: [
+              {
+                name: 'locale',
+                fieldName: 'locale',
+                type: { text: 'string' },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'archive-viewer.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraArchiveViewer',
+            tagName: 'lr-archive-viewer',
+            members: [],
+            attributes: [],
+          },
+        ],
+      },
+      {
+        path: 'dialog.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraDialog',
+            tagName: 'lr-dialog',
+            members: [
+              {
+                kind: 'field',
+                name: 'modal',
+                readonly: true,
+                type: { text: 'LyraDialogModalController' },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'drawer.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraDrawer',
+            tagName: 'lr-drawer',
+            members: [],
+          },
+        ],
+      },
+      {
+        path: 'badge.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraBadge',
+            tagName: 'lr-badge',
+            members: [
+              {
+                kind: 'field',
+                name: 'size',
+                type: { text: 'BadgeSize' },
+                attribute: 'size',
+              },
+              {
+                kind: 'field',
+                name: 'variant',
+                type: { text: 'BadgeVariant' },
+                attribute: 'variant',
+              },
+            ],
+            attributes: [
+              { name: 'size', fieldName: 'size', type: { text: 'BadgeSize' } },
+              {
+                name: 'variant',
+                fieldName: 'variant',
+                type: { text: 'BadgeVariant' },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'tag.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraTag',
+            tagName: 'lr-tag',
+            members: [],
+            attributes: [],
+          },
+        ],
+      },
+      {
+        path: 'geojson-viewer.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraGeoJsonViewer',
+            tagName: 'lr-geojson-viewer',
+            events: [
+              {
+                name: 'lr-anchor-result',
+                type: { text: 'CustomEvent<AnchorResultDetail>' },
+                description: 'Reports whether the anchor was found.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'geojson-view.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraGeojsonView',
+            tagName: 'lr-geojson-view',
+            superclass: {
+              name: 'LyraGeoJsonViewer',
+              module: 'geojson-viewer.class.ts',
+            },
+            events: [
+              {
+                name: 'lr-anchor-result',
+                inheritedFrom: {
+                  name: 'LyraGeoJsonViewer',
+                  module: 'geojson-viewer.class.ts',
                 },
-              ],
-            },
-          ],
-        },
-        {
-          path: 'unrelated.ts',
-          declarations: [
-            {
-              kind: 'class',
-              name: 'Unrelated',
-              tagName: 'lr-unrelated',
-              members: [],
-            },
-          ],
-        },
-      ],
-    };
-
-    plugin.packageLinkPhase({ customElementsManifest: synthetic });
-    const archive = synthetic.modules.find(
-      ({ path }) => path === 'archive-viewer.class.ts'
-    ).declarations[0];
-    assert.deepEqual(
-      archive.members.map(({ name }) => name),
-      ['locale', 'strings']
-    );
-    assert.deepEqual(archive.attributes, [
-      {
-        name: 'locale',
-        fieldName: 'locale',
-        type: { text: 'string' },
-        inheritedFrom: {
-          name: 'LyraElement',
-          module: 'internal/lyra-element.ts',
-        },
+              },
+            ],
+          },
+        ],
       },
-    ]);
-    const drawer = synthetic.modules.find(
-      ({ path }) => path === 'drawer.class.ts'
-    ).declarations[0];
-    assert.deepEqual(drawer.members[0], {
-      kind: 'field',
-      name: 'modal',
-      readonly: true,
-      type: { text: 'LyraDialogModalController' },
-      inheritedFrom: { name: 'LyraDialog', module: 'dialog.class.ts' },
-    });
-    const tag = synthetic.modules.find(({ path }) => path === 'tag.class.ts')
-      .declarations[0];
-    assert.equal(
-      tag.members.find(({ name }) => name === 'size').type.text,
-      'BadgeSize'
-    );
-    assert.equal(
-      tag.members.find(({ name }) => name === 'variant').type.text,
-      'TagVariant'
-    );
-    assert.equal(
-      tag.attributes.find(({ name }) => name === 'size').type.text,
-      'BadgeSize'
-    );
-    assert.equal(
-      tag.attributes.find(({ name }) => name === 'variant').type.text,
-      'TagVariant'
-    );
-    const eventTarget = synthetic.modules.find(
-      ({ path }) => path === 'event-target.class.ts'
-    ).declarations[0];
-    assert.deepEqual(eventTarget.events, [
       {
-        name: 'lr-anchor-result',
-        type: { text: 'CustomEvent<AnchorResultDetail>' },
-        description: 'Reports whether the anchor was found.',
+        path: 'unrelated.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'Unrelated',
+            tagName: 'lr-unrelated',
+            members: [],
+          },
+        ],
       },
-    ]);
-    const compactEventTarget = compactManifest(synthetic).modules.find(
-      ({ path }) => path === 'event-target.class.ts'
-    ).declarations[0];
-    assert.deepEqual(
-      compactEventTarget.events,
-      eventTarget.events,
-      'the projected inherited event survives published-manifest compaction'
-    );
-    assert.deepEqual(
-      synthetic.modules.find(({ path }) => path === 'unrelated.ts')
-        .declarations[0].members,
-      []
-    );
+    ],
+  };
 
-    const once = structuredClone(synthetic);
-    plugin.packageLinkPhase({ customElementsManifest: synthetic });
-    assert.deepEqual(
-      synthetic,
-      once,
-      'running the inherited-member projection twice is a no-op'
-    );
+  plugin.packageLinkPhase({ customElementsManifest: synthetic });
+  const archive = synthetic.modules.find(
+    ({ path }) => path === 'archive-viewer.class.ts'
+  ).declarations[0];
+  assert.deepEqual(
+    archive.members.map(({ name }) => name),
+    ['locale', 'strings']
+  );
+  assert.deepEqual(archive.attributes, [
+    {
+      name: 'locale',
+      fieldName: 'locale',
+      type: { text: 'string' },
+      inheritedFrom: {
+        name: 'LyraElement',
+        module: 'internal/lyra-element.ts',
+      },
+    },
+  ]);
+  const drawer = synthetic.modules.find(
+    ({ path }) => path === 'drawer.class.ts'
+  ).declarations[0];
+  assert.deepEqual(drawer.members[0], {
+    kind: 'field',
+    name: 'modal',
+    readonly: true,
+    type: { text: 'LyraDialogModalController' },
+    inheritedFrom: { name: 'LyraDialog', module: 'dialog.class.ts' },
+  });
+  const tag = synthetic.modules.find(({ path }) => path === 'tag.class.ts')
+    .declarations[0];
+  assert.equal(
+    tag.members.find(({ name }) => name === 'size').type.text,
+    'BadgeSize'
+  );
+  assert.equal(
+    tag.members.find(({ name }) => name === 'variant').type.text,
+    'TagVariant'
+  );
+  assert.equal(
+    tag.attributes.find(({ name }) => name === 'size').type.text,
+    'BadgeSize'
+  );
+  assert.equal(
+    tag.attributes.find(({ name }) => name === 'variant').type.text,
+    'TagVariant'
+  );
+  const geojsonAlias = synthetic.modules.find(
+    ({ path }) => path === 'geojson-view.class.ts'
+  ).declarations[0];
+  assert.deepEqual(geojsonAlias.events, [
+    {
+      name: 'lr-anchor-result',
+      type: { text: 'CustomEvent<AnchorResultDetail>' },
+      description: 'Reports whether the anchor was found.',
+    },
+  ]);
+  const compactGeojsonAlias = compactManifest(synthetic).modules.find(
+    ({ path }) => path === 'geojson-view.class.ts'
+  ).declarations[0];
+  assert.deepEqual(
+    compactGeojsonAlias.events,
+    geojsonAlias.events,
+    'the deprecated alias event survives published-manifest compaction'
+  );
+  assert.deepEqual(
+    synthetic.modules.find(({ path }) => path === 'unrelated.ts')
+      .declarations[0].members,
+    []
+  );
 
-    const malformed = structuredClone(synthetic);
-    malformed.modules.find(
-      ({ path }) => path === 'dialog.class.ts'
-    ).declarations[0].members = [];
-    malformed.modules.find(
-      ({ path }) => path === 'drawer.class.ts'
-    ).declarations[0].members = [];
-    assert.throws(
-      () => plugin.packageLinkPhase({ customElementsManifest: malformed }),
-      /lr-drawer: inherited-member projection requires lr-dialog\.modal/
-    );
+  const once = structuredClone(synthetic);
+  plugin.packageLinkPhase({ customElementsManifest: synthetic });
+  assert.deepEqual(
+    synthetic,
+    once,
+    'running the inherited-member projection twice is a no-op'
+  );
 
-    const malformedEvent = structuredClone(synthetic);
-    malformedEvent.modules.find(
-      ({ path }) => path === 'event-source.class.ts'
-    ).declarations[0].events = [];
-    assert.throws(
-      () => plugin.packageLinkPhase({ customElementsManifest: malformedEvent }),
-      /lr-test-event-target: inherited-member projection requires lr-test-event-source#lr-anchor-result/,
-      'an event rename cannot silently leave stale alias metadata behind'
-    );
+  const malformed = structuredClone(synthetic);
+  malformed.modules.find(
+    ({ path }) => path === 'dialog.class.ts'
+  ).declarations[0].members = [];
+  malformed.modules.find(
+    ({ path }) => path === 'drawer.class.ts'
+  ).declarations[0].members = [];
+  assert.throws(
+    () => plugin.packageLinkPhase({ customElementsManifest: malformed }),
+    /lr-drawer: inherited-member projection requires lr-dialog\.modal/
+  );
 
-    const malformedLocalization = structuredClone(synthetic);
-    malformedLocalization.modules.find(
-      ({ path }) => path === 'internal/lyra-element.ts'
-    ).declarations[0].members = [];
-    malformedLocalization.modules.find(
-      ({ path }) => path === 'archive-viewer.class.ts'
-    ).declarations[0].members = [];
-    assert.throws(
-      () =>
-        plugin.packageLinkPhase({
-          customElementsManifest: malformedLocalization,
-        }),
-      /lr-archive-viewer: inherited-member projection requires LyraElement\.locale/,
-      'a shared localization rename cannot silently leave stale archive metadata behind'
-    );
-  } finally {
-    INHERITED_PUBLIC_MEMBER_CONTRACTS.delete(targetTag);
-  }
+  const malformedEvent = structuredClone(synthetic);
+  malformedEvent.modules.find(
+    ({ path }) => path === 'geojson-viewer.class.ts'
+  ).declarations[0].events = [];
+  assert.throws(
+    () => plugin.packageLinkPhase({ customElementsManifest: malformedEvent }),
+    /lr-geojson-view: inherited-member projection requires lr-geojson-viewer#lr-anchor-result/,
+    'an event rename cannot silently leave stale alias metadata behind'
+  );
 
+  const malformedLocalization = structuredClone(synthetic);
+  malformedLocalization.modules.find(
+    ({ path }) => path === 'internal/lyra-element.ts'
+  ).declarations[0].members = [];
+  malformedLocalization.modules.find(
+    ({ path }) => path === 'archive-viewer.class.ts'
+  ).declarations[0].members = [];
+  assert.throws(
+    () =>
+      plugin.packageLinkPhase({
+        customElementsManifest: malformedLocalization,
+      }),
+    /lr-archive-viewer: inherited-member projection requires LyraElement\.locale/,
+    'a shared localization rename cannot silently leave stale archive metadata behind'
+  );
 });
 
 test('the CEM event projection preserves every concrete source EventMap schema', async () => {
@@ -3099,7 +3088,7 @@ test('normalization retains the documented typed-chart API inherited from the ge
   ]);
 });
 
-test('normalization retains the canonical GeoJSON search API without the retired tag', () => {
+test('normalization preserves the canonical GeoJSON search API on its compatibility alias', () => {
   const components = new Map(
     normalizeManifest(
       expandLyraInventoryManifest(readJson('custom-elements.json')),
@@ -3107,11 +3096,15 @@ test('normalization retains the canonical GeoJSON search API without the retired
     ).map((component) => [component.tag, component])
   );
   const canonical = components.get('lr-geojson-viewer');
+  const alias = components.get('lr-geojson-view');
+
   assert.ok(canonical);
-  assert.equal(components.has('lr-geojson-view'), false);
-  for (const name of ['scrollToAnchor', 'search', 'searchNext', 'searchPrevious']) {
-    assert.ok(canonical.surface.methods.some((method) => method.name === name), name);
-  }
+  assert.ok(alias);
+  assert.deepEqual(
+    alias.surface.methods,
+    canonical.surface.methods,
+    'the deprecated compatibility tag exposes the canonical effective method surface'
+  );
 });
 
 test('surface comparison catches member, default, cancelability, and polarity drift', () => {
@@ -6694,9 +6687,7 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
     }
   }
 
-  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.length, 22);
-  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.includes('lr-geojson-view'), false);
-  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.includes('lr-geojson-viewer'), true);
+  assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.length, 23);
   assert.deepEqual(DOCUMENT_ANCHOR_TARGET_CONTRACT.cssParts, [
     {
       name: 'anchor-live-region',
@@ -6780,7 +6771,7 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
     ['lr-csv-viewer', 'lr-text-select'],
     ['lr-dataset-viewer', 'lr-text-select'],
     ['lr-email-viewer', 'lr-highlight-activate'],
-    ['lr-geojson-viewer', 'lr-highlight-activate'],
+    ['lr-geojson-view', 'lr-highlight-activate'],
     ['lr-html-viewer', 'lr-highlight-activate'],
     ['lr-image-viewer', 'lr-text-select'],
     ['lr-include', 'lr-highlight-activate'],
@@ -8200,94 +8191,4 @@ test('an explicitly current attribute does not inherit its legacy property depre
   assert.equal(surface.attributes.find((entry) => entry.name === 'aria-label').deprecated, false);
   assert.equal(surface.attributes.find((entry) => entry.name === 'accessible-label').deprecated, 'Use aria-label.');
   assert.equal(surface.properties.find((entry) => entry.name === 'accessibleLabel').deprecated, 'Use aria-label.');
-});
-
-function renderedSubclassPartsFixture() {
-  const part = (name) => ({ name, description: `Rendered ${name}` });
-  const base = (tagName, name, parts) => ({
-    kind: 'class', tagName, name, cssParts: parts.map(part),
-    members: [{ kind: 'field', name: 'value', type: { text: 'string' } }],
-    events: [{ name: 'lr-change', type: { text: 'CustomEvent' } }],
-    slots: [{ name: 'content' }], cssProperties: [{ name: '--shared' }],
-  });
-  const popover = base('lr-popover', 'LyraPopover', ['popup', 'arrow', 'popup__popup', 'popup__arrow']);
-  const item = base('lr-menu-item', 'LyraMenuItem', ['base', 'spinner', 'spinner__base']);
-  const subclass = (tagName, name, parent, extra) => ({
-    kind: 'class', tagName, name, superclass: { name: parent.name, module: 'parts.ts' },
-    cssParts: [...parent.cssParts.map((entry) => ({ ...entry, inheritedFrom: { name: parent.name, module: 'parts.ts' } })), ...extra.map(part)],
-  });
-  return { schemaVersion: '1.0.0', modules: [{ kind: 'javascript-module', path: 'parts.ts', declarations: [
-    popover, item,
-    subclass('lr-dropdown', 'LyraDropdown', popover, ['popup-popup', 'popup-arrow']),
-    subclass('lr-dropdown-item', 'LyraDropdownItem', item, ['spinner-base']),
-  ] }] };
-}
-
-function projectRenderedSubclassParts(manifest) {
-  cemConfig.plugins.find((plugin) => plugin.name === 'lr-rendered-subclass-css-parts')
-    ?.packageLinkPhase({ customElementsManifest: manifest });
-}
-
-test('rendered subclass CSS parts preserve parent mirrors and survive compact inheritance expansion', () => {
-  const manifest = renderedSubclassPartsFixture();
-  const [popover, item, dropdown, dropdownItem] = manifest.modules[0].declarations;
-  const parentsBefore = structuredClone([popover, item]);
-  projectRenderedSubclassParts(manifest);
-  assert.deepEqual(dropdown.cssParts.map(({ name }) => name), ['popup', 'arrow', 'popup-popup', 'popup-arrow']);
-  assert.deepEqual(dropdownItem.cssParts.map(({ name }) => name), ['base', 'spinner', 'spinner-base']);
-  assert.equal(dropdown.lyraCssPartsComplete, true);
-  assert.equal(dropdownItem.lyraCssPartsComplete, true);
-  assert.deepEqual([popover, item], parentsBefore);
-  assert.equal(dropdown.superclass.name, 'LyraPopover');
-  const expanded = expandManifestInheritance(compactManifest(manifest));
-  for (const [tag, oldNames, parent] of [
-    ['lr-dropdown', ['popup__popup', 'popup__arrow'], popover],
-    ['lr-dropdown-item', ['spinner__base'], item],
-  ]) {
-    const declaration = expanded.modules[0].declarations.find((entry) => entry.tagName === tag);
-    assert.equal(declaration.cssParts.some(({ name }) => oldNames.includes(name)), false);
-    for (const category of ['members', 'events', 'slots', 'cssProperties']) {
-      assert.deepEqual(declaration[category].map(({ name }) => name), parent[category].map(({ name }) => name));
-    }
-  }
-});
-
-test('rendered subclass CSS parts reject stale target, base and part contracts before any mutation', () => {
-  const cases = [
-    (declarations) => declarations.splice(3, 1),
-    (declarations) => declarations.splice(1, 1),
-    (declarations) => { declarations[3].superclass.name = 'DifferentItem'; },
-    (declarations) => { declarations[3].name = 'DifferentItem'; },
-    (declarations) => { declarations[3].cssParts = declarations[3].cssParts.filter(({ name }) => name !== 'spinner-base'); },
-    (declarations) => { declarations[3].cssParts = declarations[3].cssParts.filter(({ name }) => name !== 'spinner__base'); },
-    (declarations) => { declarations[1].cssParts = declarations[1].cssParts.filter(({ name }) => name !== 'spinner__base'); },
-  ];
-  for (const mutate of cases) {
-    const manifest = renderedSubclassPartsFixture();
-    mutate(manifest.modules[0].declarations);
-    const before = structuredClone(manifest);
-    assert.throws(() => projectRenderedSubclassParts(manifest), /rendered CSS parts/);
-    assert.deepEqual(manifest, before);
-  }
-});
-
-test('inherited property-only accessibleLabel survives inventory without reviving its retired attribute', () => {
-  const declaration = {
-    tagName: 'lr-naming-child',
-    members: [{
-      kind: 'field', name: 'accessibleLabel', attribute: false,
-      inheritedFrom: { name: 'NamingParent', module: 'naming-parent.ts' },
-      type: { text: 'string' }, deprecated: 'Use the host aria-label.',
-    }],
-    attributes: [],
-  };
-  const surface = normalizeDeclaration(declaration, { ecosystem: 'lyra' });
-  assert.deepEqual(surface.properties.map(({ name }) => name), ['accessibleLabel']);
-  assert.equal(surface.properties[0].deprecated, 'Use the host aria-label.');
-  assert.deepEqual(surface.attributes, [], 'property preservation must not invent an attribute');
-  for (const privacy of ['private', 'protected']) {
-    const hidden = structuredClone(declaration);
-    hidden.members[0].privacy = privacy;
-    assert.deepEqual(normalizeDeclaration(hidden, { ecosystem: 'lyra' }).properties, []);
-  }
 });

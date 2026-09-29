@@ -8,6 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecated event** `lr-lightbox-close` since `22.0.0`; use event `Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation.`; removal not before `24.0.0` — The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window.
+- **Deprecated property** `showCounter` / `show-counter` since `21.1.0`; use property `without-counter`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,7 +37,9 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
   visible `[part="counter"]`; the polite position announcement stays active. Nothing is ever
-  written back to the attribute — no stylesheet or selector keys off it.
+  written back to the attribute — no stylesheet or selector keys off it. Deprecated alias:
+  `show-counter` (`showCounter`; use `without-counter`, which `show-counter="false"` equals;
+  removing it restores the default; removed in 23.0.0).
   Spoken position updates remain active when the counter is hidden: the shadow
   `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
   shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor

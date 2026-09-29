@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecations** none
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `without-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -46,7 +46,8 @@ explicitly empty labels remain empty and later labels render normally.
   `part="value"` caption, the same way an empty `label` already omits `part="label"`.
   `aria-valuenow`/`aria-valuetext` and the host's accessible name are unaffected either way, since
   the caption itself is always `aria-hidden`. The caption shows by default because a gauge's whole
-  purpose is showing the reading it announces.
+  purpose is showing the reading it announces. Deprecated alias: `show-value`/`showValue` (use
+  `without-value`; removed in 23.0.0) — `show-value="false"` still equals `without-value`
 - `variant: LyraProgressVariant = 'brand'` (reflected) — the same shared semantic-tone vocabulary
   `<lr-progress-bar>` uses (`'neutral'|'brand'|'success'|'warning'|'danger'`). The fallback color
   whenever `thresholds` is empty or matches nothing.

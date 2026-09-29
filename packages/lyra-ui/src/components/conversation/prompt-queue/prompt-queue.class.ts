@@ -5,18 +5,21 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow, LYRA_DEFAULT_remove } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export interface PromptQueueItem {
   id: string;
@@ -282,6 +285,9 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    editable: ['readonly', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-queue-change',
     'lr-send-now',
@@ -301,6 +307,13 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   /** Renders each queued prompt as read-only text instead of an editor. */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
+  /**
+   * Deprecated inverted alias of `readonly`: `editable="false"` equals `readonly`, and removing it
+   * restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `readonly`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Visible queue heading and accessible-name fallback. Omitting it localizes the default
    *  `promptQueueLabel` message; an explicit empty string (`label=""` or `.label = ''`) suppresses

@@ -115,7 +115,7 @@ export const styles = css`
   [part="vote-button"][data-selected] {
     background: var(
       --lr-compare-panel-selected-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet))
     );
     border-color: var(
       --lr-compare-panel-selected-border-color,
@@ -137,7 +137,7 @@ export const styles = css`
       in oklab,
       var(
         --lr-compare-panel-selected-bg,
-        var(--lr-color-brand-quiet)
+        var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet))
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );

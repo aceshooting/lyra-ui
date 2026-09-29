@@ -16,6 +16,7 @@ import {
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { nextId } from '../../../internal/a11y.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { closeIcon } from '../../../internal/icons.js';
 import {
   autocorrectConverter,
@@ -65,6 +66,19 @@ export interface LyraTokenInputEventMap {
   'lr-token-remove-request': CustomEvent<{ value: string; index: number }>;
   /** Cancelable proposal to edit one token in place. */
   'lr-token-edit-request': CustomEvent<{
+    value: string;
+    previousValue: string;
+    index: number;
+  }>;
+  /** @deprecated Use `lr-token-add-request`; removal not before 23.0.0. Fired right after it from
+   *  the same commit with an equal detail; either event's `preventDefault()` vetoes the add. */
+  'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
+  /** @deprecated Use `lr-token-remove-request`; removal not before 23.0.0. Fired right after it
+   *  from the same removal with an equal detail; either event's `preventDefault()` vetoes it. */
+  'lr-remove': CustomEvent<{ value: string; index: number }>;
+  /** @deprecated Use `lr-token-edit-request`; removal not before 23.0.0. Fired right after it from
+   *  the same commit with an equal detail; either event's `preventDefault()` vetoes the edit. */
+  'lr-token-edit': CustomEvent<{
     value: string;
     previousValue: string;
     index: number;
@@ -155,15 +169,27 @@ const stringArrayConverter = {
  *   `values` is the complete ordered batch. Cancelable -- call `preventDefault()` to veto the add
  *   (e.g. a server-side validation check) and the tokens stay out of `value`; the typed draft text
  *   is left in the input unchanged so the user can correct it, rather than being silently cleared.
+ *   Fires before `lr-add`, from the same commit; either event may veto.
  * @event lr-token-remove-request - A token is about to be removed; detail is `{ value, index }`.
  *   Cancelable -- call `preventDefault()` to veto the removal (e.g. pending an async confirmation
- *   or a protected-token check) and the token stays in `value` unchanged.
+ *   or a protected-token check) and the token stays in `value` unchanged. Fires before
+ *   `lr-remove`, from the same removal; either event may veto.
  * @event lr-token-edit-request - An existing token is about to be edited in place; detail is
  *   `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or
  *   duplicate-colliding edit -- those close the editor with no event. Cancelable -- call
  *   `preventDefault()` to veto the edit and the token stays in `value` unchanged; the inline
  *   editor stays open with the user's edited text intact so they can correct it, rather than
- *   closing and discarding it.
+ *   closing and discarding it. Fires before `lr-token-edit`, from the same commit; either event
+ *   may veto.
+ * @event lr-add - Deprecated cancelable alias of `lr-token-add-request`, kept firing right after
+ *   it with an equal `detail: { value, values }`; either event may veto, and a veto through this
+ *   alias logs a one-time development warning. Removal not before 23.0.0.
+ * @event lr-remove - Deprecated cancelable alias of `lr-token-remove-request`, kept firing right
+ *   after it with an equal `detail: { value, index }`; either event may veto, and a veto through
+ *   this alias logs a one-time development warning. Removal not before 23.0.0.
+ * @event lr-token-edit - Deprecated cancelable alias of `lr-token-edit-request`, kept firing right
+ *   after it with an equal `detail: { value, previousValue, index }`; either event may veto, and a
+ *   veto through this alias logs a one-time development warning. Removal not before 23.0.0.
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -817,7 +843,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         values: Object.freeze([...added]),
       });
     const request = this.emit('lr-token-add-request', addDetail(), { cancelable: true });
-    if (request.defaultPrevented) return;
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-add', addDetail(), { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-add', 'lr-token-add-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.updateValue(next);
     this.draft = '';
   }
@@ -885,7 +917,12 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       { value: removed, index },
       { cancelable: true }
     );
-    if (request.defaultPrevented) return;
+    // Deprecated alias, dispatched unconditionally with its own equal detail (see `addDraft()`).
+    const deprecatedAlias = this.emit('lr-remove', { value: removed, index }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-remove', 'lr-token-remove-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     // Removing a token reindexes every later one, so an editor left open over the old indices would
     // commit against the wrong token.
     if (this.editingIndex >= 0) {
@@ -968,7 +1005,16 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       { value: next, previousValue, index },
       { cancelable: true }
     );
-    if (request.defaultPrevented) return;
+    // Deprecated alias, dispatched unconditionally with its own equal detail (see `addDraft()`).
+    const deprecatedAlias = this.emit(
+      'lr-token-edit',
+      { value: next, previousValue, index },
+      { cancelable: true }
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-token-edit', 'lr-token-edit-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     if (restoreFocus) this.focusTokenPending = index;
     this.editingIndex = -1;
     this.editDraft = '';

@@ -73,8 +73,8 @@ const lookInterchange = dtcg.$extensions['com.aceshooting.lyra.looks'];
 assert.equal(lookInterchange.schemaVersion, 1);
 assert.equal(lookInterchange.base, 'lyra');
 assert.deepEqual(lookInterchange.definitions.lyra, { id: 'lyra', tokens: {} });
-assert.deepEqual(Object.keys(lookInterchange.definitions), ['lyra', 'data', 'high-contrast', 'material', 'shadcn', 'terminal']);
-for (const id of Object.keys(lookInterchange.definitions).filter(id => id !== 'lyra')) {
+assert.deepEqual(Object.keys(lookInterchange.definitions), ['lyra', 'material', 'shadcn']);
+for (const id of ['material', 'shadcn']) {
   const authored = JSON.parse(readFileSync(path.join(packageDir, 'tokens', 'looks', `${id}.json`), 'utf8'));
   assert.deepEqual(lookInterchange.definitions[id], { id, tokens: authored.tokens });
 }

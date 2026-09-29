@@ -30,11 +30,11 @@ describe('lr-message-actions: composed lr-icon-buttons', () => {
     expect(part(el, 'edit-button').getAttribute('exportparts')).to.contain(
       'button:edit-button-control'
     );
-    // The retired double-underscore spellings are no longer forwarded.
-    expect(part(el, 'regenerate-button').getAttribute('exportparts')).to.not.contain(
+    // The deprecated double-underscore spellings stay forwarded from the same native button.
+    expect(part(el, 'regenerate-button').getAttribute('exportparts')).to.contain(
       'button:regenerate-button__control'
     );
-    expect(part(el, 'edit-button').getAttribute('exportparts')).to.not.contain(
+    expect(part(el, 'edit-button').getAttribute('exportparts')).to.contain(
       'button:edit-button__control'
     );
   });

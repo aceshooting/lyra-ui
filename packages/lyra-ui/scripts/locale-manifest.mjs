@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
 import { readTranslationCatalogInventory } from './check-translations.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
-import { readTranslationReviews } from './translation-review-source.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -32,13 +31,14 @@ function packageSpecifier(relativeModulePath) {
   return `@aceshooting/lyra-ui/${relativeModulePath.replace(/^\.\//u, '')}`;
 }
 
-export function countCoverage({ locale, ownKeys, sourceKeys, parent, parentKeys }) {
-  if (parent !== null && !Array.isArray(parentKeys))
-    throw new Error(`${locale}: explicit parent coverage requires resolved parent keys`);
+export function countCoverage({ locale, ownKeys, sourceKeys, parent }) {
+  if (parent !== null) {
+    throw new Error(`${locale} declares parent ${JSON.stringify(parent)}, but no shipped delta catalog may be advertised yet`);
+  }
   const sourceSet = new Set(sourceKeys);
   const ownSet = new Set(ownKeys);
   const translatedOwnKeyCount = [...ownSet].filter((key) => sourceSet.has(key)).length;
-  const inheritedKeyCount = [...new Set(parentKeys ?? [])].filter((key) => sourceSet.has(key) && !ownSet.has(key)).length;
+  const inheritedKeyCount = 0;
   const missingKeyCount = sourceSet.size - translatedOwnKeyCount - inheritedKeyCount;
   if (missingKeyCount < 0) throw new Error(`${locale} contains more distinct keys than the English source`);
   return { translatedOwnKeyCount, inheritedKeyCount, missingKeyCount };
@@ -55,9 +55,9 @@ export function canonicalCatalogIdentities(sourceLocales) {
   return byCanonicalLocale;
 }
 
-function translationEntries({ review, module, ownKeys, parentKeys, sourceKeys, pluralPin }) {
+function translationEntries({ review, module, ownKeys, sourceKeys, pluralPin }) {
   const locale = canonicalLocale(review.locale);
-  const coverage = countCoverage({ locale, ownKeys, sourceKeys, parent: module.parent, parentKeys });
+  const coverage = countCoverage({ locale, ownKeys, sourceKeys, parent: null });
   if (review.direction !== 'ltr' && review.direction !== 'rtl') {
     throw new Error(`${locale} review metadata has an invalid direction`);
   }
@@ -76,7 +76,7 @@ function translationEntries({ review, module, ownKeys, parentKeys, sourceKeys, p
     kind: 'translated',
     direction: review.direction,
     script: localeScript(locale),
-    parent: module.parent,
+    parent: null,
     aggregateImport: packageSpecifier(`translations/${module.aggregatePath.replace(/^\.\//u, '')}`),
     familyImports: families,
     sourceKeyCount: sourceKeys.length,
@@ -140,10 +140,11 @@ function validateRuntimePin(pin, runtime) {
 
 /** Analyze checked-in source once for both the discovery manifest and optional literal loader map. */
 export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, runtime = process.versions } = {}) {
+  const reviewsPath = path.join(packageDir, 'scripts/fixtures/translation-reviews.json');
   const pluralPinPath = path.join(packageDir, 'scripts/fixtures/cldr-plural-categories.json');
   const upstreamPath = path.join(packageDir, 'scripts/fixtures/upstream-tags.json');
   const [reviews, pluralPin, upstream, inventory] = await Promise.all([
-    readTranslationReviews({ packageDir }),
+    readFile(reviewsPath, 'utf8').then(JSON.parse),
     readFile(pluralPinPath, 'utf8').then(JSON.parse),
     readFile(upstreamPath, 'utf8').then(JSON.parse),
     readTranslationCatalogInventory({ packageDir }),
@@ -183,8 +184,7 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
     return translationEntries({
       review,
       module,
-      ownKeys: inventory.authoredCatalogs.get(locale).map(([key]) => key),
-      parentKeys: module.parent ? inventory.catalogs.get(module.parent).map(([key]) => key) : undefined,
+      ownKeys: inventory.catalogs.get(locale).map(([key]) => key),
       sourceKeys,
       pluralPin,
     });

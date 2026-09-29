@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import {
   ensureShikiLanguageLoaded,
@@ -20,11 +21,11 @@ import type {
   LyraHighlight,
 } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copied, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
 /**
@@ -107,6 +108,8 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  * @csspart copy-button-icon - The copy control while `copyAppearance` is `'icon'`.
  * @csspart copy-button-control - The copy control's own native `<button>`, forwarded because the
  *   painted surface sits one shadow boundary deeper than `copy-button`.
+ * @csspart copy-button__control - Deprecated alias of `copy-button-control`, on the same node;
+ *   removal not before 23.0.0.
  * @csspart header-actions - The wrapper around the `header-actions` slot, at the trailing end of
  *   the header row.
  * @slot header-actions - Extra controls for the header row, rendered after the copy control. Their
@@ -179,6 +182,9 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   protected static override readonly ownedCollectionProperties = Object.freeze(['languages']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+  };
 
   /** The raw source text. Removing the attribute renders an empty code block. */
   @property() override code = '';
@@ -207,6 +213,20 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   /** Hides the copy-to-clipboard button in the header. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true })
   override withoutCopyButton = false;
+
+  /**
+   * Deprecated inverted alias of `without-copy-button` (`withoutCopyButton`): `copyable="false"`
+   * equals `without-copy-button`, and removing it restores the default. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-copy-button`; removal not before 23.0.0.
+   */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  copyable = true;
 
   /** How the header's copy control presents itself. `'text'` (the default) is the labelled button
    *  this component has always rendered -- unset, nothing about the header changes. `'icon'` swaps
@@ -430,6 +450,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
       this.highlightedHtml = loaded ? this.tokenize(hl, lang) : null;
     });
   }
+
 
 }
 

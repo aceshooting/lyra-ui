@@ -74,9 +74,6 @@ pnpm --filter @aceshooting/lyra-ui default-string-slices
 step "per-family translation slices"
 pnpm --filter @aceshooting/lyra-ui translation-slices
 
-step "translation review aggregate from authored sources"
-pnpm --filter @aceshooting/lyra-ui translation-review-fixture
-
 step "locale metadata and optional loader map"
 pnpm --filter @aceshooting/lyra-ui locale-manifest
 
@@ -94,9 +91,6 @@ pnpm manifest
 
 step "final component inventory after the annotated manifest"
 pnpm --filter @aceshooting/lyra-ui component-inventory
-
-step "visual manifest from authored family sources"
-pnpm --filter @aceshooting/lyra-ui visual-manifest
 
 step "registration entries, root allowlist, tag aliases, and sideEffects"
 pnpm registrations
@@ -206,8 +200,6 @@ CHANGED_PATHS=(
   packages/lyra-ui/scripts/fixtures/token-editor.generated.json
   packages/lyra-ui/scripts/fixtures/component-inventory.json
   packages/lyra-ui/scripts/fixtures/component-metadata.json
-  packages/lyra-ui/scripts/fixtures/component-metadata/
-  packages/lyra-ui/scripts/fixtures/translation-reviews.json
   packages/lyra-ui/scripts/fixtures/component-qualification.json
   packages/lyra-ui/scripts/fixtures/component-integration.json
   docs/component-quality.md

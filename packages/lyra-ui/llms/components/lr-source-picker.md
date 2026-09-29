@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated property** `searchable` / `searchable` since `21.1.0`; use property `without-search`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showSelectAll` / `show-select-all` since `21.1.0`; use property `without-select-all`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,8 +43,12 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `withoutSelectAll: boolean = false` (attribute `without-select-all`) — omits the header control
-  that otherwise selects or clears every visible leaf source.
+  that otherwise selects or clears every visible leaf source. Deprecated alias: `show-select-all`/`showSelectAll`
+  (use `without-select-all`; `show-select-all="false"` equals `without-select-all`; removed in
+  23.0.0)
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
+  Deprecated alias: `searchable` (use `without-search`; `searchable="false"` equals
+  `without-search`; removed in 23.0.0)
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
   while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while

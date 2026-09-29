@@ -3,6 +3,7 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './flow-node.js';
 import type { LyraFlowNode } from './flow-node.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
   ((query: string) =>
@@ -571,6 +572,7 @@ describe('compact density (size) and the card part', () => {
 
     expect(implicit.size).to.be.undefined;
     expect(implicit.hasAttribute('size')).to.be.false;
+    expect(implicit.compact).to.be.false;
     expect(implicit.hasAttribute('compact')).to.be.false;
     expect(cardChrome(explicit)).to.deep.equal(cardChrome(implicit));
 
@@ -583,7 +585,7 @@ describe('compact density (size) and the card part', () => {
     expect(chrome.boxShadow).to.not.equal('none');
   });
 
-  it('reflects small size and tightens the card padding, keeping the card border/background/shadow', async () => {
+  it('reflects size="s" and tightens the card padding, keeping the card border/background/shadow', async () => {
     const el = (await fixture(html`<lr-flow-node size="s" heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
     expect(el.getAttribute('size')).to.equal('s');
     const chrome = cardChrome(el);
@@ -610,7 +612,7 @@ describe('compact density (size) and the card part', () => {
     expect(compactGap).to.equal('2px'); // --lr-space-2xs fallback
   });
 
-  it('retunes the small size header gap through --lr-flow-node-compact-header-gap', async () => {
+  it('retunes the compact header gap through --lr-flow-node-compact-header-gap', async () => {
     const el = (await fixture(
       html`<lr-flow-node size="s" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
     )) as LyraFlowNode;
@@ -620,7 +622,7 @@ describe('compact density (size) and the card part', () => {
     expect(getComputedStyle(header).columnGap).to.equal('6px');
   });
 
-  it('lets a consumer retune the small size values through --lr-flow-node-compact-*', async () => {
+  it('lets a consumer retune the compact values through --lr-flow-node-compact-*', async () => {
     const el = (await fixture(html`<lr-flow-node size="s" heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-compact-padding', '3px');
     el.style.setProperty('--lr-flow-node-compact-gap', '5px');
@@ -692,7 +694,7 @@ describe('compact density (size) and the card part', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="card"]')).to.have.lengthOf(1);
     await expect(el).to.be.accessible();
   });
-  it('treats the smaller size steps and the small alias as the small size density, and m and above as the full one', async () => {
+  it('treats the smaller size steps and the small alias as the compact density, and m and above as the full one', async () => {
     const padding = async (size: string): Promise<string> => {
       const el = (await fixture(html`<lr-flow-node size=${size} heading="Fetch"></lr-flow-node>`)) as LyraFlowNode;
       return getComputedStyle(cardOf(el)).paddingTop;
@@ -709,6 +711,91 @@ describe('compact density (size) and the card part', () => {
   });
 });
 
+describe('deprecated compact attribute', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-flow-node', kind: 'property', name: 'compact' }];
+  const chromeOf = (el: LyraFlowNode): string[] => {
+    const card = getComputedStyle(el.shadowRoot!.querySelector('[part="card"]') as HTMLElement);
+    const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
+    return [card.paddingTop, card.paddingLeft, card.rowGap, header.columnGap];
+  };
+
+  it('renders exactly like size="s", keeps reflecting, and warns once, naming size', async () => {
+    const canonical = (await fixture(
+      html`<lr-flow-node size="s" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+    )) as LyraFlowNode;
+    let aliased!: LyraFlowNode;
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      aliased = await fixture<LyraFlowNode>(
+        html`<lr-flow-node compact heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+      );
+      const second = await fixture<LyraFlowNode>(html`<lr-flow-node compact></lr-flow-node>`);
+      await second.updateComplete;
+    });
+    expect(chromeOf(aliased)).to.deep.equal(chromeOf(canonical));
+    expect(chromeOf(aliased)[0]).to.equal('4px');
+    expect(aliased.hasAttribute('compact')).to.be.true;
+    expect(aliased.size).to.equal('s');
+    expect(aliased.getAttribute('size')).to.equal('s');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-flow-node:property:compact']);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('lets the last write win between size and compact', async () => {
+    const canonical = (await fixture(html`<lr-flow-node size="m" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`)) as LyraFlowNode;
+    const large = (await fixture(html`<lr-flow-node size="l" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`)) as LyraFlowNode;
+    let aliasLast!: LyraFlowNode;
+    let el!: LyraFlowNode;
+    await captureDeprecationWarnings(COMPACT, async () => {
+      aliasLast = await fixture<LyraFlowNode>(html`<lr-flow-node size="m" compact heading="Fetch"><span slot="icon">i</span></lr-flow-node>`);
+      el = await fixture<LyraFlowNode>(html`<lr-flow-node size="l" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`);
+      el.compact = true;
+      await el.updateComplete;
+      expect(el.size).to.equal('s');
+      expect(el.getAttribute('size')).to.equal('s');
+      expect(chromeOf(el)[0]).to.equal('4px');
+    });
+    expect(aliasLast.size).to.equal('s');
+    expect(chromeOf(aliasLast)[0]).to.equal('4px');
+
+    el.size = 'm';
+    await el.updateComplete;
+    expect(el.compact).to.be.false;
+    expect(el.hasAttribute('compact')).to.be.false;
+    expect(chromeOf(el)).to.deep.equal(chromeOf(canonical));
+    expect(chromeOf(el)[0]).to.equal('8px');
+    el.size = 'l';
+    await el.updateComplete;
+    expect(chromeOf(el)).to.deep.equal(chromeOf(large));
+  });
+
+  it('syncs compact back from size without warning', async () => {
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraFlowNode>(html`<lr-flow-node heading="Fetch" size="xs"></lr-flow-node>`);
+      expect(el.compact).to.be.true;
+      expect(el.hasAttribute('compact')).to.be.true;
+      el.size = 'l';
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+      el.size = undefined;
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+    });
+    expect(warnings).to.deep.equal([]);
+  });
+
+  it('keeps working as a property until removal', async () => {
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraFlowNode>(html`<lr-flow-node heading="Fetch"></lr-flow-node>`);
+      el.compact = true;
+      await el.updateComplete;
+      expect(chromeOf(el)[0]).to.equal('4px');
+      el.compact = false;
+      await el.updateComplete;
+      expect(chromeOf(el)[0]).to.equal('8px');
+    });
+  });
+});
 
 describe('heading-level', () => {
   const headingOf = (el: LyraFlowNode): HTMLElement =>

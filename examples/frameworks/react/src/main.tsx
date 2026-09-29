@@ -63,7 +63,7 @@ function App() {
       </div>
 
       <lr-table
-        aria-label="People matching the filter"
+        accessibleLabel="People matching the filter"
         rowKey={rowKey}
         columns={columns}
         rows={rows}

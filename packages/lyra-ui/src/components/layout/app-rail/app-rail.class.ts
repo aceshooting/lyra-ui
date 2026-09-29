@@ -12,6 +12,8 @@ import { activateOverlay, collectFocusableElements, composedContains, deepActive
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import type { LyraFrame } from '../../../internal/variants.js';
@@ -37,6 +39,7 @@ import './app-rail-item.class.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The rail's effective presentation -- see the class doc for what each renders. */
 export type LyraAppRailMode = 'full' | 'icon-only' | 'mobile';
@@ -67,6 +70,9 @@ const RAIL_WIDTH_CONVERTER: ComplexAttributeConverter<number | string | undefine
     return Number.isNaN(number) ? value : number;
   },
 };
+
+type WidthInput = number | string | undefined;
+const pixelsOrNaN = (value: WidthInput): number => resolveCssLength(value) ?? Number.NaN;
 
 const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'open',
@@ -288,10 +294,14 @@ export interface LyraAppRailEventMap {
  *   clipping, accepting that wide header/footer content can then scroll/bleed both ways instead.
  * @cssprop [--lr-app-rail-bg=var(--lr-color-surface)] - `[part="base"]`'s background (the docked,
  *   non-overlay presentation); the unset fallback is transparent under frame="plain".
+ * @cssprop [--lr-app-rail-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-app-rail-bg`; removal not before 23.0.0.
  * @cssprop [--lr-app-rail-panel-bg=var(--lr-color-surface-overlay)] - `[part="panel"]`'s
  *   background (the mobile overlay presentation) -- kept separate from
  *   `--lr-app-rail-bg`/`--lr-app-rail-overlay-color` (the backdrop scrim) since the panel is
  *   deliberately themed as a modal surface, not the docked rail chrome.
+ * @cssprop [--lr-app-rail-panel-background=var(--lr-color-surface-overlay)] - Deprecated alias of
+ *   `--lr-app-rail-panel-bg`; removal not before 23.0.0.
  * @cssprop [--lr-app-rail-panel-shadow=var(--lr-shadow-l)] - `[part="panel"]`'s elevation while the
  *   mobile overlay is open. Read only in the open state: the closed, off-canvas panel never casts a
  *   shadow, whatever this is set to. Set `none` to remove the open elevation.
@@ -388,6 +398,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideToggle: 'withoutToggle',
+    // The pixel aliases read a CSS length canonical value resolved to pixels (`em` against the
+    // document root); writing them writes the number through unchanged.
+    railWidthPx: ['railWidth', undefined, (value) => resolveCssLength(value as WidthInput)],
+    minRailWidthPx: ['minRailWidth', undefined, (value) => pixelsOrNaN(value as WidthInput)],
+    maxRailWidthPx: ['maxRailWidth', undefined, (value) => pixelsOrNaN(value as WidthInput)],
+  };
 
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
@@ -504,6 +522,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  would leave the open panel with no in-panel way to close it at all -- only Escape/backdrop. */
   @property({ type: Boolean, reflect: true, attribute: 'without-toggle' }) withoutToggle = false;
 
+  /** @deprecated Use `without-toggle`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
+
   /** Opts in the desktop collapse control: a `[part="collapse-toggle"]` button rendered inside
    *  `[part="header"]` that flips the rail between its `'full'` and `'icon-only'` presentations,
    *  the same flip `toggleCollapse()` performs. It writes `preferredMode`, so the collapse survives
@@ -619,6 +640,27 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   @property({ attribute: 'rail-width', converter: RAIL_WIDTH_CONVERTER, noAccessor: true })
   railWidth?: number | string;
 
+  /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
+   *  `--lr-app-rail-width` CSS token's own resolved width.
+   *  @deprecated Use `rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with railWidth, which effectiveRailWidthPx
+  // finiteRange()-normalizes.
+  @property({ type: Number, attribute: 'rail-width-px', noAccessor: true })
+  railWidthPx?: number;
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    // `railWidthPx` starts `undefined`, so the shared alias sync cannot tell a first authored
+    // attribute from the field's own initialization; warn for the attribute here instead.
+    if (name === 'rail-width-px' && value !== null && !this.hasUpdated) {
+      warnDeprecatedUsage(this, 'property', 'railWidthPx', 'rail-width');
+    }
+  }
+
   static {
     definePersistedProperty(this.prototype, 'open', {
       initial: false,
@@ -629,6 +671,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     definePersistedProperty(this.prototype, 'preferredMode', {
       initial: undefined,
       attribute: 'preferred-mode',
+    });
+    definePersistedProperty(this.prototype, 'railWidthPx', {
+      initial: undefined,
+      attribute: 'rail-width-px',
+      type: Number,
     });
     definePersistedProperty(this.prototype, 'railWidth', {
       initial: undefined,
@@ -648,6 +695,18 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  @default 440 */
   @property({ attribute: 'max-rail-width', converter: RAIL_WIDTH_CONVERTER, useDefault: true })
   maxRailWidth: number | string = 440;
+
+  /** Minimum `railWidthPx` a drag/keyboard resize can reach.
+   *  @deprecated Use `min-rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with minRailWidth, which safeMinRailWidthPx
+  // finiteRange()-normalizes.
+  @property({ type: Number, attribute: 'min-rail-width-px', useDefault: true }) minRailWidthPx = 190;
+
+  /** Maximum `railWidthPx` a drag/keyboard resize can reach.
+   *  @deprecated Use `max-rail-width`, which also accepts CSS lengths; removal not before 23.0.0. */
+  // numeric-guard-exempt: deprecated alias kept in step with maxRailWidth, which safeMaxRailWidthPx
+  // finiteRange()-normalizes.
+  @property({ type: Number, attribute: 'max-rail-width-px', useDefault: true }) maxRailWidthPx = 440;
 
   /** A width input in pixels: a number as given, a CSS length resolved live against this element,
    *  `undefined` for anything unset or unresolvable. */
@@ -1594,6 +1653,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.triggerAria = undefined;
   }
 
+
   // See the default-slot @slot doc -- any click inside the nav items while
   // the overlay is open closes it, without trying to distinguish a real
   // navigation trigger from incidental slotted content.
@@ -1794,6 +1854,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

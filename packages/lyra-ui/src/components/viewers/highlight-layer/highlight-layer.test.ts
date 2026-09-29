@@ -1,12 +1,9 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './highlight-layer.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-highlight-layer', 'interactive');
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 const ITEMS: HighlightLayerItem[] = [
   { id: 'a', rects: [{ x: 10, y: 10, width: 20, height: 5 }], label: 'Zone A', tone: 'accent' },
@@ -146,9 +143,8 @@ describe('lr-highlight-layer', () => {
       expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
     });
 
-    it('ignores the retired -background spellings while canonical paint remains available', async () => {
-      expect(await paints(declarations('background', 50))).to.deep.equal(await paints(''));
-      expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
+    it('still honors the deprecated -background spellings with the same result', async () => {
+      expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
     });
 
     it('lets the canonical -bg property win when both spellings are set', async () => {
@@ -521,7 +517,8 @@ describe('lr-highlight-layer', () => {
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });
 
-  describe('retired interactive alias', () => {
+  describe('deprecated interactive alias', () => {
+    const usage = { tag: 'lr-highlight-layer', kind: 'property', name: 'interactive' } as const;
     const shape = (el: LyraHighlightLayer) => {
       const base = el.shadowRoot!.querySelector('[part="base"]')!;
       return {
@@ -532,21 +529,70 @@ describe('lr-highlight-layer', () => {
       };
     };
 
-    it('ignores the retired attribute and property while canonical without-interaction still disables actions', async () => {
-      const legacy = await fixture<LyraHighlightLayer>(
-        html`<lr-highlight-layer interactive="false" .items=${ITEMS}></lr-highlight-layer>`,
-      );
-      Reflect.set(legacy, 'interactive', false);
-      await legacy.updateComplete;
-      expect(legacy.withoutInteraction).to.be.false;
-      expect(shape(legacy).targets).to.be.greaterThan(0);
-      expect(shape(legacy).role).to.equal('group');
-
+    it('interactive="false" (plain HTML attribute) equals without-interaction and warns once', async () => {
       const canonical = await fixture<LyraHighlightLayer>(
         html`<lr-highlight-layer without-interaction .items=${ITEMS}></lr-highlight-layer>`,
       );
-      expect(canonical.withoutInteraction).to.be.true;
+      let alias!: LyraHighlightLayer;
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        alias = await fixture<LyraHighlightLayer>(
+          html`<lr-highlight-layer interactive="false" .items=${ITEMS}></lr-highlight-layer>`,
+        );
+        alias.interactive = false;
+        await alias.updateComplete;
+      });
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        'lyra-deprecated:lr-highlight-layer:property:interactive',
+      ]);
+      expect(alias.interactive).to.be.false;
+      expect(alias.withoutInteraction).to.be.true;
+      expect(alias.hasAttribute('without-interaction')).to.be.true;
+      expect(shape(alias)).to.deep.equal(shape(canonical));
       expect(shape(canonical)).to.deep.equal({ targets: 0, role: null, label: null, hidden: 'true' });
+    });
+
+    it('a property write back to true restores the interactive rects', async () => {
+      let el!: LyraHighlightLayer;
+      await captureDeprecationWarnings([usage], async () => {
+        el = await fixture<LyraHighlightLayer>(
+          html`<lr-highlight-layer .items=${ITEMS} .interactive=${false}></lr-highlight-layer>`,
+        );
+        el.interactive = true;
+        await el.updateComplete;
+      });
+      expect(el.withoutInteraction).to.be.false;
+      expect(el.hasAttribute('without-interaction')).to.be.false;
+      expect(shape(el).targets).to.be.greaterThan(0);
+      expect(shape(el).role).to.equal('group');
+    });
+
+    it('never warns for the default or the canonical name, syncs back, and follows the last write', async () => {
+      const warnings = await captureDeprecationWarnings([usage], async () => {
+        const plain = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+        expect(plain.interactive).to.be.true;
+        await fixture<LyraHighlightLayer>(html`<lr-highlight-layer without-interaction></lr-highlight-layer>`);
+      });
+      expect(warnings).to.have.length(0);
+
+      const synced = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+      synced.withoutInteraction = true;
+      await synced.updateComplete;
+      expect(synced.interactive).to.be.false;
+      expect(synced.getAttribute('interactive'), 'the alias keeps reflecting').to.equal('false');
+
+      let aliasLast!: LyraHighlightLayer;
+      let canonicalLast!: LyraHighlightLayer;
+      await captureDeprecationWarnings([usage], async () => {
+        aliasLast = await fixture<LyraHighlightLayer>(
+          html`<lr-highlight-layer without-interaction interactive="true" .items=${ITEMS}></lr-highlight-layer>`,
+        );
+        canonicalLast = await fixture<LyraHighlightLayer>(
+          html`<lr-highlight-layer interactive without-interaction .items=${ITEMS}></lr-highlight-layer>`,
+        );
+      });
+      expect(aliasLast.withoutInteraction).to.be.false;
+      expect(canonicalLast.withoutInteraction).to.be.true;
+      expect(shape(canonicalLast).targets).to.equal(0);
     });
   });
 

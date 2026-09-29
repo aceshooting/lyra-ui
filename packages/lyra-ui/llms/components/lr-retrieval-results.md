@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated property** `dedupe` / `dedupe` since `21.1.0`; use property `without-dedupe`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `selectable` / `selectable` since `21.1.0`; use property `without-selection`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,10 +39,12 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
   its own copy on toggle _then_ emits `lr-select`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
-  `lr-checkbox`.
+  `lr-checkbox`. Deprecated alias: `selectable` (use `without-selection`; `selectable="false"`
+  equals `without-selection`; removed in 23.0.0)
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
   compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
-  first-wins so identity never becomes ambiguous.
+  first-wins so identity never becomes ambiguous. Deprecated alias: `dedupe` (use `without-dedupe`;
+  `dedupe="false"` equals `without-dedupe`; removed in 23.0.0)
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has

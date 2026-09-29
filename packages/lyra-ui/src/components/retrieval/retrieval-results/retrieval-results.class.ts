@@ -4,6 +4,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   firstByRetrievalIdentity,
   canonicalIdentityList,
@@ -22,6 +23,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
@@ -208,6 +210,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    selectable: ['withoutSelection', invertAlias, invertAlias],
+    dedupe: ['withoutDedupe', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
     'lr-chunk-open',
@@ -224,10 +230,26 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   /** Omits the per-row `<lr-checkbox>`. */
   @property({ type: Boolean, attribute: 'without-selection', reflect: true })
   withoutSelection = false;
+  /** Shows a per-row `<lr-checkbox>`.
+   *  @deprecated Use `without-selection`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  selectable = true;
 
   /** Retained for compatibility. Identity is always nonblank and first-wins even when set. */
   @property({ type: Boolean, attribute: 'without-dedupe', reflect: true })
   withoutDedupe = false;
+  /** Retained for compatibility. Identity is always nonblank and first-wins even when false.
+   *  @deprecated Use `without-dedupe`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  dedupe = true;
 
   /** `'score'` (default) sorts the canonical list descending by `score`; `'none'` preserves
    *  `chunks`' own given order. */

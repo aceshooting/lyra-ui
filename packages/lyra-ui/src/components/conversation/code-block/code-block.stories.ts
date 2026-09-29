@@ -423,15 +423,3 @@ export const RightToLeft: Story = {
     </div>
   `,
 };
-
-export const CopyControl: Story = {
-  parameters: {
-    docs: { description: { story: 'The copy action is available by default. without-copy-button hides it, and copy-button-control exposes its native control for styling.' } },
-  },
-  render: () => html`
-    <div style="display:grid;gap:var(--lr-space-m)">
-      <lr-code-block filename="editable.txt" code="Copy this example"></lr-code-block>
-      <lr-code-block filename="read-only.txt" code="Display this example" without-copy-button></lr-code-block>
-    </div>
-  `,
-};

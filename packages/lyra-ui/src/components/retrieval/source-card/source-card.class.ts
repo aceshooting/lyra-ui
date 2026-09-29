@@ -1,8 +1,10 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
+import { StripHostTitleAttribute } from '../../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -25,6 +27,12 @@ export interface LyraSourceCardEventMap {
 }
 
 class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /**
  * `<lr-source-card>` — one citation/source entry, meant to be a direct
@@ -103,7 +111,9 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * @status stable
  * @since 4.0.0
  */
-export class LyraSourceCard extends LyraSourceCardBase {
+export class LyraSourceCard extends StripHostTitleAttribute(
+  LyraSourceCardBase
+) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -116,6 +126,10 @@ export class LyraSourceCard extends LyraSourceCardBase {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    title: 'heading',
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */
   @property({ attribute: 'source-id' }) sourceId = '';
@@ -123,6 +137,14 @@ export class LyraSourceCard extends LyraSourceCardBase {
   /** The source's display title, e.g. a filename, rendered as the `title` button's own text. */
   @property() heading = '';
 
+  /** The source's display title, e.g. a filename. Rendered only as the
+   *  title button's own text -- a bare host-level `title` attribute (the
+   *  browser's global tooltip attribute) is actively stripped once Lit has
+   *  synced it into this property, so the card never grows an unsolicited
+   *  native tooltip repeating the same text. See `StripHostTitleAttribute`
+   *  (`internal/strip-host-title.ts`).
+   *  @deprecated Use `heading`; removal not before 23.0.0. */
+  @property() override title = '';
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
    *  parsed/validated as a number), so a non-numeric page label works too. */
@@ -138,6 +160,12 @@ export class LyraSourceCard extends LyraSourceCardBase {
    * use `frame="plain"` to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Tighter root padding and row gap, for the dense citation lists these cards usually render in
+   *  -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e. the full card
+   *  padding. Purely a density knob: the border and background stay, so use `frame="plain"`
+   *  to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Turns off this card's OWN controls: the `title` button and the "Show more"/"Show less"
    *  `toggle` both render `disabled`, so neither one can emit `lr-open` or `lr-expand` and neither

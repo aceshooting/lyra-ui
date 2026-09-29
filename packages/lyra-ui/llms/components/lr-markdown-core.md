@@ -8,6 +8,9 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
+- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning.
+- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,12 +52,16 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 `Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`), `linkTarget: string | null = '_blank'` (attribute
+'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`;
+deprecated alias: `gfm`, use `without-gfm`, removed in 23.0.0), `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
-`codeBlockHeader: boolean = false` (attribute `code-block-header`),
-`withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`),
+`codeBlockHeader: boolean = false` (attribute `code-block-header`) with its deprecated
+compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
+before 23.0.0),
+`withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`; deprecated
+alias: `highlight-code`/`highlightCode`, use `without-syntax-highlighting`, removed in 23.0.0),
 `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
@@ -143,7 +150,8 @@ const view = html`<lr-markdown-core
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the code-block header. Successful and
+(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
+`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.
 

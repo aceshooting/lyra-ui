@@ -106,9 +106,15 @@ for the native download action's hover and pressed backgrounds.
 
 **Renderer registry exports:**
 
-- `LyraDocumentFile` — readonly file data `{ name, mimeType, src, anchor?, highlights?, alt? }`
-  passed to renderer matching and wrapped by discriminated payloads. Adapter and legacy-render
-  boundaries snapshot it; highlights use the shared trimmed, nonempty, first-wins identity projection.
+- `DocumentFile` (deprecated, removal not before 23.0.0; use the structurally identical
+  `LyraDocumentFile`) — the compatible mutable lookup input passed to `matches(file)` callbacks:
+  `{ name, mimeType, src, anchor?, highlights?, alt? }`. Adapter and legacy-render boundaries
+  receive an immutable file snapshot whose highlights use the shared trimmed, nonempty,
+  first-wins identity projection. Exported signatures, listed below, keep this name until its
+  removal; the two names are assignable to each other, so annotate your own code with
+  `LyraDocumentFile`.
+- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload, and the
+  supported name for the file type.
 - `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
   immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
   cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
@@ -118,7 +124,8 @@ for the native download action's hover and pressed backgrounds.
 - `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
   authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
   file to one payload kind, derive capabilities from that retained payload, and render it.
-- `LyraDocumentRendererDefinition` — a validated direct
+- `LyraDocumentRendererDefinition` (the deprecated `DocumentRendererDefinition` names the same
+  union until its removal, no earlier than 23.0.0) — a validated direct
   `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
   `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
   required. Static capabilities are rejected on adapted definitions so their adapter remains the
@@ -127,7 +134,7 @@ for the native download action's hover and pressed backgrounds.
 - `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
   registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
   is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
-- `DocumentRendererRegistry` — `ReadonlyMap<string, LyraDocumentRendererDefinition>`.
+- `DocumentRendererRegistry` — `ReadonlyMap<string, DocumentRendererDefinition>`.
 - `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
   while producing the validated adapter accepted by a registry definition.
 - `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an

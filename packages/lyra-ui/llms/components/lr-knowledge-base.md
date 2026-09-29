@@ -8,6 +8,8 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecated property** `hideCreate` / `hide-create` since `21.1.0`; use property `without-create`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `hideSummary` / `hide-summary` since `21.1.0`; use property `without-summary`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,9 +40,11 @@ errorMessage?: string }` (all four types exported here), where
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
 - `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
-  total/synced/syncing/needs-attention row.
+  total/synced/syncing/needs-attention row. Deprecated alias: `hide-summary`/`hideSummary` (use `without-summary`;
+  removed in 23.0.0)
 - `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
-  affordance, e.g. for a read-only or permission-gated view.
+  affordance, e.g. for a read-only or permission-gated view. Deprecated alias: `hide-create`/`hideCreate` (use
+  `without-create`; removed in 23.0.0)
 - `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
   `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
   while it's set; `error` beats the empty state, matching `lr-table`'s own precedence

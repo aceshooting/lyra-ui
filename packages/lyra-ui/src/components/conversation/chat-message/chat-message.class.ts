@@ -1,6 +1,7 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -14,6 +15,7 @@ import { styles } from './chat-message.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
 export type ChatMessageStatus = 'sending' | 'sent' | 'failed' | 'streaming';
@@ -235,6 +237,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    attachmentsPosition: 'attachmentsPlacement',
+    actionsPosition: 'actionsPlacement',
+  };
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
   // it's declared via `static properties` + `noAccessor` rather than
@@ -278,9 +284,26 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   @property({ attribute: 'attachments-placement' })
   attachmentsPlacement: ChatMessageAttachmentsPlacement = 'after';
 
+  /**
+   * Deprecated alias of `attachments-placement` (`attachmentsPlacement`), with identical values and
+   * behavior. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `attachments-placement`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'attachments-position' }) attachmentsPosition: 'before' | 'after' = 'after';
+
   /** Where the actions row renders relative to the bubble. */
   @property({ reflect: true, attribute: 'actions-placement' })
   actionsPlacement: ChatMessageActionsPlacement = 'inside';
+
+  /**
+   * Deprecated alias of `actions-placement` (`actionsPlacement`), with identical values and
+   * behavior. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `actions-placement`; removal not before 23.0.0.
+   */
+  @property({ reflect: true, attribute: 'actions-position' })
+  actionsPosition: ChatMessageActionsPosition = 'inside';
 
   @state() private hasAvatarSlot = false;
   @state() private hasBadgesSlot = false;
@@ -566,6 +589,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

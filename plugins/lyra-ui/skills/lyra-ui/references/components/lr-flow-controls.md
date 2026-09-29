@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecations** none
+- **Deprecated property** `hideLock` / `hide-lock` since `21.1.0`; use property `without-lock`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -27,7 +27,7 @@ otherwise available direction.
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `orientation: 'vertical' | 'horizontal' = 'vertical'` (reflected) — button-cluster layout axis
 - `withoutLock: boolean = false` (attribute `without-lock`) — omits the lock/unlock toggle button.
-
+  Deprecated alias: `hide-lock`/`hideLock` (use `without-lock`; removed in 23.0.0)
 - `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
   floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws

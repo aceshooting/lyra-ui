@@ -13,6 +13,7 @@ import {
 } from '../../../internal/aria-ownership.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -48,6 +49,9 @@ interface CustomToggleOwnership {
 export interface LyraPageEventMap {
   /** Cancelable proposed `navOpen` state; `preventDefault()` leaves `navOpen` unchanged. */
   'lr-nav-toggle-request': CustomEvent<{ open: boolean }>;
+  /** @deprecated Use `lr-nav-toggle-request`; removal not before 23.0.0. Fired right after it from
+   *  the same proposal, with an equal detail; either event's `preventDefault()` vetoes it. */
+  'lr-nav-toggle': CustomEvent<{ open: boolean }>;
 }
 
 /**
@@ -110,7 +114,11 @@ export interface LyraPageEventMap {
  * @event lr-nav-toggle-request - A cancelable proposed `navOpen` state from `showNavigation()`,
  *   `hideNavigation()`, `toggleNavigation()`, or a built-in dismissal (backdrop click, Escape, the
  *   default navigation-toggle button). Call `preventDefault()` to leave `navOpen` unchanged.
- *   `detail: { open }`.
+ *   `detail: { open }`. Fires before `lr-nav-toggle`, from the same proposal; either event may
+ *   veto.
+ * @event lr-nav-toggle - Deprecated cancelable alias of `lr-nav-toggle-request`, kept firing
+ *   unchanged right after it with an equal `detail: { open }`; either event may veto, and a veto
+ *   through this alias logs a one-time development warning. Removal not before 23.0.0.
  * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
  * @csspart banner - Wrapper for the `banner` slot.
  * @csspart base - Compatibility name for the root Page wrapper; use `page`.
@@ -649,14 +657,20 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.mainElement?.scrollIntoView({ block: 'start' });
   };
 
-  /** Emits the cancelable lr-nav-toggle-request proposal
+  /** Emits the cancelable lr-nav-toggle-request proposal (then its deprecated lr-nav-toggle alias)
    *  before touching navOpen; a defaultPrevented request leaves it unchanged. Shared by every
    *  mutation path -- showNavigation(), hideNavigation(), toggleNavigation(), and the built-in
    *  drawer dismissals that call them. */
   private requestNavOpen(next: boolean): void {
     if (this.navOpen === next) return;
     const request = this.emit('lr-nav-toggle-request', { open: next }, { cancelable: true });
-    if (request.defaultPrevented) return;
+    // Deprecated alias -- dispatched unconditionally with its own equal detail, so a listener bound
+    // only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-nav-toggle', { open: next }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-nav-toggle', 'lr-nav-toggle-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
     this.navOpen = next;
   }
 

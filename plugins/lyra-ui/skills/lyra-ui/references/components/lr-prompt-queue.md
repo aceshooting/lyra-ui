@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -24,7 +24,8 @@ the equivalent action on the nearest surviving row. If the queue becomes empty, 
 receives focus. Removing an unfocused row does not move focus.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
-(reflected) — renders each queued prompt as read-only text instead of an editor;
+(reflected) — renders each queued prompt as read-only text instead of an editor (deprecated alias:
+`editable`, use `readonly`, removed in 23.0.0; inverted, so `editable="false"` equals `readonly`);
 `disabled: boolean = false` (reflected);
 `label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;

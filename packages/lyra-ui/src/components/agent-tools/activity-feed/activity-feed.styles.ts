@@ -12,7 +12,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-activity-feed-radius, var(--lr-radius));
-    background: var(--lr-activity-feed-bg, var(--lr-color-surface));
+    background: var(--lr-activity-feed-bg, var(--lr-activity-feed-background, var(--lr-color-surface)));
     overflow: hidden;
   }
   /* Density escape for transcript rows. Inline var() fallbacks let a containing transcript retune

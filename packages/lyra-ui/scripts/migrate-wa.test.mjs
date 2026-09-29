@@ -21,7 +21,6 @@ import {
   readRenameLedger,
 } from './migrate-wa.mjs';
 import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
-import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 import {
   analyzeMigrationCoverage,
@@ -36,7 +35,6 @@ const contract = buildMigrationContract(inventory);
 const checkedInventory = JSON.parse(
   fs.readFileSync(path.join(scriptDir, 'fixtures', 'component-inventory.json'), 'utf8'),
 );
-const checkedCompatibilityContext = readCurrentCompatibilityContextSync(path.dirname(scriptDir), checkedInventory);
 const checkedUpstreamTags = JSON.parse(
   fs.readFileSync(path.join(scriptDir, 'fixtures', 'upstream-tags.json'), 'utf8'),
 );
@@ -285,7 +283,7 @@ test('free and Pro package identities share the Web Awesome ecosystem without co
 });
 
 test('the packaged runtime projection stays narrow, complete, and fail-closed', () => {
-  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext });
+  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
   const runtimeContract = buildMigrationContract(runtimeInventory);
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
@@ -336,7 +334,7 @@ test('the packaged runtime executes from its adjacent projected contract', () =>
     copyMigrationRuntimeModules(scriptDir, cliDir);
     fs.writeFileSync(
       path.join(cliDir, 'migration-contract.json'),
-      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext }))}\n`,
+      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() }))}\n`,
     );
 
     const source = path.join(sourceDir, 'component.ts');

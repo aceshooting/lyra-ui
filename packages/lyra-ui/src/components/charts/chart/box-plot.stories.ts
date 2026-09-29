@@ -263,17 +263,3 @@ export const DrawWhenVisible: Story = {
     </div>
   `,
 };
-
-export const LegendAndTable: Story = {
-  parameters: {
-    docs: { description: { story: 'Box plots opt into their legend with with-legend. with-data-table reveals the summary and without-zero-baseline lets the axis follow the data range.' } },
-  },
-  render: () => html`
-    <lr-box-plot with-legend with-data-table without-zero-baseline
-      aria-label="Request latency distribution" height="12rem"
-      style="inline-size:24rem;max-inline-size:100%;--lr-chart-tooltip-color:var(--lr-color-brand)"
-      .labels=${['Current']}
-      .datasets=${[{ label: 'Latency', data: [{ min: 10, q1: 12, median: 14, q3: 16, max: 18 }] }]}
-    ></lr-box-plot>
-  `,
-};

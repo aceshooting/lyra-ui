@@ -2,13 +2,13 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './csv-viewer-register.js';
 import { CSV_VIEWER_TAG } from './csv-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
 function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const csv: LyraDocumentFile = { name: 'rows.csv', mimeType: 'text/csv', src: 'https://example.test/rows.csv' };
+const csv: DocumentFile = { name: 'rows.csv', mimeType: 'text/csv', src: 'https://example.test/rows.csv' };
 
 describe('csv-viewer-register laziness', () => {
   it('never fetches the csv-viewer class module merely by importing the register-only entry', () => {

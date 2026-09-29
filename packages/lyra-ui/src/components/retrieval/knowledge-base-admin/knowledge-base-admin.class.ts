@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 export type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
@@ -88,6 +89,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideIngestion: 'withoutIngestion',
+  };
 
   /** Knowledge-base source connectors. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -103,6 +107,10 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   @property() label?: string;
   /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources. */
   @property({ type: Boolean, attribute: 'without-ingestion' }) withoutIngestion =
+    false;
+  /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources.
+   *  @deprecated Use `without-ingestion`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'hide-ingestion' }) hideIngestion =
     false;
 
   private readonly idPrefix = `lr-knowledge-base-admin-${++knowledgeBaseAdminInstance}`;

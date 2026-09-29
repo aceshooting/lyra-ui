@@ -2,7 +2,7 @@ import { html } from 'lit';
 import { tag } from '../../../internal/prefix.js';
 import {
   registerDocumentRenderer,
-  type LyraDocumentFile,
+  type DocumentFile,
   type LazyDocumentRendererDefinition,
 } from '../document-viewer/registry.js';
 
@@ -10,12 +10,12 @@ import {
  *  importing this register-only entry alone never registers the element itself. */
 export const SPREADSHEET_VIEWER_TAG = tag('spreadsheet-viewer');
 
-const matches = (file: LyraDocumentFile): boolean => /\.xlsx?$/i.test(file.name);
+const matches = (file: DocumentFile): boolean => /\.xlsx?$/i.test(file.name);
 const renderer: LazyDocumentRendererDefinition = {
   matches,
   capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
   load: () => import('./spreadsheet-viewer.js').then(() => ({
-    render: (file: LyraDocumentFile) => html`<lr-spreadsheet-viewer
+    render: (file: DocumentFile) => html`<lr-spreadsheet-viewer
       src=${file.src}
       name=${file.name}
       .anchor=${file.anchor ?? null}

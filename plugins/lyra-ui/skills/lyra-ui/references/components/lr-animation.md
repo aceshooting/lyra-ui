@@ -7,7 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecations** none
+- **Deprecated property** `respectReducedMotion` / `respect-reduced-motion` since `21.1.0`; use property `ignore-reduced-motion`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 0 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -46,7 +46,10 @@ start/finish lifecycle, including reduced motion.
   normally even under `prefers-reduced-motion: reduce`. Unset, that preference caps playback at one
   iteration and calls `finish()` immediately instead of playing, so the target snaps to its
   resolved end state; `lr-start`/`lr-finish` still fire in order. Reserve it for genuine
-  user-triggered feedback.
+  user-triggered feedback. Deprecated alias: `respect-reduced-motion` (`respectReducedMotion`; use
+  `ignore-reduced-motion`, which `respect-reduced-motion="false"` equals; removing it restores the
+  default; removed in 23.0.0). The alias still reflects (`respect-reduced-motion="false"`); the two
+  stay in sync and the last write wins.
 - `playOnVisible: boolean = false` (attribute `play-on-visible`, reflected) — starts playback via
   `IntersectionObserver` once the target intersects. `playOnVisibleRepeat: boolean = false`
   (attribute `play-on-visible-repeat`, reflected) — re-plays on each re-entry and pauses on exit;

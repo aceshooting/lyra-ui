@@ -2,7 +2,8 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
   isAbortError,
@@ -232,6 +233,10 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    cache: ['withoutCache', invertAlias, invertAlias],
+  };
+
   /**
    * HTML fragment source. Remote URLs are validated through the shared
    * `safeFetchUrl()` allowlist (`http:`, `https:`, `blob:`, `data:`). Use
@@ -268,6 +273,11 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   /** Opts out of sharing bounded, sanitized remote resources with matching Include requests: no
    *  retained values and no in-flight deduplication. By default they are shared. */
   @property({ type: Boolean, attribute: 'without-cache' }) withoutCache = false;
+  /** Shares bounded, sanitized remote resources with matching Include requests. Set to false to
+   *  opt out of both retained values and in-flight deduplication.
+   *  @deprecated Use `without-cache`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) cache = true;
+
   /** Shared text search and anchor-target API for sanitized light-DOM includes. */
   override async search(query: string): Promise<number> { return super.search(query); }
   override async searchNext(): Promise<boolean> { return super.searchNext(); }

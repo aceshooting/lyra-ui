@@ -7,9 +7,9 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated part** `split-panel` since `21.1.0`; use part `::part(base)`; removal not before `23.0.0` — split-panel is a Lyra-only second token on the same outer wrapper as base. Neither pinned wa-split-panel nor sl-split-panel publishes a wrapper part, so base, the root part name used across the library, remains the single supported spelling. The removal-not-before version is a policy floor, not a plan: should either upstream publish a component-named wrapper part, this alias stays for as long as upstream ships it.
 - **Optional peers** none
-- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,9 +66,11 @@ custom-handle content inside the separator; its assigned subtree is inert, so th
 the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
 behavior mirror together; vertical behavior does not invert.
 
-**CSS parts:** `base` (outer wrapper), `start panel` and `end panel` (each pane exposes its
-individual token plus the shared `panel` token), and `divider` (focusable `role="separator"`,
-with value/min/max and disabled ARIA state).
+**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper; `split-panel` is a
+deprecated alias of `base`, removal not before 23.0.0, so style `::part(base)`), `start panel` and
+`end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`
+(focusable `role="separator"`, with value/min/max and disabled ARIA state). The deprecated part
+still matches until its removal; being a stylesheet selector, it logs no runtime warning.
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
 default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`

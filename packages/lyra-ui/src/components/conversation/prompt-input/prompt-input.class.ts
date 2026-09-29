@@ -15,6 +15,7 @@ import {
   type LyraEmitArgs,
 } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -203,6 +204,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    submitOnEnter: ['withoutEnterSubmit', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-attachments-add',
     'lr-sources-change',
@@ -252,6 +256,19 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** Forwarded to the composed composer: plain Enter inserts a newline instead of submitting. */
   @property({ type: Boolean, attribute: 'without-enter-submit' }) withoutEnterSubmit = false;
 
+  /**
+   * Deprecated inverted alias of `without-enter-submit` (`withoutEnterSubmit`):
+   * `submit-on-enter="false"` equals `without-enter-submit`, and removing it restores the default.
+   * Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-enter-submit`; removal not before 23.0.0.
+   */
+  @property({
+    type: Boolean,
+    attribute: 'submit-on-enter',
+    converter: trueDefaultBooleanConverter,
+  })
+  submitOnEnter = true;
   /** Forwarded to the composed native textarea. `spellcheck="false"` parses as `false`, matching
    * the textarea's true default while remaining usable from plain HTML. */
   @property({ converter: trueDefaultBooleanConverter }) override spellcheck =

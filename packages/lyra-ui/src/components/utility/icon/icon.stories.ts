@@ -121,7 +121,7 @@ export const AlignedColumn: Story = {
     docs: {
       description: {
         story:
-          'The default canvas already gives every icon the same 1.25em box, so a column of icons lines its labels up with no extra attribute. For a wider 1.5em box, set `inline-size` on the host. A glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em.',
+          'The default canvas already gives every icon the same 1.25em box, so a column of icons lines its labels up with no extra attribute. For a wider 1.5em box, set `inline-size` on the host; this replaces the deprecated `fixed-width` attribute. A glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em.',
       },
     },
   },

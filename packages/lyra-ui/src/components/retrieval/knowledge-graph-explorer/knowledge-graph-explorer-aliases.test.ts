@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
@@ -36,7 +35,7 @@ function searchState(el: LyraKnowledgeGraphExplorer): string {
   ]);
 }
 
-describe('lr-knowledge-graph-explorer canonical names after alias retirement', () => {
+describe('lr-knowledge-graph-explorer canonical names and deprecated aliases', () => {
   it('forwards edges and applies query without a deprecation warning', async () => {
     let forwarded: readonly LyraGraphEdge[] = [];
     let state = '';
@@ -55,22 +54,69 @@ describe('lr-knowledge-graph-explorer canonical names after alias retirement', (
     expect(warnings).to.have.length(0);
   });
 
-  it('ignores search-query in either order and keeps canonical edges clone-owned', async () => {
-    for (const markup of [
-      html`<lr-knowledge-graph-explorer query="marie" search-query="pierre" .nodes=${nodes} .edges=${edges}></lr-knowledge-graph-explorer>`,
-      html`<lr-knowledge-graph-explorer search-query="pierre" query="marie" .nodes=${nodes} .edges=${edges}></lr-knowledge-graph-explorer>`,
-    ]) {
-      const el = await fixture<LyraKnowledgeGraphExplorer>(markup);
-      await el.updateComplete;
-      expect(el.query).to.equal('marie');
-      expect(el.edges).to.deep.equal(edges);
-      expect(Object.isFrozen(el.edges)).to.equal(true);
-      expect('links' in el).to.equal(false);
-      expect('searchQuery' in el).to.equal(false);
-    }
+  it('keeps links and search-query working as aliases with identical results, warning once each', async () => {
+    const canonical = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+      query="polonium"
+      .nodes=${nodes}
+      .edges=${edges}
+    ></lr-knowledge-graph-explorer>`);
+    await canonical.updateComplete;
+    const expected = searchState(canonical);
+    const states: string[] = [];
+    const readback: string[] = [];
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+          search-query="polonium"
+          .nodes=${nodes}
+        ></lr-knowledge-graph-explorer>`);
+        el.links = edges;
+        await el.updateComplete;
+        states.push(searchState(el));
+        readback.push(
+          JSON.stringify([el.query, el.searchQuery, el.links, el.edges, graphOf(el).edges])
+        );
+      }
+    });
+    expect(states).to.deep.equal([expected, expected]);
+    expect(readback[0]).to.equal(JSON.stringify(['polonium', 'polonium', edges, edges, edges]));
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      'lyra-deprecated:lr-knowledge-graph-explorer:property:links',
+      'lyra-deprecated:lr-knowledge-graph-explorer:property:searchQuery',
+    ]);
   });
 
-  it('bubbles lr-community-activate without the retired alias from the composed graph', async () => {
+  it('lets the later of query and search-query win in markup', async () => {
+    const queries: string[] = [];
+    await captureDeprecationWarnings(ALIASES, async () => {
+      for (const markup of [
+        html`<lr-knowledge-graph-explorer query="marie" search-query="pierre"></lr-knowledge-graph-explorer>`,
+        html`<lr-knowledge-graph-explorer search-query="pierre" query="marie"></lr-knowledge-graph-explorer>`,
+      ]) {
+        const el = await fixture<LyraKnowledgeGraphExplorer>(markup);
+        await el.updateComplete;
+        queries.push(el.query);
+      }
+    });
+    expect(queries).to.deep.equal(['pierre', 'marie']);
+  });
+
+  it('syncs the canonical query and edges back into the aliases', async () => {
+    let readback = '';
+    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
+      const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+        .nodes=${nodes}
+      ></lr-knowledge-graph-explorer>`);
+      el.query = 'marie';
+      el.edges = edges;
+      await el.updateComplete;
+      readback = JSON.stringify([el.searchQuery, el.links]);
+    });
+    expect(readback).to.equal(JSON.stringify(['marie', edges]));
+    expect(warnings).to.have.length(0);
+  });
+
+  it('bubbles lr-community-activate and then the lr-community-click alias from the composed graph', async () => {
     const seen: string[] = [];
     const warnings = await captureDeprecationWarnings(ALIASES, async () => {
       const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
@@ -96,6 +142,7 @@ describe('lr-knowledge-graph-explorer canonical names after alias retirement', (
     const detail = JSON.stringify({ communityId: 'lab' });
     expect(seen).to.deep.equal([
       `lr-community-activate:${detail}`,
+      `lr-community-click:${detail}`,
     ]);
     expect(warnings).to.have.length(0);
   });
@@ -130,5 +177,3 @@ describe('lr-knowledge-graph-explorer CSS-length width and height', () => {
     ]);
   });
 });
-
-expectStaleAttribute('lr-knowledge-graph-explorer', 'search-query');

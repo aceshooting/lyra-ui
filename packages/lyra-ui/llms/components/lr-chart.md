@@ -7,9 +7,14 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showDataTable` / `show-data-table` since `21.1.0`; use property `with-data-table`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `zoom` / `zoom` since `21.1.0`; use property `zoomable`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,7 +40,7 @@ structured points retain their y-value formatting.
   histogram or sparkline. Tooltips, accessible data, formatting and keyboard activation remain
   available. `config` still wins over generated options, so explicit scale visibility or layout
   padding can override the preset. Leaving the compact tier restores `axes`. Radial charts are
-  unaffected.
+  unaffected. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 
   For a monthly histogram above `lr-slider`, give both controls the same inline allocation and
   use `lr-bar-chart size="s" without-legend height="64px"`. Map range values to bin edges: with
@@ -210,6 +215,7 @@ structured points retain their y-value formatting.
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
   zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
+  Deprecated alias: `zoom` (use `zoomable`; removed in 23.0.0).
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
@@ -217,7 +223,9 @@ structured points retain their y-value formatting.
 - `yLabel: string | null = null` (attribute `y-label`)
 - `y2Label: string = ''` (attribute `y2-label`)
 - `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets a linear value
-  axis start at the data minimum instead of always including zero.
+  axis start at the data minimum instead of always including zero. Deprecated alias:
+  `begin-at-zero` (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`;
+  removed in 23.0.0).
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
@@ -276,7 +284,8 @@ structured points retain their y-value formatting.
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
-  accessible data table visible rather than screen-reader-only.
+  accessible data table visible rather than screen-reader-only. Deprecated alias: `show-data-table`
+  (`showDataTable`; use `with-data-table`; removed in 23.0.0).
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
@@ -392,7 +401,9 @@ including a string or finite-number `id` when supplied; invalid ids are omitted.
 `LyraChartPoint.id` type is `string | number`, while the activation event's heterogeneous `value`
 is typed `unknown`. Validate or explicitly narrow the value itself before reading point fields;
 checking `detail.kind === 'point'` alone does not narrow `detail.value` in TypeScript.
-Also emitted: `lr-legend-visibility-change-request` (cancelable proposal), and
+Deprecated alias: `lr-point-click` (use `lr-point-activate`; removed in 23.0.0) — it still fires
+right after `lr-point-activate` from the same activation with an identical detail. Also
+`lr-legend-visibility-change-request` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
@@ -448,7 +459,8 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
-`--lr-chart-tooltip-color` (default `var(--lr-color-text)`) — each resolved fresh via
+`--lr-chart-tooltip-color` (default `var(--lr-color-text)`; deprecated alias:
+`--lr-chart-tooltip-text`, removed in 23.0.0) — each resolved fresh via
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),

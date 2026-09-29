@@ -7,7 +7,8 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
-- **Deprecations** none
+- **Deprecated property** `collapsedDepth` / `collapsed-depth` since `21.1.0`; use property `expand-depth`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecated property** `search` / `search` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,7 +39,8 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
 - `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
-  means nothing auto-collapses
+  means nothing auto-collapses. Deprecated alias: `collapsed-depth` (`collapsedDepth`; use
+  `expand-depth`, same value and meaning; removed in 23.0.0)
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   viewer scrolls internally past this height instead of growing the page. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
@@ -46,10 +48,12 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `query: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+  highlighted and their ancestors auto-expanded. Deprecated alias: `search` (use `query`; removed in
+  23.0.0)
 
 **Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
-resolving the match count. `searchNext()`/`searchPrevious()`
+resolving the match count — named distinctly from `search` because a class member can't share a name
+with a reactive property (the deprecated `search` alias). `searchNext()`/`searchPrevious()`
 advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
 mark it as the active `aria-current` result, announce its position, and scroll it into view;

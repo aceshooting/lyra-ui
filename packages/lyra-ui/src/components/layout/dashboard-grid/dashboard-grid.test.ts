@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
@@ -13,9 +12,6 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-dashboard-grid', 'locked');
 
 function twoCells(): LyraDashboardCell[] {
   return [
@@ -3695,13 +3691,13 @@ describe("readonly and the deprecated locked alias", () => {
     });
     expect(warnings).to.have.length(0);
     expect(el.readonly).to.equal(true);
-    expect('locked' in el).to.equal(false);
+    expect(el.locked, "reading the alias never warns").to.equal(true);
     expect(el.hasAttribute("readonly")).to.equal(true);
     expect(gestures(el)).to.not.equal(gestures(open));
     expect(JSON.parse(gestures(el)).handle).to.equal(false);
   });
 
-  it("ignores locked while canonical readonly disables gestures", async () => {
+  it("keeps the locked alias working identically, and warns once naming readonly", async () => {
     const canonical = await grid(
       html`<lr-dashboard-grid cells-draggable cells-resizable readonly></lr-dashboard-grid>`
     );
@@ -3714,17 +3710,53 @@ describe("readonly and the deprecated locked alias", () => {
       }
     });
     for (const el of aliased) {
-      expect(el.readonly).to.equal(false);
-      expect(el.hasAttribute("readonly")).to.equal(false);
-      expect(gestures(el)).to.not.equal(gestures(canonical));
+      expect(el.readonly).to.equal(true);
+      expect(el.hasAttribute("readonly")).to.equal(true);
+      expect(gestures(el)).to.equal(gestures(canonical));
     }
-    expect(warnings).to.have.length(0);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-dashboard-grid:property:locked",
+    ]);
+    expect(warnings[0]!.message).to.contain("readonly");
   });
 
-  it("ignores locked attribute changes after the first render", async () => {
+  it("forwards a locked property write to readonly, and both reflect", async () => {
+    const el = await grid(html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`);
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.locked = true;
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(1);
+    expect(el.readonly).to.equal(true);
+    expect(el.hasAttribute("locked")).to.equal(true);
+    expect(el.hasAttribute("readonly")).to.equal(true);
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.locked).to.equal(false);
+    expect(el.hasAttribute("locked")).to.equal(false);
+  });
+
+  it("lets the last write win between readonly and the locked alias", async () => {
+    await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await grid(html`<lr-dashboard-grid readonly locked cells-resizable></lr-dashboard-grid>`);
+      expect(el.readonly).to.equal(true);
+      el.removeAttribute("locked");
+      await el.updateComplete;
+      expect(el.readonly).to.equal(false);
+      expect(el.hasAttribute("readonly")).to.equal(false);
+      expect(JSON.parse(gestures(el)).handle).to.equal(true);
+      el.readonly = true;
+      await el.updateComplete;
+      expect(el.locked).to.equal(true);
+      expect(el.hasAttribute("locked")).to.equal(true);
+      expect(JSON.parse(gestures(el)).handle).to.equal(false);
+    });
+  });
+
+  it("keeps a lone locked attribute driving readonly after the first render", async () => {
     await captureDeprecationWarnings(aliasUsage, async () => {
       const el = await grid(html`<lr-dashboard-grid locked cells-resizable></lr-dashboard-grid>`);
-      expect(el.hasAttribute("readonly")).to.equal(false);
+      expect(el.hasAttribute("readonly"), "reflected from the alias").to.equal(true);
       el.removeAttribute("locked");
       await el.updateComplete;
       expect(el.readonly).to.equal(false);
@@ -3732,7 +3764,7 @@ describe("readonly and the deprecated locked alias", () => {
       expect(JSON.parse(gestures(el)).handle).to.equal(true);
       el.setAttribute("locked", "");
       await el.updateComplete;
-      expect(el.readonly).to.equal(false);
+      expect(el.readonly).to.equal(true);
     });
   });
 });

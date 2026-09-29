@@ -3,6 +3,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
@@ -14,6 +15,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -115,6 +117,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     styles,
     srOnly,
   ];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    interactive: ['withoutInteraction', invertAlias, invertAlias],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-visibility-change-request',
     'lr-visibility-change',
@@ -130,6 +135,14 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   /** Renders a read-only legend (no buttons, no toggling). */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
   withoutInteraction = false;
+  /** `false` renders a read-only legend (no buttons, no toggling).
+   *  @deprecated Use `without-interaction`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  interactive = true;
   /** Fallback name for the group; defaults to localized `graphLegendLabel`. A non-empty host
    *  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
    *  empty on the group. */

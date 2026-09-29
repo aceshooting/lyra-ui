@@ -514,14 +514,14 @@ describe("lr-knowledge-base-admin activation event", () => {
   });
 });
 
-describe("lr-knowledge-base-admin retired hide-ingestion alias", () => {
+describe("lr-knowledge-base-admin deprecated hide-ingestion alias", () => {
   const ALIAS: DeprecatedUsage[] = [
     { tag: "lr-knowledge-base-admin", kind: "property", name: "hideIngestion" },
   ];
   const tabs = (el: LyraKnowledgeBaseAdmin): string[] =>
     [...el.shadowRoot!.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent!.trim());
 
-  it("hides the ingestion tab through without-ingestion with canonical defaults and no deprecation warning", async () => {
+  it("hides the ingestion tab through without-ingestion without a deprecation warning", async () => {
     let canonical: string[] = [];
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
       canonical = tabs(
@@ -532,5 +532,42 @@ describe("lr-knowledge-base-admin retired hide-ingestion alias", () => {
     });
     expect(canonical).to.have.length(1);
     expect(warnings).to.have.length(0);
+  });
+
+  it("keeps hide-ingestion working with the same result, warning once", async () => {
+    let canonical: string[] = [];
+    let alias: string[] = [];
+    let property: string[] = [];
+    let readback: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = tabs(
+        await fixture<LyraKnowledgeBaseAdmin>(
+          html`<lr-knowledge-base-admin without-ingestion></lr-knowledge-base-admin>`
+        )
+      );
+      alias = tabs(
+        await fixture<LyraKnowledgeBaseAdmin>(
+          html`<lr-knowledge-base-admin hide-ingestion></lr-knowledge-base-admin>`
+        )
+      );
+      const el = await fixture<LyraKnowledgeBaseAdmin>(
+        html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
+      );
+      el.hideIngestion = true;
+      await el.updateComplete;
+      property = tabs(el);
+      readback = [el.withoutIngestion, el.hideIngestion, el.hasAttribute("hide-ingestion")];
+      // The canonical property syncs back into the alias.
+      el.withoutIngestion = false;
+      await el.updateComplete;
+      readback.push(el.hideIngestion);
+    });
+    expect(alias).to.deep.equal(canonical);
+    expect(property).to.deep.equal(canonical);
+    expect(readback).to.deep.equal([true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-knowledge-base-admin:property:hideIngestion",
+    ]);
+    expect(warnings[0]!.message).to.contain("without-ingestion");
   });
 });

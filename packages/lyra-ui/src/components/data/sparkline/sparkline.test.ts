@@ -212,33 +212,22 @@ it('renders a filled area through line geometry and solid appearance', async () 
   expect(el.shadowRoot!.querySelector('[part="line"]')).to.exist;
 });
 
-it('omits the retired area part while retaining the fill path', async () => {
+it('keeps the deprecated area part token on the fill path', async () => {
   const el = (await fixture(`<lr-sparkline mark="line" appearance="solid"></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3];
   await el.updateComplete;
   const fill = el.shadowRoot!.querySelector('[part~="fill"]');
-  expect(fill?.getAttribute('part')?.split(/\s+/)).to.deep.equal(['fill']);
-  const style = document.createElement('style');
-  el.classList.add('sparkline-part-retirement');
-  style.textContent = 'lr-sparkline.sparkline-part-retirement::part(area) { fill: rgb(1, 2, 3); }';
-  document.head.append(style);
-  try {
-    expect(getComputedStyle(fill!).fill).not.to.equal('rgb(1, 2, 3)');
-    style.textContent += 'lr-sparkline.sparkline-part-retirement::part(fill) { fill: rgb(4, 5, 6); }';
-    expect(getComputedStyle(fill!).fill).to.equal('rgb(4, 5, 6)');
-  } finally {
-    style.remove();
-  }
+  expect(fill?.getAttribute('part')?.split(/\s+/)).to.deep.equal(['fill', 'area']);
 });
 
-it('ignores retired stroke-width while preserving canonical --line-width', async () => {
+it('keeps honoring the deprecated --lr-sparkline-stroke-width fallback until --line-width is set', async () => {
   const el = (await fixture(
     `<lr-sparkline style="--lr-sparkline-stroke-width: 3px"></lr-sparkline>`,
   )) as LyraSparkline;
   el.values = [1, 2, 3];
   await el.updateComplete;
   const line = el.shadowRoot!.querySelector('[part="line"]')!;
-  expect(getComputedStyle(line).strokeWidth).not.to.equal('3px');
+  expect(getComputedStyle(line).strokeWidth).to.equal('3px');
   el.style.setProperty('--line-width', '5px');
   expect(getComputedStyle(line).strokeWidth).to.equal('5px');
 });

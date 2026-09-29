@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated property** `noSpinButtons` / `no-spin-buttons` since `21.1.0`; use property `without-spin-buttons`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 18 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -16,8 +16,8 @@
 
 ## `lr-native-time-input`
 
-The Lyra 7 browser-native time field preserved under an explicit tag. It shares the input
-implementation with `lr-input`, forces its internal native input to `type="time"` on construction and reconnect, and retypes
+The Lyra 7 browser-native time field preserved under an explicit tag. It extends `lr-input`,
+forces its internal native input to `type="time"` on construction and reconnect, and retypes
 `min`/`max` so time-shaped attributes such as `09:00:30` are forwarded verbatim instead of parsed
 as numbers. Use it when the browser/OS picker is preferred; new `wa-time-input` migrations should
 use the segmented `lr-time-input` above.
@@ -32,43 +32,16 @@ the native editing control effectively disabled. The enabled first-legend except
 own-disabled state retain their native meaning; validity and form submission follow the effective
 disabled state.
 
-**Shared input surface:** the properties and methods below are inherited from the shared input
-implementation. `LyraNativeTimeInput` is not a subclass of the public `LyraInput` constructor, so
-`nativeTime instanceof LyraInput` is false. `LyraNumberInput` remains a `LyraInput` subclass.
+**Inherits:** all public surface from `lr-input`.
 
-**Inherited attributes:** `appearance`, `aria-label`, `autocapitalize`, `autocomplete`,
-`autocorrect`, `autofocus`, `clearable`, `enterkeyhint`, `error-text`, `filled`, `help-text`,
-`inputmode`, `match`, `maxlength`, `minlength`, `password-toggle`, `password-visible`, `pattern`,
-`pill`, `placeholder`, `size`, `spellcheck`, `title`, `with-clear`, `with-hint`, and `with-label`.
-They keep their `lr-input` meanings where applicable to a native time field; text constraints and
-password controls do not change its forced `type="time"` behavior.
-
-**Inherited slots:** `clear-icon`, `help-text`, `hide-password-icon`, `prefix`,
-`show-password-icon`, and `suffix`, alongside the label/hint/error/start/end slots.
-Password icon slots do not render a password action on a time field.
-
-**Inherited CSS parts:** `clear-button`, `form-control`, `form-control-help-text`,
-`form-control-input`, `form-control-label`, `password-toggle`, `password-toggle-button`, `prefix`,
-and `suffix`. Conditional parts appear only when their associated content or action is rendered.
-
-**Inherited theme properties:** `--lr-form-control-focus-shadow`,
-`--lr-form-control-required-color`, `--lr-form-control-required-content`,
-`--lr-form-control-required-offset`, `--lr-input-action-active-bg`,
-`--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
-`--lr-input-border-color`, `--lr-input-control-height`, `--lr-input-control-min-height`,
-`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-size`, `--lr-input-gap`,
-`--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-radius`,
-`--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
-`--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`, with the same meanings
-and conditional state behavior as on `lr-input`.
-
-The `lr-input` properties, form methods, events, label/hint/error/start/end slots, parts, and theme
-properties apply except for the `noSpinButtons` / `no-spin-buttons` mirror. `step` is native seconds;
-`showPicker()`, `stepUp()`, and `stepDown()` keep their native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
+All `lr-input` properties, form methods, events, label/hint/error/start/end slots, parts, and theme
+properties apply. `step` is native seconds; `showPicker()`, `stepUp()`, and `stepDown()` keep their
+native-wrapper behavior. The control row carries `base input-wrapper time-input` part tokens on one
 node. Its native picker UI and AM/PM presentation are browser-owned and intentionally unstyled.
 The inherited `--lr-input-*` theme inputs therefore remain configurable from an ancestor theme
-wrapper without being shadowed by the component. On this element the spin-button switch is spelled
-`without-spin-buttons` (`withoutSpinButtons`). Among those inherited properties and methods:
+wrapper without being shadowed by the subclass. On this element the spin-button switch is spelled
+`without-spin-buttons` (`withoutSpinButtons`). Deprecated alias: `no-spin-buttons` (use
+`without-spin-buttons`; kept in step, last write wins; removed in 23.0.0). Among those inherited properties and methods:
 `defaultValue: string = ''` (attribute `value`, reflected) is the reset value, and
 `customError: string | null = null` (attribute `custom-error`, reflected) is a consumer-supplied
 validation message. `getForm()` returns the browser-resolved form owner, including an external

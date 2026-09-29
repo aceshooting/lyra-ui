@@ -10,9 +10,9 @@ import {
   CSV_VIEWER_TAG,
   XML_VIEWER_TAG,
 } from './document-viewer-kinds.js';
-import { findDocumentRenderer, type LyraDocumentFile } from './registry.js';
+import { findDocumentRenderer, type DocumentFile } from './registry.js';
 
-const files: readonly [tag: string, file: LyraDocumentFile][] = [
+const files: readonly [tag: string, file: DocumentFile][] = [
   [ARCHIVE_VIEWER_TAG, { name: 'a.zip', mimeType: 'application/zip', src: 'https://example.test/a.zip' }],
   [EBOOK_VIEWER_TAG, { name: 'a.epub', mimeType: 'application/epub+zip', src: 'https://example.test/a.epub' }],
   [PDF_VIEWER_TAG, { name: 'a.pdf', mimeType: 'application/pdf', src: 'https://example.test/a.pdf' }],

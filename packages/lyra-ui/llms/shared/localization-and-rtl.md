@@ -61,8 +61,9 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `LyraPluralMessage`, `LyraPluralCategory`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
 The package root continues to re-export the runtime for compatibility and remains registration-free;
 use the dedicated entry when the application only needs locale setup and the narrower import graph.
-The former `@aceshooting/lyra-ui/utilities/localization.js` entry point was removed in 23.0.0.
-Change that import specifier to `@aceshooting/lyra-ui/localization.js`; the helper contracts are unchanged.
+The `@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not
+before 23.0.0: every name it exports is exported here as the identical binding, so change the import
+specifier to `@aceshooting/lyra-ui/localization.js` and nothing else.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.

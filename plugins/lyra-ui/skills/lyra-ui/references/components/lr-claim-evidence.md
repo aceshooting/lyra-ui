@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -40,7 +40,7 @@ At most 500 claims render as `claim` rows; a `claims` array past that length ren
   `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the
   same convention as `lr-source-card`'s/`lr-entity-card`'s `size`. Purely a density knob: each
   claim's border and background stay. `m` (the default) and larger keep the full claim-trigger
-  padding.
+  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps each claim's bordered, filled box;
   `'plain'` removes the border, background, and corner radius from every `claim` row, so claims

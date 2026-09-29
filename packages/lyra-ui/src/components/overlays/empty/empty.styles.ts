@@ -17,7 +17,11 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     inline-size: 100%;
   }
-  /* The compact density uses size s and the smaller tiers. */
+  /* The compact density: size s and the steps below it, or the deprecated compact attribute. One
+     :host([x]) selector per spelling keeps every branch at the same specificity. An authored size
+     outranks compact, so compact only applies while size is absent; that qualifier sits in
+     :where() to add no specificity. */
+  :host([compact]:where(:not([size]))) [part='base'],
   :host([size='2xs']) [part='base'],
   :host([size='xs']) [part='base'],
   :host([size='s']) [part='base'],
@@ -52,6 +56,7 @@ export const styles = css`
   [part='heading'][hidden] {
     display: none;
   }
+  :host([compact]:where(:not([size]))) [part='heading'],
   :host([size='2xs']) [part='heading'],
   :host([size='xs']) [part='heading'],
   :host([size='s']) [part='heading'],

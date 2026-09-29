@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -38,7 +38,7 @@ position) survives the transition.
   `url()` are ignored.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
   `xs`/`2xs`) tightens header/body padding for constrained spaces; `m` and larger keep the regular
-  padding.
+  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
   CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`

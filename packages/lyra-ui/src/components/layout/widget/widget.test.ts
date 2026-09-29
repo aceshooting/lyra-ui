@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
   expect,
@@ -15,9 +14,6 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-widget', 'compact');
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
@@ -2380,7 +2376,56 @@ describe("the deprecated compact alias of size", () => {
     { tag: "lr-widget", kind: "property", name: "compact" },
   ];
 
-  it("uses size in either attribute order with the removed compact spelling", async () => {
+  it('renders exactly like size="s", and warns once naming size', async () => {
+    const canonical = (await fixture(
+      html`<lr-widget label="x" size="s"><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    const aliased: LyraWidget[] = [];
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        aliased.push(
+          (await fixture(
+            html`<lr-widget label="x" compact><p>Body</p></lr-widget>`
+          )) as LyraWidget
+        );
+      }
+    });
+    for (const el of aliased) {
+      expect(el.size).to.equal("s");
+      expect(el.compact).to.equal(true);
+      expect(el.getAttribute("size")).to.equal("s");
+      expect(widgetDensity(el)).to.deep.equal(widgetDensity(canonical));
+    }
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-widget:property:compact",
+    ]);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it("reads compact from size and restores size m when cleared, without warning on reads", async () => {
+    const el = (await fixture(
+      html`<lr-widget label="x" size="xs"><p>Body</p></lr-widget>`
+    )) as LyraWidget;
+    let warnings = await captureDeprecationWarnings(aliasUsage, () => {
+      expect(el.compact).to.equal(true);
+      el.size = "l";
+      expect(el.compact).to.equal(false);
+    });
+    expect(warnings).to.have.length(0);
+    warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      el.compact = true;
+      await el.updateComplete;
+      expect(el.size).to.equal("s");
+      expect(el.hasAttribute("compact"), "the alias reflects").to.equal(true);
+      el.compact = false;
+      await el.updateComplete;
+    });
+    expect(el.size).to.equal("m");
+    expect(el.hasAttribute("compact")).to.equal(false);
+    expect(warnings).to.have.length(1);
+  });
+
+  it("lets the last authored attribute win between size and the compact alias", async () => {
     const sizes: string[] = [];
     await captureDeprecationWarnings(aliasUsage, async () => {
       for (const markup of [
@@ -2391,22 +2436,41 @@ describe("the deprecated compact alias of size", () => {
         sizes.push(el.size);
       }
     });
-    expect(sizes).to.deep.equal(["l", "l"]);
+    expect(sizes).to.deep.equal(["l", "s"]);
   });
 
-  it("ignores compact attribute changes after the first render", async () => {
+  it("lets the last write win in both directions after the first render", async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = (await fixture(
+        html`<lr-widget size="l"><p>Body</p></lr-widget>`
+      )) as LyraWidget;
+      el.setAttribute("compact", "");
+      await el.updateComplete;
+      expect(el.size).to.equal("s");
+      expect(el.getAttribute("size")).to.equal("s");
+      el.size = "l";
+      await el.updateComplete;
+      expect(el.compact).to.equal(false);
+      expect(el.hasAttribute("compact")).to.equal(false);
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      "lyra-deprecated:lr-widget:property:compact",
+    ]);
+  });
+
+  it("keeps a lone compact attribute driving size after the first render", async () => {
     await captureDeprecationWarnings(aliasUsage, async () => {
       const el = (await fixture(
         html`<lr-widget compact><p>Body</p></lr-widget>`
       )) as LyraWidget;
-      expect(el.size).to.equal("m");
+      expect(el.getAttribute("size"), "reflected from the alias").to.equal("s");
       el.removeAttribute("compact");
       await el.updateComplete;
       expect(el.size).to.equal("m");
-      expect(el.getAttribute("size")).to.not.equal("s");
+      expect(el.getAttribute("size")).to.equal("m");
       el.setAttribute("compact", "");
       await el.updateComplete;
-      expect(el.size).to.equal("m");
+      expect(el.size).to.equal("s");
     });
   });
 });

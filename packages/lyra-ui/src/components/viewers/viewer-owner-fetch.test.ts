@@ -8,7 +8,7 @@ import './document-preview/document-preview.js';
 import './docx-viewer/docx-viewer.js';
 import './ebook-viewer/ebook-viewer.js';
 import './email-viewer/email-viewer.js';
-import './geojson-view/geojson-viewer.js';
+import './geojson-view/geojson-view.js';
 import './html-viewer/html-viewer.js';
 import './notebook-viewer/notebook-viewer.js';
 import './pdf-viewer/pdf-viewer.js';
@@ -18,7 +18,11 @@ import './svg-viewer/svg-viewer.js';
 import './xml-viewer/xml-viewer.js';
 import type { LyraDocumentPreview } from './document-preview/document-preview.class.js';
 import type { LyraSvgViewer } from './svg-viewer/svg-viewer.class.js';
+import { expectDeprecatedUsage } from '../../../test/expected-deprecations.js';
 
+// The deprecated `lr-geojson-view` alias must keep meeting this contract until its removal, so
+// its one-time connect warning is expected here.
+expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
 
 const REMOTE_VIEWER_TAGS = [
   'lr-archive-viewer',
@@ -30,7 +34,7 @@ const REMOTE_VIEWER_TAGS = [
   'lr-docx-viewer',
   'lr-ebook-viewer',
   'lr-email-viewer',
-  'lr-geojson-viewer',
+  'lr-geojson-view',
   'lr-html-viewer',
   'lr-notebook-viewer',
   'lr-pdf-viewer',
@@ -50,7 +54,7 @@ const LOAD_METHOD_BY_TAG: Record<(typeof REMOTE_VIEWER_TAGS)[number], string> = 
   'lr-docx-viewer': 'load',
   'lr-ebook-viewer': 'load',
   'lr-email-viewer': 'load',
-  'lr-geojson-viewer': 'load',
+  'lr-geojson-view': 'load',
   'lr-html-viewer': 'load',
   'lr-notebook-viewer': 'loadFromSrc',
   'lr-pdf-viewer': 'load',

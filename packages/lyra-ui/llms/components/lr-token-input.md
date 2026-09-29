@@ -7,7 +7,9 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated event** `lr-add` since `21.1.0`; use event `addEventListener('lr-token-add-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated event** `lr-remove` since `21.1.0`; use event `addEventListener('lr-token-remove-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecated event** `lr-token-edit` since `21.1.0`; use event `addEventListener('lr-token-edit-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -77,9 +79,10 @@ unchanged), and `lr-token-edit-request`
 cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
 open with the user's edited text intact, rather than closing and discarding it).
 All three mutators share one veto contract.
-`lr-invalid` (`detail: null`) is emitted once as a bubbling/composed, cancelable alias when native
-validity fails. Calling `preventDefault()` also cancels the native `invalid` event and suppresses
-the browser’s validation bubble.
+Deprecated aliases: `lr-add`, `lr-remove` and `lr-token-edit` (use `lr-token-add-request`,
+`lr-token-remove-request` and `lr-token-edit-request`; removed in 23.0.0). Each alias fires right
+after its canonical event with an equal detail, and either event's `preventDefault()` vetoes.
+`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —

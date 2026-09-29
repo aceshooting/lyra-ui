@@ -300,7 +300,9 @@ feedback.
 - `intervalMs: number = 900` (attribute `interval-ms`)
 - `playing: boolean = false` (reflected)
 - `withoutLoop: boolean = false` (attribute `without-loop`) — stops playback on the last item
-  instead of wrapping back to the first; read on every tick.
+  instead of wrapping back to the first; read on every tick. Deprecated alias: `loop` (use
+  `without-loop`, which `loop="false"` equals; removing `loop` restores the default; removed in
+  23.0.0).
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 
@@ -901,6 +903,8 @@ the set and assign its own value instead. There is deliberately no second, confi
 committed state is `hiddenCategories`, which the host already observes, so a paired before/after
 vocabulary would be permanent public surface nobody asked for. The event is a DOM-interaction
 proposal only, so a programmatic `hiddenCategories` assignment reconciles without emitting it.
+Deprecated alias: `lr-map-legend-toggle` (use `lr-map-legend-toggle-request`; removed in 23.0.0) —
+it still fires right after the request with an equal detail, and either event may veto.
 Also `lr-map-legend-panel-toggle-request` (**cancelable**; frozen
 `LyraMapLegendPanelToggleDetail { open }` — the proposed `legendOpen` value), fired once when the
 `legendCollapsible` disclosure is activated by pointer or by Enter/Space. It is the *panel's*
@@ -908,7 +912,9 @@ disclosure, not a *category's* visibility, so it deliberately does not reuse
 `lr-map-legend-toggle-request`. `preventDefault()` is the same genuine veto: `legendOpen` is not
 written, the rendered rows and the disclosure's `aria-expanded` do not change, so a host can own the
 open state and assign its own value from `event.detail.open`. A programmatic `legendOpen` assignment
-reconciles without emitting it, so a controlled host cannot loop.
+reconciles without emitting it, so a controlled host cannot loop. Deprecated alias:
+`lr-map-legend-panel-toggle` (use `lr-map-legend-panel-toggle-request`; removed in 23.0.0) — it
+still fires right after the request with an equal detail, and either event may veto.
 Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
@@ -1341,7 +1347,9 @@ enabled buttons retain pointer feedback.
   `nonRetaining` is `false`.
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `withoutPaste: boolean = false` (reflected, attribute `without-paste`) — ignores files pasted
-  into the dropzone, which are otherwise accepted.
+  into the dropzone, which are otherwise accepted. Deprecated alias: `paste` (use `without-paste`,
+  which `paste="false"` equals; removing `paste` restores the default; removed in 23.0.0). The alias
+  keeps its presence reflection; the two stay in sync and the last write wins.
 - `label?: string` — form-control label, rendered in `form-control-label` and naming the dropzone
   button (unless a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone
   instruction — customize that with the `dropzone` slot or the `fileInputDefaultLabel` string.
@@ -1358,7 +1366,12 @@ enabled buttons retain pointer feedback.
   before hydration can observe the assigned light-DOM content.
 - `size: LyraSize = 'm'` (reflected) — tier for the whole dropzone (see the custom properties
   below); `s` and the steps below it give a denser dropzone for constrained spaces (a toolbar, a
-  table cell).
+  table cell). Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it keeps its own
+  tighter padding, gap and instruction font, and keeps reflecting, until its removal. `size="s"` is
+  the closest tier but not pixel-identical, so review the result when migrating; for an identical
+  dropzone keep the current size and set `--lr-file-input-dropzone-padding: var(--lr-space-s)`,
+  `--lr-file-input-dropzone-font-size: var(--lr-font-size-sm)` and
+  `--lr-file-input-gap: var(--lr-space-2xs)` instead.
 - `validators: LyraFileInputValidator[] = []` (attribute: false) — additional JavaScript
   constraints, run after the intrinsic `required` check. **Fixed in 9.0.0:** the property was
   previously declared (typed `unknown[]`) and read by nothing, so an assigned validator silently
@@ -1388,10 +1401,12 @@ enabled buttons retain pointer feedback.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
-- `accessibleLabel: string = ''` (property only, deprecated; removal not before 24.0.0) — accessible name forwarded to the semantic
+- `accessibleLabel: string = ''` (attribute `accessible-label`, deprecated) — accessible name forwarded to the semantic
   dropzone and native file input, without changing visible copy. A host `aria-label` wins over it.
   When neither is set, the form label (`label` or the `label` slot) names the dropzone, then the
-  localized instruction. In markup, name the dropzone with the host `aria-label`.
+  localized instruction. In markup, name the dropzone with the host `aria-label`. The
+  `accessible-label` attribute spelling is deprecated (use `aria-label`; removed in 23.0.0) — it
+  still sets `accessibleLabel`, so a host `aria-label` wins over it
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
   singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
@@ -1511,12 +1526,11 @@ here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-fi
 
 **Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
 the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner
-radius of `[part='base']`. At `size="s"` or `size="small"`,
-`--lr-file-input-compact-padding`, `--lr-file-input-compact-gap`, and
-`--lr-file-input-compact-font-size` optionally override the padding, content gap, and instruction
-font size. They take precedence over the corresponding dropzone padding/font and general gap
-properties; when omitted, the ordinary small-size geometry stays unchanged. They do not affect
-unset, medium, or other sizes. `--lr-file-input-font-size` (default
+radius of `[part='base']`; `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
+`[part='base']`'s padding while the deprecated `compact` is set; `--lr-file-input-compact-gap`
+(default `var(--lr-space-2xs)`) — the gap between the dropzone's slotted children while `compact` is
+set; and `--lr-file-input-compact-font-size` (default `var(--lr-font-size-sm)`) — the label's font
+size while `compact` is set. `--lr-file-input-font-size` (default
 `var(--lr-form-control-font-size)`) controls the label and selected-filename text size.
 
 `size` retunes the whole dropzone, not just its label: `--lr-file-input-dropzone-font-size`
@@ -1526,7 +1540,12 @@ unset, medium, or other sizes. `--lr-file-input-font-size` (default
 `--lr-file-input-detail-font-size` (default `var(--lr-font-size-sm)`) for the secondary text (hint,
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
 each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
-while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The drag accept/reject
+while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The
+deprecated `compact` still overrides the dropzone padding and font size independently of the tier.
+The compact gap falls back to `--lr-file-input-gap` when its compact-specific property is unset. The
+compact properties apply only while `compact` is set; to tune a dense dropzone without re-pointing
+shared spacing tokens for everything else on the page, prefer `size` with the per-tier
+`--lr-file-input-dropzone-*` properties. The drag accept/reject
 highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
 `--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
@@ -1731,7 +1750,8 @@ clear it. Moving between the iframe and a zoom control clears or restores the ma
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-bg`
 (default `var(--lr-color-brand-quiet)`), which colors a zoom control on hover and supplies the base
-for its active color.
+for its active color. Deprecated alias: `--lr-zoomable-frame-control-hover-background` (use
+`--lr-zoomable-frame-control-hover-bg`; removed in 23.0.0).
 
 **RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
 both directions. Its zoom controls remain logical interface chrome, so RTL places the control group at
@@ -1862,20 +1882,28 @@ coalesce into one update.
 - `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download when
   `file` is unset; a real `File` takes precedence and uses a temporary blob URL
 - `withoutPreview: boolean = false` (reflected, attribute `without-preview`) — hides the preview
-  action, which otherwise renders whenever a `file` or `preview-src` is available.
+  action, which otherwise renders whenever a `file` or `preview-src` is available. Deprecated alias:
+  `previewable` (use `without-preview`, which `previewable="false"` equals; removing `previewable`
+  restores the default; removed in 23.0.0). The alias still reflects (`previewable="false"`); the two
+  stay in sync and the last write wins.
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
 'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
   `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
 - `withoutRemoveButton: boolean = false` (reflected, attribute `without-remove-button`) — hides the
-  remove (×) button, which otherwise renders.
+  remove (×) button, which otherwise renders. Deprecated alias: `removable` (use
+  `without-remove-button`, which `removable="false"` equals; removing `removable` restores the
+  default; removed in 23.0.0). The alias still reflects (`removable="false"`); the two stay in sync
+  and the last write wins.
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — a smaller, borderless pill instead of the default bordered chip, e.g. for a
   composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset
   renders exactly as before. An unsupported value normalizes to unset and removes the attribute.
-
+  Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it still renders exactly like
+  `size="s"` and keeps reflecting `compact`; the two stay in sync (a `size` of `s` or below reads
+  back as `compact`) and the last write wins.
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — at the compact density,
   hides `[part='meta']` (the filename/size text) entirely for an image-mime attachment, leaving only
   the thumbnail. Has no effect for a non-image chip, or at the default density. `false` (the
@@ -2140,7 +2168,8 @@ and later MIME values restore detection.
   button and the `kind="video"` `open-button` render `disabled`; a safe file chip's anchor loses
   its `href` and `download`, so it genuinely cannot fetch, and gains an explicit `role="link"` so
   its accessible name and `aria-current` stay valid on an element that no longer has an implicit
-  role. `lr-media-open` and `lr-media-download-request` stop firing from every path, `click()`
+  role. `lr-media-open`, `lr-media-download-request` and its deprecated `lr-before-media-download`
+  alias stop firing from every path, `click()`
   included, the action leaves the tab order, and it paints at `--lr-opacity-disabled` with a
   `not-allowed` cursor. Deliberately does NOT reach into the `kind="video"` player: `<video
   controls>` is media content with its own native transport, not this card's action. An
@@ -2174,7 +2203,11 @@ noncancelable) notifies
 after image-card or video open-button activation; those kinds have no component-owned navigation,
 so a host decides what "open" means. `lr-media-download-request` carries the same detail and is
 cancelable only for a safe file anchor immediately before its native download/open default; calling
-`preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
+`preventDefault()` there suppresses that exact default. `lr-before-media-download` is its deprecated
+alias (removal not before 23.0.0): it still fires right after the canonical event from the same
+activation, with an equal but separate `detail`, and either event's `preventDefault()` vetoes the
+download/open. A veto through the alias logs a one-time development warning, so move listeners to
+`lr-media-download-request`. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
 The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
@@ -2288,9 +2321,10 @@ capability as a row.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
-- `accessibleLabel?: string` (property only, deprecated; removal not before 24.0.0) — overrides either trigger shape's localized
+- `accessibleLabel?: string` (attribute `accessible-label`, deprecated) — overrides either trigger shape's localized
   accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the
-  trigger with the host `aria-label`.
+  trigger with the host `aria-label`. The `accessible-label` attribute spelling is deprecated (use
+  `aria-label`; removed in 23.0.0) — it still sets `accessibleLabel`, so a host `aria-label` wins over it.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 - `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
@@ -2325,7 +2359,8 @@ contained inside the trigger. Only the attachment events listed above cross the 
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
 `trigger-control` / `menu-trigger-control` (each trigger's own native `<button>` — as of 16.0.0
 both triggers are composed `<lr-icon-button>`s, so `trigger`/`menu-trigger` name those hosts and the
-painted surface sits one boundary deeper),
+painted surface sits one boundary deeper; deprecated aliases on the same nodes: `trigger__control`
+and `menu-trigger__control`, removed in 23.0.0),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
@@ -2521,7 +2556,10 @@ automatically under `prefers-reduced-motion: reduce`.
 - `ignoreReducedMotion: boolean = false` (reflected, attribute `ignore-reduced-motion`) — a
   deliberate page-author override that lets `play` take effect even when the OS reports
   `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen and
-  `[part="play-button"]` `disabled` regardless of `play`.
+  `[part="play-button"]` `disabled` regardless of `play`. Deprecated alias: `respect-reduced-motion`
+  (`respectReducedMotion`; use `ignore-reduced-motion`, which `respect-reduced-motion="false"`
+  equals; removing it restores the default; removed in 23.0.0). The alias still reflects
+  (`respect-reduced-motion="false"`); the two stay in sync and the last write wins.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
   including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
   verbatim in _both_ states (it does not itself vary by state). Never
@@ -2602,7 +2640,10 @@ start/finish lifecycle, including reduced motion.
   normally even under `prefers-reduced-motion: reduce`. Unset, that preference caps playback at one
   iteration and calls `finish()` immediately instead of playing, so the target snaps to its
   resolved end state; `lr-start`/`lr-finish` still fire in order. Reserve it for genuine
-  user-triggered feedback.
+  user-triggered feedback. Deprecated alias: `respect-reduced-motion` (`respectReducedMotion`; use
+  `ignore-reduced-motion`, which `respect-reduced-motion="false"` equals; removing it restores the
+  default; removed in 23.0.0). The alias still reflects (`respect-reduced-motion="false"`); the two
+  stay in sync and the last write wins.
 - `playOnVisible: boolean = false` (attribute `play-on-visible`, reflected) — starts playback via
   `IntersectionObserver` once the target intersects. `playOnVisibleRepeat: boolean = false`
   (attribute `play-on-visible-repeat`, reflected) — re-plays on each re-entry and pauses on exit;
@@ -2711,6 +2752,8 @@ disconnect and reconnect.
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
+Deprecated alias: `lr-overflow-click` (use `lr-overflow-activate`; removed in 23.0.0) — it still
+fires right after `lr-overflow-activate` with an equal detail.
 
 **Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
 and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible
@@ -2792,7 +2835,9 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
   visible `[part="counter"]`; the polite position announcement stays active. Nothing is ever
-  written back to the attribute — no stylesheet or selector keys off it.
+  written back to the attribute — no stylesheet or selector keys off it. Deprecated alias:
+  `show-counter` (`showCounter`; use `without-counter`, which `show-counter="false"` equals;
+  removing it restores the default; removed in 23.0.0).
   Spoken position updates remain active when the counter is hidden: the shadow
   `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
   shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor
@@ -2911,7 +2956,8 @@ or physical output needs one.
 
 **CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
 `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-bg`.
+`--lr-qr-code-fill` and `--lr-qr-code-bg`. Deprecated alias: `--lr-qr-code-background` (use
+`--lr-qr-code-bg`; removed in 23.0.0).
 
 `error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
 failure appends the localized message to the document's pre-mounted
@@ -3044,6 +3090,7 @@ scrim. Load `@aceshooting/lyra-ui/surfaces/glass.css` for its translucent recipe
 scrim remains opaque. This option never changes browser-owned native media controls. Increased
 contrast and reduced-transparency preferences make the treatment opaque; forced colours use
 system colours. The `LyraAvControlsSurface` type is `'regular' | 'clear'`.
+
 
 An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
@@ -3300,7 +3347,9 @@ avoiding a disappearing/reappearing semantic target.
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-bg` (default is the existing hover color mix) and
-`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`).
+`--lr-video-poster-play-button-hover-border-color` (default `var(--lr-color-brand)`). Deprecated
+alias: `--lr-video-poster-play-button-hover-background` (use
+`--lr-video-poster-play-button-hover-bg`; removed in 23.0.0).
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and
@@ -3347,7 +3396,9 @@ direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, n
 forwarded). Lyra additionally provides `withoutAutoAdvance: boolean = false` (attribute
 `without-auto-advance`; disables completion-driven navigation, so `repeat` has no effect either)
 and `repeat: 'none' | 'one' | 'all' = 'none'`. Leaving `without-auto-advance` unset preserves the
-mirrored behavior in which an ended video starts the next one. `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
+mirrored behavior in which an ended video starts the next one. Deprecated alias: `auto-advance`
+(`autoAdvance`; use `without-auto-advance`, which `auto-advance="false"` equals; removing it
+restores the default; removed in 23.0.0). `repeat="one"` restarts the current video; `repeat="all"` wraps the final video to the
 first. `items: readonly LyraVideoPlaylistItem[] = []` (attribute: false) is deterministic
 first-render row metadata with `{ title, poster?, duration?, unavailable? }`, indexed to the direct
 video children. Assign the same value before the server and browser first render. Seeded rows stay
@@ -3384,7 +3435,9 @@ are not playlist items.
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
 `var(--lr-color-brand)`) and `--lr-video-playlist-item-current-bg` (default
 `var(--lr-color-brand-fill-quiet)`) style the active playlist row, and are kept under the pointer:
-its hover and press mix from the current background rather than the plain-row surface.
+its hover and press mix from the current background rather than the plain-row surface. Deprecated
+alias: `--lr-video-playlist-item-current-background` (use `--lr-video-playlist-item-current-bg`;
+removed in 23.0.0).
 
 Only the active child is visible and loaded. Before another child is activated, the outgoing native
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an

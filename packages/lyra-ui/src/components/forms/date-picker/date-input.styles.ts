@@ -118,7 +118,7 @@ export const styles = css`
       var(--lr-date-input-border-color, var(--_lr-date-input-border-color));
     border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
     background: var(--lr-date-input-fill, var(--_lr-date-input-fill));
-    color: var(--lr-date-input-color, var(--_lr-date-input-text-color));
+    color: var(--lr-date-input-color, var(--lr-date-input-text-color, var(--_lr-date-input-text-color)));
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(

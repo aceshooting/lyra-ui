@@ -342,9 +342,9 @@ describe('zoom controls and interaction', () => {
     }
   });
 
-  it('ignores the retired hover-background token while canonical hover-bg paints', async () => {
+  it('still honors the deprecated --lr-zoomable-frame-control-hover-background alias, below the canonical -bg', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="--lr-transition-fast: 0s; --lr-zoomable-frame-control-hover-background: rgb(39, 40, 41)">
+      <div style="--lr-zoomable-frame-control-hover-background: rgb(39, 40, 41)">
         <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
         <lr-zoomable-frame
           .srcdoc=${INLINE_DOCUMENT}
@@ -355,22 +355,16 @@ describe('zoom controls and interaction', () => {
     const [aliasButton, bothButton] = [
       ...wrapper.querySelectorAll<LyraZoomableFrame>('lr-zoomable-frame'),
     ].map((frame) => frame.shadowRoot!.querySelector<HTMLElement>('[part="zoom-in-button"]')!);
-    const probe = document.createElement('span');
-    probe.style.backgroundColor = 'var(--lr-color-brand-quiet)';
-    aliasButton!.getRootNode().appendChild(probe);
-    const canonicalDefault = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    expect(getComputedStyle(aliasButton!).backgroundColor).not.to.equal(canonicalDefault);
     try {
       await hoverUntilMatched(aliasButton!, 'the alias-themed zoom-in button never reported :hover');
       await waitUntil(
-        () => getComputedStyle(aliasButton!).backgroundColor === canonicalDefault,
-        'the retired token still painted the hover background',
+        () => getComputedStyle(aliasButton!).backgroundColor === 'rgb(39, 40, 41)',
+        'the deprecated alias did not paint the hover background',
       );
       await hoverUntilMatched(bothButton!, 'the canonically themed zoom-in button never reported :hover');
       await waitUntil(
         () => getComputedStyle(bothButton!).backgroundColor === 'rgb(49, 50, 51)',
-        'the canonical -bg did not paint with the retired token present',
+        'the canonical -bg did not win over the deprecated alias',
       );
     } finally {
       await resetMouse();

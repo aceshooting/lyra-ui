@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // A stand-in for a component that forwards its own light-DOM content into
 // `lr-empty`'s slots through nested `<slot>` elements (e.g. a card/widget
@@ -683,7 +684,7 @@ it('reflects size and leaves it unset by default', async () => {
   const bare = (await fixture(html`<lr-empty heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   expect(bare.size).to.be.undefined;
   expect(bare.hasAttribute('size')).to.be.false;
-  expect('compact' in bare).to.equal(false);
+  expect(bare.compact).to.be.false;
 });
 
 it('keeps the default (non-compact) base/heading styling unchanged', async () => {
@@ -904,6 +905,7 @@ it('colours the icon with the muted text role, not the border token', async () =
 });
 
 describe('size ladder and the deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-empty', kind: 'property', name: 'compact' }];
   const densityOf = (el: LyraEmpty): Record<string, string> => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
     const heading = getComputedStyle(el.shadowRoot!.querySelector('[part="heading"]')!);
@@ -935,4 +937,52 @@ describe('size ladder and the deprecated compact alias', () => {
     }
   });
 
+  it('renders compact exactly like size="s", keeps reflecting it, and warns once, naming size', async () => {
+    const canonical = densityOf(await mount('size="s"'));
+    let aliased!: LyraEmpty;
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      aliased = await mount('compact');
+      await mount('compact');
+    });
+    expect(densityOf(aliased)).to.deep.equal(canonical);
+    expect(aliased.compact).to.be.true;
+    expect(aliased.hasAttribute('compact')).to.be.true;
+    expect(aliased.size).to.equal('s');
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-empty:property:compact']);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('keeps compact in step with size, last write winning, and never warns for size writes', async () => {
+    const normal = densityOf(await mount(''));
+    const compact = densityOf(await mount('size="s"'));
+    const quiet = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await mount('size="xs"');
+      expect(el.compact).to.be.true;
+      el.size = 'l';
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+    });
+    expect(quiet).to.have.length(0);
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await mount('compact');
+      sizeLast.size = 'm';
+      await sizeLast.updateComplete;
+      expect(sizeLast.compact).to.be.false;
+      expect(sizeLast.hasAttribute('compact')).to.be.false;
+      expect(densityOf(sizeLast)).to.deep.equal(normal);
+      const sizeAttributeLast = await mount('compact size="m"');
+      expect(sizeAttributeLast.size, 'the later size attribute wins').to.equal('m');
+      expect(sizeAttributeLast.getAttribute('size')).to.equal('m');
+      expect(sizeAttributeLast.compact).to.be.false;
+      expect(densityOf(sizeAttributeLast)).to.deep.equal(normal);
+      const compactLast = await mount('size="m" compact');
+      expect(compactLast.size).to.equal('s');
+      expect(densityOf(compactLast)).to.deep.equal(compact);
+      compactLast.compact = false;
+      await compactLast.updateComplete;
+      expect(compactLast.size).to.be.undefined;
+      expect(densityOf(compactLast)).to.deep.equal(normal);
+    });
+  });
 });

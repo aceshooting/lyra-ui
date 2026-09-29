@@ -19,6 +19,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 export type LyraAttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
 
 /** The capabilities that resolve to a real file selection (as opposed to `camera`/`audio`, which
@@ -215,8 +216,12 @@ export interface LyraAttachmentTriggerEventMap {
  *   come from `--lr-icon-button-*`, retuned by `appearance`/`size`.
  * @csspart trigger-control - The single-capability action's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `trigger`.
+ * @csspart trigger__control - Deprecated alias of `trigger-control` on the same node; removal not
+ *   before 23.0.0.
  * @csspart menu-trigger-control - The multi-capability action's own native `<button>`, forwarded
  *   for the same reason.
+ * @csspart menu-trigger__control - Deprecated alias of `menu-trigger-control` on the same node;
+ *   removal not before 23.0.0.
  * @csspart menu - The `<lr-dropdown>` shell. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-dropdown>`'s `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
@@ -260,6 +265,12 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   static override styles = [LyraElement.styles, sizes, styles];
 
+  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
+  }
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
   ]);
@@ -279,12 +290,14 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
+  @property({ attribute: 'accessible-label' })
   get accessibleLabel(): string | undefined {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
     this.legacyAccessibleLabel = value;
   }
 
@@ -506,7 +519,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     return html`
       <lr-icon-button
         part="trigger"
-        exportparts="button:trigger-control"
+        exportparts="button:trigger-control, button:trigger__control"
         class="trigger-button"
         aria-label=${label}
         title=${this.triggerTitle ?? nothing}
@@ -534,7 +547,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         <lr-icon-button
           slot="trigger"
           part="menu-trigger"
-          exportparts="button:menu-trigger-control"
+          exportparts="button:menu-trigger-control, button:menu-trigger__control"
           class="trigger-button"
           aria-label=${accessibleLabel}
           title=${this.triggerTitle ?? nothing}

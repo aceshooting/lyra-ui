@@ -4,7 +4,7 @@ import "./document-viewer.js";
 import {
   clearDocumentRenderers,
   registerDocumentRenderer,
-  type LyraDocumentFile,
+  type DocumentFile,
   type LyraAvDocumentRendererPayload,
 } from "./registry.js";
 import type { LyraDocumentViewer } from "./document-viewer.js";
@@ -280,7 +280,7 @@ describe("registry dispatch", () => {
 
   it("drops a lazy renderer result that resolves after detach and resolves afresh on reconnect", async () => {
     let settleLoader!: (definition: {
-      render: (file: LyraDocumentFile) => unknown;
+      render: (file: DocumentFile) => unknown;
     }) => void;
     let renderCalls = 0;
     registerDocumentRenderer("application/x-deferred", {
@@ -758,7 +758,7 @@ describe("anchor/highlights/alt widening", () => {
   });
 
   it("forwards anchor/highlights/alt to the resolved renderer's render(file)", async () => {
-    let capturedFile: LyraDocumentFile | undefined;
+    let capturedFile: DocumentFile | undefined;
     registerDocumentRenderer("application/pdf", {
       capabilities: { anchors: ["page"] },
       render: (file) => {
@@ -786,7 +786,7 @@ describe("anchor/highlights/alt widening", () => {
   });
 
   it("normalizes highlight identities before forwarding them to a renderer", async () => {
-    let capturedFile: LyraDocumentFile | undefined;
+    let capturedFile: DocumentFile | undefined;
     registerDocumentRenderer("application/pdf", {
       render: (file) => {
         capturedFile = file;
@@ -879,7 +879,7 @@ describe("anchor/highlights/alt widening", () => {
 
   it("re-resolves (re-renders with a fresh file) when anchor/highlights/alt change without a fresh load", async () => {
     let renderCount = 0;
-    let lastFile: LyraDocumentFile | undefined;
+    let lastFile: DocumentFile | undefined;
     registerDocumentRenderer("application/pdf", {
       capabilities: { anchors: ["page"] },
       render: (file) => {
@@ -1029,7 +1029,7 @@ describe("anchor/highlights/alt widening", () => {
 
 describe("renderer payload authority", () => {
   it("uses an opt-in payload file for dispatch, rendering, heading, and download ahead of scalar props", async () => {
-    let received: LyraDocumentFile | undefined;
+    let received: DocumentFile | undefined;
     registerDocumentRenderer("application/x-payload", {
       render: (file) => {
         received = file;

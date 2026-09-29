@@ -2,12 +2,14 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { firstByIdentity } from '../collection-identity.js';
 import {
@@ -19,6 +21,7 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Visual chrome for `<lr-commit-card>`'s root — the library's shared container-frame vocabulary. */
 export type CommitCardAppearance = LyraFrame;
@@ -59,6 +62,12 @@ const GIT_STATUS_KEY: Record<GitStatus, string> = {
   conflicted: 'gitStatusConflicted',
   ignored: 'gitStatusIgnored',
 };
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ filePath: string }>;
@@ -113,6 +122,7 @@ export interface LyraCommitCardEventMap {
  * @cssprop [--lr-commit-card-bg=transparent] - Fill of the outer card (`[part="base"]`)
  *   while `frame="card"`, unset by default so the card takes the surface it sits on.
  *   `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-commit-card-background=transparent] - Deprecated alias of `--lr-commit-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-commit-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-commit-card-radius=var(--lr-radius-container)] - Corner radius of the outer card.
@@ -158,6 +168,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    copyable: ['withoutCopyButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
+
   @property() hash = '';
   /** Commit subject and optional body. Removing the attribute clears both displayed sections. */
   @property() message = '';
@@ -172,6 +187,10 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   /** Hides the hash copy button. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
 
+  /** Whether the hash copy button renders.
+   *  @deprecated Use `without-copy-button`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
+
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
    * for dense contexts (a commit rendered as a row in a list or PR timeline) -- same convention as
@@ -179,6 +198,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
    * a density knob: the border stays, so use `frame="plain"` instead to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+
+  /** Tighter root padding for dense contexts (a commit rendered as a row in a list or PR
+   *  timeline) -- same convention as `<lr-agent-run>`'s own `compact`. Defaults to `false`, i.e.
+   *  the full card padding. Purely a density knob: the border stays, so use `frame="plain"`
+   *  instead to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary (the same `frame` property
    *  `<lr-agent-run>` carries). `'card'` (the default) keeps the bordered, padded box. `'plain'`

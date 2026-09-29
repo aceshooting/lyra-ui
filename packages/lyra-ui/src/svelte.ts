@@ -288,6 +288,8 @@ export type LyraGaugeSvelteProps = LyraSvelteElementProps<'lr-gauge'>;
 
 export type LyraGenerationMetricsSvelteProps = LyraSvelteElementProps<'lr-generation-metrics'>;
 
+export type LyraGeojsonViewSvelteProps = LyraSvelteElementProps<'lr-geojson-view'>;
+
 export type LyraGeoJsonViewerSvelteProps = LyraSvelteElementProps<'lr-geojson-viewer'>;
 
 export type LyraGraphSvelteProps = LyraSvelteElementProps<'lr-graph'>;
@@ -771,6 +773,7 @@ export interface LyraSvelteElements {
   'lr-funnel': LyraFunnelSvelteProps;
   'lr-gauge': LyraGaugeSvelteProps;
   'lr-generation-metrics': LyraGenerationMetricsSvelteProps;
+  'lr-geojson-view': LyraGeojsonViewSvelteProps;
   'lr-geojson-viewer': LyraGeoJsonViewerSvelteProps;
   'lr-graph': LyraGraphSvelteProps;
   'lr-graph-legend': LyraGraphLegendSvelteProps;
@@ -1077,6 +1080,7 @@ export interface LyraElementTagNameMap {
   'lr-funnel': LyraComponentTypeMap['lr-funnel']['element'];
   'lr-gauge': LyraComponentTypeMap['lr-gauge']['element'];
   'lr-generation-metrics': LyraComponentTypeMap['lr-generation-metrics']['element'];
+  'lr-geojson-view': LyraComponentTypeMap['lr-geojson-view']['element'];
   'lr-geojson-viewer': LyraComponentTypeMap['lr-geojson-viewer']['element'];
   'lr-graph': LyraComponentTypeMap['lr-graph']['element'];
   'lr-graph-legend': LyraComponentTypeMap['lr-graph-legend']['element'];

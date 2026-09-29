@@ -978,7 +978,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "4ae22ecd9782e8b2217d",
+      "fingerprint": "b26f8da1f358ce49a9e5",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -994,7 +994,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "001e8b374779e3e50106",
+      "fingerprint": "8f2a0baab9a604bcac00",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1042,7 +1042,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "c0e57452d7ff82829085",
+      "fingerprint": "5762c3ff87be9e37d9f7",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1058,7 +1058,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "24b3c612fe7d11fe0df7",
+      "fingerprint": "80b28351534af14e9e8d",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -8581,7 +8581,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarInputDetail",
       "kind": "interface",
-      "fingerprint": "dcbb8e4d357da4431e0f",
+      "fingerprint": "d63266aa301fa78571a2",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8629,7 +8629,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarResetDetail",
       "kind": "interface",
-      "fingerprint": "e1b1e4f71ba0d9ad3b1c",
+      "fingerprint": "2dfc3d94ef20d94fbb89",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -8677,7 +8677,7 @@
       "module": "src/components/layout/filter-bar/filter-bar.class.ts",
       "exportName": "LyraFilterBarTextDefinition",
       "kind": "interface",
-      "fingerprint": "d847f699a6b7acbf4492",
+      "fingerprint": "7119c49f589c733621d2",
       "routes": [
         "src/all.ts",
         "src/components/layout/filter-bar/filter-bar-register.ts",
@@ -11699,6 +11699,29 @@
     },
     {
       "module": "src/components/retrieval/graph/graph-model.ts",
+      "exportName": "LyraGraphLink",
+      "kind": "interface",
+      "fingerprint": "3e3e8f81923ac52488bc",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-graph.ts",
+        "src/components/retrieval/graph/graph.class.ts",
+        "src/components/retrieval/graph/graph.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "components-retrieval-graph-graph-contracts",
+        "declaration": "LyraGraphLink"
+      }
+    },
+    {
+      "module": "src/components/retrieval/graph/graph-model.ts",
       "exportName": "LyraGraphNode",
       "kind": "interface",
       "fingerprint": "02be06b19f5b02c171f5",
@@ -13239,7 +13262,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "adaptDocumentRenderer",
       "kind": "function",
-      "fingerprint": "e44acc046588e456f650",
+      "fingerprint": "1bde90fbf92c0c4cf640",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13281,7 +13304,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "createDocumentRendererAdapter",
       "kind": "function",
-      "fingerprint": "310867c49b397a03627c",
+      "fingerprint": "7f8cd9a0d91d714f2283",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13304,7 +13327,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "createDocumentRendererRegistry",
       "kind": "function",
-      "fingerprint": "cb7d0f1df3f81b562c0c",
+      "fingerprint": "32eaeed196bce722fcc0",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13327,7 +13350,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "DirectDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "54d93945ccb57f1bb55b",
+      "fingerprint": "7db0392f9a568f1072af",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13348,9 +13371,32 @@
     },
     {
       "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "DocumentFile",
+      "kind": "interface",
+      "fingerprint": "a87b3eb348809b1b040d",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "DocumentFile"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "findDocumentRenderer",
       "kind": "function",
-      "fingerprint": "6903b175186f17e60a80",
+      "fingerprint": "252224602aac1867e58b",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13373,7 +13419,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "getDefaultDocumentRendererRegistry",
       "kind": "function",
-      "fingerprint": "f1fa1c111a3589ffc66e",
+      "fingerprint": "b505da73821259f940f2",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13396,7 +13442,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "LazyDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "31a6d405750dac7c4c3f",
+      "fingerprint": "db86a9d622d4bbf0819a",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13419,7 +13465,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "loadDocumentRenderer",
       "kind": "function",
-      "fingerprint": "7a034e20a6268719ef49",
+      "fingerprint": "88855f32796c0e645a48",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13465,7 +13511,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "LyraAdaptedDocumentRendererDefinition",
       "kind": "interface",
-      "fingerprint": "3dc1f38f861e6d12e274",
+      "fingerprint": "0253a7cada22ba0112ce",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13534,7 +13580,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "LyraDocumentRendererAdapter",
       "kind": "interface",
-      "fingerprint": "5791f1cb5a14c5544f34",
+      "fingerprint": "a1334f164a81781fe68c",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13557,7 +13603,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "LyraDocumentRendererAdapterDefinition",
       "kind": "interface",
-      "fingerprint": "05320236e4edf7a82808",
+      "fingerprint": "bc941e0c0a8b6d7630a1",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -13603,7 +13649,7 @@
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "registerDocumentRenderer",
       "kind": "function",
-      "fingerprint": "e94f4b46e2df5b0a3541",
+      "fingerprint": "086cc4c8a653860f380f",
       "routes": [
         "src/all.ts",
         "src/components/lr-document-viewer.ts",
@@ -14577,7 +14623,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "c2c7d556a3a8a17e721c",
+      "fingerprint": "f94babfce2ef98c66b2e",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15595,7 +15641,8 @@
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
-        "src/utilities/index.ts"
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16254,7 +16301,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "ae230a53fb9684047dd7",
+      "fingerprint": "843634e8e83e40ede6da",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16270,7 +16317,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "b22b78b2d22ebacf4f9b",
+      "fingerprint": "00fe0311169e0d186a60",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16286,7 +16333,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "31da784117c67b24d6b7",
+      "fingerprint": "da38c1393a199a2525cf",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16890,17 +16937,18 @@
       }
     },
     {
-      "module": "src/localization.ts",
+      "module": "src/utilities/localization.ts",
       "exportName": "bridgeLyraLocale",
       "kind": "function",
-      "fingerprint": "b8ffa25b8e6d69a5dbfc",
+      "fingerprint": "648e737083c79e5a0a90",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
-        "src/utilities/index.ts"
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16911,7 +16959,7 @@
       }
     },
     {
-      "module": "src/localization.ts",
+      "module": "src/utilities/localization.ts",
       "exportName": "LyraLocaleBridgeOptions",
       "kind": "interface",
       "fingerprint": "e111ebcd1f6b5850207c",
@@ -16921,7 +16969,8 @@
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts",
-        "src/utilities/index.ts"
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16932,13 +16981,14 @@
       }
     },
     {
-      "module": "src/localization.ts",
+      "module": "src/utilities/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "8aa4e23ea989c19fbb7c",
+      "fingerprint": "dae1910576291a6a2f08",
       "routes": [
         "src/localization.ts",
-        "src/utilities/index.ts"
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
@@ -16952,7 +17002,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "22172325e391ce6a7e14",
+      "fingerprint": "962508088dee6ca21939",
       "routes": [
         "src/vue.ts"
       ],
@@ -17379,7 +17429,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "48cb25e60a3dce08846d",
+      "fingerprint": "aaad6f90249947d0b136",
       "routes": [
         "src/framework-types.ts"
       ],

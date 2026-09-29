@@ -22,7 +22,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-stack-trace-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-stack-trace-radius, var(--lr-radius));
-    background: var(--lr-stack-trace-bg, var(--lr-color-surface));
+    background: var(--lr-stack-trace-bg, var(--lr-stack-trace-background, var(--lr-color-surface)));
     padding: var(--lr-space-s);
   }
   /* Density escape, same convention as lr-agent-run's and lr-thinking-panel's dense size tier. Inline

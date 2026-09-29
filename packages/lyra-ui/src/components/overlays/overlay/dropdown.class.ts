@@ -13,8 +13,6 @@ import {
   type LyraPopoverEventMap,
   type LyraPopupRole,
 } from './popover.class.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './dropdown.styles.js';
 
 export type { PlaceStrategy, PlaceSync };
@@ -69,9 +67,13 @@ interface ConsumerMenuSnapshot {
  * @csspart base__popup - Shoelace compatibility name on the positioned popup.
  * @csspart panel - Shoelace compatibility name on the positioned popup.
  * @csspart popup-popup - Exported popup alias on the positioned popup.
+ * @csspart popup__popup - Deprecated alias of `popup-popup` on the same node; removal not before
+ *   23.0.0.
  * @csspart arrow - The arrow element, rendered unless `without-arrow` is set. Its part name also carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`,
  *   `arrow-right`), so `::part(arrow arrow-top)` can style one side.
  * @csspart popup-arrow - Exported alias on the arrow, on the same node.
+ * @csspart popup__arrow - Deprecated alias of `popup-arrow` on the same node; removal not before
+ *   23.0.0.
  * @csspart menu - The contained menu engine.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Opening transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Closing transition duration.
@@ -100,12 +102,6 @@ interface ConsumerMenuSnapshot {
  */
 export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   static override styles = [LyraPopover.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    arrow: ['withoutArrow', invertAlias, invertAlias],
-  };
-  /** Render the anchor arrow. Defaults on.
-   * @deprecated Use `without-arrow`; removal not before 24.0.0. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Dropdowns sit flush against their trigger by default; generic popovers retain eight pixels. */
   override distance = 0;
 
@@ -217,12 +213,12 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   protected override get popupPartNames(): string {
-    const parts = ['popup', 'dialog', 'popup-popup', 'base', 'base__popup', 'panel'];
+    const parts = ['popup', 'dialog', 'popup-popup', 'popup__popup', 'base', 'base__popup', 'panel'];
     return parts.join(' ');
   }
 
   protected override get arrowPartNames(): string {
-    return 'arrow popup-arrow';
+    return 'arrow popup-arrow popup__arrow';
   }
 
   protected override isInsideLightDismissBoundary(path: EventTarget[]): boolean {

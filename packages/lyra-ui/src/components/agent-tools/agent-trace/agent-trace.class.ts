@@ -1,8 +1,10 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './agent-trace.styles.js';
@@ -12,6 +14,7 @@ import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-lege
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 export type { LyraSpan } from '../trace-tree/span.js';
 
@@ -128,6 +131,12 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showTokens: 'withTokens',
+    showCost: 'withCost',
+    showBars: ['withoutBars', invertAlias, invertAlias],
+  };
+
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-span-visibility-change',
   ]);
@@ -161,6 +170,20 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   /** Suppresses the inline duration bar on the composed `<lr-trace-tree>`, for dense/narrow
    *  embeddings. */
   @property({ type: Boolean, attribute: 'without-bars' }) withoutBars = false;
+
+  /** Forwarded verbatim to the composed `<lr-trace-tree>`.
+   *  @deprecated Use `with-tokens`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-tokens' }) showTokens = false;
+
+  /** Forwarded verbatim to the composed `<lr-trace-tree>`.
+   *  @deprecated Use `with-cost`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-cost' }) showCost = false;
+
+  /** Shows the inline duration bar on the composed `<lr-trace-tree>`, matching the
+   *  positive-polarity `showTokens`/`showCost` convention on this same element. Defaults to
+   *  `true`; set `show-bars="false"` to suppress the bar for dense/narrow embeddings.
+   *  @deprecated Use `without-bars`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-bars', converter: trueDefaultBooleanConverter }) showBars = true;
 
   private presentKinds(spans: readonly LyraSpan[]): LyraSpan['kind'][] {
     const present = new Set(spans.map((s) => s.kind));

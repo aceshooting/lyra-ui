@@ -4310,6 +4310,16 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraAnimation"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAppRail"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraAppRailGroup"
         },
         {
@@ -4331,6 +4341,11 @@
           "kind": "class",
           "module": ".",
           "name": "LyraArtifactPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraAttachmentChip"
         },
         {
           "kind": "class",
@@ -4565,6 +4580,11 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraContextMenu"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraContextMeter"
         },
         {
@@ -4685,6 +4705,11 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraDropdown"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraDropdownItem"
         },
         {
@@ -4760,12 +4785,22 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraFileInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraFileTree"
         },
         {
           "kind": "class",
           "module": ".",
           "name": "LyraFilterBar"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraFlag"
         },
         {
           "kind": "class",
@@ -4926,6 +4961,11 @@
           "kind": "class",
           "module": ".",
           "name": "LyraJsonViewer"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraKbd"
         },
         {
           "kind": "class",
@@ -5150,6 +5190,11 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraPhoneInput"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraPieChart"
         },
         {
@@ -5290,6 +5335,11 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraResponsivePanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraResultCard"
         },
         {
@@ -5400,6 +5450,11 @@
         {
           "kind": "class",
           "module": ".",
+          "name": "LyraSplitPanel"
+        },
+        {
+          "kind": "class",
+          "module": ".",
           "name": "LyraSpreadsheetViewer"
         },
         {
@@ -5421,6 +5476,11 @@
           "kind": "class",
           "module": ".",
           "name": "LyraStreamStatus"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraStreamingText"
         },
         {
           "kind": "class",
@@ -5486,6 +5546,11 @@
           "kind": "class",
           "module": ".",
           "name": "LyraTerminal"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraTestResults"
         },
         {
           "kind": "class",
@@ -5636,6 +5701,11 @@
           "kind": "class",
           "module": ".",
           "name": "LyraVideoPlaylist"
+        },
+        {
+          "kind": "class",
+          "module": ".",
+          "name": "LyraVirtualList"
         },
         {
           "kind": "class",

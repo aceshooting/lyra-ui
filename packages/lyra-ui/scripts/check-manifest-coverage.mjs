@@ -20,6 +20,13 @@ const manifest = expandManifestInheritance(
 );
 const listOnly = process.argv.includes('--list');
 
+/** Public component hooks whose intentionally generic names do not carry their owning tag's
+ * namespace. Keep this narrow and reviewed: arbitrary same-sheet custom properties may be
+ * implementation plumbing, while every entry here must be declared in CEM/editor metadata. */
+const genericPublicProps = new Map([
+  ['lr-date-picker', ['--lr-cell-size']],
+]);
+
 /** Reviewed public namespaces that predate the exact `--<tag>-*` convention. Every property read
  * through one of these prefixes is component-owned and must therefore reach CEM/editor metadata. */
 const legacyPublicPrefixes = new Map([
@@ -119,6 +126,8 @@ for (const mod of manifest.modules ?? []) {
         }
       }
     }
+    for (const token of genericPublicProps.get(decl.tagName) ?? []) usedProps.add(token);
+
     // Shared sheets composed into those entry sheets contribute their own consumer hooks — see
     // `resolveSheetGraph`/`sharedSheetHooks`. The own-namespace prefix cannot apply here: a shared
     // hook is shared precisely because it is not named after any one component.

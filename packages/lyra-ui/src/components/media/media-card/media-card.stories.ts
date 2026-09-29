@@ -329,7 +329,7 @@ export const Disabled: Story = {
     docs: {
       description: {
         story:
-          '`disabled` turns off this card\'s own action: the image button and the video `open-button` render `disabled`, a file chip\'s anchor loses its `href`/`download` and leaves the tab order, `lr-media-open`/`lr-media-download-request` stop firing, and the affordance paints at `--lr-opacity-disabled`. The `kind="video"` player keeps its own native transport — that is media, not this card\'s action.',
+          '`disabled` turns off this card\'s own action: the image button and the video `open-button` render `disabled`, a file chip\'s anchor loses its `href`/`download` and leaves the tab order, `lr-media-open`/`lr-media-download-request` (and its deprecated `lr-before-media-download` alias) stop firing, and the affordance paints at `--lr-opacity-disabled`. The `kind="video"` player keeps its own native transport — that is media, not this card\'s action.',
       },
     },
   },

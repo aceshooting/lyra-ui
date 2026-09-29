@@ -11,6 +11,8 @@ it('localizes the built-in value label in the legend and generated accessible na
   const el = (await fixture(html`
     <lr-heatmap
 
+
+
       .strings=${{ heatmapValueLabel: 'valeur' }}
      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
@@ -25,6 +27,8 @@ it('keeps an explicitly customized value-label verbatim', async () => {
     <lr-heatmap
       value-label="requests"
 
+
+
      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;
   const legendLabel = el.shadowRoot!.querySelector('[part="legend"] > span:last-of-type')!;
@@ -38,6 +42,8 @@ it('formats legend ranges with the effective locale', async () => {
     <lr-heatmap
       locale="de-DE"
 
+
+
      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1234.5, 2345.6]] }}></lr-heatmap>
   `)) as LyraHeatmap;
 
@@ -50,6 +56,8 @@ it('formats matrix row and column counts with the effective locale', async () =>
   const el = (await fixture(html`
     <lr-heatmap
       locale="fa-IR"
+
+
 
      .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B', 'C'], values: [[1, 2]] }}></lr-heatmap>
   `)) as LyraHeatmap;

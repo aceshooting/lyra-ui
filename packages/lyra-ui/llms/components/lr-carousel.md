@@ -7,6 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
+- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
 - **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -61,7 +62,8 @@ slide itself; they do not change the active slide or move focus away from it.
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
-  including an explicitly empty value.
+  including an explicitly empty value. Deprecated alias: `accessible-label` (use `aria-label`;
+  removed in 23.0.0).
 - `accessibleLabel?: string` (attribute: false) — fallback landmark name used while the host has no
   `aria-label`. Omitting it reads back `undefined` and uses the localized `carouselLabel` default;
   an explicitly empty value is used as-is.

@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated event** `lr-message-reorder` since `21.1.0`; use event `addEventListener('lr-message-reorder-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -63,9 +63,10 @@ fired before it is applied — prevent it to keep the current state unchanged), 
 (both carry complete messages/variables); `lr-version-select` (`{ version }`); and cancelable
 `lr-message-reorder-request` (`{ messages, messageId, fromIndex, toIndex }`) before an accepted move
 updates the component and emits `lr-change`. Prevent `lr-message-reorder-request` to keep the
-current order; the listener may persist `detail.messages` and assign it back when ready. Once the
-move request is accepted, the general `lr-change-request` follows; only its acceptance updates the
-arrays and emits `lr-change`. Plus `focus` and
+current order; the listener may persist `detail.messages` and assign it back when ready. Deprecated
+alias: `lr-message-reorder` (use `lr-message-reorder-request`; removed in 23.0.0) — still fired right
+after it with an equal detail, and either event may veto. If both allow the move, the general
+`lr-change-request` follows; only its acceptance updates the arrays and emits `lr-change`. Plus `focus` and
 `blur` (no detail), re-dispatched
 from the host — bubbling and composed — whenever a message textarea or a variable input gains or
 loses focus. They exist because the native `focus`/`blur` events neither bubble nor cross the shadow

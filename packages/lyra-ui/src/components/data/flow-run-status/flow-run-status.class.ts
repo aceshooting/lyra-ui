@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
@@ -19,6 +20,7 @@ import { styles } from './flow-run-status.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStatusLabel, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const ALL_STATUSES: readonly LyraToolStatus[] = ['pending', 'running', 'success', 'error', 'denied'];
 const DONE_STATUSES = new Set<LyraToolStatus>(['success', 'error', 'denied']);
@@ -80,6 +82,9 @@ export class LyraFlowRunStatus extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideSummary: 'withoutSummary',
+  };
 
   @property() for = '';
   private _decorations: FlowRunDecorations = Object.freeze({});
@@ -97,6 +102,13 @@ export class LyraFlowRunStatus extends LyraElement {
   /** Omits the visible strip -- the `[part="summary"]` line and every `[part="count"]` -- while
    *  still pushing `decorations` into the canvas and announcing step transitions. */
   @property({ type: Boolean, attribute: 'without-summary' }) withoutSummary = false;
+  /**
+   * Deprecated alias of `without-summary`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `without-summary`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, attribute: 'hide-summary' }) hideSummary = false;
 
   @property() label = '';
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the

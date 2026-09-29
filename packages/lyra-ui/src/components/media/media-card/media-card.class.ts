@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
@@ -17,6 +18,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 export type LyraMediaCardKind = 'image' | 'video' | 'file';
 
 export interface LyraMediaCardOpenDetail {
@@ -28,6 +30,10 @@ export interface LyraMediaCardEventMap {
   'lr-media-open': CustomEvent<LyraMediaCardOpenDetail>;
   /** Canonical cancelable veto point before a safe file anchor's native download/open. */
   'lr-media-download-request': CustomEvent<LyraMediaCardOpenDetail>;
+  /** @deprecated Use `lr-media-download-request`; removal not before 23.0.0. Fired unchanged right
+   *  after it from the same activation, with an equal detail; either event's `preventDefault()`
+   *  vetoes the native download/open. */
+  'lr-before-media-download': CustomEvent<LyraMediaCardOpenDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
 }
@@ -38,6 +44,7 @@ function detectKind(mimeType: string): LyraMediaCardKind {
   if (mt.startsWith('video/')) return 'video';
   return 'file';
 }
+
 
 /**
  * `<lr-media-card>` — a lightweight inline preview for one already-sent,
@@ -93,7 +100,8 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * chip is a real `<a href download>` so a bare drop-in still does something
  * useful — but `lr-media-download-request` fires first and is `cancelable`; a host that
  * calls `preventDefault()` on it suppresses that default download/open so it
- * can substitute its own handling instead.
+ * can substitute its own handling instead. Its deprecated alias
+ * `lr-before-media-download` still fires right after it, and either may veto.
  *
  * **Pressed-state theme controls.** `--lr-media-card-active-border-color`
  * and `--lr-media-card-active-bg` retint only an image/file card while it is
@@ -123,6 +131,11 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  *   `detail: { src, filename }`; noncancelable notification.
  * @event lr-media-download-request - A safe file anchor is about to perform its native default.
  *   `detail: { src, filename }`; cancelable, and prevention suppresses the native download/open.
+ *   Fires before `lr-before-media-download`, from the same activation; either event may veto.
+ * @event lr-before-media-download - Deprecated cancelable alias of `lr-media-download-request`,
+ *   kept firing unchanged right after it with an equal `detail: { src, filename }`; either event
+ *   may veto, and a veto through this alias logs a one-time development warning. Removal not
+ *   before 23.0.0.
  * @event {FocusEvent} blur - Relayed once from the primary action as a bubbling, composed native
  *   event.
  * @event {FocusEvent} focus - Relayed once from the primary action as a bubbling, composed native
@@ -208,7 +221,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Turns off this card's OWN action: the image button and the video `open-button` render
    *  `disabled`, a safe file chip's anchor loses its `href` and `download` (so it genuinely cannot
    *  fetch rather than merely claiming `aria-disabled` on a live link) and leaves the tab order,
-   *  `lr-media-open` and `lr-media-download-request` stop firing from every path including `click()`,
+   *  `lr-media-open`, `lr-media-download-request` and its deprecated `lr-before-media-download`
+   *  alias stop firing from every path including `click()`,
    *  and the affordance paints at `--lr-opacity-disabled` with a `not-allowed` cursor.
    *
    *  Deliberately does NOT reach into the `kind="video"` player: `<video controls>` is media
@@ -338,7 +352,13 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     }
     const detail = this.eventDetail();
     const request = this.emit('lr-media-download-request', { ...detail }, { cancelable: true });
-    if (request.defaultPrevented) e.preventDefault();
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
+    const deprecatedAlias = this.emit('lr-before-media-download', { ...detail }, { cancelable: true });
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-before-media-download', 'lr-media-download-request');
+    }
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) e.preventDefault();
   };
 
   private get primaryAction(): HTMLElement | null {
@@ -469,6 +489,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     return this.renderFileFallback();
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

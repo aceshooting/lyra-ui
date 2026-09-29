@@ -3,17 +3,10 @@ import { isMainModule } from './is-main-module.mjs';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 import { normalizeManifest } from './component-inventory.mjs';
 import { UNRELEASED_VERSION } from './component-metadata.mjs';
-import {
-  assembleComponentMetadata,
-  commitComponentMetadataWritePlan,
-  createComponentMetadataWritePlan,
-  readComponentMetadataSources,
-} from './component-metadata-source.mjs';
-import { commitSourceWritePlan, readSourceSnapshot } from './source-fixture-io.mjs';
 import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -308,8 +301,7 @@ function validateRequest({ packageDir, family, name }) {
 
   const tag = `lr-${name}`;
   const inventory = readJson(paths.inventory);
-  const metadataSources = readComponentMetadataSources(packageDir);
-  const metadata = assembleComponentMetadata(metadataSources);
+  const metadata = readJson(paths.metadata);
   const manifest = readJson(paths.manifest);
   const indexSource = readFileSync(paths.familyIndex, 'utf8');
   const docsSource = readFileSync(paths.docs, 'utf8');
@@ -339,7 +331,6 @@ function validateRequest({ packageDir, family, name }) {
     familyEntry,
     inventory,
     metadata,
-    metadataSources,
     indexSource,
     docsSource,
     packageJson: readJson(paths.packageJson),
@@ -380,11 +371,7 @@ function verificationSteps(testPath) {
   ];
 }
 
-async function runProcessStep(packageDir, step) {
-  if (step.id === 'component-metadata') {
-    const { run } = await import(pathToFileURL(join(packageDir, 'scripts/generate-component-metadata.mjs')).href);
-    return { metadataWrites: run(['--write']) };
-  }
+function runProcessStep(packageDir, step) {
   const result = spawnSync(step.command, step.args, {
     cwd: packageDir,
     env: { ...process.env, ...step.env },
@@ -421,7 +408,6 @@ export async function scaffoldComponent({
     state.paths.docs,
     state.paths.inventory,
     state.paths.metadata,
-    ...state.metadataSources.snapshots.map(entry => entry.file),
     state.paths.manifest,
     state.paths.rootBarrel,
     state.paths.allBarrel,
@@ -437,24 +423,6 @@ export async function scaffoldComponent({
   const snapshots = new Map(
     snapshotPaths.map((file) => [file, existsSync(file) ? readFileSync(file, 'utf8') : null]),
   );
-  const sourcePrefix = `${join(packageDir, 'scripts/fixtures/component-metadata')}/`;
-  const metadataFiles = new Set(state.metadataSources.snapshots
-    .filter(entry => entry.file.startsWith(sourcePrefix) || entry.file === state.paths.metadata)
-    .map(entry => entry.file));
-  metadataFiles.add(state.paths.inventory);
-  const metadataWrites = new Map();
-  const recordMetadataWrites = entries => {
-    for (const entry of entries ?? []) {
-      if (entry.original === entry.expected) continue;
-      const previous = metadataWrites.get(entry.file);
-      metadataWrites.set(entry.file, {
-        ...entry,
-        original: previous ? previous.original : entry.original,
-        conflicted: previous?.conflicted || Boolean(previous && previous.expected !== entry.original),
-      });
-      metadataFiles.add(entry.file);
-    }
-  };
 
   try {
     mkdirSync(state.paths.componentDirectory);
@@ -462,19 +430,14 @@ export async function scaffoldComponent({
       writeFileSync(join(state.paths.componentDirectory, file), source, { flag: 'wx' });
     }
 
-    state.metadata.assignments[PROFILE] = [...state.metadata.assignments[PROFILE], tag].sort((a, b) =>
-      a.localeCompare(b),
-    );
-    const metadataPlan = createComponentMetadataWritePlan(state.metadataSources, state.metadata, {
-      includeAggregate: false,
-      familyByTag: { ...state.metadataSources.familyByTag, [tag]: family },
-    });
-    commitComponentMetadataWritePlan(metadataPlan);
-    recordMetadataWrites(metadataPlan.entries);
     state.familyCatalog.directories[name] = family;
     atomicWrite(state.paths.familyCatalog, jsonSource(state.familyCatalog));
     atomicWrite(state.paths.familyIndex, addIndexExport(state.indexSource, name));
     atomicWrite(state.paths.docs, appendDocs(state.docsSource, details));
+    state.metadata.assignments[PROFILE] = [...state.metadata.assignments[PROFILE], tag].sort((a, b) =>
+      a.localeCompare(b),
+    );
+    atomicWrite(state.paths.metadata, jsonSource(state.metadata));
 
     const steps = verificationSteps(`src/components/${family}/${name}/${name}.test.ts`);
     await runStep(steps[0]);
@@ -492,23 +455,13 @@ export async function scaffoldComponent({
     }
     state.inventory.components.push(inventoryEntry({ tag, family, name, surface: component.surface }));
     state.inventory.components.sort((left, right) => left.tag.localeCompare(right.tag));
-    const inventoryWrite = {
-      file: state.paths.inventory,
-      original: snapshots.get(state.paths.inventory),
-      expected: jsonSource(state.inventory),
-    };
-    commitSourceWritePlan({ root: packageDir, entries: [inventoryWrite] });
-    recordMetadataWrites([inventoryWrite]);
+    atomicWrite(state.paths.inventory, jsonSource(state.inventory));
 
-    for (const step of steps.slice(1)) {
-      const result = await runStep(step);
-      if (step.id === 'component-metadata') recordMetadataWrites(result?.metadataWrites);
-    }
+    for (const step of steps.slice(1)) await runStep(step);
 
     const materialized = readJson(state.paths.inventory).components.find((entry) => entry.tag === tag);
     // Re-read: the component-metadata step reconciles `history` (for example after a version bump).
-    const expected = expectedMaturity(expectedSince(state.packageJson.version,
-      assembleComponentMetadata(readComponentMetadataSources(packageDir))));
+    const expected = expectedMaturity(expectedSince(state.packageJson.version, readJson(state.paths.metadata)));
     if (JSON.stringify(materialized?.maturity) !== JSON.stringify(expected)) {
       throw new Error(
         `${PROFILE} did not materialize the reviewed metadata for ${tag}; the scaffold was rolled back.`,
@@ -519,22 +472,9 @@ export async function scaffoldComponent({
   } catch (error) {
     rmSync(state.paths.componentDirectory, { recursive: true, force: true });
     for (const [file, source] of snapshots) {
-      if (metadataFiles.has(file)) continue;
       if (source === null) rmSync(file, { force: true });
       else atomicWrite(file, source);
     }
-    const preserved = [];
-    for (const entry of metadataWrites.values()) {
-      if (entry.file.startsWith(`${state.paths.componentDirectory}/`)) continue;
-      if (entry.conflicted) { preserved.push(entry.file); continue; }
-      try {
-        const current = readSourceSnapshot(packageDir, entry.file.slice(packageDir.length + 1), { missing: true });
-        if (current.original !== entry.expected) { preserved.push(entry.file); continue; }
-        if (entry.original === null) rmSync(entry.file, { force: true });
-        else commitSourceWritePlan({ root: packageDir, entries: [{ ...current, expected: entry.original }] });
-      } catch { preserved.push(entry.file); }
-    }
-    if (preserved.length) throw new Error(`${error.message}; rollback preserved concurrent changes at ${preserved.join(', ')}`, { cause: error });
     throw error;
   }
 }

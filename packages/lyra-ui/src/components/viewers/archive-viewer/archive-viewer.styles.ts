@@ -6,25 +6,25 @@ export const virtualListHighlightStyles = css`
   ::highlight(lr-highlight-accent) {
     background-color: var(
       --lr-archive-viewer-highlight-accent-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-archive-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
     );
   }
   ::highlight(lr-highlight-success) {
     background-color: var(
       --lr-archive-viewer-highlight-success-bg,
-      var(--lr-color-success-quiet)
+      var(--lr-archive-viewer-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   ::highlight(lr-highlight-warning) {
     background-color: var(
       --lr-archive-viewer-highlight-warning-bg,
-      var(--lr-color-warning-quiet)
+      var(--lr-archive-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   ::highlight(lr-highlight-danger) {
     background-color: var(
       --lr-archive-viewer-highlight-danger-bg,
-      var(--lr-color-danger-quiet)
+      var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   /* --lr-color-surface-raised, not --lr-color-surface: entry rows paint no background, so they
@@ -34,20 +34,20 @@ export const virtualListHighlightStyles = css`
   ::highlight(lr-highlight-neutral) {
     background-color: var(
       --lr-archive-viewer-highlight-neutral-bg,
-      var(--lr-color-surface-raised)
+      var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   ::highlight(lr-highlight-active) {
     background-color: var(
       --lr-archive-viewer-highlight-active-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-archive-viewer-highlight-active-background, var(--lr-color-brand-quiet))
     );
     text-decoration: underline;
   }
   mark[data-lr-highlight-tone] {
     background: var(
       --lr-archive-viewer-highlight-accent-bg,
-      var(--lr-color-brand-quiet)
+      var(--lr-archive-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
     );
     color: inherit;
     border-radius: calc(var(--lr-radius) * 0.5);
@@ -55,25 +55,25 @@ export const virtualListHighlightStyles = css`
   mark[data-lr-highlight-tone='success'] {
     background: var(
       --lr-archive-viewer-highlight-success-bg,
-      var(--lr-color-success-quiet)
+      var(--lr-archive-viewer-highlight-success-background, var(--lr-color-success-quiet))
     );
   }
   mark[data-lr-highlight-tone='warning'] {
     background: var(
       --lr-archive-viewer-highlight-warning-bg,
-      var(--lr-color-warning-quiet)
+      var(--lr-archive-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
     );
   }
   mark[data-lr-highlight-tone='danger'] {
     background: var(
       --lr-archive-viewer-highlight-danger-bg,
-      var(--lr-color-danger-quiet)
+      var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
     );
   }
   mark[data-lr-highlight-tone='neutral'] {
     background: var(
       --lr-archive-viewer-highlight-neutral-bg,
-      var(--lr-color-surface-raised)
+      var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
     );
   }
   mark[data-lr-highlight-name='lr-highlight-active'] {

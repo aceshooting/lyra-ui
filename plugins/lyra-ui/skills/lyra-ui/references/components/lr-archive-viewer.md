@@ -7,9 +7,14 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-archive-viewer-highlight-accent-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-archive-viewer-highlight-active-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-archive-viewer-highlight-danger-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-archive-viewer-highlight-neutral-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-archive-viewer-highlight-success-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-archive-viewer-highlight-warning-background` since `21.1.0`; use css-property `--lr-archive-viewer-highlight-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -80,6 +85,12 @@ background of their own and therefore show the viewer's `--lr-color-surface`, so
 falling back to that same token would render as unhighlighted.
 `--lr-archive-viewer-highlight-active-bg` and
 `--lr-archive-viewer-highlight-active-outline` control the active quote.
+Deprecated aliases: `--lr-archive-viewer-highlight-accent-background`,
+`--lr-archive-viewer-highlight-success-background`,
+`--lr-archive-viewer-highlight-warning-background`,
+`--lr-archive-viewer-highlight-danger-background`,
+`--lr-archive-viewer-highlight-neutral-background` and
+`--lr-archive-viewer-highlight-active-background` (use the matching `-bg` names; removed in 23.0.0).
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 

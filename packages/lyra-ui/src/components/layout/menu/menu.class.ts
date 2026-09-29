@@ -215,9 +215,9 @@ function registerMenuWidthScale(): void {
  * @slot - `<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and `<hr>` or
  * `<lr-divider>` separators between groups (native `<hr>` already carries an implicit `separator`
  * role, matching what `role="menu"` expects between item groups). Any other default-slot content
- * is unsupported in this slot: native slot projection does not give it menu semantics or
- * keyboard navigation. Put other content in the `header` or `footer` slot below.
- * Content forwarded by a dropdown retains that component's free-form default-slot contract.
+ * is deprecated (removal not before 23.0.0): it still renders, but inside `role="menu"` without a
+ * menu-item role and skipped by keyboard navigation, so put it in the `header` or `footer` slot
+ * below.
  * @slot header - Composed content rendered above the items and *outside* the
  * `role="menu"` list — a filter/search field, a section title, a summary row.
  * Keeps its own full default keyboard behavior, is reachable with Tab from

@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 export type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type {
@@ -32,6 +33,7 @@ import '../../data/stat/stat.class.js';
 import '../../layout/tab-group/tab-group.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -121,6 +123,8 @@ export interface LyraEntityDossierEventMap
  *   `detail: { chunkId, sourceId, anchor? }`.
  * @event lr-chunk-toggle - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, expanded }`.
+ * @event lr-expand - Deprecated alias of `lr-chunk-toggle`, surfaced unchanged from the embedded
+ *   chunk inspector right after it. `detail: { chunkId, expanded }`. Removal not before 23.0.0.
  * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
  *   `detail: { section, expanded }`.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
@@ -174,6 +178,9 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showFocusButton: ['withoutFocusButton', invertAlias, invertAlias],
+  };
 
   /** `null` renders the shared `lr-empty` `noData` state in place of the whole dossier. */
   @property({ attribute: false }) entity: Readonly<LyraEntity> | null = null;
@@ -186,6 +193,14 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   /** Forwarded to `lr-entity-card`'s own `withoutFocusButton`. */
   @property({ type: Boolean, attribute: 'without-focus-button' })
   withoutFocusButton = false;
+  /** Forwarded to `lr-entity-card`'s own `showFocusButton`.
+   *  @deprecated Use `without-focus-button`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    attribute: 'show-focus-button',
+    converter: trueDefaultBooleanConverter,
+  })
+  showFocusButton = true;
 
   /** Headline confidence KPI, rendered as an `lr-stat` next to the entity summary. Omitted
    *  entirely (no placeholder, no empty stat) when `null`. */

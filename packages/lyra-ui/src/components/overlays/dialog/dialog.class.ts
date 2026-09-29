@@ -18,6 +18,9 @@ import {
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   animateRegistered,
@@ -28,6 +31,7 @@ import { styles } from './dialog.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
@@ -213,6 +217,8 @@ export interface LyraDialogEventMap {
  *   `--lr-icon-button-size-scope` (or the application-wide `--lr-theme-icon-button-size`) on this
  *   element or an ancestor -- NOT `--lr-icon-button-size` itself, which every `LyraElement`
  *   re-declares on its own `:host` and so never reaches this composed child.
+ * @csspart close-button__control - Deprecated alias of `close-button-control` on the same node;
+ *   removal not before 23.0.0.
  * @csspart label - Mapped alias on the visible title.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
@@ -272,9 +278,15 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    closable: ['withoutCloseButton', invertAlias, invertAlias],
+  };
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     super.attributeChangedCallback(name, oldValue, newValue);
+    if (name === 'accessible-label' && newValue !== null) {
+      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
+    }
   }
 
   private _open = false;
@@ -321,6 +333,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @property({ type: Boolean, attribute: 'without-close-button', reflect: true })
   withoutCloseButton = false;
 
+  /** Renders a built-in close (X) button in the header row (creating one,
+   *  with no heading text, if `label` and `heading` are unset), wired to the same
+   *  `close()` path Escape/backdrop-dismiss already use, with reason
+   *  `'close-button'`.
+   *  @deprecated Use `without-close-button`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) closable = true;
+
   /** Suppresses the header row entirely, whatever `heading`, the close button, the `label` slot or the
    *  `header-actions` slot would otherwise render. For a dialog that owns its own chrome. This is
    *  Web Awesome's spelling (`wa-dialog`'s `without-header`); `noHeader` below is Shoelace's. Both
@@ -346,12 +365,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
+  @property({ attribute: 'accessible-label' })
   get accessibleLabel(): string {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    if (!this.hasAttribute('accessible-label')) {
+      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
+    }
     this.legacyAccessibleLabel = value;
   }
 
@@ -1046,7 +1067,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                     ? html`
                         <lr-icon-button
                           part="close-button close-button__base"
-                          exportparts="button:close-button-control"
+                          exportparts="button:close-button-control, button:close-button__control"
                           aria-label=${this.localize('close')}
                           @click=${this.onCloseButtonClick}
                         >
@@ -1070,6 +1091,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

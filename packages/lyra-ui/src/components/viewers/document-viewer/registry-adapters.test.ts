@@ -4,8 +4,8 @@ import {
   adaptDocumentRenderer,
   createDocumentRendererAdapter,
   createDocumentRendererRegistry,
-  type LyraDocumentFile,
-  type LyraDocumentRendererDefinition,
+  type DocumentFile,
+  type DocumentRendererDefinition,
   type DocumentRendererRegistry,
   type LyraDocumentRendererAdapter,
   type LyraDocumentRendererPayload,
@@ -13,7 +13,7 @@ import {
 } from './registry.js';
 import type { LyraDocumentViewer } from './document-viewer.js';
 
-const FILE: LyraDocumentFile = { name: 'Supported file', mimeType: 'application/x-adapter', src: '' };
+const FILE: DocumentFile = { name: 'Supported file', mimeType: 'application/x-adapter', src: '' };
 
 function documentAdapter(): LyraDocumentRendererAdapter {
   return createDocumentRendererAdapter({
@@ -92,7 +92,7 @@ for (const field of ['kind', 'adapt', 'capabilities', 'render'] as const) {
   it(`rejects a modified factory ${field} tuple even when it retains the original private brand`, async () => {
     const original = documentAdapter();
     const modified = { ...original, [field]: field === 'kind' ? 'av' : () => undefined };
-    expect(() => createDocumentRendererRegistry([[FILE.mimeType, { adapter: modified } as LyraDocumentRendererDefinition]])).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([[FILE.mimeType, { adapter: modified } as DocumentRendererDefinition]])).to.throw(TypeError);
     const viewer = await fixture<LyraDocumentViewer>(html`<lr-document-viewer
       .registry=${new Map([[FILE.mimeType, { adapter: modified }]])}
     ></lr-document-viewer>`);

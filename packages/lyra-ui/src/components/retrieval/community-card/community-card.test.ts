@@ -407,7 +407,7 @@ it('formats member and overflow counts with the effective locale', async () => {
   ).to.include('١٬٢٣٣');
 });
 
-describe('lr-community-card size and the retired compact alias', () => {
+describe('lr-community-card size and the deprecated compact alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-community-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraCommunityCard): string => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
@@ -420,7 +420,7 @@ describe('lr-community-card size and the retired compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraCommunityCard>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" without a deprecation warning', async () => {
     let dense = '';
     let regular = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -430,5 +430,47 @@ describe('lr-community-card size and the retired compact alias', () => {
     expect(dense).to.equal('0|0|8px|4px');
     expect(regular).to.not.equal(dense);
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-community-card size="s" .community=${community} .members=${members}></lr-community-card>`));
+      alias = observe(await mount(html`<lr-community-card compact .community=${community} .members=${members}></lr-community-card>`));
+      const el = await mount(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-community-card:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`));
+      const el = await mount(html`<lr-community-card compact .community=${community} .members=${members}></lr-community-card>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-community-card compact size="m" .community=${community} .members=${members}></lr-community-card>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
   });
 });

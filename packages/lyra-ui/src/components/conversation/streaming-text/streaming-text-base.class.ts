@@ -4,8 +4,10 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './streaming-text.styles.js';
 
 const DEFAULT_COALESCE_MS = 50;
@@ -67,6 +69,11 @@ export interface LyraStreamingTextEventMap {
  */
 export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreamingTextEventMap> {
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    gfm: ['withoutGfm', invertAlias, invertAlias],
+    highlightCode: ['withoutSyntaxHighlighting', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
 
   /** The full current text so far -- always the complete string, never a
    *  delta to append. */
@@ -84,7 +91,8 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   streamingRender: MarkdownStreamingRender = 'plain';
 
   // Declared by each concrete tag, as the Markdown elements do, so each tag's own manifest entry
-  // carries the header option.
+  // carries the header option and its deprecated spelling.
+  abstract codeBlockChrome: boolean;
   abstract codeBlockHeader: boolean;
 
   /** Trailing-edge coalesce window, in ms, for `content` updates -- see the
@@ -119,6 +127,14 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  matches the composed element's own default. */
   @property({ type: Boolean, attribute: 'without-gfm' }) withoutGfm = false;
 
+  /**
+   * Deprecated inverted alias of `without-gfm` (`withoutGfm`): `gfm="false"` equals `without-gfm`,
+   * and removing it restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-gfm`; removal not before 23.0.0.
+   */
+  @property({ converter: trueDefaultBooleanConverter }) gfm = true;
+
   /** Forwarded verbatim to the composed Markdown element's own `linkTarget` -- the `target`
    *  applied to every rendered `<a>`, with `rel="noopener noreferrer"` always added by the
    *  composed element alongside it whenever a `target` is emitted. `'_blank'` (the default)
@@ -143,6 +159,16 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  own default. */
   @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
   withoutSyntaxHighlighting = false;
+
+  /**
+   * Deprecated inverted alias of `without-syntax-highlighting` (`withoutSyntaxHighlighting`):
+   * `highlight-code="false"` equals `without-syntax-highlighting`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-syntax-highlighting`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'highlight-code', converter: trueDefaultBooleanConverter })
+  highlightCode = true;
 
   /** Forwarded verbatim to the composed Markdown element's own `headingAnchors`. `false` (the
    *  default) matches the composed element's own default. */

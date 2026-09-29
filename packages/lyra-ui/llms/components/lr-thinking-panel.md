@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-thinking-panel-background` since `21.1.0`; use css-property `--lr-thinking-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
-- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -31,7 +32,7 @@ plain text) — this component has no dependency on either.
   `xs`/`2xs`) tightens the header/body padding, the header's internal gap, and the header/body font
   size for dense transcript rows; `m` and larger keep the regular density. This is only a density
   control: its card border and surface remain, so use `frame="plain"` when surrounding message
-  chrome already supplies them.
+  chrome already supplies them. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — the library-wide container-frame vocabulary
   (`'card' | 'plain'`). `'card'` keeps the bordered, filled outer container. `'plain'` removes its
   border, background, and corner radius so a nested panel does not double an existing frame;
@@ -90,7 +91,8 @@ padding at that size; and `--lr-thinking-panel-compact-body-font-size` (default
 `--lr-thinking-panel-border-color` (default `var(--lr-color-border)`) and
 `--lr-thinking-panel-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome
 without a `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. The mouse-hover preview on `[part="body"]` mentioned above has its own
+`frame="plain"` keeps. Deprecated alias: `--lr-thinking-panel-background` (use
+`--lr-thinking-panel-bg`; removed in 23.0.0). The mouse-hover preview on `[part="body"]` mentioned above has its own
 four-longhand outline shape: `--lr-thinking-panel-body-hover-outline-width` (default
 `var(--lr-focus-ring-width)`), `--lr-thinking-panel-body-hover-outline-style` (default `solid`),
 `--lr-thinking-panel-body-hover-outline-color` (default `var(--lr-color-border)`, set to

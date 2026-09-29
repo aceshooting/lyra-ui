@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { toRgba } from '../../../../test/color-contrast.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -15,9 +14,6 @@ import {
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
 import { sendKeys } from '@web/test-runner-commands';
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-app-rail', 'hide-toggle');
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)
@@ -3708,7 +3704,7 @@ describe("app-rail canonical names and their deprecated aliases", () => {
   const base = (el: LyraAppRail) =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
-  it("keeps the mobile toggle visible when only hide-toggle is set", async () => {
+  it("keeps hide-toggle hiding the closed mobile toggle like without-toggle, and warns once", async () => {
     const hidden: string[] = [];
     const warnings = await captureDeprecationWarnings([usage("hideToggle")], async () => {
       for (let index = 0; index < 2; index += 1) {
@@ -3716,13 +3712,28 @@ describe("app-rail canonical names and their deprecated aliases", () => {
         fireMobileChange(el, true);
         await el.updateComplete;
         await el.updateComplete;
-        expect(el.withoutToggle).to.equal(false);
-        expect(el.hasAttribute("without-toggle")).to.equal(false);
+        expect(el.withoutToggle).to.equal(true);
+        expect(el.hasAttribute("without-toggle"), "the canonical attribute reflects").to.equal(true);
         hidden.push(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).display);
       }
     });
-    expect(hidden.every(display => display !== "none")).to.equal(true);
-    expect(warnings).to.have.length(0);
+    expect(hidden).to.deep.equal(["none", "none"]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-app-rail:property:hideToggle"]);
+    expect(warnings[0]!.message).to.contain("without-toggle");
+  });
+
+  it("forwards the hideToggle property both ways, both attributes reflecting", async () => {
+    const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
+    await captureDeprecationWarnings([usage("hideToggle")], async () => {
+      el.hideToggle = true;
+      await el.updateComplete;
+    });
+    expect(el.withoutToggle).to.equal(true);
+    expect(el.hasAttribute("hide-toggle")).to.equal(true);
+    el.withoutToggle = false;
+    await el.updateComplete;
+    expect(el.hideToggle).to.equal(false);
+    expect(el.hasAttribute("hide-toggle")).to.equal(false);
   });
 
   it("accepts CSS lengths on rail-width, min-rail-width and max-rail-width, resolved live", async () => {
@@ -3753,22 +3764,108 @@ describe("app-rail canonical names and their deprecated aliases", () => {
     expect(el.minRailWidth).to.equal(200);
   });
 
-  it("ignores hide-toggle attribute changes after the first render", async () => {
+  it("keeps the -px aliases working with identical results, and warns once for each", async () => {
+    let aliased!: LyraAppRail;
+    const warnings = await captureDeprecationWarnings(
+      [usage("railWidthPx"), usage("minRailWidthPx"), usage("maxRailWidthPx")],
+      async () => {
+        aliased = (await fixture(html`
+          <lr-app-rail force-mode="full" resizable rail-width-px="250" min-rail-width-px="200" max-rail-width-px="300"></lr-app-rail>
+        `)) as LyraAppRail;
+        await aliased.updateComplete;
+      },
+    );
+    const canonical = (await fixture(html`
+      <lr-app-rail force-mode="full" resizable rail-width="250" min-rail-width="200" max-rail-width="300"></lr-app-rail>
+    `)) as LyraAppRail;
+    await canonical.updateComplete;
+    for (const attribute of ["aria-valuemin", "aria-valuemax", "aria-valuenow"]) {
+      expect(resizer(aliased).getAttribute(attribute), attribute).to.equal(resizer(canonical).getAttribute(attribute));
+    }
+    expect(base(aliased).style.getPropertyValue("inline-size")).to.equal("250px");
+    expect([aliased.railWidthPx, aliased.minRailWidthPx, aliased.maxRailWidthPx]).to.deep.equal([250, 200, 300]);
+    expect(aliased.railWidth).to.equal(250);
+    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
+      "lyra-deprecated:lr-app-rail:property:maxRailWidthPx",
+      "lyra-deprecated:lr-app-rail:property:minRailWidthPx",
+      "lyra-deprecated:lr-app-rail:property:railWidthPx",
+    ]);
+    expect(canonical.railWidthPx, "reading an alias never warns").to.equal(250);
+  });
+
+  it("reads a canonical CSS length back through the -px alias in pixels", async () => {
+    const el = (await fixture(html`<lr-app-rail resizable rail-width="10rem" min-rail-width="8rem"></lr-app-rail>`)) as LyraAppRail;
+    const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(el.railWidthPx).to.equal(10 * rootSize);
+    expect(el.minRailWidthPx).to.equal(8 * rootSize);
+    expect(el.maxRailWidthPx).to.equal(440);
+  });
+
+  it("lets the last authored attribute win between canonical names and their aliases", async () => {
+    let first!: LyraAppRail;
+    let second!: LyraAppRail;
+    await captureDeprecationWarnings([usage("railWidthPx")], async () => {
+      first = (await fixture(html`<lr-app-rail rail-width="300" rail-width-px="200"></lr-app-rail>`)) as LyraAppRail;
+      second = (await fixture(html`<lr-app-rail rail-width-px="200" rail-width="300"></lr-app-rail>`)) as LyraAppRail;
+    });
+    expect([first.railWidth, first.railWidthPx]).to.deep.equal([200, 200]);
+    expect([second.railWidth, second.railWidthPx]).to.deep.equal([300, 300]);
+  });
+
+  it("restores the alias defaults when an alias attribute is removed", async () => {
+    let el!: LyraAppRail;
+    await captureDeprecationWarnings([usage("minRailWidthPx"), usage("maxRailWidthPx")], async () => {
+      el = (await fixture(html`<lr-app-rail min-rail-width-px="240" max-rail-width-px="600"></lr-app-rail>`)) as LyraAppRail;
+      el.removeAttribute("min-rail-width-px");
+      el.removeAttribute("max-rail-width-px");
+      await el.updateComplete;
+    });
+    expect(el.minRailWidth).to.equal(190);
+    expect(el.maxRailWidth).to.equal(440);
+    expect(el.minRailWidthPx).to.equal(190);
+  });
+
+  it("lets the last write win in both directions after the first render", async () => {
+    const aliases = [usage("railWidthPx"), usage("minRailWidthPx"), usage("maxRailWidthPx"), usage("hideToggle")];
+    const warnings = await captureDeprecationWarnings(aliases, async () => {
+      const el = (await fixture(html`
+        <lr-app-rail resizable rail-width="20rem" min-rail-width="12rem" max-rail-width="30rem"></lr-app-rail>
+      `)) as LyraAppRail;
+      await el.updateComplete;
+      el.setAttribute("rail-width-px", "250");
+      el.setAttribute("min-rail-width-px", "150");
+      el.setAttribute("max-rail-width-px", "600");
+      el.setAttribute("hide-toggle", "");
+      await el.updateComplete;
+      expect([el.railWidth, el.minRailWidth, el.maxRailWidth]).to.deep.equal([250, 150, 600]);
+      expect(el.withoutToggle).to.equal(true);
+      el.railWidth = "10rem";
+      el.withoutToggle = false;
+      await el.updateComplete;
+      const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      expect(el.railWidthPx).to.equal(10 * rootSize);
+      expect(el.hideToggle).to.equal(false);
+      expect(el.hasAttribute("hide-toggle")).to.equal(false);
+    });
+    expect(warnings).to.have.length(4);
+  });
+
+  it("keeps a lone hide-toggle attribute driving without-toggle after the first render", async () => {
     await captureDeprecationWarnings([usage("hideToggle")], async () => {
       const el = (await fixture(html`<lr-app-rail hide-toggle></lr-app-rail>`)) as LyraAppRail;
       await el.updateComplete;
-      expect(el.hasAttribute("without-toggle")).to.equal(false);
+      expect(el.hasAttribute("without-toggle"), "reflected from the alias").to.equal(true);
       el.removeAttribute("hide-toggle");
       await el.updateComplete;
       expect(el.withoutToggle).to.equal(false);
       expect(el.hasAttribute("without-toggle")).to.equal(false);
       el.setAttribute("hide-toggle", "");
       await el.updateComplete;
-      expect(el.withoutToggle).to.equal(false);
+      expect(el.withoutToggle).to.equal(true);
     });
   });
 
-  it("does not recolor the base and panel through the deprecated -background custom properties", async () => {
+  it("recolors the base and panel through the deprecated -background custom properties", async () => {
     const el = (await fixture(
       html`<lr-app-rail
         open
@@ -3776,14 +3873,14 @@ describe("app-rail canonical names and their deprecated aliases", () => {
         ><button>a</button></lr-app-rail
       >`
     )) as LyraAppRail;
-    expect(normalizeColor(getComputedStyle(base(el)).backgroundColor)).to.not.equal("rgb(10, 20, 30)");
+    expect(normalizeColor(getComputedStyle(base(el)).backgroundColor)).to.equal("rgb(10, 20, 30)");
     el.style.setProperty("--lr-app-rail-bg", "rgb(1, 2, 3)");
     expect(normalizeColor(getComputedStyle(base(el)).backgroundColor), "the canonical name wins").to.equal("rgb(1, 2, 3)");
     fireMobileChange(el, true);
     await el.updateComplete;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
-    expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.not.equal("rgb(40, 50, 60)");
+    expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.equal("rgb(40, 50, 60)");
   });
 
   it("reports the overlay state as expanded beside the deprecated open key", async () => {

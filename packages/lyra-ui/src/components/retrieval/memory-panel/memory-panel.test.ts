@@ -1775,8 +1775,8 @@ describe('lr-memory-panel render cap', () => {
   });
 });
 
-describe('lr-memory-panel retired lr-expand alias', () => {
-  it('fires lr-memory-toggle, without the retired lr-expand alias, without warning', async () => {
+describe('lr-memory-panel deprecated lr-expand alias', () => {
+  it('fires lr-memory-toggle, then the lr-expand alias with its own equal detail, without warning', async () => {
     const el = await populated();
     const toggle = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"] [part="expand-toggle"]'
@@ -1800,8 +1800,9 @@ describe('lr-memory-panel retired lr-expand alias', () => {
     const detail = { memoryId: 'l1', scope: 'long-term', expanded: true };
     expect(seen).to.deep.equal([
       { type: 'lr-memory-toggle', detail, cancelable: false },
+      { type: 'lr-expand', detail, cancelable: false },
     ]);
-    expect(details.size, 'only the canonical event is emitted').to.equal(1);
+    expect(details.size, 'each event carries its own detail object').to.equal(2);
     expect(warnings).to.have.length(0);
   });
 });

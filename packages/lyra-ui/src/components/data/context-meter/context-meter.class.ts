@@ -15,6 +15,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { statePart } from '../../../internal/state-part.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
@@ -22,6 +23,7 @@ import { styles } from './context-meter.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
 export type ContextMeterTone = LyraVariant;
@@ -268,6 +270,9 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showLegend: 'withLegend',
+  };
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */
   @property({ attribute: false }) segments: readonly ContextMeterSegment[] = [];
@@ -306,6 +311,14 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    *  emits nothing, mirroring `<lr-sequence-strip>`'s `withLegend` rather than the interactive
    *  `<lr-graph-legend>`. */
   @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
+
+  /**
+   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `with-legend`; removal not before 23.0.0.
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   /**
    * What each legend row shows beside its swatch. `label` (the default) is exactly the output this
@@ -707,6 +720,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

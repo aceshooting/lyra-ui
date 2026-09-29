@@ -34,19 +34,19 @@ import { isMainModule } from './is-main-module.mjs';
 
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
 import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
-import { readTranslationReviews } from './translation-review-source.mjs';
 
-const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const localizationFile = join(packageRoot, 'src/internal/localization.ts');
 const localizationRuntimeFile = join(packageRoot, 'src/internal/localization-runtime.ts');
 const translationsRoot = join(packageRoot, 'src/translations');
 const packageJsonPath = join(packageRoot, 'package.json');
+const reviewFixturePath = join(packageRoot, 'scripts/fixtures/translation-reviews.json');
 const reviewSchemaPath = join(packageRoot, 'scripts/fixtures/translation-reviews.schema.json');
 const pluralCategoryPinPath = join(packageRoot, 'scripts/fixtures/cldr-plural-categories.json');
 const upstreamTagsPath = join(packageRoot, 'scripts/fixtures/upstream-tags.json');
@@ -148,25 +148,16 @@ function namedObjectLiteral(program, name) {
   return found;
 }
 
-/** Literal full/delta registration shared by the inventory and semantic checker. */
+/** The `registerLyraLocale('<tag>', <identifier>[, <meta>])` call a catalog module must make. */
 function registrationCall(program) {
   let call;
   visitAst(program, (node) => {
-    if (node.type !== 'CallExpression' || node.callee?.type !== 'Identifier') return;
-    if (!['registerLyraLocale', 'registerLyraLocaleDelta'].includes(node.callee.name)) return;
-    if (call) throw new Error('A catalog module must contain exactly one locale registration');
-    const delta = node.callee.name === 'registerLyraLocaleDelta';
-    const offset = delta ? 1 : 0;
-    if (node.arguments.length < 2 + offset || node.arguments.length > 3 + offset)
-      throw new Error('Locale registration has an invalid argument count');
-    const parent = delta ? literalString(node.arguments?.[1]) : null;
-    const meta = node.arguments?.[2 + offset];
-    if (delta && !parent) throw new Error('Delta parent must be a nonempty literal locale tag');
-    if (meta && meta.type !== 'ObjectExpression') throw new Error('Locale metadata must be a literal object');
+    if (call || node.type !== 'CallExpression') return;
+    if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraLocale') return;
     call = {
-      tag: literalString(node.arguments?.[0]), parent,
-      identifier: node.arguments?.[1 + offset]?.type === 'Identifier' ? node.arguments[1 + offset].name : undefined,
-      meta,
+      tag: literalString(node.arguments?.[0]),
+      identifier: node.arguments?.[1]?.type === 'Identifier' ? node.arguments[1].name : undefined,
+      meta: node.arguments?.[2]?.type === 'ObjectExpression' ? node.arguments[2] : undefined,
     };
   });
   return call;
@@ -185,23 +176,8 @@ function bareImportSpecifiers(program) {
   return specifiers;
 }
 
-/** Strict literal catalog input, also used before the slice generator preserves raw values. */
-export function readTranslationCatalogModule(source, file) {
-  const program = parseProgram(file, source);
-  const registration = registrationCall(program);
-  if (!registration?.tag || !registration.identifier)
-    throw new Error(`${file}: expected a literal locale registration and catalog identifier`);
-  const object = namedObjectLiteral(program, registration.identifier);
-  if (!object) throw new Error(`${file}: registered catalog must be a literal object`);
-  const errors = [];
-  const entries = messageEntries(object, file, errors);
-  validateMeta(file, registration.meta, errors);
-  if (errors.length) throw new Error(errors.join('\n'));
-  return { registration, entries, imports: bareImportSpecifiers(program) };
-}
-
 /**
- * Reads literal own messages, complete resolved locale maps, and the generated module
+ * Reads the literal English messages, each complete aggregate locale map, and the generated module
  * paths that compose it. Shared by the translation checker and locale discovery generator so the
  * published coverage counts, content hashes, and optional loader map describe the same source.
  */
@@ -226,8 +202,6 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
     .sort();
   const catalogs = new Map();
-  const authoredCatalogs = new Map();
-  const slicesByLocale = new Map();
   const modules = [];
 
   for (const name of rootFiles) {
@@ -246,11 +220,8 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         continue;
       }
       const entries = messageEntries(object, file, errors);
-      validateMeta(file, registration.meta, errors);
-      if (registration.parent && JSON.stringify(bareImportSpecifiers(program)) !== JSON.stringify([`./${registration.parent}.js`]))
-        errors.push(`${file}: delta parent import must match its declared parent aggregate`);
-      authoredCatalogs.set(registration.tag, entries);
-      modules.push({ locale: registration.tag, parent: registration.parent, aggregatePath: `./${base}.js`, familyPaths: {} });
+      catalogs.set(registration.tag, entries);
+      modules.push({ locale: registration.tag, aggregatePath: `./${base}.js`, familyPaths: {} });
       continue;
     }
 
@@ -272,9 +243,6 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     const unionEntries = new Map();
     const familyPaths = {};
     let localeTag;
-    let parent;
-    const sliceEntriesByFamily = new Map();
-    let metaSignature;
     for (const sliceName of sliceNames) {
       const family = sliceName.slice(0, -'.ts'.length);
       if (family !== 'shared' && !knownFamilies.has(family)) {
@@ -289,19 +257,6 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         errors.push(`${sliceFile}: expected registerLyraLocale('<tag>', <catalog>)`);
         continue;
       }
-      if (parent !== undefined && parent !== sliceRegistration.parent)
-        errors.push(`${sliceFile}: parent declaration disagrees with a sibling slice (mixed full/delta catalogs are invalid)`);
-      if (parent === undefined) parent = sliceRegistration.parent;
-      validateMeta(sliceFile, sliceRegistration.meta, errors);
-      if (sliceRegistration.meta) {
-        const signature = JSON.stringify(sliceRegistration.meta.properties.map((property) => [propertyName(property), literalString(property.value)]).sort());
-        if (metaSignature !== undefined && signature !== metaSignature) errors.push(`${sliceFile}: locale metadata disagrees with a sibling slice`);
-        metaSignature = signature;
-      }
-      const parentImports = bareImportSpecifiers(sliceProgram);
-      const expectedParentImports = sliceRegistration.parent ? [`../${sliceRegistration.parent}/${family}.js`] : [];
-      if (JSON.stringify(parentImports) !== JSON.stringify(expectedParentImports))
-        errors.push(`${sliceFile}: parent imports must exactly match the declared parent family`);
       localeTag ??= sliceRegistration.tag;
       if (sliceRegistration.tag !== localeTag || localeTag !== base) {
         errors.push(`${sliceFile}: locale tag does not match the aggregate's canonical file name`);
@@ -313,7 +268,6 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         continue;
       }
       const entries = messageEntries(object, sliceFile, errors);
-      sliceEntriesByFamily.set(family, entries);
       for (const [key, value] of entries) {
         if (unionEntries.has(key)) errors.push(`src/translations/${base}: duplicate message key ${key}`);
         else unionEntries.set(key, value);
@@ -321,71 +275,10 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
       familyPaths[family] = `./${base}/${family}.js`;
     }
     if (localeTag) {
-      for (const [family, entries] of sliceEntriesByFamily) validateOwnOrder(entries, `${base}/${family}`);
-      authoredCatalogs.set(localeTag, englishOrder.filter((key) => unionEntries.has(key)).map((key) => [key, unionEntries.get(key)]));
-      slicesByLocale.set(localeTag, sliceEntriesByFamily);
-      modules.push({ locale: localeTag, parent, aggregatePath: `./${base}.js`, familyPaths });
+      catalogs.set(localeTag, englishOrder.filter((key) => unionEntries.has(key)).map((key) => [key, unionEntries.get(key)]));
+      modules.push({ locale: localeTag, aggregatePath: `./${base}.js`, familyPaths });
     }
   }
-
-  function validateOwnOrder(entries, file) {
-    const keys = entries.map(([key]) => key);
-    const ownKeys = new Set(keys);
-    const sourceKeys = new Set(englishOrder);
-    for (const key of keys) if (!sourceKeys.has(key)) errors.push(`${file}: unknown message key ${key}`);
-    const expected = englishOrder.filter((key) => ownKeys.has(key));
-    if (JSON.stringify(keys) !== JSON.stringify(expected)) errors.push(`${file}: authored message keys are not in source order`);
-  }
-  const modulesByLocale = new Map(modules.map((module) => [module.locale, module]));
-  for (const { locale } of modules) {
-    const visited = new Set();
-    let current = locale;
-    while (current) {
-      if (visited.has(current)) throw new Error(`Locale parent cycle at ${current}`);
-      if (visited.size > 32) throw new Error('Locale parent chain exceeds 32 edges');
-      visited.add(current);
-      const module = modulesByLocale.get(current);
-      if (!module) throw new Error(`Unknown locale parent ${current}`);
-      current = module.parent;
-    }
-  }
-  function familyKeys(locale, family) {
-    const module = modulesByLocale.get(locale);
-    return new Set([
-      ...(module.parent ? familyKeys(module.parent, family) : []),
-      ...(slicesByLocale.get(locale)?.get(family) ?? []).map(([key]) => key),
-    ]);
-  }
-  function resolve(locale, chain = []) {
-    if (chain.includes(locale)) throw new Error(`Locale parent cycle: ${[...chain, locale].join(' -> ')}`);
-    if (chain.length > 32) throw new Error('Locale parent chain exceeds 32 edges');
-    if (catalogs.has(locale)) return catalogs.get(locale);
-    const module = modulesByLocale.get(locale);
-    if (!module) throw new Error(`Unknown locale parent ${locale}`);
-    const own = authoredCatalogs.get(locale);
-    validateOwnOrder(own, locale);
-    const inherited = module.parent ? resolve(module.parent, [...chain, locale]) : [];
-    if (module.parent && slicesByLocale.has(locale)) {
-      const parentModule = modulesByLocale.get(module.parent);
-      for (const family of Object.keys(module.familyPaths)) {
-        if (!parentModule.familyPaths[family]) errors.push(`${locale}/${family}: parent has no matching family module`);
-        const inheritedKeys = familyKeys(module.parent, family);
-        for (const [key] of slicesByLocale.get(locale).get(family)) {
-          if (!inheritedKeys.has(key)) errors.push(`${locale}/${family}: override ${key} does not belong to the matching parent family`);
-        }
-      }
-      for (const family of Object.keys(parentModule.familyPaths)) {
-        if (!module.familyPaths[family]) errors.push(`${locale}: missing inherited parent family ${family}`);
-      }
-    }
-    const merged = new Map([...inherited, ...own]);
-    const missing = englishOrder.filter((key) => !merged.has(key));
-    if (missing.length) errors.push(`${locale}: complete resolved catalog is missing ${missing.join(', ')}`);
-    const entries = englishOrder.filter((key) => merged.has(key)).map((key) => [key, merged.get(key)]);
-    catalogs.set(locale, entries);
-    return entries;
-  }
-  for (const module of modules) resolve(module.locale);
 
   const pseudoRoot = join(translationsRoot, 'pseudo');
   const pseudoModules = [];
@@ -420,7 +313,7 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     }
   }
   if (errors.length > 0) throw new Error(errors.join('\n'));
-  return { englishEntries, catalogs, authoredCatalogs, modules, pseudoModules };
+  return { englishEntries, catalogs, modules, pseudoModules };
 }
 
 /** The base language subtag of a locale tag, normalized the way `normalizeLocale()` does. */
@@ -679,7 +572,6 @@ async function main() {
   const requiredSideEffects = [];
 
   const summaries = [];
-  const inventory = await readTranslationCatalogInventory({ packageDir: packageRoot });
   const catalogEntries = new Map();
   const registeredTags = [];
 
@@ -715,10 +607,8 @@ async function main() {
         continue;
       }
       const entries = messageEntries(catalog, file, errors);
-      const resolved = inventory.catalogs.get(tag);
-      catalogEntries.set(tag, resolved);
-      validateCatalogEntries({ file, entries, expectedOrderedKeys: registration.parent ? englishOrder.filter((key) => entries.some(([own]) => own === key)) : englishOrder, english, categories, errors });
-      validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories, errors });
+      catalogEntries.set(tag, entries);
+      validateCatalogEntries({ file, entries, expectedOrderedKeys: englishOrder, english, categories, errors });
 
       const srcEntry = `./src/translations/${name}`;
       const distEntry = `./dist/translations/${base}.js`;
@@ -794,7 +684,7 @@ async function main() {
       validateCatalogEntries({
         file: sliceFile,
         entries: sliceEntries,
-        expectedOrderedKeys: sliceRegistration.parent ? orderedKeysForSlice(sliceName).filter((key) => sliceEntries.some(([own]) => own === key)) : orderedKeysForSlice(sliceName),
+        expectedOrderedKeys: orderedKeysForSlice(sliceName),
         english,
         categories: sliceCategories,
         errors,
@@ -827,9 +717,7 @@ async function main() {
     // -- `validateTranslationReviews()`'s content-addressed `messageSnapshot()` in particular --
     // hash the ORDERED entry list, and that snapshot must stay identical to what the pre-16.0.0
     // monolith produced, or every approved review goes stale for a purely mechanical reason.
-    const resolved = inventory.catalogs.get(tag);
-    catalogEntries.set(tag, resolved);
-    validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories: pluralCategoriesFor(tag, pluralCategoryPin), errors });
+    catalogEntries.set(tag, englishOrder.filter((key) => unionMap.has(key)).map((key) => [key, unionMap.get(key)]));
 
     const srcAggregateEntry = `./src/translations/${name}`;
     const distAggregateEntry = `./dist/translations/${base}.js`;
@@ -852,11 +740,12 @@ async function main() {
   ));
 
   try {
-    const [fixture, schemaSource, upstreamSource] = await Promise.all([
-      readTranslationReviews({ packageDir: packageRoot }),
+    const [reviewSource, schemaSource, upstreamSource] = await Promise.all([
+      readFile(reviewFixturePath, 'utf8'),
       readFile(reviewSchemaPath, 'utf8'),
       readFile(upstreamTagsPath, 'utf8'),
     ]);
+    const fixture = JSON.parse(reviewSource);
     // Parsing the schema here makes a missing or malformed authoritative schema fail the same gate
     // as its fixture, even though cross-file facts are enforced by validateTranslationReviews().
     JSON.parse(schemaSource);

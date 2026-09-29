@@ -688,12 +688,12 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
   });
 });
 
-describe('lr-source-card heading and the retired title alias', () => {
+describe('lr-source-card heading and the deprecated title alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'title' }];
   const text = (el: LyraSourceCard): string =>
     el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
 
-  it('renders heading with canonical defaults and no deprecation warning or a host title attribute', async () => {
+  it('renders heading without a deprecation warning or a host title attribute', async () => {
     let rendered = '';
     let hostTitle: string | null = 'unset';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -705,9 +705,57 @@ describe('lr-source-card heading and the retired title alias', () => {
     expect(hostTitle).to.equal(null);
     expect(warnings).to.have.length(0);
   });
+
+  it('keeps title working as an alias, still stripping the host title attribute, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = text(await fixture<LyraSourceCard>(html`<lr-source-card heading="annual_report.pdf"></lr-source-card>`));
+      const el = await fixture<LyraSourceCard>(html`<lr-source-card title="annual_report.pdf"></lr-source-card>`);
+      alias = text(el);
+      readback = [el.heading, el.title, el.hasAttribute('title')];
+      // The canonical property syncs back into the alias.
+      el.heading = 'renamed.pdf';
+      await el.updateComplete;
+      readback.push(el.title, el.hasAttribute('title'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(readback).to.deep.equal(['annual_report.pdf', 'annual_report.pdf', false, 'renamed.pdf', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-card:property:title',
+    ]);
+    expect(warnings[0]!.message).to.contain('heading');
+  });
+
+  it('strips a title attribute set programmatically after connection, applying it as the heading', async () => {
+    let readback: unknown[] = [];
+    await captureDeprecationWarnings(ALIAS, async () => {
+      const el = await fixture<LyraSourceCard>(html`<lr-source-card></lr-source-card>`);
+      el.setAttribute('title', 'late.pdf');
+      await el.updateComplete;
+      el.title = 'later.pdf';
+      await el.updateComplete;
+      readback = [el.heading, el.hasAttribute('title'), text(el)];
+    });
+    expect(readback).to.deep.equal(['later.pdf', false, 'later.pdf']);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    const headings: string[] = [];
+    await captureDeprecationWarnings(ALIAS, async () => {
+      for (const markup of [
+        html`<lr-source-card heading="first.pdf" title="later.pdf"></lr-source-card>`,
+        html`<lr-source-card title="first.pdf" heading="later.pdf"></lr-source-card>`,
+      ]) {
+        headings.push(text(await fixture<LyraSourceCard>(markup)));
+      }
+    });
+    expect(headings).to.deep.equal(['later.pdf', 'later.pdf']);
+  });
 });
 
-describe('lr-source-card size and the retired compact alias', () => {
+describe('lr-source-card size and the deprecated compact alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-source-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraSourceCard): string => {
     const chrome = baseChrome(el);
@@ -715,7 +763,7 @@ describe('lr-source-card size and the retired compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraSourceCard>(markup);
 
-  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
+  it('applies size="s" without a deprecation warning', async () => {
     let dense = '';
     let regular = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -725,5 +773,47 @@ describe('lr-source-card size and the retired compact alias', () => {
     expect(dense).to.equal('4px|2px');
     expect(regular).to.equal('8px|4px');
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact equal to size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-source-card size="s" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      alias = observe(await mount(html`<lr-source-card compact heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      const el = await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.size, el.compact, el.hasAttribute('compact')];
+      // The canonical property syncs back into the alias, which reflects as it always did.
+      el.size = 'm';
+      await el.updateComplete;
+      readback.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal(['s', true, true, false, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-source-card:property:compact',
+    ]);
+  });
+
+  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
+    let regular = '';
+    let cleared = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      regular = observe(await mount(html`<lr-source-card heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+      const el = await mount(html`<lr-source-card compact heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`);
+      el.compact = false;
+      await el.updateComplete;
+      cleared = observe(el);
+      both = observe(await mount(html`<lr-source-card compact size="m" heading="a.pdf"><span slot="excerpt">x</span></lr-source-card>`));
+    });
+    expect(cleared).to.equal(regular);
+    expect(both).to.equal(regular);
   });
 });

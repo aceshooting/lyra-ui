@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated property** `showCapture` / `show-capture` since `21.1.0`; use property `without-capture`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -27,7 +27,8 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `withoutCapture: boolean = false` (attribute `without-capture`, reflected) — hides native
-push-to-talk capture; `label?: string` — accessible name for the session shell. Omitting it localizes the
+push-to-talk capture (deprecated alias: `show-capture`/`showCapture`, use `without-capture`,
+removed in 23.0.0; inverted, so `show-capture="false"` equals `without-capture`); `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

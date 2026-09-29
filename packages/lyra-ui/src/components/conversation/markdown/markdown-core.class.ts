@@ -30,11 +30,16 @@ import {
   type MarkdownVariantContext,
 } from './markdown-base.class.js';
 import { styles } from './markdown.styles.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+// The parse-only variant, matching `<lr-markdown>`. Inert either way today (neither the deprecated
+// `gfm` nor `highlightCode` alias reflects, so no `toAttribute` is ever called), but the pair had drifted onto
+// two different converters, and the reflecting one would start behaving differently the moment any
+// either property gained `reflect: true`.
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Re-exported so `markdown-core.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
@@ -48,6 +53,12 @@ export type { MarkdownStreamingRender } from './markdown-shared.js';
  *  see `createMarkdownKatexState()` for why sharing one instance across the pair would change
  *  re-render-on-resolve behavior on a page using both. */
 const katexState = createMarkdownKatexState();
+
+/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
+ *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
+ *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
+ *  `fromAttribute` checks the literal string instead. Shared by the deprecated `gfm` and
+ *  `highlightCode` aliases. */
 
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -261,6 +272,11 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    gfm: ['withoutGfm', invertAlias, invertAlias],
+    highlightCode: ['withoutSyntaxHighlighting', invertAlias, invertAlias],
+    codeBlockChrome: 'codeBlockHeader',
+  };
 
   private static readonly variant = createMarkdownVariantContext(
     'lr-markdown-core',
@@ -306,6 +322,14 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
 
   /** Disables GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
   @property({ type: Boolean, attribute: 'without-gfm' }) override withoutGfm = false;
+
+  /**
+   * Deprecated inverted alias of `without-gfm` (`withoutGfm`): `gfm="false"` equals `without-gfm`,
+   * and removing it restores the default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-gfm`; removal not before 23.0.0.
+   */
+  @property({ converter: trueDefaultBooleanConverter }) override gfm = true;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.
@@ -353,12 +377,32 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
+  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
+   * write to either wins.
+   * Setting it logs a one-time development warning.
+   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'code-block-chrome' })
+  override codeBlockChrome = false;
+
   /** Turns off syntax highlighting of fenced code blocks, keeping plain output even when grammars
    *  are supplied. Unset (the default), fenced blocks are highlighted through the fine-grained Shiki
    *  core loader when `languages` supplies the matching grammar; the empty default language map
    *  means no fenced block is highlighted. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */
   @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
   override withoutSyntaxHighlighting = false;
+
+  /**
+   * Deprecated inverted alias of `without-syntax-highlighting` (`withoutSyntaxHighlighting`):
+   * `highlight-code="false"` equals `without-syntax-highlighting`, and removing it restores the
+   * default. Setting it logs a one-time development warning.
+   *
+   * @deprecated Use `without-syntax-highlighting`; removal not before 23.0.0.
+   */
+  @property({
+    attribute: 'highlight-code',
+    converter: trueDefaultBooleanConverter,
+  })
+  override highlightCode = true;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`), or a lazy loader per key, e.g.

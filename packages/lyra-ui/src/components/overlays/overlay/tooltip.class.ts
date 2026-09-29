@@ -34,6 +34,7 @@ import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
+  trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -45,6 +46,8 @@ import {
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
@@ -57,6 +60,7 @@ import { tooltipStyles } from './overlay.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Default delay (ms) before an interaction opens the tooltip. */
 const DEFAULT_SHOW_DELAY = 150;
@@ -200,6 +204,8 @@ export interface LyraTooltipEventMap {
  * size of the tooltip.
  * @cssprop --lr-tooltip-max-inline-size - Retained Lyra fallback for `--max-width`.
  * @cssprop --lr-tooltip-bg - Tooltip background color (default `--lr-color-neutral`).
+ * @cssprop --lr-tooltip-background - Deprecated alias of `--lr-tooltip-bg`, read only as its
+ *   fallback; removal not before 23.0.0.
  * @cssprop --lr-tooltip-color - Tooltip text color (default `--lr-color-on-neutral`).
  * @cssprop [--arrow-size=var(--lr-tooltip-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
  * arrow square.
@@ -232,6 +238,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, tooltipStyles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    arrow: ['withoutArrow', invertAlias, invertAlias],
+  };
   private _open = false;
   /** Whether the tooltip is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle;
    *  assigning `false` also cancels a delayed open that has not fired yet.
@@ -353,6 +362,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   /** Suppresses the arrow that otherwise points at the anchor. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
+  /** Render an arrow that points at the anchor. Defaults on for mapped tooltip markup.
+   *  @deprecated Use `without-arrow`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */

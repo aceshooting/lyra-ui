@@ -3214,7 +3214,7 @@ describe("readonly", () => {
   });
 });
 
-describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
+describe("deprecated lr-add / lr-remove / lr-token-edit aliases", () => {
   const cases = [
     {
       alias: "lr-add",
@@ -3265,20 +3265,26 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
       { tag: "lr-token-input", kind: "event", name: alias },
     ];
 
-    it(`fires only ${canonical}, with a cancelable detail`, async () => {
+    it(`fires ${canonical} first, then ${alias}, with separate equal cancelable details`, async () => {
       const el = (await fixture(mount())) as LyraTokenInput;
       const seen: CustomEvent[] = [];
       const record = (event: Event) => seen.push(event as CustomEvent);
       el.addEventListener(canonical, record);
       el.addEventListener(alias, record);
       await act(el);
-      expect(seen.map((event) => event.type)).to.deep.equal([canonical]);
+      expect(seen.map((event) => event.type)).to.deep.equal([canonical, alias]);
       expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
+        JSON.stringify(detail),
         JSON.stringify(detail),
       ]);
       expect(
+        seen[0]!.detail === seen[1]!.detail,
+        "each event carries its own detail object"
+      ).to.equal(false);
+      expect(
         seen.map((event) => [event.cancelable, event.bubbles, event.composed])
       ).to.deep.equal([
+        [true, true, true],
         [true, true, true],
       ]);
       expect(el.value).to.deep.equal(changed);
@@ -3293,11 +3299,11 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
       });
       const warnings = await captureDeprecationWarnings(usage, () => act(el));
       expect(el.value).to.deep.equal(unchanged);
-      expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
+      expect(aliasPrevented, "the alias still fires, undecided").to.equal(false);
       expect(warnings).to.have.length(0);
     });
 
-    it(`ignores a listener bound only to ${alias}`, async () => {
+    it(`still lets a listener bound only to ${alias} veto, and warns once`, async () => {
       const values: string[][] = [];
       const warnings = await captureDeprecationWarnings(usage, async () => {
         for (let round = 0; round < 2; round += 1) {
@@ -3307,16 +3313,19 @@ describe("retired lr-add / lr-remove / lr-token-edit aliases", () => {
           values.push([...el.value]);
         }
       });
-      expect(values).to.deep.equal([[...changed], [...changed]]);
-      expect(warnings).to.have.length(0);
+      expect(values).to.deep.equal([[...unchanged], [...unchanged]]);
+      expect(warnings.map(({ key }) => key)).to.deep.equal([
+        `lyra-deprecated:lr-token-input:event:${alias}`,
+      ]);
+      expect(warnings[0]!.message).to.contain(canonical);
     });
 
-    it(`does not notify a ${alias} listener`, async () => {
+    it(`does not warn when a ${alias} listener only observes`, async () => {
       const el = (await fixture(mount())) as LyraTokenInput;
       let observed = 0;
       el.addEventListener(alias, () => (observed += 1));
       const warnings = await captureDeprecationWarnings(usage, () => act(el));
-      expect(observed).to.equal(0);
+      expect(observed).to.equal(1);
       expect(warnings).to.have.length(0);
       expect(el.value).to.deep.equal(changed);
     });

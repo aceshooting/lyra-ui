@@ -7,9 +7,11 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-activity-feed-background` since `21.1.0`; use css-property `--lr-activity-feed-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecated property** `showTimestamps` / `show-timestamps` since `21.1.0`; use property `with-timestamps`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,7 +49,8 @@ non-English `.strings` catalog and `''`. A present host `aria-label` names the o
 plain and virtualized rendering paths while `label` remains the visible header text. Host
 `aria-labelledby` and `aria-describedby` likewise reach that semantic list in both rendering paths —
 `withTimestamps: boolean = false` (attribute `with-timestamps`) — adds a trailing `<time>` per
-entry,
+entry (deprecated alias: `show-timestamps`/`showTimestamps`, use `with-timestamps`; removed in
+23.0.0),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
@@ -57,7 +60,7 @@ the persistent `[part="entry-text"]` wrapper rather than removing that part, and
 the smaller `xs`/`2xs`) tightens the header and entry-row padding and gap for dense transcript
 contexts, the same density-only convention `<lr-confirm-bar>`'s and `<lr-thinking-panel>`'s own
 `size` establish: the outer border and surface stay, so pair it with `frame="plain"` to remove card
-chrome. Retune it through
+chrome. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). Retune it through
 `--lr-activity-feed-compact-header-padding`, `--lr-activity-feed-compact-header-gap`,
 `--lr-activity-feed-compact-entry-padding`, and `--lr-activity-feed-compact-entry-gap`.
 `frame: LyraFrame = 'card'` (reflected) — `'card' |
@@ -100,7 +103,8 @@ The card chrome itself is retunable the same way:
 header/body divider that `frame="plain"` keeps, and `--lr-activity-feed-radius` (default
 `var(--lr-radius)`) sets its corner radius — so retuning a nested feed no longer needs a
 `::part(base)` override. `frame="plain"` still removes the border, radius and fill outright; the
-hooks tune the card presentation rather than reinstating chrome you asked to drop.
+hooks tune the card presentation rather than reinstating chrome you asked to drop. Deprecated alias:
+`--lr-activity-feed-background` (use `--lr-activity-feed-bg`; removed in 23.0.0).
 
 **Known gotchas:**
 

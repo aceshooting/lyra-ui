@@ -635,6 +635,7 @@ it("round-trips tag-only and shared upstream tokens through attributes, properti
   );
 });
 
+
 /**
  * Regression: an accessible name computed from slotted content must not depend on whether the
  * component currently sits inside a rendered container. A closed overlay popup, an inactive slide
@@ -670,7 +671,7 @@ describe('remove-button hover background', () => {
       '--lr-tag-remove-hover-bg: rgb(1, 2, 3); --lr-tag-remove-hover-background: rgb(9, 9, 9);',
     ],
   ] as const) {
-    it(`checks hovered remove fill reach for ${name}`, async () => {
+    it(`paints the hovered remove button from ${name}`, async () => {
       const el = (await fixture(
         html`<lr-tag with-remove style=${`--lr-transition-fast: 0s; ${style}`}>Tag</lr-tag>`,
       )) as LyraTag;
@@ -678,7 +679,7 @@ describe('remove-button hover background', () => {
       try {
         await hoverUntilMatched(button, 'the remove button never received the pointer hover state');
         await waitUntil(
-          () => (getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)') === !name.startsWith('deprecated'),
+          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
           `hover background stayed ${getComputedStyle(button).backgroundColor}`,
         );
       } finally {

@@ -7,9 +7,11 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Deprecated css-property** `--lr-icon-fixed-width` since `21.1.0`; use host-css-property `inline-size (the same value, on the fixed-width icons only)`; removal not before `23.0.0` — This property only sizes the box while the deprecated fixed-width attribute is set, so it shares that attribute's removal window. A host inline-size declaration reproduces the wider box without a component-specific custom property; a glyph wider than 1em then keeps its intrinsic width instead of being squeezed to 1em.
 - **Deprecated property** `autoWidth` / `auto-width` since `8.0.0`; use property `canvas="auto"`; removal not before `10.0.0` — autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is.
+- **Deprecated property** `fixedWidth` / `fixed-width` since `21.1.0`; use host-css-property `inline-size: var(--lr-size-1-5em) on that icon (or the --lr-icon-fixed-width value it used)`; removal not before `23.0.0` — fixed-width predates the mirrored canvas vocabulary, whose default fixed canvas already gives every icon the same 1.25em box so a column of icons lines its labels up. Where the wider 1.5em box matters, a host inline-size reproduces it, except that a glyph wider than 1em keeps its intrinsic width instead of being squeezed to 1em. Neither pinned upstream publishes fixed-width, so it is a Lyra-only spelling.
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 4 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -63,6 +65,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected, deprecated; removal not before
+  23.0.0) — widens the icon _box_ to `--lr-icon-fixed-width` while the glyph's svg is pinned to
+  `--lr-icon-size` (1em by default) and centres inside it, so a column of differently-shaped icons
+  lines its labels up. It keeps working unchanged, and setting it logs a one-time development
+  warning. Omit it: the default canvas already gives every icon the same 1.25em box. For the wider
+  1.5em box set `lr-icon { inline-size: var(--lr-size-1-5em); }` on the host instead. One geometry
+  difference: a glyph wider than 1em keeps its intrinsic width (up to the box) instead of being
+  squeezed to 1em.
 
 **Events:**
 
@@ -97,6 +107,9 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-fixed-width` (default `--lr-size-1-5em`; deprecated together with `fixed-width`,
+  removal not before 23.0.0) — inline size of the box while `fixed-width` is set. Set `inline-size`
+  on the host instead.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.

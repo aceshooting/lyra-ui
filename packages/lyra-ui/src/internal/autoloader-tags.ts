@@ -126,6 +126,7 @@ export const AUTOLOADER_TAGS = [
   'lr-funnel',
   'lr-gauge',
   'lr-generation-metrics',
+  'lr-geojson-view',
   'lr-geojson-viewer',
   'lr-graph',
   'lr-graph-legend',

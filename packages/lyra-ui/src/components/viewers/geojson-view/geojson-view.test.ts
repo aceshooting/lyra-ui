@@ -1,17 +1,26 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
-import './geojson-viewer.js';
+import './geojson-view.js';
 // Registers the shipped `ar` catalog slices the `lang="ar"` feature-count test resolves against,
 // so it renders real catalog text instead of tripping the dev-mode locale-fallback warning that
 // strict-console browser lanes treat as fatal.
 import '../../../translations/ar/viewers.js';
 import '../../../translations/ar/media.js';
 import '../../../translations/ar/shared.js';
-import { LyraGeoJsonViewer } from './geojson-viewer.class.js';
-import { LyraGeojsonView } from './geojson-view.class.js';
+import { LyraGeoJsonViewer, LyraGeojsonView } from './geojson-view.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import {
+  captureDeprecationWarnings,
+  expectDeprecatedUsage,
+  type DeprecatedUsage,
+} from '../../../../test/expected-deprecations.js';
+
+// The fixtures below deliberately stay on the deprecated `lr-geojson-view` alias: it must keep
+// passing the full viewer contract until its removal, so its connect warning is expected here.
+expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
+
 const GEOJSON_URL = 'https://example.test/zones.geojson';
 
 const FEATURE_COLLECTION = {
@@ -35,47 +44,75 @@ const OriginalIntersectionObserver = window.IntersectionObserver;
 const testObservers = new WeakMap<Element, TestIntersectionObserver>();
 
 describe('GeoJSON viewer identity', () => {
-  it('registers only the canonical tag and retains a distinct compatibility constructor', () => {
+  it('registers the canonical viewer name and preserves the legacy tag/class aliases', () => {
     const canonical = document.createElement('lr-geojson-viewer');
-    expect(canonical instanceof LyraGeoJsonViewer).to.equal(true);
-    expect(canonical instanceof LyraGeojsonView).to.equal(false);
-    expect(Object.getPrototypeOf(LyraGeojsonView) === LyraGeoJsonViewer).to.equal(true);
-    expect(customElements.get('lr-geojson-viewer') === LyraGeoJsonViewer).to.equal(true);
-    expect(customElements.get('lr-geojson-view') === undefined).to.equal(true);
+    const legacy = document.createElement('lr-geojson-view');
+    expect(canonical).to.be.instanceOf(LyraGeoJsonViewer);
+    expect(legacy).to.be.instanceOf(LyraGeoJsonViewer);
+    expect(legacy).to.be.instanceOf(LyraGeojsonView);
+    expect(canonical).not.to.be.instanceOf(LyraGeojsonView);
+    expect(
+      customElements.get('lr-geojson-viewer') === LyraGeoJsonViewer
+    ).to.equal(true);
+    expect(customElements.get('lr-geojson-view') === LyraGeojsonView).to.equal(
+      true
+    );
+  });
+});
+
+describe('deprecated lr-geojson-view alias', () => {
+  const aliasUsage: readonly DeprecatedUsage[] = [
+    { tag: 'lr-geojson-view', kind: 'component', name: 'lr-geojson-view' },
+  ];
+
+  it('logs one development warning naming lr-geojson-viewer, however many aliases connect', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+      const first = document.createElement('lr-geojson-view');
+      const second = document.createElement('lr-geojson-view');
+      wrapper.append(first, second);
+      await first.updateComplete;
+      await second.updateComplete;
+    });
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-geojson-view:component:lr-geojson-view',
+    ]);
+    expect(warnings[0]!.message).to.contain('<lr-geojson-viewer>');
+    expect(warnings[0]!.message).to.contain("deprecated component 'lr-geojson-view'");
   });
 
-  it('renders populated inherited metadata when the application registers the retained constructor', async () => {
-    if (!customElements.get('test-retained-geojson-view')) {
-      customElements.define('test-retained-geojson-view', LyraGeojsonView);
-    }
-    const originalFetch = globalThis.fetch;
-    try {
-      const feature = {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [6.13, 49.61] },
-        properties: { name: 'Retained landmark' },
-      };
-      stubFetch(feature);
+  it('keeps the alias fully functional after warning', async () => {
+    let tagName = '';
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       const el = await fixture<LyraGeojsonView>(
-        html`<test-retained-geojson-view max-height="12rem"></test-retained-geojson-view>`
+        html`<lr-geojson-view max-height="12rem"></lr-geojson-view>`
       );
-      (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
-      const missingPeer = oneEvent(el, 'lr-render-error');
-      el.src = GEOJSON_URL;
-      await missingPeer;
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
-      expect(el instanceof LyraGeoJsonViewer).to.equal(true);
-      expect(el.shadowRoot!.querySelector('[part="metadata"]')!.textContent)
-        .to.include('Retained landmark');
-      const fallback = el.shadowRoot!.querySelector<HTMLElement & { data: unknown }>('lr-json-viewer');
-      expect(fallback !== null).to.equal(true);
-      expect(fallback!.data).to.deep.equal(feature);
-      expect(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
-        .style.getPropertyValue('--lr-geojson-viewer-max-height')).to.equal('12rem');
-      expect(customElements.get('lr-geojson-view') === undefined).to.equal(true);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+      tagName = el.localName;
+      expect(
+        (
+          el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+        ).style.getPropertyValue('--lr-geojson-viewer-max-height')
+      ).to.equal('12rem');
+    });
+    expect(tagName).to.equal('lr-geojson-view');
+    expect(warnings).to.have.length(1);
+  });
+
+  it('never warns for the canonical lr-geojson-viewer', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
+      const el = await fixture<LyraGeoJsonViewer>(
+        html`<lr-geojson-viewer></lr-geojson-viewer>`
+      );
+      await el.updateComplete;
+    });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('does not warn for an alias that is created but never connected', async () => {
+    const warnings = await captureDeprecationWarnings(aliasUsage, () => {
+      document.createElement('lr-geojson-view');
+    });
+    expect(warnings).to.have.length(0);
   });
 });
 
@@ -197,7 +234,7 @@ afterEach(() => {
   ).IntersectionObserver = OriginalIntersectionObserver;
 });
 
-async function useDeterministicMapStyle(el: LyraGeoJsonViewer): Promise<void> {
+async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
   const map = el.shadowRoot!.querySelector('lr-map') as
     | (HTMLElement & {
         mapStyle: unknown;
@@ -240,7 +277,7 @@ async function useDeterministicMapStyle(el: LyraGeoJsonViewer): Promise<void> {
   }
 }
 
-async function constructMapBeforeStyleLoad(el: LyraGeoJsonViewer): Promise<{
+async function constructMapBeforeStyleLoad(el: LyraGeojsonView): Promise<{
   map: HTMLElement & { map?: DeferredStyleMap };
   instance: DeferredStyleMap;
 }> {
@@ -290,8 +327,8 @@ function stubFetch(body: unknown, ok = true): void {
 
 describe('fetching and parsing', () => {
   it('keeps the nested loading skeleton decorative while the shared sink owns announcements', async () => {
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view></lr-geojson-view>`
     );
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')
@@ -322,8 +359,8 @@ describe('fetching and parsing', () => {
   it('fetches, parses, and computes a feature count for a FeatureCollection', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     // `loadMaplibre()`'s real dynamic import of maplibre-gl takes well over a single
     // macrotask tick to settle in this test environment (measured ~300ms) -- poll for
     // the loaded-state marker rather than assuming one `setTimeout(0)` is enough, same
@@ -365,8 +402,8 @@ describe('fetching and parsing', () => {
       ],
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer lang="ar" src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view lang="ar" src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never loaded',
@@ -380,8 +417,8 @@ describe('fetching and parsing', () => {
   it('fires lr-render-error and shows an error state for a non-GeoJSON shape', async () => {
     stubFetch({ not: 'geojson' });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
@@ -399,11 +436,11 @@ describe('fetching and parsing', () => {
     // exercises the .strings resolution without the optional peer.
     stubFetch({ not: 'geojson' });
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         src=${GEOJSON_URL}
         .strings=${{ geojsonViewInvalid: 'Fichier GeoJSON invalide.' }}
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
@@ -417,8 +454,8 @@ describe('missing maplibre-gl peer', () => {
   it('falls back to lr-json-viewer and emits exactly one render error when loadMaplibre resolves null', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -440,8 +477,8 @@ describe('missing maplibre-gl peer', () => {
   it('suppresses undeclared composed events from the fallback JSON viewer', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -481,8 +518,8 @@ describe('missing maplibre-gl peer', () => {
       geometry: { type: 'Point', coordinates: [10, 20] },
       properties: { owner: { displayName: 'Ada Lovelace' } },
     });
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view></lr-geojson-view>`
     );
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
@@ -504,8 +541,8 @@ describe('missing maplibre-gl peer', () => {
       geometry: { type: 'Point', coordinates: [10, 20] },
       properties: { owner: 'Ada Lovelace', reviewer: 'Ada Lovelace' },
     });
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view></lr-geojson-view>`
     );
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
@@ -594,7 +631,7 @@ describe('document renderer contract', () => {
       src: GEOJSON_URL,
       anchor,
       highlights,
-    }) as LyraGeoJsonViewer;
+    }) as LyraGeojsonView;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;
@@ -611,8 +648,8 @@ describe('child map event ownership', () => {
   it('suppresses undeclared composed map events', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -635,8 +672,8 @@ describe('child map event ownership', () => {
 describe('aria-label forwarding', () => {
   it('forwards a host aria-label to [part="base"], winning over the localized default', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer aria-label="Zones"></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view aria-label="Zones"></lr-geojson-view>`
+    )) as LyraGeojsonView;
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
     ).to.equal('Zones');
@@ -644,11 +681,11 @@ describe('aria-label forwarding', () => {
 
   it('lets a host aria-label override the name property', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         name="Named zones"
         aria-label="Zones"
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.getAttribute('aria-label')).to.equal('Zones');
     expect(base.getAttribute('role')).to.equal('region');
@@ -657,12 +694,12 @@ describe('aria-label forwarding', () => {
   it('forwards the host aria-label to the nested map role owner', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         name="Named zones"
         aria-label="Host zones"
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -675,8 +712,8 @@ describe('aria-label forwarding', () => {
 
   it('preserves an explicit empty host aria-label on the base region instead of falling back to name', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer name="Named zones" aria-label=""></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view name="Named zones" aria-label=""></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.hasAttribute('aria-label')).to.be.true;
     expect(base.getAttribute('aria-label')).to.equal('');
@@ -685,12 +722,12 @@ describe('aria-label forwarding', () => {
   it('preserves an explicit empty host aria-label on the nested map label prop instead of falling back to name', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         name="Named zones"
         aria-label=""
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -704,12 +741,12 @@ describe('aria-label forwarding', () => {
   it('keeps the outer region until the lazy map is ready, then makes its canvas the sole named region', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         name="Named zones"
         aria-label="Host zones"
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -739,11 +776,11 @@ describe('aria-label forwarding', () => {
 
   it('hands landmark ownership to the canvas at construction, before the map style loads', async () => {
     stubFetch(FEATURE_COLLECTION);
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view
         name="Named zones"
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
+      ></lr-geojson-view>`
     );
     await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
@@ -766,11 +803,11 @@ describe('aria-label forwarding', () => {
 
   it('ignores a stale canvas construction and map-load event after src is replaced', async () => {
     stubFetch(FEATURE_COLLECTION);
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view
         name="Named zones"
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
+      ></lr-geojson-view>`
     );
     await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null);
     const map = el.shadowRoot!.querySelector('lr-map')!;
@@ -792,8 +829,8 @@ describe('aria-label forwarding', () => {
 describe('max-height', () => {
   it('applies no inline max-height custom property when unset (default)', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     expect(
       (
         el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
@@ -803,8 +840,8 @@ describe('max-height', () => {
 
   it('applies max-height as a custom property on the base part', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer max-height="20rem"></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view max-height="20rem"></lr-geojson-view>`
+    )) as LyraGeojsonView;
     expect(
       (
         el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
@@ -815,11 +852,11 @@ describe('max-height', () => {
   it('caps the base part in the loaded map branch too', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         max-height="20rem"
         src=${GEOJSON_URL}
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -834,8 +871,8 @@ describe('max-height', () => {
 
   it('validates maxHeight before assigning the base custom property', async () => {
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     el.maxHeight = '10rem;position:fixed';
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -855,11 +892,11 @@ describe('accessibility', () => {
   it('is accessible once loaded', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer
+      html`<lr-geojson-view
         src=${GEOJSON_URL}
         name="zones.geojson"
-      ></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      ></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never reached the loaded state',
@@ -896,10 +933,10 @@ describe('responsive metadata', () => {
     });
     const wrapper = await fixture<HTMLElement>(
       html`<div style="inline-size: 320px">
-        <lr-geojson-viewer></lr-geojson-viewer>
+        <lr-geojson-view></lr-geojson-view>
       </div>`
     );
-    const el = wrapper.querySelector('lr-geojson-viewer') as LyraGeoJsonViewer;
+    const el = wrapper.querySelector('lr-geojson-view') as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -921,8 +958,8 @@ describe('responsive metadata', () => {
       geometry: { type: 'Point', coordinates: [10, 20] },
       properties: {},
     });
-    const el = await fixture<LyraGeoJsonViewer>(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view></lr-geojson-view>`
     );
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
@@ -953,8 +990,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects a top-level JSON value that is not an object (a bare primitive) as invalid GeoJSON', async () => {
     stubFetch(42); // JSON.parse('42') === 42, a number -- typeof !== 'object'
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
@@ -966,8 +1003,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects top-level JSON null as invalid GeoJSON', async () => {
     stubFetch(null); // JSON.parse('null') === null
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const eventPromise = oneEvent(el, 'lr-render-error');
     await eventPromise;
     await el.updateComplete;
@@ -983,8 +1020,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       properties: {},
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never reached the loaded state',
@@ -1004,8 +1041,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('treats a bare geometry (not a Feature or FeatureCollection) as a single feature and fits the view to it', async () => {
     stubFetch({ type: 'Point', coordinates: [5, 6] });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never reached the loaded state',
@@ -1037,8 +1074,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       ],
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never reached the loaded state',
@@ -1056,8 +1093,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects a Feature with no geometry member', async () => {
     stubFetch({ type: 'Feature', properties: { name: 'Empty' } });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="error"]') !== null
     );
@@ -1069,8 +1106,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects a FeatureCollection with no features array', async () => {
     stubFetch({ type: 'FeatureCollection' });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="error"]') !== null
     );
@@ -1082,8 +1119,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('rejects malformed coordinate shapes and enforces a coordinate ceiling', async () => {
     stubFetch({ type: 'Point', coordinates: [10] });
     const malformed = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => malformed.shadowRoot!.querySelector('[part="error"]') !== null
     );
@@ -1096,8 +1133,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       ]),
     });
     const oversized = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => oversized.shadowRoot!.querySelector('[part="error"]') !== null
     );
@@ -1109,8 +1146,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('accepts a MultiPoint containing a single valid position', async () => {
     stubFetch({ type: 'MultiPoint', coordinates: [[10, 20]] });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'single-point MultiPoint was rejected',
@@ -1204,8 +1241,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       ],
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -1227,8 +1264,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('accepts a Feature with null geometry and uses the world fallback view', async () => {
     stubFetch({ type: 'Feature', properties: null, geometry: null });
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -1250,8 +1287,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
   it('accepts a top-level FeatureCollection with zero features as a valid, empty load -- not an error', async () => {
     stubFetch({ type: 'FeatureCollection', features: [] });
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -1352,8 +1389,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     for (const [description, value] of malformed) {
       stubFetch(value);
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') !== null,
         description
@@ -1399,8 +1436,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     for (const [description, value] of values) {
       stubFetch(value);
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') !== null,
         description
@@ -1434,8 +1471,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     for (const value of values) {
       stubFetch(value);
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') !== null
       );
@@ -1464,8 +1501,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     ]) {
       stubFetch(value);
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="error"]') !== null
       );
@@ -1486,8 +1523,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       properties: { blob: String.fromCharCode(1).repeat(900_000) },
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="error"]') !== null
     );
@@ -1505,8 +1542,8 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       ],
     });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('lr-map') !== null,
       'map branch never rendered',
@@ -1533,8 +1570,8 @@ describe('fetch lifecycle edge cases', () => {
     }) as typeof fetch;
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view></lr-geojson-view>`
+      )) as LyraGeojsonView;
       let renderErrorCount = 0;
       el.addEventListener('lr-render-error', () => {
         renderErrorCount++;
@@ -1570,8 +1607,8 @@ describe('fetch lifecycle edge cases', () => {
     }) as typeof fetch;
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () =>
           calls === 1 &&
@@ -1601,8 +1638,8 @@ describe('fetch lifecycle edge cases', () => {
     document.body.appendChild(iframe);
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view></lr-geojson-view>`
+      )) as LyraGeojsonView;
       expect(
         iframe.contentDocument!.querySelectorAll(
           `[${ANNOUNCEMENT_SINK_ATTRIBUTE}]`
@@ -1636,8 +1673,8 @@ describe('fetch lifecycle edge cases', () => {
     // await chain in between), so the event listener must be attached before `src` is set -- setting
     // it as part of the fixture template risks the event firing before oneEvent() can attach.
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     const eventPromise = oneEvent(el, 'lr-render-error');
     el.src = GEOJSON_URL;
     const event = (await eventPromise) as CustomEvent<{ error: unknown }>;
@@ -1668,8 +1705,8 @@ describe('fetch lifecycle edge cases', () => {
       // Same ordering concern as the non-2xx test above: the content-length check throws right
       // after the fetch settles, so attach the listener before triggering the load.
       const el = (await fixture(
-        html`<lr-geojson-viewer></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view></lr-geojson-view>`
+      )) as LyraGeojsonView;
       const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = GEOJSON_URL;
       await eventPromise;
@@ -1700,10 +1737,10 @@ describe('fetch lifecycle edge cases', () => {
     }) as typeof fetch;
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer
+        html`<lr-geojson-view
           src="https://example.test/first.geojson"
-        ></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        ></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => signals.length === 1,
         'the first fetch never started'
@@ -1740,10 +1777,10 @@ describe('fetch lifecycle edge cases', () => {
       })) as typeof fetch;
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer
+        html`<lr-geojson-view
           src="https://example.test/stale.geojson"
-        ></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        ></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => resolvers.length === 1,
         'the first fetch never started'
@@ -1799,8 +1836,8 @@ describe('fetch lifecycle edge cases', () => {
       } as unknown as Response)) as typeof fetch;
     try {
       const el = (await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-      )) as LyraGeoJsonViewer;
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
       await waitUntil(
         () => resolveArrayBuffer !== undefined,
         'the response body read never started'
@@ -1846,7 +1883,7 @@ describe('fetch lifecycle edge cases', () => {
     ).AbortController = undefined;
     try {
       await fixture(
-        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
       );
       await waitUntil(() => fetchCalled, 'fetch was never called');
       expect(observedSignal).to.equal(undefined);
@@ -1881,8 +1918,8 @@ describe('failure-state styling', () => {
   it('paints [part="error"] in the danger tone every sibling document viewer uses', async () => {
     stubFetch({ not: 'geojson' });
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await oneEvent(el, 'lr-render-error');
     await el.updateComplete;
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
@@ -1901,8 +1938,8 @@ describe('failure-state styling', () => {
   it('distinguishes the missing-peer callout from ordinary metadata text', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
     (
       el as unknown as { forceMissingMaplibreForTesting: boolean }
     ).forceMissingMaplibreForTesting = true;
@@ -1932,8 +1969,8 @@ describe('failure-state styling', () => {
   it('gives [part="status"] the quiet metadata tone rather than plain body text', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(
-      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
-    )) as LyraGeoJsonViewer;
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="status"]') != null,
       'geojson-view never loaded',
@@ -1998,8 +2035,8 @@ it('registers a application/geo+json renderer whose matches() and render() behav
 
 it('keeps GeoJSON metadata left-to-right under RTL', async () => {
   stubFetch({ type: 'Feature', geometry: { type: 'Point', coordinates: [10, 20] }, properties: { name: 'منطقة' } });
-  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px"><lr-geojson-viewer></lr-geojson-viewer></div>`);
-  const el = host.querySelector('lr-geojson-viewer') as LyraGeoJsonViewer;
+  const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px"><lr-geojson-view></lr-geojson-view></div>`);
+  const el = host.querySelector('lr-geojson-view') as LyraGeojsonView;
   (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
   el.src = GEOJSON_URL;
   await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);

@@ -32,9 +32,7 @@ import {
 import { formatDeprecationSubject } from './component-metadata.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
-import { projectRenameLedger } from './lyra-rename-ledger.mjs';
-import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
-import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
+import { deprecationRecordFor, validateRenameLedger } from './lyra-rename-ledger.mjs';
 import { SHARED_COMPAT_ORDER, SHARED_TOPICS } from './shared-topics.mjs';
 
 export { SHARED_TOPICS } from './shared-topics.mjs';
@@ -606,21 +604,21 @@ function parseReadmeMirrorNotes(readmeText) {
  * completeness is gated by check-migration-coverage.mjs, not here, so docs still build while a
  * deprecation waits for its entry.
  */
-export function buildLyraRenameReference(renameLedger, inventory, { exportDeprecations = [], compatibilityContext = null } = {}) {
-  const projection = projectRenameLedger(renameLedger, inventory, { exportDeprecations, compatibilityContext });
+export function buildLyraRenameReference(renameLedger, inventory, { exportDeprecations = [] } = {}) {
+  const findings = validateRenameLedger(renameLedger, { inventory, exportDeprecations });
+  if (findings.length) throw new Error(`Cannot build migration reference: ${findings.join('; ')}`);
   const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
   const lines = [];
-  for (const profile of projection.profiles) {
+  for (const profile of renameLedger.profiles) {
     const from = `Lyra ${profile.fromMajor}`;
     const to = `Lyra ${profile.toMajor}`;
-    const hasRetired = [...profile.reviews, ...profile.moduleReviews].some(entry => entry.removedIn) || Object.values(compatibilityContext?.records ?? {}).some(entry => entry.state === 'retired' && Number(entry.policy.removalNotBefore.split('.')[0]) === profile.aliasRemovalMajor);
     lines.push(
       `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
       '',
       `${from} minor releases and ${to} rename some Lyra-only attributes, properties, events, CSS parts,`,
-      hasRetired ? 'custom properties and slots. Published names retired in this installed release remain migration inputs.' : 'custom properties and slots. Each previous name keeps working as a deprecated alias until',
-      `${hasRetired ? 'Removed aliases no longer work at runtime.' : `Lyra ${profile.aliasRemovalMajor} removes it.`} Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
-      hasRetired ? 'change. Run the CLI of the installed package after upgrading; historical profiles remain available. It' : `change. Run the CLI of the installed package after upgrading, within ${from} or to ${to}. It`,
+      'custom properties and slots. Each previous name keeps working as a deprecated alias until',
+      `Lyra ${profile.aliasRemovalMajor} removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
+      `change. Run the CLI of the installed package after upgrading, within ${from} or to ${to}. It`,
       'applies only the entries the installed release ships, so running it again after a later upgrade',
       'picks up the rest:',
       '',
@@ -637,7 +635,7 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       'other component already dispatches the new name, and an unowned listener or any custom-property',
       'use only when, in addition, every component with the old name renamed it the same way and the',
       'scanned code never dispatches the old name itself. Everything else is reported with a location;',
-      hasRetired ? 'review removed names before running the migrated application.' : 'the old name keeps working meanwhile.',
+      'the old name keeps working meanwhile.',
       '',
       '| Code | Reported when |',
       '|---|---|',
@@ -668,6 +666,7 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       continue;
     }
     if (profile.renames.length) {
+      const components = new Map(inventory.components.map((component) => [component.tag, component]));
       lines.push(
         '| Component | Kind | Deprecated name | New name | Handling |',
         '|---|---|---|---|---|',
@@ -676,7 +675,7 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
             ? 'Inverted boolean: static HTML and Lit attributes rewritten, everything else reported'
             : entry.kind === 'css-property' || entry.kind === 'event'
               ? 'Rewritten where the reach is unchanged, otherwise reported'
-              : entry.kind === 'attribute' && !entry.reflects
+              : entry.kind === 'attribute' && !components.get(entry.tag)?.surface?.attributes?.find((attribute) => attribute.name === entry.to)?.reflects
                 ? 'Rewritten on the component; selectors reported (not reflected)'
                 : 'Rewritten where the component is proven';
           return `| \`<${entry.tag}>\` | ${entry.kind} | \`${cell(entry.from)}\` | \`${cell(entry.to)}\` | ${handling} |`;
@@ -722,11 +721,13 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       );
     }
     if (profile.reviews.length) {
+      const components = new Map(inventory.components.map((component) => [component.tag, component]));
       lines.push(
         `| Component | Kind | Deprecated name | Replacement (manual) |`,
         '|---|---|---|---|',
         ...profile.reviews.map((entry) => {
-          const replacement = entry.replacement;
+          const record = deprecationRecordFor(components.get(entry.tag), entry.kind, entry.name);
+          const replacement = record?.replacement?.usage || record?.replacement?.name || '';
           const name = entry.kind === 'slot' && entry.name === '' ? '(default slot)' : `\`${cell(entry.name)}\``;
           return `| \`<${entry.tag}>\` | ${entry.kind} | ${name} | \`${cell(replacement)}\` |`;
         }),
@@ -755,7 +756,8 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
         '| Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |',
         '|---|---|---|---|',
         ...profile.moduleReviews.map((entry) => {
-          return `| ${entry.kind} | \`${cell(entry.module ? `${entry.module}#${entry.name}` : entry.name)}\` | ${cell(entry.replacement)} | ${entry.removedIn ? `Removed in ${entry.removedIn}` : entry.removalNotBefore} |`;
+          const record = exportDeprecations.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
+          return `| ${entry.kind} | \`${cell(entry.module ? `${entry.module}#${entry.name}` : entry.name)}\` | ${cell(record.replacement.usage || record.replacement.name)} | ${record.removalNotBefore} |`;
         }),
         '',
       );
@@ -764,10 +766,10 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
   return lines;
 }
 
-export function buildMigration({ compatibilityContext = readCurrentCompatibilityContextSync(packageDir) } = {}) {
+export function buildMigration() {
   const inventory = JSON.parse(read('scripts', 'fixtures', 'component-inventory.json'));
   const renameLedger = JSON.parse(read('scripts', 'fixtures', 'lyra-renames.json'));
-  const exportDeprecations = assembleComponentMetadata(readComponentMetadataSources(packageDir)).exportDeprecations;
+  const exportDeprecations = JSON.parse(read('scripts', 'fixtures', 'component-metadata.json')).exportDeprecations;
   const readmeNotes = parseReadmeMirrorNotes(read('README.md'));
   const classifications = [
     'exact',
@@ -971,7 +973,7 @@ export function buildMigration({ compatibilityContext = readCurrentCompatibility
     'Web Awesome\'s `did-ssr` is its runtime hydration marker, not an authored member to recreate or',
     'rename on a Lyra component. The inventory records these exclusions explicitly.',
     '',
-    ...buildLyraRenameReference(renameLedger, inventory, { exportDeprecations, compatibilityContext }),
+    ...buildLyraRenameReference(renameLedger, inventory, { exportDeprecations }),
     '## Classification summary',
     '',
     '| Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |',

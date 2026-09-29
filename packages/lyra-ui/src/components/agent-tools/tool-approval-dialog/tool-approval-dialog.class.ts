@@ -2,6 +2,7 @@ import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warnin
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -10,7 +11,7 @@ import { styles } from './tool-approval-dialog.styles.js';
 import type { ApprovalAction } from '../approval-state.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
@@ -18,6 +19,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
 export type ToolApprovalDialogWrap = LyraTextWrap;
@@ -230,6 +232,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   static override styles = [LyraElement.styles, styles];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    editable: ['readonly', invertAlias, invertAlias],
+    pending: 'pendingAction',
+  };
+
   // `open`/`pendingAction` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
   // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
   // `dispatchWriteGuard` below. Comparing before/after *values* cannot make that distinction:
@@ -238,6 +245,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // listener that touched nothing at all.
   private _open = false;
   private _pendingAction: ToolApprovalDialogPending = null;
+  /** Backs the deprecated `pending` alias, kept in step with `_pendingAction` by `deprecatedAliases`. */
+  private _pending: ToolApprovalDialogPending = null;
 
   /** Marked on every write to `open`/`pendingAction`, from any source. `onApprove`/`onDeny` open it
    *  immediately before dispatching `lr-approve-request`/`lr-deny-request` and read it back afterward: since the
@@ -278,6 +287,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  before approval. */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
+  /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval.
+   *  @deprecated Use `readonly`; removal not before 23.0.0. */
+  @property({ reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
+
   /** Which decision is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
@@ -292,6 +305,23 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this._pendingAction = value;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pendingAction', previous);
+  }
+
+  /** Which decision is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
+   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
+   *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
+   *  to `null` every time the dialog transitions from closed to open, mirroring
+   *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
+   *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
+   *  enabled backdrop dismissal are suppressed (see `activateOverlay()`).
+   *  @deprecated Use `pending-action`; removal not before 23.0.0. */
+  @property({ reflect: true })
+  get pending(): ToolApprovalDialogPending { return this._pending; }
+  set pending(value: ToolApprovalDialogPending) {
+    const previous = this._pending;
+    this._pending = value;
+    markVetoGuardWrite(this.dispatchWriteGuard);
+    this.requestUpdate('pending', previous);
   }
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */

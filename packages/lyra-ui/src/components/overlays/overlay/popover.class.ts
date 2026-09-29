@@ -30,6 +30,7 @@ import {
   literalSetConverter,
   omittedEmptyStringConverter,
   optionalLiteralSetConverter,
+  trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import {
   activateNonmodalOverlay,
@@ -40,6 +41,8 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
@@ -52,6 +55,7 @@ import { styles, glassPopoverStyles } from './overlay.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
 const DEFAULT_DISTANCE = 8;
@@ -262,6 +266,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     new GlassScrollLayer(this, '[part~="popup"]');
   }
   static override styles = [LyraElement.styles, styles, glassPopoverStyles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases | undefined = {
+    arrow: ['withoutArrow', invertAlias, invertAlias],
+  };
   private _open = false;
   /** Whether the popover is open. Assigning it runs the full `lr-show`/`lr-hide` lifecycle.
    * @default false */
@@ -375,6 +382,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   @property({ attribute: false }) anchor: Element | null = null;
   /** Suppresses the arrow that points at the anchor, wherever it would otherwise render. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
+  /** Render an arrow that points at the anchor. Defaults on for the mapped surface.
+   *  @deprecated Use `without-arrow`; removal not before 23.0.0. */
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter, reflect: true }) arrow = true;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */

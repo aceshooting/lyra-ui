@@ -464,9 +464,10 @@ describe("lr-button", () => {
       "quiet text is the muted token, not the body text"
     ).to.not.equal(getComputedStyle(el).color);
     // The two quiet knobs reach the rendered box: re-point each and watch the box follow. The
-    // canonical color token controls text even when the removed spelling is present.
+    // deprecated --lr-button-quiet-text spelling still works, and the canonical name wins over it.
     for (const style of [
       "--lr-button-quiet-color: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);",
+      "--lr-button-quiet-text: rgb(1, 2, 3); --lr-button-quiet-border: rgb(4, 5, 6);",
       "--lr-button-quiet-color: rgb(1, 2, 3); --lr-button-quiet-text: rgb(9, 9, 9); --lr-button-quiet-border: rgb(4, 5, 6);",
     ]) {
       const retuned = (await fixture(html`
@@ -2598,7 +2599,7 @@ describe("--lr-button-hover-bg / --lr-button-active-bg and their deprecated -bac
       "--lr-button-hover-bg: rgb(1, 2, 3); --lr-button-active-bg: rgb(4, 5, 6); --lr-button-hover-background: rgb(9, 9, 9); --lr-button-active-background: rgb(8, 8, 8);",
     ],
   ] as const) {
-    it(`checks ${name} hover and press background reach`, async () => {
+    it(`paints the ${name} hover and press backgrounds`, async () => {
       const el = (await fixture(
         html`<lr-button style=${`--lr-transition-fast: 0s; ${style}`}>Save</lr-button>`
       )) as LyraButton;
@@ -2607,13 +2608,12 @@ describe("--lr-button-hover-bg / --lr-button-active-bg and their deprecated -bac
       try {
         await hoverUntilMatched(base, `${name} button never received the pointer hover state`);
         await waitUntil(
-          () => (getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)") === !name.startsWith('deprecated'),
+          () => getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)",
           `${name} hover background never rendered`
         );
         await sendMouse({ type: "down" });
-        await waitUntil(() => base.matches(':active'), 'button is pressed');
         await waitUntil(
-          () => (getComputedStyle(base).backgroundColor === "rgb(4, 5, 6)") === !name.startsWith('deprecated'),
+          () => getComputedStyle(base).backgroundColor === "rgb(4, 5, 6)",
           `${name} press background never rendered`
         );
         await sendMouse({ type: "up" });
@@ -3285,6 +3285,7 @@ it('drops the internal aria-controls relationship once the host idref stops reso
 
   expect((base.ariaControlsElements ?? []).length).to.equal(0);
 });
+
 
 it('forwards host aria-keyshortcuts through button/link changes and removal', async () => {
   const el = await fixture<LyraButton>(html`<lr-button aria-keyshortcuts="Control+B">Toggle</lr-button>`);

@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
@@ -20,6 +21,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_reorderMoveCancelled, LYRA_DEFAULT_reorderMovePending } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
 export interface LyraReorderDetail {
   readonly order: readonly string[];
   readonly fromIndex: number;
@@ -30,6 +32,9 @@ export interface LyraReorderListEventMap {
   /** Cancelable proposed move; `preventDefault()` holds it for `finalizePendingMove()` or
    *  `revertPendingMove()`. */
   'lr-reorder-request': CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>;
+  /** @deprecated Use `lr-reorder-request`; removal not before 23.0.0. Fired right after it from the
+   *  same move, with an equal detail; either event's `preventDefault()` holds the move. */
+  'lr-reorder': CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>;
 }
 
 type ReorderFocusTarget = {
@@ -56,6 +61,7 @@ function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
   }
   return false;
 }
+
 
 /** True when `node` sits inside `root`'s composed subtree. `Node.contains()` alone never crosses
  *  a shadow boundary, and the captured focus target here is typically one or two shadow roots
@@ -114,7 +120,12 @@ type ReorderReconciliation = {
  * `revertPendingMove()` to discard it and restore the prior order. Uncanceled (the default), the
  * move applies synchronously in the same tick when `controlled` is unset, unchanged from every
  * release before this option existed; while `controlled` is set it instead waits for a matching
- * host re-render, per that property's own doc comment.
+ * host re-render, per that property's own doc comment. Fires before `lr-reorder`, from the same
+ * move; either event may hold it.
+ * @event lr-reorder - Deprecated cancelable alias of `lr-reorder-request`, kept firing unchanged
+ * right after it with an equal `detail: { order, fromIndex, toIndex }`; either event may hold the
+ * move, and a hold through this alias logs a one-time development warning. Removal not before
+ * 23.0.0.
  * @csspart base - The list's root wrapper (`role="list"`).
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
  * @status stable
@@ -135,6 +146,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-reorder-request',
+    'lr-reorder',
   ]);
 
   /** Accessible-name fallback for the internal `role="list"` element when the host has no
@@ -506,6 +518,17 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       Object.freeze({ order: expectedValues, fromIndex, toIndex }),
       { cancelable: true }
     );
+    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
+    // bound only to the old name sees every move a canonical listener sees and can still hold or
+    // resolve it. The single currency check below covers a resolution made by either listener.
+    const deprecatedAlias = this.emit(
+      'lr-reorder',
+      Object.freeze({ order: expectedValues, fromIndex, toIndex }),
+      { cancelable: true }
+    );
+    if (deprecatedAlias.defaultPrevented) {
+      warnDeprecatedUsage(this, 'event', 'lr-reorder', 'lr-reorder-request');
+    }
     if (this.pendingMove !== transaction || transaction.token !== this.moveToken) return;
     if (!this.pendingMembershipIsCurrent()) {
       this.pendingMove = null;
@@ -513,7 +536,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       return;
     }
 
-    if (request.defaultPrevented) {
+    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) {
       if (transaction.resolution === 'revert') {
         this.pendingMove = null;
         this.syncBoundaryState();

@@ -856,7 +856,7 @@ describe('lr-grounding-summary render cap', () => {
   });
 });
 
-describe('lr-grounding-summary retired show-claims alias', () => {
+describe('lr-grounding-summary deprecated show-claims alias', () => {
   const CLAIMED_ASSESSMENT: GroundingAssessment = {
     ...ASSESSMENT,
     claims: [
@@ -867,7 +867,7 @@ describe('lr-grounding-summary retired show-claims alias', () => {
   const observe = (el: LyraGroundingSummary): string => String(el.shadowRoot!.querySelector('lr-claim-evidence') !== null);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraGroundingSummary>(markup);
 
-  it('applies without-claims with canonical defaults and no deprecation warning', async () => {
+  it('applies without-claims without a deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -876,5 +876,66 @@ describe('lr-grounding-summary retired show-claims alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps show-claims="false" equal to without-claims, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} without-claims></lr-grounding-summary>`));
+      alias = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} show-claims="false"></lr-grounding-summary>`));
+      const el = await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`);
+      el.showClaims = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutClaims, el.showClaims, el.getAttribute('show-claims')];
+      // The canonical property syncs back into the alias.
+      el.withoutClaims = false;
+      await el.updateComplete;
+      readback.push(el.showClaims, el.hasAttribute('show-claims'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback).to.deep.equal([true, false, 'false', true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-grounding-summary:property:showClaims',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-claims');
+  });
+
+  it('restores the default when show-claims is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`));
+      const el = await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} show-claims="false"></lr-grounding-summary>`);
+      el.showClaims = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.showClaims = false;
+      await el.updateComplete;
+      el.removeAttribute('show-claims');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} without-claims></lr-grounding-summary>`));
+      const el = await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} show-claims without-claims></lr-grounding-summary>`);
+      expect(el.withoutClaims).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-grounding-summary .assessment=${CLAIMED_ASSESSMENT} .citations=${CITATIONS} without-claims show-claims></lr-grounding-summary>`);
+      expect(reversed.withoutClaims, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
   });
 });

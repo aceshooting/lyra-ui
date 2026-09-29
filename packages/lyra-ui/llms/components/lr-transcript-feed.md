@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecations** none
+- **Deprecated property** `showTimestamps` / `show-timestamps` since `21.1.0`; use property `with-timestamps`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -40,7 +40,8 @@ Each newly final entry's `text` is announced once through the shared light-DOM p
 instead, the same route `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is
 _mounted_ with are treated as existing transcript rather than newly spoken captions, so the first
 render only records them. `follow: boolean = true`
-(reflected), `withTimestamps: boolean = false` (attribute `with-timestamps`), `formatTimestamp?:
+(reflected), `withTimestamps: boolean = false` (attribute `with-timestamps`; deprecated alias:
+`show-timestamps`/`showTimestamps`, use `with-timestamps`, removed in 23.0.0), `formatTimestamp?:
 (date: Date) => string` (attribute: false), `maxRenderedEntries: number = 500` (attribute
 `max-rendered-entries`) — `0` explicitly renders every entry; a positive value keeps only the newest N,
 `sessionId: string = ''` (attribute `session-id`) — changing session identity clears finalized-ID

@@ -14,9 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
-import { buildMigrationContract, buildMirrorMap, readRenameLedger } from './migrate-wa.mjs';
-import { readCurrentCompatibilityContext } from './check-published-compatibility.mjs';
-import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
+import { buildMigrationContract, buildMirrorMap, readExportDeprecations, readRenameLedger } from './migrate-wa.mjs';
 import { compareVersions, validateRenameLedger } from './lyra-rename-ledger.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -168,8 +166,8 @@ export function analyzeRetiredEventHistory(renameLedger, history) {
  * are judged by the ledger's default check instead: a boolean defaulting to true that becomes one
  * defaulting to false must be declared inverted or keep its default through a `defaults` entry.
  */
-export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = null, exportDeprecations = [], retiredEventHistory = null, compatibilityContext = null } = {}) {
-  const errors = validateRenameLedger(renameLedger, { inventory, exportDeprecations, requireCoverage: true, sharedTokens, compatibilityContext });
+export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = null, exportDeprecations = [], retiredEventHistory = null } = {}) {
+  const errors = validateRenameLedger(renameLedger, { inventory, exportDeprecations, requireCoverage: true, sharedTokens });
   if (retiredEventHistory) errors.push(...analyzeRetiredEventHistory(renameLedger, retiredEventHistory));
   const summary = {};
   for (const profile of Array.isArray(renameLedger?.profiles) ? renameLedger.profiles : []) {
@@ -245,7 +243,7 @@ function namedReadmeUpstream(readme) {
  * Returns every migration-coverage defect without mutating its inputs. This is exported so the
  * safety assertions can be exercised with synthetic fixtures rather than by rewriting repo files.
  */
-export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null, exportDeprecations = [], retiredEventHistory = null, compatibilityContext = null }) {
+export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null, exportDeprecations = [], retiredEventHistory = null }) {
   const errors = [];
   const polarityCheckablePairs = [];
   const expected = catalog(upstreamTags);
@@ -475,7 +473,7 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
       inventoryMappings.filter((mapping) => mapping.classification === classification).length,
     ]),
   );
-  const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens, exportDeprecations, retiredEventHistory, compatibilityContext }) : null;
+  const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens, exportDeprecations, retiredEventHistory }) : null;
   if (renameAnalysis) errors.push(...renameAnalysis.errors);
   return {
     errors: [...new Set(errors)].sort(),
@@ -512,21 +510,18 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
   );
 }
 
-async function run() {
+function run() {
   const readJson = (...segments) =>
     JSON.parse(fs.readFileSync(path.join(packageDir, ...segments), 'utf8'));
   const upstreamTags = readJson('scripts', 'fixtures', 'upstream-tags.json');
-  const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
-  const compatibilityContext = await readCurrentCompatibilityContext(packageDir, inventory);
   const result = analyzeMigrationCoverage({
-    inventory,
-    compatibilityContext,
+    inventory: readJson('scripts', 'fixtures', 'component-inventory.json'),
     upstreamTags,
     lyraManifest: readJson('custom-elements.json'),
     readme: fs.readFileSync(path.join(packageDir, 'README.md'), 'utf8'),
     renameLedger: readRenameLedger(),
     retiredEventHistory: readJson('scripts', 'fixtures', 'retired-event-history.json'),
-    exportDeprecations: assembleComponentMetadata(readComponentMetadataSources(packageDir)).exportDeprecations,
+    exportDeprecations: readExportDeprecations(),
     sharedTokens: new Set(Object.keys(readJson('tokens', 'canonical-tokens.json').tokens)),
   });
 
@@ -540,5 +535,5 @@ async function run() {
 }
 
 if (isMainModule(import.meta.url)) {
-  process.exitCode = await run();
+  process.exitCode = run();
 }

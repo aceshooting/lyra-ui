@@ -7,9 +7,10 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-result-card-background` since `21.1.0`; use css-property `--lr-result-card-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
 - **Optional peers** none
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-result-field` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -42,7 +43,7 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
   transcript or result list), same convention as `<lr-agent-run>`'s own `size`; `m` and larger keep
   the full padding. Purely a density knob: the border and background stay, so use `frame="plain"`
   instead to drop the chrome entirely. When both are set, plain leaves the dense padding and gaps
-  intact.
+  intact. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-agent-run>`/`<lr-card>` carry. `'card'`
   (the default) keeps the bordered, filled box. `'plain'` removes the border, background, and corner
@@ -82,7 +83,8 @@ not only the padding box — a dense card no longer keeps full-size gaps inside 
 (default `var(--lr-color-border-subtle)`) and `--lr-result-card-radius` (default `var(--lr-radius)`) retune
 the card chrome without a `::part(base)` override. The border-color hook also colors
 `[part="header"]`'s divider, so a retuned card doesn't strand a mismatched interior rule;
-`frame="plain"` still drops the outer chrome and that divider.
+`frame="plain"` still drops the outer chrome and that divider. Deprecated alias:
+`--lr-result-card-background` (use `--lr-result-card-bg`; removed in 23.0.0).
 Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border-subtle`,
 `--lr-color-surface`/`-text`, `--lr-radius`.
 

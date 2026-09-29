@@ -4,13 +4,17 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './sequence-playback.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
 const INVALID_INTERVAL_WARNING_KEY = 'lyra-sequence-playback-invalid-interval';
@@ -70,9 +74,13 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    loop: ['withoutLoop', invertAlias, invertAlias],
+  };
 
   static override properties = {
     playing: { type: Boolean, reflect: true, noAccessor: true },
+    loop: { type: Boolean, converter: trueDefaultBooleanConverter },
   };
 
   /** Total number of sequence items; the current-index range is `[0, itemCount)`. */
@@ -90,6 +98,9 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   /** Stops playback on the last item instead of wrapping back to the first. Read on every tick,
    *  so a live change takes effect at the next step. */
   @property({ type: Boolean, attribute: 'without-loop' }) withoutLoop = false;
+
+  /** @deprecated Use `without-loop` (inverted); removal not before 23.0.0. */
+  loop = true;
 
   /**
    * Re-declared as a Lit reactive property (shadowing the inherited plain

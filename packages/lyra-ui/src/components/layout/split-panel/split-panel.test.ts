@@ -132,7 +132,7 @@ it('reflects string snap points and removes the attribute for function/empty wri
   expect(element.hasAttribute('snap')).to.equal(false);
 });
 
-it('renders the exact two-pane slots, shared panel part, divider slot, and canonical wrapper part', async () => {
+it('renders the exact two-pane slots, shared panel part, divider slot, and wrapper aliases', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 200px">
       <div slot="start">Start</div>
@@ -141,8 +141,7 @@ it('renders the exact two-pane slots, shared panel part, divider slot, and canon
     </lr-split-panel>
   `)) as LyraSplitPanel;
 
-  expect(element.shadowRoot!.querySelector('[part~="base"]') !== null).to.equal(true);
-  expect(element.shadowRoot!.querySelector('[part~="split-panel"]') === null).to.equal(true);
+  expect(element.shadowRoot!.querySelector('[part~="base"][part~="split-panel"]')).to.exist;
   expect(element.shadowRoot!.querySelector('[part~="start"][part~="panel"] slot[name="start"]')).to
     .exist;
   expect(element.shadowRoot!.querySelector('[part~="end"][part~="panel"] slot[name="end"]')).to
@@ -153,7 +152,7 @@ it('renders the exact two-pane slots, shared panel part, divider slot, and canon
 
 // `split-panel` is a deprecated second token on the wrapper that `base` names; until its removal
 // both must keep reaching the same node, so a consumer rule written against either still paints.
-it('styles the wrapper through base while the removed split-panel part is inert', async () => {
+it('styles the same wrapper through ::part(split-panel) and ::part(base) during the compatibility window', async () => {
   const style = document.createElement('style');
   style.textContent =
     'lr-split-panel.alias-probe::part(split-panel) { outline: 1px solid rgb(1, 2, 3); }' +
@@ -167,7 +166,7 @@ it('styles the wrapper through base while the removed split-panel part is inert'
       </lr-split-panel>
     `)) as LyraSplitPanel;
     const wrapper = getComputedStyle(base(element));
-    expect(wrapper.outlineColor).to.not.equal('rgb(1, 2, 3)');
+    expect(wrapper.outlineColor).to.equal('rgb(1, 2, 3)');
     expect(wrapper.outlineOffset).to.equal('3px');
   } finally {
     style.remove();

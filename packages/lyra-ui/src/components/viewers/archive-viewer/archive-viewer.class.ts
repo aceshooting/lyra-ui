@@ -116,11 +116,23 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @cssprop [--lr-archive-viewer-max-height=none] - Maximum block size of the scrollable body.
  *   Also settable via the `max-height` property.
  * @cssprop --lr-archive-viewer-highlight-accent-bg - Accent highlight background.
+ * @cssprop --lr-archive-viewer-highlight-accent-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-accent-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-success-bg - Success highlight background.
+ * @cssprop --lr-archive-viewer-highlight-success-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-success-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-warning-bg - Warning highlight background.
+ * @cssprop --lr-archive-viewer-highlight-warning-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-warning-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-danger-bg - Danger highlight background.
+ * @cssprop --lr-archive-viewer-highlight-danger-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-danger-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-neutral-bg - Neutral highlight background.
+ * @cssprop --lr-archive-viewer-highlight-neutral-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-active-bg - Active highlight background.
+ * @cssprop --lr-archive-viewer-highlight-active-background - Deprecated alias of
+ *   `--lr-archive-viewer-highlight-active-bg`; removal not before 23.0.0.
  * @cssprop --lr-archive-viewer-highlight-active-outline - Active fallback-highlight outline.
  * @status stable
  * @since 4.0.0

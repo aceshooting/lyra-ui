@@ -1,11 +1,11 @@
 import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './archive-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
 
-const zip: LyraDocumentFile = { name: 'archive.zip', mimeType: 'application/zip', src: 'https://example.test/archive.zip' };
+const zip: DocumentFile = { name: 'archive.zip', mimeType: 'application/zip', src: 'https://example.test/archive.zip' };
 describe('archive registry', () => {
   it('registers standard, legacy, and extension dispatch', async () => {
     expect(findDocumentRenderer(zip)).to.exist;

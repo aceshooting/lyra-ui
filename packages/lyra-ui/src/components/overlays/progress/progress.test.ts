@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
@@ -8,10 +7,6 @@ import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
 import { formatProgressPercent } from './progress-shared.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-progress-bar', 'accessible-label');
-expectStaleAttribute('lr-progress-ring', 'accessible-label');
 
 class ProgressBarLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -1156,17 +1151,59 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
       await el.updateComplete;
       return el;
     };
+    const percentText = (el: Element): string =>
+      tag === 'lr-progress-bar'
+        ? (el.shadowRoot!.querySelector('[part="label"] span')?.textContent ?? '')
+        : ringRenderedLabelText(el as LyraProgressRing);
+
+    it('renders exactly like with-value and warns once, naming with-value', async () => {
+      const canonical = await mount(`<${tag} lang="en" value="40" with-value></${tag}>`);
+      let aliased!: LyraProgressBar | LyraProgressRing;
+      const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
+        aliased = await mount(`<${tag} lang="en" value="40" show-value></${tag}>`);
+        await mount(`<${tag} lang="en" value="40" show-value></${tag}>`);
+      });
+      expect(percentText(canonical)).to.equal(formatProgressPercent('en', 40));
+      expect(percentText(aliased)).to.equal(percentText(canonical));
+      expect(aliased.withValue).to.be.true;
+      expect(aliased.showValue).to.be.true;
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:property:showValue`]);
+      expect(warnings[0]!.message).to.contain('with-value');
+    });
 
     it('does not warn for the canonical spelling or the default', async () => {
       const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
         const el = await mount(`<${tag} value="40" with-value></${tag}>`);
-        expect(el.withValue).to.be.true;
+        expect(el.showValue).to.be.true;
         const bare = await mount(`<${tag} value="40"></${tag}>`);
         expect(bare.withValue).to.be.false;
       });
       expect(warnings).to.have.length(0);
     });
 
+    it('lets the last write win in both directions and syncs show-value back from with-value', async () => {
+      await captureDeprecationWarnings(SHOW_VALUE, async () => {
+        const both = await mount(`<${tag} value="40" show-value="" with-value></${tag}>`);
+        expect(both.withValue).to.be.true;
+        both.withValue = false;
+        await both.updateComplete;
+        expect(both.showValue).to.be.false;
+        both.withValue = true;
+        await both.updateComplete;
+        expect(both.showValue).to.be.true;
+        both.showValue = false;
+        await both.updateComplete;
+        expect(both.withValue).to.be.false;
+        const el = await mount(`<${tag} value="40"></${tag}>`);
+        el.showValue = true;
+        await el.updateComplete;
+        expect(el.withValue).to.be.true;
+        el.setAttribute('show-value', '');
+        el.removeAttribute('show-value');
+        await el.updateComplete;
+        expect(el.withValue).to.be.false;
+      });
+    });
   });
 
   describe(`${tag} deprecated accessible-label attribute`, () => {
@@ -1190,24 +1227,25 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
       await expect(el).to.be.accessible();
     });
 
-    it('ignores accessible-label and keeps the localized progress name', async () => {
+    it('still names the progressbar through accessible-label, warning once', async () => {
       let el!: LyraProgressBar | LyraProgressRing;
       const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
         el = await mount(`<${tag} value="25" accessible-label="Sync progress"></${tag}>`);
         await mount(`<${tag} value="25" accessible-label="Other"></${tag}>`);
       });
-      expect(name(el)).to.equal('Progress');
-      expect(el.accessibleLabel).to.equal('');
-      expect(warnings).to.have.length(0);
+      expect(name(el)).to.equal('Sync progress');
+      expect(el.accessibleLabel).to.equal('Sync progress');
+      expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:${tag}:attribute:accessible-label`]);
+      expect(warnings[0]!.message).to.contain('aria-label');
     });
 
-    it('lets the host aria-label win over accessible-label, with the localized fallback after removal', async () => {
+    it('lets the host aria-label win over accessible-label, and a removed alias clears the name', async () => {
       await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
         const el = await mount(`<${tag} value="25" accessible-label="Alias" aria-label="Host"></${tag}>`);
         expect(name(el)).to.equal('Host');
         el.removeAttribute('aria-label');
         await el.updateComplete;
-        expect(name(el)).to.equal('Progress');
+        expect(name(el)).to.equal('Alias');
         el.removeAttribute('accessible-label');
         await el.updateComplete;
         expect(name(el)).to.equal('Progress');

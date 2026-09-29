@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecations** none
+- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `with-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 26 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -112,7 +112,8 @@ single numeric string entry.
   property unset preserves the numeric `aria-valuetext`.
 - `withValue: boolean = false` (attribute `with-value`) — opt-in numeric readout next to the track;
   a range readout joins both values with an en dash. The explicit HTML spelling
-  `with-value="false"` stays false.
+  `with-value="false"` stays false. Deprecated alias: `show-value`/`showValue` (use `with-value`; kept in step,
+  last write wins; removed in 23.0.0).
 - `valueDisplay: SliderValueDisplay = 'numeric'` (attribute `value-display`) — `'numeric' |
   'formatted'`. Opt into `formatted` to reuse `valueFormatter` (or `tooltipFormatter` when no
   value formatter is supplied) for the visible readout too. Each range handle is formatted

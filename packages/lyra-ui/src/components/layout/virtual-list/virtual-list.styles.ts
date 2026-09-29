@@ -129,11 +129,11 @@ export const styles = css`
   [part="row"] [part~="row-excerpt"] mark {
     background: var(
       --lr-thread-list-excerpt-highlight-bg,
-      var(--lr-color-warning-quiet)
+      var(--lr-thread-list-excerpt-highlight-background, var(--lr-color-warning-quiet))
     );
     color: var(
       --lr-thread-list-excerpt-highlight-color,
-      inherit
+      var(--lr-thread-list-excerpt-highlight-foreground, inherit)
     );
     border-radius: var(
       --lr-thread-list-excerpt-highlight-radius,

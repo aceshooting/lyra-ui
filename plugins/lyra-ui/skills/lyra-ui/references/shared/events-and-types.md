@@ -630,6 +630,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelReactProps;
   'lr-gauge': LyraGaugeReactProps;
   'lr-generation-metrics': LyraGenerationMetricsReactProps;
+  'lr-geojson-view': LyraGeojsonViewReactProps;
   'lr-geojson-viewer': LyraGeoJsonViewerReactProps;
   'lr-graph': LyraGraphReactProps;
   'lr-graph-legend': LyraGraphLegendReactProps;
@@ -1058,6 +1059,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraComponentTypeMap['lr-funnel']['element'];
   'lr-gauge': LyraComponentTypeMap['lr-gauge']['element'];
   'lr-generation-metrics': LyraComponentTypeMap['lr-generation-metrics']['element'];
+  'lr-geojson-view': LyraComponentTypeMap['lr-geojson-view']['element'];
   'lr-geojson-viewer': LyraComponentTypeMap['lr-geojson-viewer']['element'];
   'lr-graph': LyraComponentTypeMap['lr-graph']['element'];
   'lr-graph-legend': LyraComponentTypeMap['lr-graph-legend']['element'];
@@ -1363,6 +1365,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelSvelteProps;
   'lr-gauge': LyraGaugeSvelteProps;
   'lr-generation-metrics': LyraGenerationMetricsSvelteProps;
+  'lr-geojson-view': LyraGeojsonViewSvelteProps;
   'lr-geojson-viewer': LyraGeoJsonViewerSvelteProps;
   'lr-graph': LyraGraphSvelteProps;
   'lr-graph-legend': LyraGraphLegendSvelteProps;
@@ -1784,6 +1787,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-funnel': LyraFunnelVueProps;
   'lr-gauge': LyraGaugeVueProps;
   'lr-generation-metrics': LyraGenerationMetricsVueProps;
+  'lr-geojson-view': LyraGeojsonViewVueProps;
   'lr-geojson-viewer': LyraGeoJsonViewerVueProps;
   'lr-graph': LyraGraphVueProps;
   'lr-graph-legend': LyraGraphLegendVueProps;

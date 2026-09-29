@@ -82,9 +82,7 @@ while doing something else. The vocabulary rules apply to every component, mirro
 - **Lyra-only renames are ledger data too.** A `component-metadata.json#deprecations` record that
   retires a Lyra-only name in 23.0.0 lands with its `scripts/fixtures/lyra-renames.json` entry in
   the same change, or `check-migration-coverage.mjs` fails `pnpm lint`; the entry drives
-  `lyra-ui-migrate --origin=lyra-v21` and the generated `llms/migration.md` section. The metadata
-  aggregate is generated: author the notice in its `component-metadata/families/<family>.json`
-  source, or `component-metadata/exports.json` for exported types and entry points. Use `renames`
+  `lyra-ui-migrate --origin=lyra-v21` and the generated `llms/migration.md` section. Use `renames`
   only for an exact alias of the same member with the same type and behavior; for an event, part
   or custom property the target must also be a name no other component exposes, because the
   codemod reports every unowned selector or declaration of a shared target as newly reaching the

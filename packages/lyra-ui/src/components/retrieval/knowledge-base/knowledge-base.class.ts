@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -309,6 +310,10 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    hideSummary: 'withoutSummary',
+    hideCreate: 'withoutCreate',
+  };
 
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -327,7 +332,15 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property({ type: Boolean, attribute: 'without-create', reflect: true })
   withoutCreate = false;
 
+  /** Hides the aggregate summary row (total/synced/syncing/needs-attention).
+   *  @deprecated Use `without-summary`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'hide-summary', reflect: true })
+  hideSummary = false;
 
+  /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view.
+   *  @deprecated Use `without-create`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'hide-create', reflect: true })
+  hideCreate = false;
 
   /** Reports a failed source-list load. Forwarded to the nested `<lr-table>`, whose own built-in
    *  failed-load state renders in place of the source rows; `<lr-table>`'s own precedence applies

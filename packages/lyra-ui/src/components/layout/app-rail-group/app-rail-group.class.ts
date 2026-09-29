@@ -7,6 +7,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { tag } from '../../../internal/prefix.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { styles } from './app-rail-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -120,6 +123,9 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    open: ['collapsed', invertAlias, invertAlias],
+  };
 
   static override get observedAttributes(): string[] {
     return [...super.observedAttributes, 'icon-only'];
@@ -154,6 +160,25 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
     this.requestUpdate('collapsed', old);
   }
   private _collapsed = false;
+
+  /** Whether the group's content is shown. `true` by default — a nav section that hid itself on
+   *  first paint would be the surprising default — which is why it carries
+   *  `trueDefaultBooleanConverter`: Lit's presence-based boolean converter cannot parse
+   *  `open="false"`, so without it the property would be unsettable from markup.
+   *  @deprecated Use `collapsed` (inverted); removal not before 23.0.0.
+   *  @default true */
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const old = this._open;
+    this._open = next;
+    // A listener resolving a toggle request through the alias counts as a write, as it did before.
+    markVetoGuardWrite(this.toggleGuard);
+    this.requestUpdate('open', old);
+  }
+  private _open = true;
 
   private readonly toggleGuard = new VetoWriteGuard();
 

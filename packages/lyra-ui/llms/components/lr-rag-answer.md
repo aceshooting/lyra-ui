@@ -7,7 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated property** `showClaims` / `show-claims` since `21.1.0`; use property `without-claims`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecated property** `showSources` / `show-sources` since `21.1.0`; use property `without-sources`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,7 +38,9 @@ either way. An answer with no error announces nothing. Remove any host
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details
-from reaching the grounding summary); `label?: string` (omission uses the localized answer label; an explicit
+from reaching the grounding summary). Deprecated aliases: `show-sources`/`showSources` (use `without-sources`;
+`show-sources="false"` equals `without-sources`; removed in 23.0.0) and `show-claims`/`showClaims` (use
+`without-claims`; `show-claims="false"` equals `without-claims`; removed in 23.0.0); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host

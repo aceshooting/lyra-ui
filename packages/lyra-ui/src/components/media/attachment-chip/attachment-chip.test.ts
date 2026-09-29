@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './attachment-chip.js';
@@ -14,6 +13,9 @@ import {
 
 const PREVIEWABLE: readonly DeprecatedUsage[] = [
   { tag: 'lr-attachment-chip', kind: 'property', name: 'previewable' },
+];
+const REMOVABLE: readonly DeprecatedUsage[] = [
+  { tag: 'lr-attachment-chip', kind: 'property', name: 'removable' },
 ];
 const COMPACT: readonly DeprecatedUsage[] = [
   { tag: 'lr-attachment-chip', kind: 'property', name: 'compact' },
@@ -66,6 +68,7 @@ it('defaults to status="pending", a remove button, and empty independent props',
   expect(el.status).to.equal('pending');
   expect(el.getAttribute('status')).to.equal('pending');
   expect(el.withoutRemoveButton).to.be.false;
+  expect(el.removable).to.be.true;
   expect(el.size).to.be.undefined;
   expect(el.hasAttribute('size')).to.be.false;
   expect(el.name).to.equal('');
@@ -74,6 +77,7 @@ it('defaults to status="pending", a remove button, and empty independent props',
   expect(el.thumbnailSrc).to.equal('');
   expect(el.previewSrc).to.equal('');
   expect(el.withoutPreview).to.be.false;
+  expect(el.previewable).to.be.true;
   expect(el.progress).to.equal(0);
   expect(el.file).to.be.undefined;
 });
@@ -172,10 +176,65 @@ describe('withoutPreview and the deprecated previewable alias', () => {
       ></lr-attachment-chip>
     `)) as LyraAttachmentChip;
     expect(el.withoutPreview).to.be.true;
+    expect(el.previewable).to.be.false;
     expect(previewButtons(el)).to.equal(0);
   });
 
-  it('keeps without-preview authoritative with the retired attribute present', async () => {
+  it('previewable="false" (plain HTML attribute) equals without-preview and warns once', async () => {
+    const counts: number[] = [];
+    const warnings = await captureDeprecationWarnings(PREVIEWABLE, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(html`
+          <lr-attachment-chip
+            name="report.pdf"
+            mime-type="application/pdf"
+            preview-src="https://example.test/report.pdf"
+            previewable="false"
+          ></lr-attachment-chip>
+        `)) as LyraAttachmentChip;
+        expect(el.previewable).to.be.false;
+        expect(el.withoutPreview).to.be.true;
+        counts.push(previewButtons(el));
+      }
+    });
+    expect(counts).to.deep.equal([0, 0]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-attachment-chip:property:previewable',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-preview');
+  });
+
+  it('forwards a property write, restores on attribute removal, and reflects the alias again', async () => {
+    await captureDeprecationWarnings(PREVIEWABLE, async () => {
+      const el = (await fixture(html`
+        <lr-attachment-chip
+          name="report.pdf"
+          preview-src="https://example.test/report.pdf"
+          previewable="false"
+        ></lr-attachment-chip>
+      `)) as LyraAttachmentChip;
+      el.removeAttribute('previewable');
+      await el.updateComplete;
+      expect(el.withoutPreview).to.be.false;
+      expect(previewButtons(el)).to.equal(1);
+
+      el.previewable = false;
+      await el.updateComplete;
+      expect(el.withoutPreview).to.be.true;
+      expect(el.getAttribute('previewable')).to.equal('false');
+      expect(el.hasAttribute('without-preview')).to.be.true;
+      expect(previewButtons(el)).to.equal(0);
+
+      // The alias syncs back from a canonical write.
+      el.withoutPreview = false;
+      await el.updateComplete;
+      expect(el.previewable).to.be.true;
+      expect(el.hasAttribute('previewable')).to.be.false;
+      expect(previewButtons(el)).to.equal(1);
+    });
+  });
+
+  it('lets the last-written spelling win (without-preview after previewable)', async () => {
     await captureDeprecationWarnings(PREVIEWABLE, async () => {
       const el = (await fixture(html`
         <lr-attachment-chip
@@ -662,6 +721,7 @@ describe('remove affordance', () => {
       html`<lr-attachment-chip name="a.txt" without-remove-button></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     expect(attribute.withoutRemoveButton).to.be.true;
+    expect(attribute.removable).to.be.false;
     expect(removeButtons(attribute)).to.equal(0);
 
     const property = (await fixture(
@@ -669,6 +729,53 @@ describe('remove affordance', () => {
     )) as LyraAttachmentChip;
     expect(removeButtons(property)).to.equal(0);
     expect(property.hasAttribute('without-remove-button')).to.be.true;
+  });
+
+  it('the deprecated removable="false" equals without-remove-button and warns once', async () => {
+    const counts: number[] = [];
+    const warnings = await captureDeprecationWarnings(REMOVABLE, async () => {
+      const attribute = (await fixture(
+        html`<lr-attachment-chip name="a.txt" removable="false"></lr-attachment-chip>`,
+      )) as LyraAttachmentChip;
+      expect(attribute.removable).to.be.false;
+      expect(attribute.withoutRemoveButton).to.be.true;
+      counts.push(removeButtons(attribute));
+
+      const property = (await fixture(
+        html`<lr-attachment-chip name="a.txt" .removable=${false}></lr-attachment-chip>`,
+      )) as LyraAttachmentChip;
+      counts.push(removeButtons(property));
+      expect(property.getAttribute('removable'), 'the alias reflects').to.equal('false');
+
+      // The alias syncs back from a canonical write.
+      property.withoutRemoveButton = false;
+      await property.updateComplete;
+      expect(property.removable).to.be.true;
+      expect(property.hasAttribute('removable')).to.be.false;
+    });
+    expect(counts).to.deep.equal([0, 0]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-attachment-chip:property:removable',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-remove-button');
+  });
+
+  it('restores the remove button when removable="false" is removed, and lets the last-written spelling win', async () => {
+    await captureDeprecationWarnings(REMOVABLE, async () => {
+      const el = (await fixture(
+        html`<lr-attachment-chip name="a.txt" removable="false"></lr-attachment-chip>`,
+      )) as LyraAttachmentChip;
+      el.removeAttribute('removable');
+      await el.updateComplete;
+      expect(el.withoutRemoveButton).to.be.false;
+      expect(removeButtons(el)).to.equal(1);
+
+      const both = (await fixture(
+        html`<lr-attachment-chip name="a.txt" removable without-remove-button></lr-attachment-chip>`,
+      )) as LyraAttachmentChip;
+      expect(both.withoutRemoveButton).to.be.true;
+      expect(removeButtons(both)).to.equal(0);
+    });
   });
 
   it('tints the remove button on hover and deepens it while pressed', async () => {
@@ -749,7 +856,7 @@ describe('hit area', () => {
     `)) as LyraAttachmentChip;
     for (const part of ['retry-button', 'preview-button', 'remove-button']) {
       const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      // The size="s" thumbnail is smaller, but every interactive action still keeps the shared
+      // The compact thumbnail is smaller, but every interactive action still keeps the shared
       // --lr-icon-button-size hit-area floor.
       expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
       expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
@@ -978,7 +1085,7 @@ describe('untitledLabel', () => {
   });
 });
 
-describe('size density', () => {
+describe('size and the deprecated compact alias', () => {
   interface Density {
     borderStyle: string;
     borderRadius: string;
@@ -1003,11 +1110,12 @@ describe('size density', () => {
   it('defaults to no size and no compact, unchanged visual chrome', async () => {
     const el = (await fixture(html`<lr-attachment-chip name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
     expect(el.size).to.be.undefined;
+    expect(el.compact).to.be.false;
     expect(el.hasAttribute('compact')).to.be.false;
     expect(el.hasAttribute('size')).to.be.false;
   });
 
-  it('shrinks font-size and gap at small size via themeable custom properties', async () => {
+  it('shrinks font-size and gap at size="s" via themeable custom properties', async () => {
     const el = (await fixture(html`<lr-attachment-chip size="s" name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const nonCompact = (await fixture(html`<lr-attachment-chip name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
     const compact = densityOf(el);
@@ -1016,7 +1124,7 @@ describe('size density', () => {
     expect(compact.gap).to.not.equal(plain.gap);
   });
 
-  it('selects the small size density at s and below, in either spelling, and the default at m and above', async () => {
+  it('selects the compact density at s and below, in either spelling, and the default at m and above', async () => {
     const plain = densityOf((await fixture(html`<lr-attachment-chip name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip);
     const small = densityOf((await fixture(html`<lr-attachment-chip size="s" name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip);
     expect(small).to.not.deep.equal(plain);
@@ -1039,10 +1147,50 @@ describe('size density', () => {
     expect(el.hasAttribute('size')).to.be.false;
   });
 
+  it('the deprecated compact renders exactly like size="s", keeps reflecting, and warns once', async () => {
+    const canonical = densityOf((await fixture(html`<lr-attachment-chip size="s" name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip);
+    const densities: Density[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      for (let index = 0; index < 2; index += 1) {
+        const el = (await fixture(html`<lr-attachment-chip compact name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
+        expect(el.hasAttribute('compact')).to.be.true;
+        densities.push(densityOf(el));
+      }
+    });
+    expect(densities).to.deep.equal([canonical, canonical]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-attachment-chip:property:compact',
+    ]);
+    expect(warnings[0]!.message).to.contain('size');
+  });
+
+  it('syncs compact and size both ways, the last write winning', async () => {
+    const plain = densityOf((await fixture(html`<lr-attachment-chip name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip);
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const el = (await fixture(html`<lr-attachment-chip compact size="m" name="a.png"></lr-attachment-chip>`)) as LyraAttachmentChip;
+      expect(el.size).to.equal('m');
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+      expect(densityOf(el)).to.deep.equal(plain);
+
+      el.compact = true;
+      await el.updateComplete;
+      expect(el.size).to.equal('s');
+      expect(el.getAttribute('size')).to.equal('s');
+
+      el.size = 'xs';
+      await el.updateComplete;
+      expect(el.compact, 'xs is still the compact density').to.be.true;
+      el.size = 'l';
+      await el.updateComplete;
+      expect(el.compact).to.be.false;
+      expect(el.hasAttribute('compact')).to.be.false;
+    });
+  });
 });
 
 describe('thumbnailOnly', () => {
-  it('hides [part=meta] for an image chip at the small size density with thumbnailOnly set', async () => {
+  it('hides [part=meta] for an image chip at the compact density with thumbnailOnly set', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip size="s" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -1066,7 +1214,7 @@ describe('thumbnailOnly', () => {
     expect(getComputedStyle(meta).display).to.not.equal('none');
   });
 
-  it('defaults to false, unchanged visual chrome even at the small size density', async () => {
+  it('defaults to false, unchanged visual chrome even at the compact density', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip size="s" name="a.png" mime-type="image/png"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -1074,15 +1222,23 @@ describe('thumbnailOnly', () => {
     const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
     expect(getComputedStyle(meta).display).to.not.equal('none');
   });
-
-
-  it('shows [part=meta] again when size changes from small to medium', async () => {
+  it('keeps thumbnailOnly working through the deprecated compact alias', async () => {
     await captureDeprecationWarnings(COMPACT, async () => {
       const el = (await fixture(
-        html`<lr-attachment-chip size="s" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
+        html`<lr-attachment-chip compact thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
       )) as LyraAttachmentChip;
-      el.size = 'm';
-      await el.updateComplete;
+      const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+      expect(getComputedStyle(meta).display).to.equal('none');
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(base).paddingInlineStart).to.equal('2px');
+    });
+  });
+
+  it('shows [part=meta] again when a later size="m" overrides compact', async () => {
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const el = (await fixture(
+        html`<lr-attachment-chip compact size="m" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
+      )) as LyraAttachmentChip;
       const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
       expect(getComputedStyle(meta).display).to.not.equal('none');
     });
@@ -1117,7 +1273,7 @@ describe('themeable padding', () => {
     expect(getComputedStyle(base).paddingInlineStart).to.equal('4px');
   });
 
-  it('honors --lr-attachment-chip-compact-padding at the small size density', async () => {
+  it('honors --lr-attachment-chip-compact-padding at the compact density', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip size="s" name="a.png" style="--lr-attachment-chip-compact-padding: 1px 6px"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
@@ -1126,12 +1282,12 @@ describe('themeable padding', () => {
     expect(getComputedStyle(base).paddingInlineStart).to.equal('6px');
   });
 
-  it('reduces [part=base] padding, symmetrically, when the small size density and thumbnailOnly actually hide [part=meta]', async () => {
+  it('reduces [part=base] padding, symmetrically, when the compact density and thumbnailOnly actually hide [part=meta]', async () => {
     const el = (await fixture(
       html`<lr-attachment-chip size="s" thumbnail-only name="a.png" mime-type="image/png"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    // --lr-size-0-125rem (2px) on every side, less than the ordinary size="s" row's 4px inline
+    // --lr-size-0-125rem (2px) on every side, less than the ordinary compact row's 4px inline
     // component, which was sized for a text row this lone-thumbnail chip no longer renders.
     expect(getComputedStyle(base).paddingBlockStart).to.equal('2px');
     expect(getComputedStyle(base).paddingInlineStart).to.equal('2px');
@@ -1152,7 +1308,7 @@ describe('themeable padding', () => {
     expect(getComputedStyle(base).paddingInlineStart).to.equal('7px');
   });
 
-  it('leaves the ordinary small size padding in place for a non-image compact-density thumbnailOnly chip', async () => {
+  it('leaves the ordinary compact padding in place for a non-image compact-density thumbnailOnly chip', async () => {
     // thumbnailOnly has no effect for a non-image chip (per its own doc), so [part=meta] stays
     // visible and the reduced thumbnail-only padding must not apply -- proving the :has() gate
     // tracks the actually-rendered state, not just the two reflected attributes.
@@ -1378,5 +1534,3 @@ it('draws the resting chip edge in the subtle border tier while the progress tra
   expect(getComputedStyle(base!).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(track!).backgroundColor).to.equal('rgb(7, 8, 9)');
 });
-
-expectStaleAttribute('lr-attachment-chip', 'previewable');

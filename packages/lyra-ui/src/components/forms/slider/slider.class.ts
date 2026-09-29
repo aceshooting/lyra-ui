@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import {
@@ -45,6 +46,7 @@ import { currentValidityValidator, type LyraFormValidator } from '../form-valida
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
  *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
@@ -300,6 +302,7 @@ export class LyraSlider extends LyraSliderBase {
   }
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { showValue: 'withValue' };
 
   // These accessors sanitize the live value synchronously when a range
   // setting changes. Keeping the properties `noAccessor` prevents Lit's
@@ -727,6 +730,8 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Renders the visible value readout (`part="value"`). `with-value="false"` is accepted as off. */
   @property({ type: Boolean, attribute: 'with-value', converter: falseDefaultBooleanConverter }) withValue = false;
+  /** @deprecated Use `with-value`; removal not before 23.0.0. */
+  @property({ type: Boolean, attribute: 'show-value', converter: falseDefaultBooleanConverter }) showValue = false;
 
   /** Visible readout text. `formatted` reuses valueFormatter (then tooltipFormatter when absent)
    * for each handle, with localized numeric fallback for nullish results. The numeric default

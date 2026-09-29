@@ -8708,7 +8708,7 @@ describe('bounded heatmap fallback paths', () => {
   });
 });
 
-describe("retired lr-cell-click event", () => {
+describe("deprecated lr-cell-click alias", () => {
   const matrixHeatmap = async (): Promise<LyraHeatmap> => {
     const el = (await fixture(html`<lr-heatmap cell-size="22"></lr-heatmap>`)) as LyraHeatmap;
     setMatrixData(el, { rowLabels: ["Mon", "Tue"] });
@@ -8734,7 +8734,7 @@ describe("retired lr-cell-click event", () => {
     );
   };
 
-  it("emits only lr-cell-activate with the activated cell detail", async () => {
+  it("fires right after lr-cell-activate from the same activation, with its own equal detail", async () => {
     const el = await matrixHeatmap();
     const order: string[] = [];
     const events: CustomEvent[] = [];
@@ -8745,32 +8745,35 @@ describe("retired lr-cell-click event", () => {
       });
     }
     clickCell(el);
-    expect(order).to.deep.equal(["lr-cell-activate"]);
+    expect(order).to.deep.equal(["lr-cell-activate", "lr-cell-click"]);
     expect(events[0]!.detail).to.deep.equal({ row: 1, col: 0, value: 1 });
+    expect(events[1]!.detail).to.deep.equal(events[0]!.detail);
+    expect(events[1]!.detail === events[0]!.detail).to.equal(false);
     expect(events.map((e) => [e.bubbles, e.composed, e.cancelable])).to.deep.equal([
+      [true, true, false],
       [true, true, false],
     ]);
   });
 
-  it("does not notify a retired event listener", async () => {
+  it("keeps an alias-only listener hearing every activation", async () => {
     const el = await matrixHeatmap();
     let detail: unknown;
     el.addEventListener("lr-cell-click", (e) => (detail = (e as CustomEvent).detail));
     clickCell(el);
-    expect(detail).to.equal(undefined);
+    expect(detail).to.deep.equal({ row: 1, col: 0, value: 1 });
   });
 });
 
-describe("tooltip colors and retired token isolation", () => {
+describe("--lr-heatmap-tooltip-color and its deprecated --lr-heatmap-tooltip-text alias", () => {
   const tooltipColor = async (style: string): Promise<string> => {
     const el = (await fixture(html`<lr-heatmap style=${style}></lr-heatmap>`)) as LyraHeatmap;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
     return getComputedStyle(tooltip).color;
   };
 
-  it("ignores the retired tooltip token while canonical color paints", async () => {
+  it("colors the tooltip text from the canonical property, still honors the alias, and lets the canonical one win", async () => {
     expect(await tooltipColor("--lr-heatmap-tooltip-color: rgb(1, 2, 3)")).to.equal("rgb(1, 2, 3)");
-    expect(await tooltipColor("--lr-heatmap-tooltip-text: rgb(4, 5, 6)")).to.equal(await tooltipColor(""));
+    expect(await tooltipColor("--lr-heatmap-tooltip-text: rgb(4, 5, 6)")).to.equal("rgb(4, 5, 6)");
     expect(
       await tooltipColor("--lr-heatmap-tooltip-color: rgb(1, 2, 3); --lr-heatmap-tooltip-text: rgb(4, 5, 6)")
     ).to.equal("rgb(1, 2, 3)");

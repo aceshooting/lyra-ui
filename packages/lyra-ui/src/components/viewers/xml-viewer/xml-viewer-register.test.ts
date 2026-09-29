@@ -2,14 +2,14 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './xml-viewer-register.js';
 import { XML_VIEWER_TAG } from './xml-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
 function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const xml: LyraDocumentFile = { name: 'data.xml', mimeType: 'application/xml', src: 'https://example.test/data.xml' };
-const rss: LyraDocumentFile = { name: 'feed.rss', mimeType: 'application/octet-stream', src: 'https://example.test/feed.rss' };
+const xml: DocumentFile = { name: 'data.xml', mimeType: 'application/xml', src: 'https://example.test/data.xml' };
+const rss: DocumentFile = { name: 'feed.rss', mimeType: 'application/octet-stream', src: 'https://example.test/feed.rss' };
 
 describe('xml-viewer-register laziness', () => {
   it('never fetches the xml-viewer class module merely by importing the register-only entry', () => {

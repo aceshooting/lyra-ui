@@ -7,9 +7,12 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Deprecated css-property** `--lr-export-button-active-background` since `21.1.0`; use css-property `--lr-export-button-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-export-button-background` since `21.1.0`; use css-property `--lr-export-button-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-export-button-hover-background` since `21.1.0`; use css-property `--lr-export-button-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-export` since `22.0.0`; use event `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })`; removal not before `24.0.0` — The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior.
 - **Optional peers** none
-- **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -116,6 +119,9 @@ corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
+Deprecated aliases: `--lr-export-button-background`, `--lr-export-button-hover-background` and
+`--lr-export-button-active-background` (use the `-bg` names; removed in 23.0.0).
+
 The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is

@@ -5,6 +5,7 @@ import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
@@ -76,6 +77,9 @@ export interface LyraChunkInspectorEventMap {
   }>>;
   /** A chunk's text toggle changed its expanded state. */
   'lr-chunk-toggle': CustomEvent<{ chunkId: string; expanded: boolean }>;
+  /** @deprecated Use `lr-chunk-toggle`; removal not before 23.0.0. Fired right after it from the
+   *  same toggle, with an equal detail. */
+  'lr-expand': CustomEvent<{ chunkId: string; expanded: boolean }>;
 }
 
 type Tier = 'high' | 'medium' | 'low';
@@ -83,7 +87,7 @@ type Tier = 'high' | 'medium' | 'low';
 /** How `<lr-chunk-inspector>` orders the chunks it was given. */
 export type ChunkInspectorSort = 'score' | 'none';
 
-/** Whether a `size` sits on the dense tier uses for dense rendering. */
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
 function isDenseSize(size: LyraSize): boolean {
   const step = normalizeSize(size);
   return step === 's' || step === 'xs' || step === '2xs';
@@ -112,7 +116,9 @@ function isDenseSize(size: LyraSize): boolean {
  * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { chunkId,
  * sourceId, anchor? }`.
  * @event lr-chunk-toggle - A chunk's text toggle was activated, expanding or collapsing it.
- *   `detail: { chunkId, expanded }`.
+ *   `detail: { chunkId, expanded }`. Fires before `lr-expand`, from the same toggle.
+ * @event lr-expand - Deprecated alias of `lr-chunk-toggle`, kept firing unchanged right after it
+ *   with an equal `detail: { chunkId, expanded }`. Removal not before 23.0.0.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
@@ -167,6 +173,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-chunk-open',
   ]);
@@ -190,6 +199,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
    * default) and larger render the full rows.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Compact rows render title + score bar + open button only.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
   /** Fallback name for the populated chunk group. A non-empty host `aria-label` makes the host the
    *  sole overall owner; an explicitly empty host label stays empty on the group. */
   @property() label = '';
@@ -275,6 +287,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     else next.delete(chunkId);
     this.expandedIds = next;
     this.emit('lr-chunk-toggle', { chunkId, expanded });
+    // Deprecated alias, dispatched with its own equal detail right after the canonical event.
+    this.emit('lr-expand', { chunkId, expanded });
   }
 
   // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,

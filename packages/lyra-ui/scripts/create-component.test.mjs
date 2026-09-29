@@ -10,13 +10,6 @@ import {
 } from './create-component.mjs';
 import { normalizeManifest } from './component-inventory.mjs';
 import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
-import {
-  assembleComponentMetadata,
-  commitComponentMetadataWritePlan,
-  createComponentMetadataWritePlan,
-  partitionComponentMetadata,
-  readComponentMetadataSources,
-} from './component-metadata-source.mjs';
 
 const temporaryDirectories = [];
 
@@ -61,8 +54,7 @@ function fixturePackage() {
     join(packageDir, 'scripts/fixtures/component-metadata.json'),
     `${JSON.stringify(
       {
-        schemaVersion: 2,
-        policy: {},
+        schemaVersion: 1,
         profiles: {
           'new-component-experimental': {
             status: 'experimental',
@@ -73,9 +65,6 @@ function fixturePackage() {
           },
         },
         assignments: { 'new-component-experimental': [] },
-        deprecations: [],
-        exportDeprecations: [],
-        history: {},
       },
       null,
       2,
@@ -85,10 +74,6 @@ function fixturePackage() {
   write(join(packageDir, 'src/lyra.ts'), '// generated fixture\n');
   write(join(packageDir, 'src/internal/root-registration-allowlist.ts'), '// generated fixture\n');
   write(join(packageDir, 'package.json'), '{"name":"@aceshooting/lyra-ui","version":"8.0.0"}\n');
-  const metadata = JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-metadata.json'), 'utf8'));
-  for (const [file, source] of Object.entries(partitionComponentMetadata(metadata, { familyNames: ['utility'], familyByTag: {} }))) {
-    write(join(packageDir, file), source);
-  }
   return packageDir;
 }
 
@@ -155,10 +140,8 @@ function successfulRunner(packageDir, steps, { manifest, since = '8.0.0' } = {})
       );
     }
     if (step.id === 'component-metadata') {
-      const sources = readComponentMetadataSources(packageDir);
       const path = join(packageDir, 'scripts/fixtures/component-inventory.json');
-      const original = readFileSync(path, 'utf8');
-      const inventory = JSON.parse(original);
+      const inventory = JSON.parse(readFileSync(path, 'utf8'));
       const entry = inventory.components.find((component) => component.tag === 'lr-status-panel');
       entry.maturity = {
         status: 'experimental',
@@ -171,11 +154,7 @@ function successfulRunner(packageDir, steps, { manifest, since = '8.0.0' } = {})
           'Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.',
         deprecations: [],
       };
-      const plan = createComponentMetadataWritePlan(sources, assembleComponentMetadata(sources), {
-        extraWrites: [{ file: path, original, expected: `${JSON.stringify(inventory, null, 2)}\n` }],
-      });
-      commitComponentMetadataWritePlan(plan);
-      return { metadataWrites: plan.entries.filter(entry => entry.original !== entry.expected) };
+      writeFileSync(path, `${JSON.stringify(inventory, null, 2)}\n`);
     }
   };
 }
@@ -430,7 +409,6 @@ test('rolls back every authored file when focused regeneration fails', async () 
     inventory: readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'),
     metadata: readFileSync(join(packageDir, 'scripts/fixtures/component-metadata.json'), 'utf8'),
     manifest: readFileSync(join(packageDir, 'custom-elements.json'), 'utf8'),
-    metadataSources: readComponentMetadataSources(packageDir).snapshots,
   };
 
   await assert.rejects(
@@ -469,7 +447,6 @@ test('rolls back every authored file when focused regeneration fails', async () 
     before.metadata,
   );
   assert.equal(readFileSync(join(packageDir, 'custom-elements.json'), 'utf8'), before.manifest);
-  for (const { file, original } of before.metadataSources) assert.equal(readFileSync(file, 'utf8'), original);
 });
 
 test('removes the tag alias the registration step generated when a later verification fails', async () => {
@@ -485,12 +462,11 @@ test('removes the tag alias the registration step generated when a later verific
       family: 'utility',
       name: 'status-panel',
       runStep(step) {
-        const result = inner(step);
+        inner(step);
         // `pnpm registrations` writes one alias module per inventory tag; the alias for the
         // new tag is outside the component directory, so only the snapshot can remove it.
         if (step.id === 'registrations') write(newAlias, '// generated alias\n');
         if (step.id === 'component-inventory') throw new Error('simulated inventory failure');
-        return result;
       },
     }),
     /simulated inventory failure/,
@@ -512,7 +488,7 @@ test('expects an unreleased since once the current package version is already ta
     taggedCurrent: { version: '8.0.0', tag: 'lyra-ui@8.0.0', tags: [] },
     releases: [],
   };
-  commitComponentMetadataWritePlan(createComponentMetadataWritePlan(readComponentMetadataSources(packageDir), metadata));
+  writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
 
   await scaffoldComponent({
     packageDir,
@@ -526,127 +502,4 @@ test('expects an unreleased since once the current package version is already ta
   );
   const entry = inventory.components.find((component) => component.tag === 'lr-status-panel');
   assert.equal(entry.maturity.since, 'unreleased');
-});
-
-test('scaffold enrolls its family source before manifest without writing the generated aggregate', async () => {
-  const packageDir = fixturePackage();
-  const aggregatePath = join(packageDir, 'scripts/fixtures/component-metadata.json');
-  const original = readFileSync(aggregatePath, 'utf8');
-  const inner = successfulRunner(packageDir, []);
-  await scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep(step) {
-      if (step.id === 'manifest') {
-        const sources = readComponentMetadataSources(packageDir);
-        assert.deepEqual(assembleComponentMetadata(sources).assignments['new-component-experimental'], ['lr-status-panel']);
-        assert.equal(readFileSync(aggregatePath, 'utf8'), original);
-      }
-      return inner(step);
-    },
-  });
-});
-
-test('a late scaffold failure restores family and history writes made by metadata generation', async () => {
-  const packageDir = fixturePackage();
-  const before = readComponentMetadataSources(packageDir).snapshots;
-  const inner = successfulRunner(packageDir, []);
-  await assert.rejects(scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep(step) {
-      const result = inner(step);
-      if (step.id === 'component-metadata') {
-        const sources = readComponentMetadataSources(packageDir);
-        const metadata = assembleComponentMetadata(sources);
-        metadata.history.current = { version: '8.0.0', tags: ['lr-status-panel'] };
-        const plan = createComponentMetadataWritePlan(sources, metadata);
-        commitComponentMetadataWritePlan(plan);
-        return { metadataWrites: [...result.metadataWrites, ...plan.entries.filter(entry => entry.original !== entry.expected)] };
-      }
-      if (step.id === 'registrations') throw new Error('late registration failure');
-      return result;
-    },
-  }), /late registration failure/);
-  for (const { file, original } of before) assert.equal(readFileSync(file, 'utf8'), original);
-});
-
-test('an early scaffold failure preserves an unrelated family edit', async () => {
-  const packageDir = fixturePackage();
-  const catalogFile = join(packageDir, 'scripts/component-families.json');
-  const catalog = JSON.parse(readFileSync(catalogFile, 'utf8'));
-  catalog.families.push({ key: 'forms', label: 'Forms' });
-  writeFileSync(catalogFile, JSON.stringify(catalog));
-  const file = join(packageDir, 'scripts/fixtures/component-metadata/families/forms.json');
-  write(file, JSON.stringify({ family: 'forms', assignments: { 'new-component-experimental': [] }, deprecations: [] }));
-  const original = readFileSync(file, 'utf8');
-  await assert.rejects(scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep() {
-      writeFileSync(file, `${original}\n`);
-      throw new Error('manifest failed after independent edit');
-    },
-  }), /manifest failed after independent edit/);
-  assert.equal(readFileSync(file, 'utf8'), `${original}\n`);
-});
-
-test('a late independent edit to a written family survives scaffold rollback with a diagnostic', async () => {
-  const packageDir = fixturePackage();
-  const file = join(packageDir, 'scripts/fixtures/component-metadata/families/utility.json');
-  const inner = successfulRunner(packageDir, []);
-  let independent;
-  await assert.rejects(scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep(step) {
-      const result = inner(step);
-      if (step.id === 'registrations') {
-        independent = `${readFileSync(file, 'utf8')}\n`;
-        writeFileSync(file, independent);
-        throw new Error('late independent edit');
-      }
-      return result;
-    },
-  }), /late independent edit; rollback preserved concurrent changes/);
-  assert.equal(readFileSync(file, 'utf8'), independent);
-});
-
-test('rollback restores the generator preimage including an earlier independent history edit', async () => {
-  const packageDir = fixturePackage();
-  const file = join(packageDir, 'scripts/fixtures/component-metadata/history.json');
-  const independent = JSON.stringify({ history: { note: 'independent history context' } });
-  const inner = successfulRunner(packageDir, []);
-  await assert.rejects(scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep(step) {
-      const result = inner(step);
-      if (step.id === 'manifest') writeFileSync(file, independent);
-      if (step.id === 'component-metadata') {
-        const sources = readComponentMetadataSources(packageDir);
-        const metadata = assembleComponentMetadata(sources);
-        metadata.history.current = { version: '8.0.0', tags: ['lr-status-panel'] };
-        const plan = createComponentMetadataWritePlan(sources, metadata);
-        commitComponentMetadataWritePlan(plan);
-        return { metadataWrites: [...result.metadataWrites, ...plan.entries.filter(entry => entry.original !== entry.expected)] };
-      }
-      if (step.id === 'registrations') throw new Error('registration failed');
-      return result;
-    },
-  }), /registration failed/);
-  assert.equal(readFileSync(file, 'utf8'), independent);
-});
-
-test('rollback preserves a conflicting family write chain across generator transactions', async () => {
-  const packageDir = fixturePackage();
-  const file = join(packageDir, 'scripts/fixtures/component-metadata/families/utility.json');
-  const inner = successfulRunner(packageDir, []);
-  let afterGenerator;
-  await assert.rejects(scaffoldComponent({
-    packageDir, family: 'utility', name: 'status-panel',
-    runStep(step) {
-      const result = inner(step);
-      if (step.id === 'manifest') writeFileSync(file, `${readFileSync(file, 'utf8')}\n`);
-      if (step.id === 'component-metadata') afterGenerator = readFileSync(file, 'utf8');
-      if (step.id === 'registrations') throw new Error('registration failed');
-      return result;
-    },
-  }), /registration failed; rollback preserved concurrent changes/);
-  assert.equal(readFileSync(file, 'utf8'), afterGenerator);
 });

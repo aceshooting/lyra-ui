@@ -2,9 +2,16 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
-import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { styles } from './result-card.styles.js';
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
+}
 
 /** Visual chrome for `<lr-result-card>`'s root — the library's shared container-frame vocabulary. */
 export type ResultCardAppearance = LyraFrame;
@@ -49,6 +56,8 @@ export type ResultCardAppearance = LyraFrame;
  *   children while `size` is `s` or smaller.
  * @cssprop [--lr-result-card-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
+ * @cssprop [--lr-result-card-background=var(--lr-color-surface)] - Deprecated alias of
+ *   `--lr-result-card-bg`; removal not before 23.0.0.
  * @cssprop [--lr-result-card-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border and of the `[part="header"]` divider.
  * @cssprop [--lr-result-card-radius=var(--lr-radius-container)] - Corner radius of the outer card.
@@ -58,6 +67,10 @@ export type ResultCardAppearance = LyraFrame;
  */
 export class LyraResultCard extends LyraElement {
   static override styles = [LyraElement.styles, styles];
+
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** Small visible heading for the card. Leave unset for an untitled card.
    *  This is deliberately separate from the host's native `title` tooltip. Removing the attribute clears its displayed text. */
@@ -75,6 +88,14 @@ export class LyraResultCard extends LyraElement {
    * the chrome entirely. `frame="plain"` leaves the dense padding and gaps intact when both are set.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+
+  /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
+   *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
+   *  full card padding. Purely a density knob: the border and background stay, so use
+   *  `frame="plain"` instead to drop the chrome entirely. `frame="plain"` leaves compact padding
+   *  and gaps intact when both are set.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Explicit SSR presence hint for an `actions` slot. Browser upgrades also detect assignment
    * automatically, so ordinary client-authored markup does not need it. Server renderers cannot
@@ -139,6 +160,7 @@ export class LyraResultCard extends LyraElement {
     `;
   }
 }
+
 
 declare global {
   interface HTMLElementTagNameMap {

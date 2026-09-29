@@ -8,6 +8,7 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import type { ChatMessageRole } from '../../conversation/chat-message/chat-message.class.js';
@@ -17,6 +18,7 @@ import { overallSemanticLabel } from '../semantic-owner.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_promptStudioAddMessage, LYRA_DEFAULT_promptStudioLabel, LYRA_DEFAULT_promptStudioMessageContent, LYRA_DEFAULT_promptStudioMessageRole, LYRA_DEFAULT_promptStudioMessages, LYRA_DEFAULT_promptStudioPreview, LYRA_DEFAULT_promptStudioPreviewLimit, LYRA_DEFAULT_promptStudioRemoveMessage, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleTool, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_promptStudioRun, LYRA_DEFAULT_promptStudioSave, LYRA_DEFAULT_promptStudioVariableName, LYRA_DEFAULT_promptStudioVariableValue, LYRA_DEFAULT_promptStudioVariables, LYRA_DEFAULT_promptStudioVersions } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /** Conversation message roles plus the tool-result role needed by prompt authoring. */
 export type PromptStudioRole = ChatMessageRole | 'tool';
@@ -57,6 +59,9 @@ export interface LyraPromptStudioEventMap {
   'lr-change': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   /** Cancelable request to reorder messages, fired before the order changes. */
   'lr-message-reorder-request': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
+  /** @deprecated Use `lr-message-reorder-request`; removal not before 23.0.0. Fired right after it
+   *  from the same move, with an equal detail; either event's `preventDefault()` vetoes the move. */
+  'lr-message-reorder': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
   'lr-run': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   'lr-save': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   'lr-version-select': CustomEvent<LyraEventDetailSnapshot<{ version: PromptStudioVersion }>>;
@@ -94,7 +99,10 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * @event lr-message-reorder-request - A cancelable request to reorder messages. Carries the
  *   proposed complete message order and the moved message's id and indexes. Prevent it to persist
  *   or reject the proposed order yourself, then assign `messages` when the host is ready to render
- *   it.
+ *   it. Fires before `lr-message-reorder`, from the same move; either event may veto.
+ * @event lr-message-reorder - Deprecated cancelable alias of `lr-message-reorder-request`, kept
+ *   firing right after it with an equal detail; either event may veto, and a veto through this
+ *   alias logs a one-time development warning. Removal not before 23.0.0.
  * @event lr-run - The current prompt was requested for execution.
  * @event lr-save - The current prompt was requested for persistence.
  * @event lr-version-select - A complete saved version was activated.
@@ -165,6 +173,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     'lr-change-request',
     'lr-change',
     'lr-message-reorder-request',
+    'lr-message-reorder',
     'lr-run',
     'lr-save',
     'lr-version-select',
@@ -374,7 +383,12 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     this.changeRequestPending = true;
     try {
       const request = this.emit('lr-message-reorder-request', proposal(), { cancelable: true });
-      if (request.defaultPrevented || this.disabled ||
+      // The retained alias has its own equal snapshot; either request may veto the move.
+      const deprecatedAlias = this.emit('lr-message-reorder', proposal(), { cancelable: true });
+      if (deprecatedAlias.defaultPrevented) {
+        warnDeprecatedUsage(this, 'event', 'lr-message-reorder', 'lr-message-reorder-request');
+      }
+      if (request.defaultPrevented || deprecatedAlias.defaultPrevented || this.disabled ||
         this.messages !== previousMessages || this.variables !== previousVariables) return;
     } finally {
       this.changeRequestPending = false;

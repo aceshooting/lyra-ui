@@ -1,5 +1,5 @@
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -27,6 +27,7 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeSize,
   optionalSizeConverter,
@@ -161,9 +162,28 @@ interface TableRowEntry<T> {
   key: string | number;
 }
 
+/**
+ * Tri-state boolean converter for the deprecated `empty-compact` alias. An absent attribute stays
+ * `undefined` -- "keep each empty branch's own built-in default" -- rather than collapsing to
+ * `false`, which Lit's presence-based `type: Boolean` converter cannot express. Same shape as
+ * `spellcheckConverter` above, one state wider; `empty-compact="false"` is parsed as `false`, not
+ * `true`.
+ */
+const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> = {
+  fromAttribute(value): boolean | undefined {
+    if (value === null) return undefined;
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    if (value === undefined) return null;
+    return value ? '' : 'false';
+  },
+};
+
 /** The steps of the shared size ladder that render the built-in empty state compact. */
 const COMPACT_EMPTY_SIZES: ReadonlySet<LyraSizeStep> = new Set<LyraSizeStep>(['2xs', 'xs', 's']);
 const isCompactEmptySize = (size: LyraSize): boolean => COMPACT_EMPTY_SIZES.has(normalizeSize(size));
+
 
 /** Which inline-start/inline-end edge a column aligns or sticks to. */
 export type TableEdgeAlign = 'start' | 'end';
@@ -523,6 +543,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-sort': CustomEvent<TableSortCommitDetail>;
   /** A row was activated by pointer or Enter/Space. */
   'lr-row-activate': CustomEvent<Readonly<{ row: T }>>;
+  /** @deprecated Use `lr-row-activate`; removal not before 23.0.0. Fired unchanged right after it
+   *  from the same activation, with an equal detail. */
+  'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
   'lr-row-expand-request': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-load-more': CustomEvent<null>;
@@ -775,6 +798,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   `detail: { phase: 'commit', sortKey, sortDir }`. Client mode also updates `sortKey`/`sortDir`;
  *   server mode leaves them controlled while reporting the accepted proposal.
  * @event lr-row-activate - A row was activated by pointer or Enter/Space. `detail: { row }`.
+ * @event lr-row-click - Deprecated alias of `lr-row-activate`, fired unchanged right after it from
+ *   the same activation with an equal `detail: { row }`. Removal not before 23.0.0.
  * @event lr-load-more - The "load more" control was activated.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
@@ -1005,6 +1030,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    emptyCompact: [
+      'emptySize',
+      (compact) => (compact == null ? undefined : compact ? 's' : 'm'),
+      (size) => (size === undefined ? undefined : isCompactEmptySize(size as LyraSize)),
+    ],
+    noColumnsHeading: 'emptyColumnsHeading',
+    noColumnsDescription: 'emptyColumnsDescription',
+    hideColumnsLabel: 'columnsHideLabel',
+  };
 
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
   /** Clone-owned readonly column-definition sequence, bounded to the first 10,000 source
@@ -1411,6 +1446,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this._emptySize = next;
     this.requestUpdate('emptySize', previous);
   }
+  /**
+   * Overrides the built-in `[part='empty']` state's `compact` rendering. Leave `undefined` (the
+   * default) to keep each branch's own built-in behavior. Deprecated tri-state alias of
+   * `empty-size`: `empty-compact` equals `empty-size="s"`, `empty-compact="false"` equals
+   * `empty-size="m"`, and clearing it clears `empty-size`.
+   *
+   * @deprecated Use `empty-size` (`s` for compact, `m` for spacious); removal not before 23.0.0.
+   */
+  @property({ attribute: 'empty-compact', converter: optionalBooleanConverter }) emptyCompact?: boolean;
   /** Heading of the built-in no-columns state. Omission localizes `noColumns`; any supplied
    *  string, including `''`, renders verbatim. */
   @property({ attribute: 'empty-columns-heading' }) emptyColumnsHeading?: string;
@@ -1420,6 +1464,27 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** Label of `[part='reveal-columns-button']` while priority columns are revealed. Omission
    *  localizes `showFewerColumns`. */
   @property({ attribute: 'columns-hide-label' }) columnsHideLabel?: string;
+  /**
+   * Deprecated alias of `empty-columns-heading`, with identical behavior. Setting it logs a
+   * one-time development warning.
+   *
+   * @deprecated Use `empty-columns-heading`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'no-columns-heading' }) noColumnsHeading?: string;
+  /**
+   * Deprecated alias of `empty-columns-description`, with identical behavior. Setting it logs a
+   * one-time development warning.
+   *
+   * @deprecated Use `empty-columns-description`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'no-columns-description' }) noColumnsDescription = '';
+  /**
+   * Deprecated alias of `columns-hide-label`, with identical behavior. Setting it logs a one-time
+   * development warning.
+   *
+   * @deprecated Use `columns-hide-label`; removal not before 23.0.0.
+   */
+  @property({ attribute: 'hide-columns-label' }) hideColumnsLabel?: string;
 
   /** Whether the current rendered allocation actually hides at least one `priority` column. This
    * read-only state becomes false once `priorityColumnsVisible` reveals them; the toggle remains
@@ -2987,6 +3052,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (entry === undefined) return;
     const { row, key: selectedKey } = entry;
     this.emit('lr-row-activate', Object.freeze({ row }));
+    // Deprecated alias, fired right after with its own equal detail so a listener still bound to
+    // the old name keeps hearing every activation.
+    this.emit('lr-row-click', Object.freeze({ row }));
     if (this.selectionMode === 'single') {
       this.selectedRowKeys = this.asKeySet(new Set([selectedKey]));
       const rowKeys = this.asKeyList(Object.freeze([selectedKey]));

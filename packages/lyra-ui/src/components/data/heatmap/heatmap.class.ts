@@ -569,6 +569,9 @@ const CALENDAR_SPACING_PROPERTIES: ReadonlySet<PropertyKey> = new Set<CalendarSp
 export interface LyraHeatmapEventMap {
   /** A cell was activated by pointer or Enter/Space. */
   'lr-cell-activate': CustomEvent<LyraHeatmapCellClickDetail>;
+  /** @deprecated Use `lr-cell-activate`; removal not before 23.0.0. Fired unchanged right after
+   *  it from the same activation, with an equal detail. */
+  'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
   'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
   'lr-calendar-geometry-change': CustomEvent<LyraHeatmapCalendarGeometry>;
   'lr-selection-change': CustomEvent<HeatmapSelectionChangeDetail>;
@@ -716,6 +719,8 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * tooltip and the keyboard live-region announcement. Use the callback for application-specific
  * wording that is not represented by the locale catalog.
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
+ * @event lr-cell-click - Deprecated alias of `lr-cell-activate`, fired unchanged right after it
+ * from the same activation with an equal `detail`. Removal not before 23.0.0.
  * @event lr-matrix-geometry-change - Fired after a matrix-mode draw pass whose resolved
  * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
  * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
@@ -760,6 +765,8 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * @cssprop [--lr-heatmap-label-font] - Font for axis/legend labels drawn on the canvas.
  * @cssprop [--lr-heatmap-tooltip-bg=var(--lr-color-surface)] - Hover tooltip background.
  * @cssprop [--lr-heatmap-tooltip-color=var(--lr-color-text)] - Hover tooltip text color.
+ * @cssprop [--lr-heatmap-tooltip-text=var(--lr-color-text)] - Deprecated alias of `--lr-heatmap-tooltip-color`; removal not
+ *   before 23.0.0.
  * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
@@ -4287,6 +4294,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       detail = { row: pos.row, col: pos.col, value };
     }
     this.emit('lr-cell-activate', { ...detail });
+    // Deprecated alias, fired right after with its own equal detail so a listener still bound to
+    // the old name keeps hearing every activation.
+    this.emit('lr-cell-click', { ...detail });
   }
 
   private selectedPositions = new Map<string, CellPos>();

@@ -129,12 +129,17 @@ only that tag, or use the explicit `all.js` entry when whole-library registratio
 import "@aceshooting/lyra-ui/all.js"; // explicitly registers the root-included tags
 ```
 
-Import component classes from their family-shaped `.class.js` subpaths. Root component-class
-re-exports and family-shaped registration imports are deprecated; they keep working throughout
-the compatibility window, with removal no earlier than 24.0.0. Stable tag-shaped registration
-imports and class-only subpaths are the canonical routes. The package root's helpers and types
-remain available. `all.js` is side-effectful and registers the
-root-included inventory; prefer tag-shaped imports in application code for smaller bundles.
+Import component classes from their family-shaped `.class.js` subpaths. Deprecated root
+component-class exports refer to the component constructor bindings themselves, including a
+constructor re-exported from a module that also exports helpers or types. That deprecation does not
+extend to sibling helpers, constants, or types; those remain supported unless they have their own
+deprecation record. Use the owning component's granular `.class.js` subpath for class imports.
+Family-shaped registration imports are also deprecated. Both deprecated root component-class exports
+and family-shaped registration imports keep working throughout the compatibility window, with
+removal no earlier than 24.0.0. Stable tag-shaped registration imports and class-only subpaths are
+the canonical routes. The package root's helpers and types remain available. `all.js` is
+side-effectful and registers the root-included inventory; prefer tag-shaped imports in application
+code for smaller bundles.
 
 The entry points, then:
 
@@ -153,11 +158,11 @@ The entry points, then:
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
 - **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 288
-  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
+  root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer` and `lr-geojson-viewer`. Those always need their own subpath import,
+  `lr-knowledge-graph-explorer`, `lr-geojson-view`, and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
   isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.

@@ -2048,12 +2048,12 @@ describe('row checkbox containment', () => {
   });
 });
 
-describe('lr-retrieval-results retired selectable alias', () => {
+describe('lr-retrieval-results deprecated selectable alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-retrieval-results', kind: 'property', name: 'selectable' }];
   const observe = (el: LyraRetrievalResults): string => String(el.shadowRoot!.querySelectorAll('lr-checkbox').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRetrievalResults>(markup);
 
-  it('applies without-selection with canonical defaults and no deprecation warning', async () => {
+  it('applies without-selection without a deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -2063,9 +2063,74 @@ describe('lr-retrieval-results retired selectable alias', () => {
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
   });
+
+  it('keeps selectable="false" equal to without-selection, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${chunks} without-selection></lr-retrieval-results>`));
+      alias = observe(await mount(html`<lr-retrieval-results .chunks=${chunks} selectable="false"></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`);
+      el.selectable = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutSelection, el.selectable, el.hasAttribute('selectable')];
+      // The canonical property syncs back into the alias.
+      el.withoutSelection = false;
+      await el.updateComplete;
+      readback.push(el.selectable, el.hasAttribute('selectable'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback, 'the alias reflects presence-style again').to.deep.equal([true, false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-retrieval-results:property:selectable',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-selection');
+  });
+
+  it('restores the default when selectable is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${chunks} selectable="false"></lr-retrieval-results>`);
+      el.selectable = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.selectable = false;
+      await el.updateComplete;
+      // The alias reflects presence-style, so `false` drops its attribute; a literal "false"
+      // attribute is what a later removal restores the default from.
+      el.setAttribute('selectable', 'false');
+      await el.updateComplete;
+      el.removeAttribute('selectable');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${chunks} without-selection></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${chunks} selectable without-selection></lr-retrieval-results>`);
+      expect(el.withoutSelection).to.equal(true);
+      both = observe(el);
+      const reversed = await mount(html`<lr-retrieval-results .chunks=${chunks} without-selection selectable></lr-retrieval-results>`);
+      expect(reversed.withoutSelection, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(both).to.equal(canonical);
+  });
 });
 
-describe('lr-retrieval-results retired dedupe alias', () => {
+describe('lr-retrieval-results deprecated dedupe alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-retrieval-results', kind: 'property', name: 'dedupe' }];
   const duplicates: RetrievalChunk[] = [
     { id: 'dup', text: 'a', score: 0.3, source: { id: 's1', name: 'a.pdf' } },
@@ -2084,7 +2149,7 @@ describe('lr-retrieval-results retired dedupe alias', () => {
     ]);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRetrievalResults>(markup);
 
-  it('applies without-dedupe with canonical defaults and no deprecation warning', async () => {
+  it('applies without-dedupe without a deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -2093,5 +2158,72 @@ describe('lr-retrieval-results retired dedupe alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+
+  it('keeps dedupe="false" equal to without-dedupe, warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let readback: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates} without-dedupe></lr-retrieval-results>`));
+      alias = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates} dedupe="false"></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${duplicates}></lr-retrieval-results>`);
+      el.dedupe = false;
+      await el.updateComplete;
+      property = observe(el);
+      readback = [el.withoutDedupe, el.dedupe, el.hasAttribute('dedupe')];
+      // The canonical property syncs back into the alias.
+      el.withoutDedupe = false;
+      await el.updateComplete;
+      readback.push(el.dedupe, el.hasAttribute('dedupe'));
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(readback, 'the alias reflects presence-style again').to.deep.equal([true, false, false, true, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal([
+      'lyra-deprecated:lr-retrieval-results:property:dedupe',
+    ]);
+    expect(warnings[0]!.message).to.contain('without-dedupe');
+  });
+
+  it('restores the default when dedupe is true or removed', async () => {
+    let plain = '';
+    let restored = '';
+    let removed = '';
+    await captureDeprecationWarnings(ALIAS, async () => {
+      plain = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates}></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${duplicates} dedupe="false"></lr-retrieval-results>`);
+      el.dedupe = true;
+      await el.updateComplete;
+      restored = observe(el);
+      el.dedupe = false;
+      await el.updateComplete;
+      // The alias reflects presence-style, so `false` drops its attribute; a literal "false"
+      // attribute is what a later removal restores the default from.
+      el.setAttribute('dedupe', 'false');
+      await el.updateComplete;
+      el.removeAttribute('dedupe');
+      await el.updateComplete;
+      removed = observe(el);
+    });
+    expect(restored).to.equal(plain);
+    expect(removed).to.equal(plain);
+  });
+
+  it('lets the later attribute win when markup carries both spellings', async () => {
+    let canonical = '';
+    let both = '';
+    let resolved = false;
+    await captureDeprecationWarnings(ALIAS, async () => {
+      canonical = observe(await mount(html`<lr-retrieval-results .chunks=${duplicates} without-dedupe></lr-retrieval-results>`));
+      const el = await mount(html`<lr-retrieval-results .chunks=${duplicates} dedupe without-dedupe></lr-retrieval-results>`);
+      resolved = el.withoutDedupe;
+      both = observe(el);
+      const reversed = await mount(html`<lr-retrieval-results .chunks=${duplicates} without-dedupe dedupe></lr-retrieval-results>`);
+      expect(reversed.withoutDedupe, 'the later alias attribute wins').to.equal(false);
+    });
+    expect(resolved).to.equal(true);
+    expect(both).to.equal(canonical);
   });
 });

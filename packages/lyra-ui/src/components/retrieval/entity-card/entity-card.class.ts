@@ -3,9 +3,10 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './entity-card.styles.js';
@@ -14,6 +15,7 @@ import '../../overlays/badge/badge.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -62,6 +64,12 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
     '--lr-badge-background': `color-mix(in srgb, ${safe} 12%, var(--lr-color-surface))`,
     '--lr-badge-border': safe,
   };
+}
+
+/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+function isDenseSize(size: LyraSize): boolean {
+  const step = normalizeSize(size);
+  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 /**
@@ -130,6 +138,10 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    showFocusButton: ['withoutFocusButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
+  };
 
   /** `null` renders the shared `lr-empty` `noData` state. */
   @property({ attribute: false }) entity: Readonly<LyraEntity> | null = null;
@@ -141,6 +153,14 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   /** Hides the built-in focus action, for pages with no graph. */
   @property({ type: Boolean, attribute: 'without-focus-button' })
   withoutFocusButton = false;
+  /** Hides the built-in focus action on pages with no graph.
+   *  @deprecated Use `without-focus-button`; removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    attribute: 'show-focus-button',
+    converter: trueDefaultBooleanConverter,
+  })
+  showFocusButton = true;
 
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
@@ -150,6 +170,12 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
    * `frame="plain"` to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Tighter root padding and row gap for dense contexts (a dossier rendered in a sidebar or a
+   *  result list) -- same convention as `lr-empty`'s `compact`, and as this component's sibling
+   *  `lr-community-card`. Defaults to `false`, i.e. the full card padding. Purely a density knob:
+   *  the border and background stay, so use `frame="plain"` to drop the chrome entirely.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, padded box. `'plain'` removes the border, background, padding and corner
    *  radius, so a card nested inside a container that already draws a border doesn't double it.

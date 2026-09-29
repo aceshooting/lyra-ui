@@ -100,7 +100,7 @@ import type { LyraOptionEventMap } from './components/forms/combobox/option.clas
 import type { LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
 import type { LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPickerEventMap } from './components/forms/emoji-picker/emoji-picker.class.js';
-import type { LyraInputEventMap } from './components/forms/input/input-shared.js';
+import type { LyraInputEventMap } from './components/forms/input/input.class.js';
 import type { LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';
 import type { LyraLocalePickerEventMap } from './components/forms/locale-picker/locale-picker.class.js';
 import type { LyraOtpInputEventMap } from './components/forms/otp-input/otp-input.class.js';
@@ -262,9 +262,12 @@ export type LyraActivateEvent =
   | LyraWidgetEventMap['lr-activate'];
 
 /**
- * `lr-add` — dispatched by `<lr-memory-panel>`; detail `LyraMemoryPanelEventMap['lr-add']`.
+ * `lr-add` — dispatched by 2 components: `<lr-memory-panel>`, `<lr-token-input>`; detail union of
+ * 2, e.g. `LyraMemoryPanelEventMap['lr-add']`.
  */
-export type LyraAddEvent = LyraMemoryPanelEventMap['lr-add'];
+export type LyraAddEvent =
+  | LyraMemoryPanelEventMap['lr-add']
+  | LyraTokenInputEventMap['lr-add'];
 
 /**
  * `lr-add-condition` — dispatched by `<lr-condition-builder>`; detail
@@ -335,13 +338,13 @@ export type LyraAfterShowEvent =
   | LyraTooltipEventMap['lr-after-show'];
 
 /**
- * `lr-anchor-result` — dispatched by 24 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-anchor-result` — dispatched by 25 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-diff-view>`, `<lr-document-viewer>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`,
- * `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-image-viewer>`,
- * `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-xml-viewer>`; detail union of 13, e.g.
+ * `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
+ * `<lr-image-viewer>`, `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-message-parts>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-xml-viewer>`; detail union of 13, e.g.
  * `LyraAnchorTargetEventMap['lr-anchor-result']`.
  */
 export type LyraAnchorResultEvent =
@@ -469,6 +472,12 @@ export type LyraAutoloadPreloadEvent = AutoloaderEventMap['lr-autoload-preload']
 export type LyraAutoloadTraversalErrorEvent = AutoloaderEventMap['lr-autoload-traversal-error'];
 
 /**
+ * `lr-before-media-download` — dispatched by `<lr-media-card>`; detail
+ * `LyraMediaCardEventMap['lr-before-media-download']`.
+ */
+export type LyraBeforeMediaDownloadEvent = LyraMediaCardEventMap['lr-before-media-download'];
+
+/**
  * `lr-before-page-change` — dispatched by `<lr-pagination>`; detail
  * `LyraPaginationEventMap['lr-before-page-change']`.
  */
@@ -520,10 +529,12 @@ export type LyraCardActivateEvent = LyraCardEventMap['lr-card-activate'];
 export type LyraCellActivateEvent = LyraHeatmapEventMap['lr-cell-activate'];
 
 /**
- * `lr-cell-click` — dispatched by `<lr-data-grid>`; detail
- * `LyraDataGridEventMap['lr-cell-click']`.
+ * `lr-cell-click` — dispatched by 2 components: `<lr-data-grid>`, `<lr-heatmap>`; detail union of
+ * 2, e.g. `LyraDataGridEventMap['lr-cell-click']`.
  */
-export type LyraCellClickEvent = LyraDataGridEventMap['lr-cell-click'];
+export type LyraCellClickEvent =
+  | LyraDataGridEventMap['lr-cell-click']
+  | LyraHeatmapEventMap['lr-cell-click'];
 
 /**
  * `lr-cell-contextmenu` — dispatched by `<lr-data-grid>`; detail
@@ -618,6 +629,11 @@ export type LyraCheckboxGroupToggleRequestEvent = LyraCheckboxGroupEventMap['lr-
  * `LyraCheckboxEventMap['lr-checkbox-toggle-request']`.
  */
 export type LyraCheckboxToggleRequestEvent = LyraCheckboxEventMap['lr-checkbox-toggle-request'];
+
+/**
+ * `lr-chip-select` — dispatched by `<lr-chip>`; detail `LyraChipEventMap['lr-chip-select']`.
+ */
+export type LyraChipSelectEvent = LyraChipEventMap['lr-chip-select'];
 
 /**
  * `lr-chip-toggle-request` — dispatched by `<lr-chip>`; detail
@@ -800,6 +816,15 @@ export type LyraColumnVisibilityChangeEvent = LyraDataGridEventMap['lr-column-vi
 export type LyraCommunityActivateEvent =
   | LyraGraphEventMap['lr-community-activate']
   | LyraKnowledgeGraphExplorerEventMap['lr-community-activate'];
+
+/**
+ * `lr-community-click` — dispatched by 2 components: `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`; detail union of 2, e.g.
+ * `LyraGraphEventMap['lr-community-click']`.
+ */
+export type LyraCommunityClickEvent =
+  | LyraGraphEventMap['lr-community-click']
+  | LyraKnowledgeGraphExplorerEventMap['lr-community-click'];
 
 /**
  * `lr-complete` — dispatched by `<lr-otp-input>`; detail `LyraOtpInputEventMap['lr-complete']`.
@@ -1199,11 +1224,14 @@ export type LyraExampleToolApprovalDecideRequestEvent = LyraEvalRunEventMap['lr-
 export type LyraExampleToolRenderErrorEvent = LyraEvalRunEventMap['lr-example-tool-render-error'];
 
 /**
- * `lr-expand` — dispatched by 4 components: `<lr-accordion>`, `<lr-source-card>`,
- * `<lr-tree-item>`, `<lr-tree>`; detail union of 4, e.g. `LyraAccordionEventMap['lr-expand']`.
+ * `lr-expand` — dispatched by 8 components: `<lr-accordion>`, `<lr-chunk-inspector>`,
+ * `<lr-entity-dossier>`, `<lr-memory-panel>`, `<lr-provenance-panel>`, `<lr-source-card>`,
+ * `<lr-tree-item>`, `<lr-tree>`; detail union of 6, e.g. `LyraAccordionEventMap['lr-expand']`.
  */
 export type LyraExpandEvent =
   | LyraAccordionEventMap['lr-expand']
+  | LyraChunkInspectorEventMap['lr-expand']
+  | LyraMemoryPanelEventMap['lr-expand']
   | LyraSourceCardEventMap['lr-expand']
   | LyraTreeEventMap['lr-expand']
   | LyraTreeItemEventMap['lr-expand'];
@@ -1672,6 +1700,16 @@ export type LyraLinkClickEvent =
   | LyraMarkdownEventMap['lr-link-click'];
 
 /**
+ * `lr-link-enter` — dispatched by `<lr-graph>`; detail `LyraGraphEventMap['lr-link-enter']`.
+ */
+export type LyraLinkEnterEvent = LyraGraphEventMap['lr-link-enter'];
+
+/**
+ * `lr-link-leave` — dispatched by `<lr-graph>`; detail `LyraGraphEventMap['lr-link-leave']`.
+ */
+export type LyraLinkLeaveEvent = LyraGraphEventMap['lr-link-leave'];
+
+/**
  * `lr-load` — dispatched by 8 components: `<lr-animated-image>`, `<lr-av-player>`, `<lr-icon>`,
  * `<lr-image-viewer>`, `<lr-include>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`,
  * `<lr-pptx-viewer>`; detail union of 8, e.g. `LyraAnimatedImageEventMap['lr-load']`.
@@ -1713,10 +1751,22 @@ export type LyraLocationChangeEvent = LyraEbookViewerEventMap['lr-location-chang
 export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
 
 /**
+ * `lr-map-legend-panel-toggle` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-legend-panel-toggle']`.
+ */
+export type LyraMapLegendPanelToggleEvent = LyraMapEventMap['lr-map-legend-panel-toggle'];
+
+/**
  * `lr-map-legend-panel-toggle-request` — dispatched by `<lr-map>`; detail
  * `LyraMapEventMap['lr-map-legend-panel-toggle-request']`.
  */
 export type LyraMapLegendPanelToggleRequestEvent = LyraMapEventMap['lr-map-legend-panel-toggle-request'];
+
+/**
+ * `lr-map-legend-toggle` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-legend-toggle']`.
+ */
+export type LyraMapLegendToggleEvent = LyraMapEventMap['lr-map-legend-toggle'];
 
 /**
  * `lr-map-legend-toggle-request` — dispatched by `<lr-map>`; detail
@@ -1745,6 +1795,12 @@ export type LyraMapViewChangeEvent = LyraMapEventMap['lr-map-view-change'];
  * `LyraHeatmapEventMap['lr-matrix-geometry-change']`.
  */
 export type LyraMatrixGeometryChangeEvent = LyraHeatmapEventMap['lr-matrix-geometry-change'];
+
+/**
+ * `lr-maximize-change` — dispatched by `<lr-tool-result-dialog>`; detail
+ * `LyraToolResultDialogEventMap['lr-maximize-change']`.
+ */
+export type LyraMaximizeChangeEvent = LyraToolResultDialogEventMap['lr-maximize-change'];
 
 /**
  * `lr-maximize-change-request` — dispatched by `<lr-tool-result-dialog>`; detail
@@ -1818,6 +1874,12 @@ export type LyraMentionSelectEvent =
   | LyraPromptInputEventMap['lr-mention-select'];
 
 /**
+ * `lr-menu-item-change` — dispatched by 2 components: `<lr-dropdown-item>`, `<lr-menu-item>`;
+ * detail `LyraMenuItemEventMap['lr-menu-item-change']`.
+ */
+export type LyraMenuItemChangeEvent = LyraMenuItemEventMap['lr-menu-item-change'];
+
+/**
  * `lr-menu-item-change-request` — dispatched by 2 components: `<lr-dropdown-item>`,
  * `<lr-menu-item>`; detail `LyraMenuItemEventMap['lr-menu-item-change-request']`.
  */
@@ -1828,6 +1890,12 @@ export type LyraMenuItemChangeRequestEvent = LyraMenuItemEventMap['lr-menu-item-
  * `<lr-menu-item>`; detail `LyraMenuItemEventMap['lr-menu-item-state-change']`.
  */
 export type LyraMenuItemStateChangeEvent = LyraMenuItemEventMap['lr-menu-item-state-change'];
+
+/**
+ * `lr-message-reorder` — dispatched by `<lr-prompt-studio>`; detail
+ * `LyraPromptStudioEventMap['lr-message-reorder']`.
+ */
+export type LyraMessageReorderEvent = LyraPromptStudioEventMap['lr-message-reorder'];
 
 /**
  * `lr-message-reorder-request` — dispatched by `<lr-prompt-studio>`; detail
@@ -1901,6 +1969,11 @@ export type LyraMutationEvent = LyraMutationObserverEventMap['lr-mutation'];
  * `LyraRealtimeSessionEventMap['lr-mute-change']`.
  */
 export type LyraMuteChangeEvent = LyraRealtimeSessionEventMap['lr-mute-change'];
+
+/**
+ * `lr-nav-toggle` — dispatched by `<lr-page>`; detail `LyraPageEventMap['lr-nav-toggle']`.
+ */
+export type LyraNavToggleEvent = LyraPageEventMap['lr-nav-toggle'];
 
 /**
  * `lr-nav-toggle-request` — dispatched by `<lr-page>`; detail
@@ -1993,6 +2066,12 @@ export type LyraOptionChangeEvent = LyraOptionEventMap['lr-option-change'];
  * `LyraAvatarGroupEventMap['lr-overflow-activate']`.
  */
 export type LyraOverflowActivateEvent = LyraAvatarGroupEventMap['lr-overflow-activate'];
+
+/**
+ * `lr-overflow-click` — dispatched by `<lr-avatar-group>`; detail
+ * `LyraAvatarGroupEventMap['lr-overflow-click']`.
+ */
+export type LyraOverflowClickEvent = LyraAvatarGroupEventMap['lr-overflow-click'];
 
 /**
  * `lr-overflow-toggle` — dispatched by `<lr-chip-group>`; detail
@@ -2104,6 +2183,17 @@ export type LyraPointActivateEvent =
   | LyraBoxPlotEventMap['lr-point-activate']
   | LyraChartEventMap['lr-point-activate']
   | LyraLiteChartEventMap['lr-point-activate'];
+
+/**
+ * `lr-point-click` — dispatched by 12 components: `<lr-bar-chart>`, `<lr-box-plot>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
+ * `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
+ * `<lr-scatter-chart>`; detail union of 3, e.g. `LyraBoxPlotEventMap['lr-point-click']`.
+ */
+export type LyraPointClickEvent =
+  | LyraBoxPlotEventMap['lr-point-click']
+  | LyraChartEventMap['lr-point-click']
+  | LyraLiteChartEventMap['lr-point-click'];
 
 /**
  * `lr-point-select` — dispatched by `<lr-embedding-explorer>`; detail
@@ -2287,15 +2377,16 @@ export type LyraRelationActivateEvent =
   | LyraPathStripEventMap['lr-relation-activate'];
 
 /**
- * `lr-remove` — dispatched by 5 components: `<lr-attachment-chip>`, `<lr-chip>`,
- * `<lr-memory-panel>`, `<lr-message-parts>`, `<lr-tag>`; detail union of 4, e.g.
- * `LyraAttachmentChipEventMap['lr-remove']`.
+ * `lr-remove` — dispatched by 6 components: `<lr-attachment-chip>`, `<lr-chip>`,
+ * `<lr-memory-panel>`, `<lr-message-parts>`, `<lr-tag>`, `<lr-token-input>`; detail union of 5,
+ * e.g. `LyraAttachmentChipEventMap['lr-remove']`.
  */
 export type LyraRemoveEvent =
   | LyraAttachmentChipEventMap['lr-remove']
   | LyraChipEventMap['lr-remove']
   | LyraMemoryPanelEventMap['lr-remove']
-  | LyraTagEventMap['lr-remove'];
+  | LyraTagEventMap['lr-remove']
+  | LyraTokenInputEventMap['lr-remove'];
 
 /**
  * `lr-remove-condition` — dispatched by `<lr-condition-builder>`; detail
@@ -2310,14 +2401,15 @@ export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-c
 export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
 
 /**
- * `lr-render-error` — dispatched by 27 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-render-error` — dispatched by 28 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-docx-viewer>`,
- * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
- * `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`, `<lr-widget-renderer>`,
- * `<lr-xml-viewer>`; detail union of 27, e.g. `LyraArchiveViewerEventMap['lr-render-error']`.
+ * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`,
+ * `<lr-html-viewer>`, `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-message-parts>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`,
+ * `<lr-widget-renderer>`, `<lr-xml-viewer>`; detail union of 27, e.g.
+ * `LyraArchiveViewerEventMap['lr-render-error']`.
  */
 export type LyraRenderErrorEvent =
   | LyraArchiveViewerEventMap['lr-render-error']
@@ -2349,11 +2441,12 @@ export type LyraRenderErrorEvent =
   | LyraXmlViewerEventMap['lr-render-error'];
 
 /**
- * `lr-reorder` — dispatched by 3 components: `<lr-node-palette>`, `<lr-task-list>`, `<lr-tree>`;
- * detail union of 3, e.g. `LyraNodePaletteEventMap['lr-reorder']`.
+ * `lr-reorder` — dispatched by 4 components: `<lr-node-palette>`, `<lr-reorder-list>`,
+ * `<lr-task-list>`, `<lr-tree>`; detail union of 4, e.g. `LyraNodePaletteEventMap['lr-reorder']`.
  */
 export type LyraReorderEvent =
   | LyraNodePaletteEventMap['lr-reorder']
+  | LyraReorderListEventMap['lr-reorder']
   | LyraTaskListEventMap['lr-reorder']
   | LyraTreeEventMap['lr-reorder'];
 
@@ -2508,6 +2601,11 @@ export type LyraRotationChangeEvent = LyraImageViewerEventMap['lr-rotation-chang
 export type LyraRowActivateEvent = LyraTableEventMap['lr-row-activate'];
 
 /**
+ * `lr-row-click` — dispatched by `<lr-table>`; detail `LyraTableEventMap['lr-row-click']`.
+ */
+export type LyraRowClickEvent = LyraTableEventMap['lr-row-click'];
+
+/**
  * `lr-row-collapse` — dispatched by `<lr-data-grid>`; detail
  * `LyraDataGridEventMap['lr-row-collapse']`.
  */
@@ -2602,13 +2700,13 @@ export type LyraScrollEvent = LyraScrollerEventMap['lr-scroll'];
 export type LyraSearchEvent = LyraRetrievalSearchEventMap['lr-search'];
 
 /**
- * `lr-search-change` — dispatched by 23 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-search-change` — dispatched by 24 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-diff-view>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`, `<lr-email-viewer>`,
- * `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-include>`, `<lr-json-viewer>`,
- * `<lr-knowledge-graph-explorer>`, `<lr-message-parts>`, `<lr-notebook-viewer>`,
- * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-terminal>`,
- * `<lr-tool-call-block>`, `<lr-xml-viewer>`; detail union of 21, e.g.
+ * `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-include>`,
+ * `<lr-json-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-message-parts>`,
+ * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
+ * `<lr-terminal>`, `<lr-tool-call-block>`, `<lr-xml-viewer>`; detail union of 21, e.g.
  * `LyraAvPlayerEventMap['lr-search-change']`.
  */
 export type LyraSearchChangeEvent =
@@ -2949,11 +3047,11 @@ export type LyraTakeOverEvent = LyraBrowserFrameEventMap['lr-take-over'];
 export type LyraTestSelectEvent = LyraTestResultsEventMap['lr-test-select'];
 
 /**
- * `lr-text-select` — dispatched by 17 components: `<lr-archive-viewer>`, `<lr-calendar-viewer>`,
+ * `lr-text-select` — dispatched by 18 components: `<lr-archive-viewer>`, `<lr-calendar-viewer>`,
  * `<lr-code-block-core>`, `<lr-code-block>`, `<lr-contact-viewer>`, `<lr-docx-viewer>`,
- * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
- * `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`, `<lr-pdf-viewer>`,
- * `<lr-pptx-viewer>`, `<lr-terminal>`; detail union of 10, e.g.
+ * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`,
+ * `<lr-html-viewer>`, `<lr-include>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
+ * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-terminal>`; detail union of 10, e.g.
  * `LyraAnchorTargetEventMap['lr-text-select']`.
  */
 export type LyraTextSelectEvent =
@@ -3066,6 +3164,12 @@ export type LyraToggleToggleRequestEvent = LyraToggleEventMap['lr-toggle-toggle-
 export type LyraTokenAddRequestEvent = LyraTokenInputEventMap['lr-token-add-request'];
 
 /**
+ * `lr-token-edit` — dispatched by `<lr-token-input>`; detail
+ * `LyraTokenInputEventMap['lr-token-edit']`.
+ */
+export type LyraTokenEditEvent = LyraTokenInputEventMap['lr-token-edit'];
+
+/**
  * `lr-token-edit-request` — dispatched by `<lr-token-input>`; detail
  * `LyraTokenInputEventMap['lr-token-edit-request']`.
  */
@@ -3148,6 +3252,12 @@ export type LyraTourEndRequestEvent = LyraTourEventMap['lr-tour-end-request'];
  * `lr-tour-start` — dispatched by `<lr-tour>`; detail `LyraTourEventMap['lr-tour-start']`.
  */
 export type LyraTourStartEvent = LyraTourEventMap['lr-tour-start'];
+
+/**
+ * `lr-tour-step-change` — dispatched by `<lr-tour>`; detail
+ * `LyraTourEventMap['lr-tour-step-change']`.
+ */
+export type LyraTourStepChangeEvent = LyraTourEventMap['lr-tour-step-change'];
 
 /**
  * `lr-tour-step-change-request` — dispatched by `<lr-tour>`; detail
@@ -3352,6 +3462,7 @@ export interface LyraGlobalEventMap {
   'lr-autoload-loaded': LyraAutoloadLoadedEvent;
   'lr-autoload-preload': LyraAutoloadPreloadEvent;
   'lr-autoload-traversal-error': LyraAutoloadTraversalErrorEvent;
+  'lr-before-media-download': LyraBeforeMediaDownloadEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
@@ -3369,6 +3480,7 @@ export interface LyraGlobalEventMap {
   'lr-change-request': LyraChangeRequestEvent;
   'lr-checkbox-group-toggle-request': LyraCheckboxGroupToggleRequestEvent;
   'lr-checkbox-toggle-request': LyraCheckboxToggleRequestEvent;
+  'lr-chip-select': LyraChipSelectEvent;
   'lr-chip-toggle-request': LyraChipToggleRequestEvent;
   'lr-chunk-open': LyraChunkOpenEvent;
   'lr-chunk-select': LyraChunkSelectEvent;
@@ -3391,6 +3503,7 @@ export interface LyraGlobalEventMap {
   'lr-column-resize-request': LyraColumnResizeRequestEvent;
   'lr-column-visibility-change': LyraColumnVisibilityChangeEvent;
   'lr-community-activate': LyraCommunityActivateEvent;
+  'lr-community-click': LyraCommunityClickEvent;
   'lr-complete': LyraCompleteEvent;
   'lr-connect': LyraConnectEvent;
   'lr-connector-action': LyraConnectorActionEvent;
@@ -3494,17 +3607,22 @@ export interface LyraGlobalEventMap {
   'lr-line-activate': LyraLineActivateEvent;
   'lr-link-activate': LyraLinkActivateEvent;
   'lr-link-click': LyraLinkClickEvent;
+  'lr-link-enter': LyraLinkEnterEvent;
+  'lr-link-leave': LyraLinkLeaveEvent;
   'lr-load': LyraLoadEvent;
   'lr-load-children': LyraLoadChildrenEvent;
   'lr-load-more': LyraLoadMoreEvent;
   'lr-location-change': LyraLocationChangeEvent;
   'lr-map-click': LyraMapClickEvent;
+  'lr-map-legend-panel-toggle': LyraMapLegendPanelToggleEvent;
   'lr-map-legend-panel-toggle-request': LyraMapLegendPanelToggleRequestEvent;
+  'lr-map-legend-toggle': LyraMapLegendToggleEvent;
   'lr-map-legend-toggle-request': LyraMapLegendToggleRequestEvent;
   'lr-map-load': LyraMapLoadEvent;
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
+  'lr-maximize-change': LyraMaximizeChangeEvent;
   'lr-maximize-change-request': LyraMaximizeChangeRequestEvent;
   'lr-mcp-log': LyraMcpLogEvent;
   'lr-mcp-open-link': LyraMcpOpenLinkEvent;
@@ -3517,8 +3635,10 @@ export interface LyraGlobalEventMap {
   'lr-memory-toggle': LyraMemoryToggleEvent;
   'lr-mention-close': LyraMentionCloseEvent;
   'lr-mention-select': LyraMentionSelectEvent;
+  'lr-menu-item-change': LyraMenuItemChangeEvent;
   'lr-menu-item-change-request': LyraMenuItemChangeRequestEvent;
   'lr-menu-item-state-change': LyraMenuItemStateChangeEvent;
+  'lr-message-reorder': LyraMessageReorderEvent;
   'lr-message-reorder-request': LyraMessageReorderRequestEvent;
   'lr-message-retry': LyraMessageRetryEvent;
   'lr-metric-change': LyraMetricChangeEvent;
@@ -3530,6 +3650,7 @@ export interface LyraGlobalEventMap {
   'lr-multi-split-orientation-change': LyraMultiSplitOrientationChangeEvent;
   'lr-mutation': LyraMutationEvent;
   'lr-mute-change': LyraMuteChangeEvent;
+  'lr-nav-toggle': LyraNavToggleEvent;
   'lr-nav-toggle-request': LyraNavToggleRequestEvent;
   'lr-node-activate': LyraNodeActivateEvent;
   'lr-node-add': LyraNodeAddEvent;
@@ -3543,6 +3664,7 @@ export interface LyraGlobalEventMap {
   'lr-open': LyraOpenEvent;
   'lr-option-change': LyraOptionChangeEvent;
   'lr-overflow-activate': LyraOverflowActivateEvent;
+  'lr-overflow-click': LyraOverflowClickEvent;
   'lr-overflow-toggle': LyraOverflowToggleEvent;
   'lr-page-change': LyraPageChangeEvent;
   'lr-page-select': LyraPageSelectEvent;
@@ -3558,6 +3680,7 @@ export interface LyraGlobalEventMap {
   'lr-pin-change': LyraPinChangeEvent;
   'lr-play': LyraPlayEvent;
   'lr-point-activate': LyraPointActivateEvent;
+  'lr-point-click': LyraPointClickEvent;
   'lr-point-select': LyraPointSelectEvent;
   'lr-poll-due': LyraPollDueEvent;
   'lr-preview-change': LyraPreviewChangeEvent;
@@ -3613,6 +3736,7 @@ export interface LyraGlobalEventMap {
   'lr-review-validity-change': LyraReviewValidityChangeEvent;
   'lr-rotation-change': LyraRotationChangeEvent;
   'lr-row-activate': LyraRowActivateEvent;
+  'lr-row-click': LyraRowClickEvent;
   'lr-row-collapse': LyraRowCollapseEvent;
   'lr-row-expand': LyraRowExpandEvent;
   'lr-row-expand-request': LyraRowExpandRequestEvent;
@@ -3681,6 +3805,7 @@ export interface LyraGlobalEventMap {
   'lr-toggle-request': LyraToggleRequestEvent;
   'lr-toggle-toggle-request': LyraToggleToggleRequestEvent;
   'lr-token-add-request': LyraTokenAddRequestEvent;
+  'lr-token-edit': LyraTokenEditEvent;
   'lr-token-edit-request': LyraTokenEditRequestEvent;
   'lr-token-remove-request': LyraTokenRemoveRequestEvent;
   'lr-tool-activate': LyraToolActivateEvent;
@@ -3694,6 +3819,7 @@ export interface LyraGlobalEventMap {
   'lr-tour-end': LyraTourEndEvent;
   'lr-tour-end-request': LyraTourEndRequestEvent;
   'lr-tour-start': LyraTourStartEvent;
+  'lr-tour-step-change': LyraTourStepChangeEvent;
   'lr-tour-step-change-request': LyraTourStepChangeRequestEvent;
   'lr-tour-target-missing': LyraTourTargetMissingEvent;
   'lr-validity-change': LyraValidityChangeEvent;

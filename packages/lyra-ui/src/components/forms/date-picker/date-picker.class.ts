@@ -361,6 +361,8 @@ function projectDisabledDateKeys(value: unknown): readonly string[] {
  * @csspart view-item-today - The item containing today.
  * @cssprop [--lr-date-picker-cell-size=var(--lr-size-2-25rem)] - Inline and block size of each
  *   day cell and the matching calendar grid track.
+ * @cssprop [--lr-cell-size=var(--lr-size-2-25rem)] - Deprecated alias of
+ *   `--lr-date-picker-cell-size`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
  * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
  * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
@@ -1080,6 +1082,7 @@ const active = activeElementIn(this.renderRoot as ShadowRoot);
   override click(): void {
     this.rovingTarget?.click();
   }
+
 
   private viewPeriodMonths(view = this.effectiveView): number {
     if (view === 'years') return 12;

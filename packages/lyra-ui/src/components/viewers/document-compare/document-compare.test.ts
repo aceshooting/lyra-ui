@@ -1,4 +1,3 @@
-import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import jsGrammar from 'shiki/langs/javascript.mjs';
 import './document-compare.js';
@@ -6,9 +5,7 @@ import type { LyraDocumentCompare } from './document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
-
-// These fixtures deliberately verify that retired attributes remain inert.
-expectStaleAttribute('lr-document-compare', 'sync-scroll');
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(target, 'clipboard');
@@ -302,24 +299,73 @@ describe('lr-document-compare', () => {
       expect(el.withoutSyncScroll).to.be.false;
     });
 
-    it('ignores the retired sync-scroll attribute and property while preserving canonical scroll controls', async () => {
-      const legacy = await sideBySideFixture(false, 'false');
-      Reflect.set(legacy, 'syncScroll', false);
-      await legacy.updateComplete;
-      expect(legacy.withoutSyncScroll).to.be.false;
-      const oldPane = legacy.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
-      const newPane = legacy.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
-      oldPane.scrollTop = oldPane.scrollHeight - oldPane.clientHeight;
-      oldPane.dispatchEvent(new Event('scroll'));
-      expect(newPane.scrollTop).to.be.closeTo(newPane.scrollHeight - newPane.clientHeight, 1);
+    describe('deprecated sync-scroll alias', () => {
+      const usage = { tag: 'lr-document-compare', kind: 'property', name: 'syncScroll' } as const;
 
-      const canonical = await sideBySideFixture(true);
-      expect(canonical.withoutSyncScroll).to.be.true;
-      const canonicalOld = canonical.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
-      const canonicalNew = canonical.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
-      canonicalOld.scrollTop = canonicalOld.scrollHeight - canonicalOld.clientHeight;
-      canonicalOld.dispatchEvent(new Event('scroll'));
-      expect(canonicalNew.scrollTop).to.equal(0);
+      it('sync-scroll="false" (plain HTML attribute) equals without-sync-scroll and warns once', async () => {
+        let alias!: LyraDocumentCompare;
+        const warnings = await captureDeprecationWarnings([usage], async () => {
+          alias = await sideBySideFixture(false, 'false');
+          alias.syncScroll = false;
+          await alias.updateComplete;
+        });
+        expect(warnings.map(({ key }) => key)).to.deep.equal([
+          'lyra-deprecated:lr-document-compare:property:syncScroll',
+        ]);
+        expect(alias.syncScroll).to.be.false;
+        expect(alias.withoutSyncScroll).to.be.true;
+
+        const mirrored = async (el: LyraDocumentCompare): Promise<number> => {
+          const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+          const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+          paneOld.scrollTop = paneOld.scrollHeight - paneOld.clientHeight;
+          paneOld.dispatchEvent(new Event('scroll'));
+          return paneNew.scrollTop;
+        };
+        const canonical = await sideBySideFixture(true);
+        expect(await mirrored(alias)).to.equal(await mirrored(canonical));
+        expect(await mirrored(canonical)).to.equal(0);
+      });
+
+      it('a property write back to true restores scroll sync', async () => {
+        let el!: LyraDocumentCompare;
+        await captureDeprecationWarnings([usage], async () => {
+          el = await sideBySideFixture(false, 'false');
+          el.syncScroll = true;
+          await el.updateComplete;
+        });
+        expect(el.withoutSyncScroll).to.be.false;
+        const paneOld = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+        const paneNew = el.shadowRoot!.querySelector('[part="pane-new"]') as HTMLElement;
+        paneOld.scrollTop = paneOld.scrollHeight - paneOld.clientHeight;
+        paneOld.dispatchEvent(new Event('scroll'));
+        expect(paneNew.scrollTop).to.be.closeTo(paneNew.scrollHeight - paneNew.clientHeight, 1);
+      });
+
+      it('never warns for the default or the canonical name, syncs back, and follows the last write', async () => {
+        const warnings = await captureDeprecationWarnings([usage], async () => {
+          const plain = (await fixture(html`<lr-document-compare></lr-document-compare>`)) as LyraDocumentCompare;
+          expect(plain.syncScroll).to.be.true;
+          const canonical = (await fixture(
+            html`<lr-document-compare without-sync-scroll></lr-document-compare>`,
+          )) as LyraDocumentCompare;
+          expect(canonical.syncScroll).to.be.false;
+        });
+        expect(warnings).to.have.length(0);
+
+        let aliasLast!: LyraDocumentCompare;
+        let canonicalLast!: LyraDocumentCompare;
+        await captureDeprecationWarnings([usage], async () => {
+          aliasLast = (await fixture(
+            html`<lr-document-compare without-sync-scroll sync-scroll></lr-document-compare>`,
+          )) as LyraDocumentCompare;
+          canonicalLast = (await fixture(
+            html`<lr-document-compare sync-scroll without-sync-scroll></lr-document-compare>`,
+          )) as LyraDocumentCompare;
+        });
+        expect(aliasLast.withoutSyncScroll).to.be.false;
+        expect(canonicalLast.withoutSyncScroll).to.be.true;
+      });
     });
 
     it('proportionally mirrors scroll position from pane-old to pane-new by default', async () => {

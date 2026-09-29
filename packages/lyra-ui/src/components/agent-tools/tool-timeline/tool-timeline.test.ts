@@ -6,6 +6,7 @@ import type { LyraToolCallChip } from '../tool-call-chip/tool-call-chip.class.js
 import type { LyraToolResultView } from '../tool-result-view/tool-result-view.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -971,6 +972,53 @@ it('accepts approval-readonly as a plain-HTML attribute and forwards it to the a
   expect(dialog(el).readonly).to.be.true;
 });
 
+describe('lr-tool-timeline deprecated approval-editable alias', () => {
+  const APPROVAL_EDITABLE: readonly DeprecatedUsage[] = [
+    { tag: 'lr-tool-timeline', kind: 'property', name: 'approvalEditable' },
+  ];
+
+  it('treats approval-editable="false" exactly like approval-readonly, keeps a bare one meaning the default, and warns once', async () => {
+    let results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const off = (await fixture(html`<lr-tool-timeline approval-editable="false"></lr-tool-timeline>`)) as LyraToolTimeline;
+      const bare = (await fixture(html`<lr-tool-timeline approval-editable></lr-tool-timeline>`)) as LyraToolTimeline;
+      const both = (await fixture(html`<lr-tool-timeline approval-editable approval-readonly></lr-tool-timeline>`)) as LyraToolTimeline;
+      const property = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
+      property.approvalEditable = false;
+      await property.updateComplete;
+      results = [off, bare, both, property].map((el) => dialog(el).readonly);
+      results.push(off.approvalEditable, off.approvalReadonly);
+    });
+    expect(results).to.deep.equal([true, false, true, true, false, true]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-timeline:property:approvalEditable']);
+  });
+
+  it('applies the last authored spelling when approval-editable and approval-readonly are both present', async () => {
+    let results: boolean[] = [];
+    await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const canonicalLast = (await fixture(html`<lr-tool-timeline approval-editable approval-readonly></lr-tool-timeline>`)) as LyraToolTimeline;
+      const aliasLast = (await fixture(html`<lr-tool-timeline approval-readonly approval-editable></lr-tool-timeline>`)) as LyraToolTimeline;
+      results = [canonicalLast.approvalReadonly, dialog(canonicalLast).readonly, aliasLast.approvalReadonly, dialog(aliasLast).readonly];
+    });
+    expect(results).to.deep.equal([true, true, false, false]);
+  });
+
+  it('syncs and reflects approval-editable back from approvalReadonly without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(APPROVAL_EDITABLE, async () => {
+      const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+      el.approvalReadonly = true;
+      await el.updateComplete;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+      el.approvalReadonly = false;
+      await el.updateComplete;
+      reads.push(el.approvalEditable, el.getAttribute('approval-editable'));
+    });
+    expect(reads).to.deep.equal([true, null, false, 'false', true, null]);
+    expect(warnings).to.have.length(0);
+  });
+});
 
 it('renders correctly under dir="rtl" with no crash, preserving chronological order', async () => {
   const entries: ToolTimelineEntry[] = [

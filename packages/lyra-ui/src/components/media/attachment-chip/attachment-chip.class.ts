@@ -18,6 +18,9 @@ import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './attachment-chip.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeReflectedOptionalSize,
   normalizeSize,
@@ -217,6 +220,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    previewable: ['withoutPreview', invertAlias, invertAlias],
+    removable: ['withoutRemoveButton', invertAlias, invertAlias],
+    compact: ['size', (value) => (value ? 's' : undefined), (value) => isCompactSize(value as LyraSize | undefined)],
+  };
 
   /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
    *  When set, `name`/`bytes`/`mime-type`/the image thumbnail are all derived
@@ -268,6 +276,15 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ type: Boolean, reflect: true, attribute: 'without-preview' })
   withoutPreview = false;
 
+  /** Shows the preview action when a `file` or `preview-src` is available.
+   *  @deprecated Use `without-preview` (inverted); removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  previewable = true;
+
   /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders.
    * Failures already present on reconnect render silently; new connected failures announce once. */
   @property({ reflect: true }) status: LyraAttachmentUploadStatus = 'pending';
@@ -280,6 +297,15 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** Hides the remove (×) button, which otherwise renders. */
   @property({ type: Boolean, reflect: true, attribute: 'without-remove-button' })
   withoutRemoveButton = false;
+
+  /** Shows the remove (×) button.
+   *  @deprecated Use `without-remove-button` (inverted); removal not before 23.0.0. */
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  removable = true;
 
   private _size?: LyraSize;
   /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
@@ -295,7 +321,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
   set size(next: LyraSize | undefined) {
     // Only a foreign (unsupported) raw attribute is repaired in place; a supported one is left for
-    // reflection, preserving the supported author spelling.
+    // reflection, so a write synced from the deprecated `compact` while the element upgrades never
+    // overwrites a `size` attribute that has not been processed yet.
     const raw = this.getAttribute('size');
     const normalized =
       raw !== null && optionalSizeConverter.normalize(raw) !== undefined
@@ -306,6 +333,13 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     this._size = normalized;
     this.requestUpdate('size', old);
   }
+
+  /** Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy
+   *  chip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.
+   *  a composer's pending-attachment tray) without hand-tuning several `::part()` custom
+   *  properties individually. `false` (the default) is visually identical to today.
+   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** At the compact density (`size="s"` and below), hides `[part=meta]` (the filename/size text)
    *  entirely for an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a

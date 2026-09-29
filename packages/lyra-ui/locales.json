@@ -272,7 +272,7 @@
       "kind": "translated",
       "direction": "ltr",
       "script": "Latn",
-      "parent": "de",
+      "parent": null,
       "aggregateImport": "@aceshooting/lyra-ui/translations/de-CH.js",
       "familyImports": {
         "agent-tools": "@aceshooting/lyra-ui/translations/de-CH/agent-tools.js",
@@ -289,8 +289,8 @@
         "viewers": "@aceshooting/lyra-ui/translations/de-CH/viewers.js"
       },
       "sourceKeyCount": 1384,
-      "translatedOwnKeyCount": 34,
-      "inheritedKeyCount": 1350,
+      "translatedOwnKeyCount": 1384,
+      "inheritedKeyCount": 0,
       "missingKeyCount": 0,
       "reviewTier": "ai-assisted",
       "reviewStatus": "approved",

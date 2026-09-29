@@ -12,7 +12,6 @@ import {
   findEventContractDrift,
   runtimeEventCancelabilityFromSource,
   sourceEventTypeContracts,
-  sourceEventMapReferences,
   splitAuthoredEventSections,
 } from './check-event-contracts.mjs';
 import { createManifestInheritanceFixture } from './fixtures/manifest-inheritance.mjs';
@@ -769,94 +768,5 @@ assert.deepEqual(
   ],
   'runtime emit options are authoritative over stale or ambiguous cancelability prose',
 );
-
-const inputEvents = {
-  input: 'InputEvent',
-  change: 'Event',
-  'lr-input': 'CustomEvent<{ value: string }>',
-  'lr-change': 'CustomEvent<{ value: string }>',
-  'lr-clear': 'CustomEvent<null>',
-  'lr-input-settled': 'CustomEvent<{ value: string }>',
-  blur: 'FocusEvent',
-  focus: 'FocusEvent',
-  'lr-invalid': 'CustomEvent<null>',
-};
-for (const [name, file, extra] of [
-  ['LyraInput', 'input', {}],
-  ['LyraNumberInput', 'number-input', { beforeinput: 'InputEvent' }],
-  ['LyraNativeTimeInput', 'native-time-input', {}],
-]) {
-  const expected = { ...inputEvents, ...extra };
-  const tagName = `lr-${file}`;
-  const contracts = sourceEventTypeContracts({ modules: [{
-    path: `src/components/forms/input/${file}.class.ts`,
-    declarations: [{ name, customElement: true, tagName, events: Object.keys(expected).map(event => ({ name: event })) }],
-  }] });
-  assert.deepEqual(contracts.get(tagName), expected, `${tagName} retains its complete source-derived input event types`);
-}
-
-const mixinFixtureRoot = mkdtempSync(path.join(tmpdir(), 'lyra-event-mixin-contracts-'));
-try {
-  for (const [index, expression, supported] of [
-    ['form', 'FormAssociated(Base)', true],
-    ['document', 'DocumentAnchorTarget(Base)', true],
-    ['text', 'TextViewerTarget(Base)', true],
-    ['unknown', 'Unrecognized(Base)', false],
-    ['empty', 'FormAssociated()', false],
-    ['extra', 'FormAssociated(Base, Extra)', false],
-    ['member', 'FormAssociated(namespace.Base)', false],
-    ['nested', 'FormAssociated(factory(Base))', false],
-    ['spread', 'FormAssociated(...bases)', false],
-    ['missing', 'FormAssociated(Missing)', false],
-  ]) {
-    writeFileSync(path.join(mixinFixtureRoot, `${index}.ts`), `
-      interface FixtureEvents { 'lr-ready': CustomEvent<{ ready: boolean }>; }
-      class Base extends LyraElement<FixtureEvents> {}
-      export class Fixture extends ${expression} {}
-    `);
-    const contracts = sourceEventTypeContracts({ modules: [{ path: `${index}.ts`, declarations: [{
-      name: 'Fixture', customElement: true, tagName: 'lr-fixture', events: [{ name: 'lr-ready' }],
-    }] }] }, mixinFixtureRoot);
-    assert.deepEqual(contracts.get('lr-fixture'), supported ? { 'lr-ready': 'CustomEvent<{ ready: boolean }>' } : undefined,
-      `${expression}: only recognized one-identifier mixin bases provide inherited event types`);
-  }
-} finally {
-  rmSync(mixinFixtureRoot, { recursive: true, force: true });
-}
-
-const referenceRoot = mkdtempSync(path.join(tmpdir(), 'lyra-event-map-reference-'));
-try {
-  mkdirSync(path.join(referenceRoot, 'src'));
-  const fixtureManifest = { modules: [{ path: 'src/fixture.ts', declarations: [{
-    name: 'LyraFixture', customElement: true, tagName: 'lr-fixture', events: [{ name: 'lr-ready' }],
-  }] }] };
-  const fixtureSource = exported => `
-    ${exported ? 'export ' : ''}interface SharedEvents { 'lr-ready': CustomEvent<{ ready: boolean }>; }
-    class Base extends LyraElement<SharedEvents> {}
-    export class LyraFixture extends FormAssociated(Base) {}
-  `;
-  writeFileSync(path.join(referenceRoot, 'src/fixture.ts'), fixtureSource(true));
-  assert.deepEqual(sourceEventMapReferences(fixtureManifest, referenceRoot).get('lr-fixture'), {
-    name: 'SharedEvents', module: 'src/fixture.ts', exportedFrom: 'src/fixture.ts',
-  });
-  writeFileSync(path.join(referenceRoot, 'src/fixture.ts'), fixtureSource(false));
-  assert.throws(() => sourceEventMapReferences(fixtureManifest, referenceRoot), /must resolve to an exported interface/);
-  writeFileSync(path.join(referenceRoot, 'src/fixture.ts'), fixtureSource(true).replace('FormAssociated(Base)', 'UnknownMixin(Base)'));
-  assert.throws(() => sourceEventMapReferences(fixtureManifest, referenceRoot), /must resolve to an exported interface/);
-  assert.throws(() => sourceEventMapReferences({ modules: [{ ...fixtureManifest.modules[0], path: '../outside.ts' }] }, referenceRoot), /module is unresolved/);
-} finally {
-  rmSync(referenceRoot, { recursive: true, force: true });
-}
-
-const inputReferences = sourceEventMapReferences({ modules: ['input', 'native-time-input'].map(file => ({
-  path: `src/components/forms/input/${file}.class.ts`,
-  declarations: [{ name: file === 'input' ? 'LyraInput' : 'LyraNativeTimeInput', customElement: true,
-    tagName: `lr-${file}`, events: [{ name: 'input' }] }],
-})) });
-assert.equal(inputReferences.get('lr-input').name, 'LyraInputEventMap');
-assert.equal(inputReferences.get('lr-input').exportedFrom, 'src/components/forms/input/input.class.ts');
-assert.equal(inputReferences.get('lr-native-time-input').name, 'LyraInputEventMap');
-assert.equal(inputReferences.get('lr-native-time-input').module, inputReferences.get('lr-input').module);
-assert.equal(inputReferences.get('lr-native-time-input').exportedFrom, undefined);
 
 console.log('Event-contract checker self-tests passed.');

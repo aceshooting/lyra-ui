@@ -1,12 +1,10 @@
 import { gzipSync } from 'node:zlib';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parsePackedConsumerArguments } from './packed-attw.mjs';
-import { readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
-import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
@@ -627,7 +625,6 @@ async function writeFixture(
 ) {
   const dependencies = {
     '@aceshooting/lyra-ui': `file:${relative(fixtureDir, packageTarball)}`,
-    lit: uiPackageJson.dependencies.lit,
   };
   if (withOptionalPeers) dependencies['@aceshooting/lyra-flags'] = `file:${relative(fixtureDir, flagsTarball)}`;
 
@@ -1595,9 +1592,6 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
 
 async function main() {
   const { runAttw } = parsePackedConsumerArguments(process.argv.slice(2));
-  const migrationArtifactsDir = process.env.LYRA_PACKED_MIGRATION_ARTIFACTS
-    ? resolve(process.env.LYRA_PACKED_MIGRATION_ARTIFACTS)
-    : undefined;
   const workspace = await mkdtemp(join(tmpdir(), 'lr-packed-consumer-'));
   try {
     const tarballDir = join(workspace, 'packages');
@@ -1613,9 +1607,7 @@ async function main() {
     ]);
 
     const uiTarball = await pack(uiPackage, tarballDir);
-    if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: uiTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
     const flagsTarball = await pack(flagsPackage, tarballDir);
-    if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: flagsTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
 
     await run(
       pnpm,
@@ -1669,13 +1661,6 @@ async function main() {
     await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);
 
     await verifyPackedMigrationCli(coreFixture);
-    const migrationProof = await verifyPackedMigrationConsumers({
-      fixtureDir: coreFixture,
-      compatibilityContext: await readCurrentCompatibilityContext(uiPackage),
-      tarballPath: uiTarball,
-      artifactsDir: migrationArtifactsDir ? join(migrationArtifactsDir, 'cli') : undefined,
-    });
-    await writeResolvedMigrationEntry({ fixtureDir: optionalFixture, proof: migrationProof });
 
     await run(
       process.execPath,
@@ -1725,12 +1710,6 @@ async function main() {
       );
     }
     await runBundle(maplibreV5Fixture, 'map', bundleEntries.map, false, 5);
-    await runBundle(optionalFixture, 'migratedX', { fixture: 'optional' }, false);
-    await verifyResolvedMigrationBrowser({
-      bundleDir: join(optionalFixture, 'bundle', 'migratedX'),
-      proof: migrationProof,
-      artifactsDir: migrationArtifactsDir ? join(migrationArtifactsDir, 'browser') : undefined,
-    });
 
     console.log('Packed-consumer checks passed.');
   } finally {

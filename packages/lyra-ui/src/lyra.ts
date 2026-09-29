@@ -283,13 +283,14 @@ export type {
 /** @deprecated Import LyraAnimatedImage from @aceshooting/lyra-ui/components/media/animated-image/animated-image.class.js. */
 export { LyraAnimatedImage } from './components/media/animated-image/animated-image.class.js';
 export type { LyraAnimatedImageEventMap } from './components/media/animated-image/animated-image.class.js';
+/** @deprecated Import LyraAnimation from @aceshooting/lyra-ui/components/media/animation/animation.class.js. */
+export { LyraAnimation } from './components/media/animation/animation.class.js';
 export {
   animations,
   getAnimationNames,
   getEasingNames,
   LYRA_ANIMATION_NAMES,
   LYRA_EASINGS,
-  LyraAnimation,
 } from './components/media/animation/animation.class.js';
 export type {
   LyraAnimationCatalog,
@@ -312,12 +313,14 @@ export type {
 } from './utilities/animation-registry.js';
 export { invalidateLyraTheme } from './utilities/theme.js';
 export type { LyraThemeRoot } from './utilities/theme.js';
-export { bridgeLyraLocale } from './localization.js';
+export { bridgeLyraLocale } from './utilities/localization.js';
+// From the declaring runtime, not `./utilities/localization.js`: that module's specifier for this
+// name is deprecated with its entry point, and re-exporting through it would deprecate it here too.
 export { subscribeLyraLocale } from './internal/localization-runtime.js';
 export type {
   LyraLocaleBridgeCleanup,
   LyraLocaleBridgeOptions,
-} from './localization.js';
+} from './utilities/localization.js';
 /** @deprecated Import LyraAvatarGroup from @aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js. */
 export { LyraAvatarGroup } from './components/media/avatar-group/avatar-group.class.js';
 export type {
@@ -382,8 +385,9 @@ export type {
   LyraTourEndReason,
   LyraTourEventMap,
 } from './components/utility/tour/tour.class.js';
+/** @deprecated Import LyraFlag from @aceshooting/lyra-ui/components/media/flag/flag.class.js. */
+export { LyraFlag } from './components/media/flag/flag.class.js';
 export {
-  LyraFlag,
   setFlagUrlResolver,
 } from './components/media/flag/flag.class.js';
 export type {
@@ -506,8 +510,9 @@ export type {
   LyraMultiSplitResizeDetail,
   LyraMultiSplitToggleDetail,
 } from './components/layout/multi-split/multi-split.class.js';
+/** @deprecated Import LyraSplitPanel from @aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js. */
+export { LyraSplitPanel } from './components/layout/split-panel/split-panel.class.js';
 export {
-  LyraSplitPanel,
   SNAP_NONE,
 } from './components/layout/split-panel/split-panel.class.js';
 export type {
@@ -618,8 +623,9 @@ export type {
   StackTraceParseOptions,
   StackTraceParseResult,
 } from './components/agent-tools/stack-trace/stack-trace-parse.js';
+/** @deprecated Import LyraTestResults from @aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js. */
+export { LyraTestResults } from './components/agent-tools/test-results/test-results.class.js';
 export {
-  LyraTestResults,
   testResultDetailSlotName,
 } from './components/agent-tools/test-results/test-results.class.js';
 export type {
@@ -718,6 +724,7 @@ export type {
   LyraGraphEdge,
   LyraGraphFit,
   LyraGraphLayout,
+  LyraGraphLink,
   LyraGraphNode,
   LyraGraphNodeLabelsMode,
   LyraGraphPickKind,
@@ -762,9 +769,10 @@ export type {
   LyraMapStyleSpecification,
   LyraMapInstance,
 } from './components/media/map/map.class.js';
+/** @deprecated Import LyraFileInput from @aceshooting/lyra-ui/components/media/file-input/file-input.class.js. */
+export { LyraFileInput } from './components/media/file-input/file-input.class.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,
-  LyraFileInput,
 } from './components/media/file-input/file-input.class.js';
 export type {
   LyraFileInputCapture,
@@ -785,8 +793,9 @@ export type {
   LyraDropZoneRejectedFile,
 } from './components/media/drop-zone/drop-zone.class.js';
 
+/** @deprecated Import LyraPhoneInput from @aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js. */
+export { LyraPhoneInput } from './components/forms/phone-input/phone-input.class.js';
 export {
-  LyraPhoneInput,
   loadLibphonenumberAdapter,
 } from './components/forms/phone-input/phone-input.class.js';
 export type {
@@ -960,8 +969,9 @@ export type {
   ChatComposerWrap,
   ChatComposerSelectionDirection,
 } from './components/conversation/chat-composer/chat-composer.class.js';
+/** @deprecated Import LyraAttachmentChip from @aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.class.js. */
+export { LyraAttachmentChip } from './components/media/attachment-chip/attachment-chip.class.js';
 export {
-  LyraAttachmentChip,
   formatFileSize,
 } from './components/media/attachment-chip/attachment-chip.class.js';
 export type {
@@ -976,8 +986,9 @@ export type {
   StreamStatusPhase,
 } from './components/conversation/stream-status/stream-status.class.js';
 export type { LyraStreamPhase } from './internal/stream-phase.js';
+/** @deprecated Import LyraVirtualList from @aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js. */
+export { LyraVirtualList } from './components/layout/virtual-list/virtual-list.class.js';
 export {
-  LyraVirtualList,
   VIRTUAL_LIST_ROW_ATTRIBUTE,
   VIRTUAL_LIST_STICKY_ATTRIBUTE,
 } from './components/layout/virtual-list/virtual-list.class.js';
@@ -1032,8 +1043,9 @@ export type {
   SourceCardExpandDetail,
   SourceCardOpenDetail,
 } from './components/retrieval/source-card/source-card.class.js';
+/** @deprecated Import LyraAppRail from @aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js. */
+export { LyraAppRail } from './components/layout/app-rail/app-rail.class.js';
 export {
-  LyraAppRail,
   computeAppRailMode,
 } from './components/layout/app-rail/app-rail.class.js';
 /** @deprecated Import LyraAppRailItem from @aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js. */
@@ -1061,8 +1073,9 @@ export type {
 export { LyraReorderItem } from './components/layout/reorder-list/reorder-item.class.js';
 /** @deprecated Import LyraReorderList from @aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js. */
 export { LyraReorderList } from './components/layout/reorder-list/reorder-list.class.js';
+/** @deprecated Import LyraResponsivePanel from @aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js. */
+export { LyraResponsivePanel } from './components/layout/responsive-panel/responsive-panel.class.js';
 export {
-  LyraResponsivePanel,
   resolveResponsivePanelEffectiveMode,
 } from './components/layout/responsive-panel/responsive-panel.class.js';
 export type {
@@ -1081,8 +1094,9 @@ export type {
   LyraMentionFilter,
   LyraMentionSelectDetail,
 } from './components/utility/mention-popover/mention-popover.class.js';
+/** @deprecated Import LyraStreamingText from @aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js. */
+export { LyraStreamingText } from './components/conversation/streaming-text/streaming-text.class.js';
 export {
-  LyraStreamingText,
   looksLikeMarkdown,
 } from './components/conversation/streaming-text/streaming-text.class.js';
 export type {
@@ -1173,12 +1187,14 @@ export type {
 export type { LyraArrowPlacement } from './components/overlays/overlay/popover.class.js';
 /** @deprecated Import LyraTooltip from @aceshooting/lyra-ui/components/overlays/overlay/tooltip.class.js. */
 export { LyraTooltip } from './components/overlays/overlay/tooltip.class.js';
+/** @deprecated Import LyraDropdown from @aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js. */
+export { LyraDropdown } from './components/overlays/overlay/dropdown.class.js';
 export {
-  LyraDropdown,
   type LyraDropdownEventMap,
 } from './components/overlays/overlay/dropdown.class.js';
+/** @deprecated Import LyraContextMenu from @aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js. */
+export { LyraContextMenu } from './components/overlays/context-menu/context-menu.class.js';
 export {
-  LyraContextMenu,
   type LyraContextMenuEventMap,
   type LyraContextMenuPoint,
   type LyraContextMenuShowDetail,
@@ -1244,6 +1260,8 @@ export type {
 } from './components/viewers/document-viewer/document-viewer.class.js';
 export type {
   DirectDocumentRendererDefinition,
+  DocumentFile,
+  DocumentRendererDefinition,
   DocumentRendererRegistry,
   LazyDocumentRendererDefinition,
   LyraAdaptedDocumentRenderer,
@@ -1321,8 +1339,9 @@ export type {
   LyraAttachmentFilesDetail,
   LyraFileBackedCapability,
 } from './components/media/attachment-trigger/attachment-trigger.class.js';
+/** @deprecated Import LyraKbd from @aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js. */
+export { LyraKbd } from './components/overlays/kbd/kbd.class.js';
 export {
-  LyraKbd,
   shortcutTokenLabel,
   parseShortcut,
 } from './components/overlays/kbd/kbd.class.js';
@@ -2337,6 +2356,7 @@ export type {
 } from './components/viewers/geojson-view/geojson-viewer.class.js';
 /** @deprecated Import LyraGeoJsonViewer from @aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js. */
 export { LyraGeojsonView } from './components/viewers/geojson-view/geojson-view.class.js';
+export type { LyraGeojsonViewEventMap } from './components/viewers/geojson-view/geojson-view.class.js';
 export type { LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
 export type { LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';
 export type {

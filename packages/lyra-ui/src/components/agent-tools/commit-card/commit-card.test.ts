@@ -3,6 +3,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
 import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function settleClipboard(el: LyraCommitCard): Promise<void> {
   await Promise.resolve();
@@ -767,6 +768,77 @@ describe('card chrome theming hooks', () => {
   });
 });
 
+describe('lr-commit-card size and its deprecated compact alias', () => {
+  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-commit-card', kind: 'property', name: 'compact' }];
+  const density = (el: LyraCommitCard): string => JSON.stringify({ padding: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).padding });
+
+  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
+    const el = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`);
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+    expect(el.hasAttribute('compact')).to.equal(false);
+    expect(el.compact).to.equal(false);
+  });
+
+  it('tightens through the canonical size="s" without a deprecation warning', async () => {
+    let regular = '';
+    let dense = '';
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      regular = density(await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`));
+      dense = density(await fixture<LyraCommitCard>(html`<lr-commit-card size="s" hash="abcdef1"></lr-commit-card>`));
+    });
+    expect(dense).to.not.equal(regular);
+    expect(warnings).to.have.length(0);
+  });
+
+  it('keeps compact working as size="s", warning once', async () => {
+    let canonical = '';
+    let alias = '';
+    let property = '';
+    let reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      canonical = density(await fixture<LyraCommitCard>(html`<lr-commit-card size="s" hash="abcdef1"></lr-commit-card>`));
+      const aliased = await fixture<LyraCommitCard>(html`<lr-commit-card compact hash="abcdef1"></lr-commit-card>`);
+      alias = density(aliased);
+      const el = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`);
+      el.compact = true;
+      await el.updateComplete;
+      property = density(el);
+      el.compact = false;
+      await el.updateComplete;
+      reads = [aliased.size, aliased.compact, el.size, el.compact];
+    });
+    expect(alias).to.equal(canonical);
+    expect(property).to.equal(canonical);
+    expect(reads).to.deep.equal(['s', true, 'm', false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-commit-card:property:compact']);
+  });
+
+  it('applies the last write when compact and size are both authored', async () => {
+    let reads: unknown[] = [];
+    await captureDeprecationWarnings(COMPACT, async () => {
+      const sizeLast = await fixture<LyraCommitCard>(html`<lr-commit-card compact size="l" hash="abcdef1"></lr-commit-card>`);
+      const compactLast = await fixture<LyraCommitCard>(html`<lr-commit-card size="l" compact hash="abcdef1"></lr-commit-card>`);
+      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
+    });
+    expect(reads).to.deep.equal(['l', false, 's', true]);
+  });
+
+  it('syncs and reflects compact back from the canonical size without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
+      const el = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`);
+      el.size = 'xs';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+      el.size = 'l';
+      await el.updateComplete;
+      reads.push(el.compact, el.hasAttribute('compact'));
+    });
+    expect(reads).to.deep.equal([true, true, false, false]);
+    expect(warnings).to.have.length(0);
+  });
+});
 
 describe('lr-commit-card deprecated --lr-commit-card-background alias', () => {
   const fill = (el: LyraCommitCard): string =>
@@ -779,7 +851,44 @@ describe('lr-commit-card deprecated --lr-commit-card-background alias', () => {
       html`<lr-commit-card hash="abcdef1" style="--lr-commit-card-bg: rgb(4, 5, 6); --lr-commit-card-background: rgb(1, 2, 3)"></lr-commit-card>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('lr-commit-card deprecated copyable alias', () => {
+  const COPYABLE: readonly DeprecatedUsage[] = [{ tag: 'lr-commit-card', kind: 'property', name: 'copyable' }];
+  const hasCopy = (el: LyraCommitCard): boolean => el.shadowRoot!.querySelector('[part="copy-button"]') !== null;
+
+  it('treats copyable="false" exactly like without-copy-button, keeps a bare copyable meaning the default, and warns once', async () => {
+    let results: boolean[] = [];
+    const warnings = await captureDeprecationWarnings(COPYABLE, async () => {
+      const canonical = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1" without-copy-button></lr-commit-card>`);
+      const off = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1" copyable="false"></lr-commit-card>`);
+      const bare = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1" copyable></lr-commit-card>`);
+      const both = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1" copyable without-copy-button></lr-commit-card>`);
+      const aliasLast = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1" without-copy-button copyable></lr-commit-card>`);
+      const property = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`);
+      property.copyable = false;
+      await property.updateComplete;
+      results = [hasCopy(canonical), hasCopy(off), hasCopy(bare), hasCopy(both), hasCopy(aliasLast), hasCopy(property), off.withoutCopyButton, off.copyable];
+    });
+    expect(results).to.deep.equal([false, false, true, false, true, false, true, false]);
+    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-commit-card:property:copyable']);
+  });
+
+  it('syncs and reflects copyable back from the canonical without-copy-button without warning', async () => {
+    const reads: unknown[] = [];
+    const warnings = await captureDeprecationWarnings(COPYABLE, async () => {
+      const el = await fixture<LyraCommitCard>(html`<lr-commit-card hash="abcdef1"></lr-commit-card>`);
+      el.withoutCopyButton = true;
+      await el.updateComplete;
+      reads.push(el.copyable, el.getAttribute('copyable'));
+      el.withoutCopyButton = false;
+      await el.updateComplete;
+      reads.push(el.copyable, el.getAttribute('copyable'));
+    });
+    expect(reads).to.deep.equal([false, 'false', true, null]);
+    expect(warnings).to.have.length(0);
   });
 });

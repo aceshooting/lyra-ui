@@ -4,6 +4,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
@@ -12,6 +13,7 @@ import type { ToolInvocation, ToolApprovalEventDetail } from '../../../ai/types.
 import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import type { LyraDetailsToggleDetail } from '../../layout/details/details.class.js';
 import { styles } from './tool-timeline.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalAction } from '../approval-state.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -31,6 +33,7 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 
 /**
  * One entry in a `<lr-tool-timeline>`. Extends `ToolInvocation` (`src/ai/types.ts`) with the
@@ -389,6 +392,10 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    approvalEditable: ['approvalReadonly', invertAlias, invertAlias],
+  };
+
   /** The calls to render, in any order — see the class doc's ordering note. Entries with empty
    *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. */
   @property({ attribute: false }) entries: readonly ToolTimelineEntry[] = [];
@@ -396,6 +403,12 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** Forwarded to the shared approval dialog's own `readonly` — withholds editing an entry's
    *  arguments before approving it. */
   @property({ type: Boolean, reflect: true, attribute: 'approval-readonly' }) approvalReadonly = false;
+
+  /** Forwarded to the shared approval dialog's own `editable` — whether a reviewer can edit an
+   *  entry's arguments before approving it.
+   *  @deprecated Use `approval-readonly`; removal not before 23.0.0. */
+  @property({ type: Boolean, reflect: true, attribute: 'approval-editable', converter: trueDefaultBooleanConverter })
+  approvalEditable = true;
 
   /** Overrides the default `hour:minute` rendering of every entry's `startedAt`. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;

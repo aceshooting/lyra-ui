@@ -7,9 +7,16 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
-- **Deprecations** none
+- **Deprecated css-property** `--lr-diff-view-add-background` since `21.1.0`; use css-property `--lr-diff-view-add-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-fold-background` since `21.1.0`; use css-property `--lr-diff-view-fold-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-highlight-accent-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-accent-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-highlight-danger-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-danger-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-highlight-neutral-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-neutral-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-highlight-success-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-success-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-highlight-warning-background` since `21.1.0`; use css-property `--lr-diff-view-highlight-warning-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecated css-property** `--lr-diff-view-remove-background` since `21.1.0`; use css-property `--lr-diff-view-remove-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 7 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -171,5 +178,10 @@ consumer can compute or unit-test the same alignment without instantiating the e
 - `--lr-diff-view-remove-color` — Removed-line text color.
 - `--lr-diff-view-fold-color` — Fold-marker text color.
 - `--lr-diff-view-fold-bg` — Fold-marker background.
+- Deprecated aliases: `--lr-diff-view-add-background`, `--lr-diff-view-remove-background`,
+  `--lr-diff-view-fold-background`, `--lr-diff-view-highlight-accent-background`,
+  `--lr-diff-view-highlight-success-background`, `--lr-diff-view-highlight-warning-background`,
+  `--lr-diff-view-highlight-danger-background` and `--lr-diff-view-highlight-neutral-background`
+  (use the matching `-bg` names; removed in 23.0.0).
 
 ---
