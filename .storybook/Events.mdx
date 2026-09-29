@@ -45,7 +45,7 @@ abandons the operation. Cancelling one of those is a supported way to take over:
 
 ```js
 // Take over exporting instead of letting the component download a file.
-exportButton.addEventListener('lr-export', (event) => {
+exportButton.addEventListener('lr-export-request', (event) => {
   event.preventDefault();
   sendToServer(event.detail.format);
 });
@@ -56,9 +56,10 @@ dialog.addEventListener('lr-hide', (event) => {
 });
 ```
 
-Veto points exist where an operation is worth intercepting — `lr-export` on `<lr-export-button>`,
+Veto points exist where an operation is worth intercepting — `lr-export-request` on `<lr-export-button>`,
 `lr-show` / `lr-hide` on `<lr-dialog>`, `<lr-details>`, `<lr-tooltip>` and `<lr-popover>`,
-`lr-remove` on `<lr-tag>`, `lr-token-remove-request` on `<lr-token-input>`, the approve/deny pair on
+`lr-remove` on `<lr-tag>`, `lr-token-remove-request` on `<lr-token-input>`, and
+`lr-approve-request` / `lr-deny-request` on
 `<lr-tool-approval-dialog>`. Each component's own page says which of its events are cancelable;
 everything else is a notification that has already happened.
 

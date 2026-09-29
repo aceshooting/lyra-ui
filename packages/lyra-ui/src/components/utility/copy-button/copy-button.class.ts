@@ -185,8 +185,6 @@ export interface LyraCopyButtonEventMap {
  * @csspart button - Mapped alias for `base` on the same composed trigger.
  * @csspart base-control - The composed `<lr-icon-button>`'s own native control, forwarded so the
  *   painted surface stays reachable across the extra shadow boundary.
- * @csspart base__control - Deprecated alias of `base-control` on the same node; removal not before
- *   23.0.0.
  * @csspart base-success - The trigger while the copied confirmation is showing.
  * @csspart base-error - The trigger while the failure state is showing.
  * @csspart copy-icon - The resting copy glyph.
@@ -711,7 +709,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
               <lr-icon-button
                 slot="trigger"
                 part=${part}
-                exportparts="button:base-control, button:base__control"
+                exportparts="button:base-control"
                 ?disabled=${this.disabled}
                 aria-label=${buttonLabel}
                 @click=${this.onClick}

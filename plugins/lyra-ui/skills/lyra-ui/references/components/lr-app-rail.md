@@ -7,14 +7,9 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated css-property** `--lr-app-rail-background` since `21.1.0`; use css-property `--lr-app-rail-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-app-rail-panel-background` since `21.1.0`; use css-property `--lr-app-rail-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `hideToggle` / `hide-toggle` since `21.1.0`; use property `without-toggle`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `maxRailWidthPx` / `max-rail-width-px` since `21.1.0`; use property `max-rail-width`; removal not before `23.0.0` — One name per concept across the library.
-- **Deprecated property** `minRailWidthPx` / `min-rail-width-px` since `21.1.0`; use property `min-rail-width`; removal not before `23.0.0` — One name per concept across the library.
-- **Deprecated property** `railWidthPx` / `rail-width-px` since `21.1.0`; use property `rail-width`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -71,7 +66,6 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   Requires a non-Shift modifier. Removing the attribute restores the empty default. See the shortcut
   behavior below.
 
-
 - `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
   one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
   throws (`el.mode = 'icon-only'` -> TypeError).
@@ -117,8 +111,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   existing output. This does not remove the button once the overlay is open: at that point it has
   been reparented inside the trapped `[part="panel"]` (see the CSS parts entry below) as the
   panel's only in-panel dismiss control, and hiding it there too would leave the open panel with no
-  in-panel way to close it at all besides Escape/backdrop. Deprecated alias: `hide-toggle`
-  (`hideToggle`; use `without-toggle`; removed in 23.0.0).
+  in-panel way to close it at all besides Escape/backdrop.
 - `trigger: HTMLElement | null = null` (attribute: false) — direct reference to an external element
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
   with `withoutToggle`). When set (or resolved through `for`), closing the overlay by any path —
@@ -190,8 +183,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `resizable`; settable/gettable directly. A CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved
   live — `rem` against the document root, `em` against the rail — or a number of pixels; a plain
   numeric attribute value parses to a number, and a drag or keyboard resize writes a number. Unset
-  defers to `--lr-app-rail-width`'s own resolved width. Deprecated alias: `rail-width-px`
-  (`railWidthPx`, which reads the width back in pixels; use `rail-width`; removed in 23.0.0).
+  defers to `--lr-app-rail-width`'s own resolved width.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
   mount. Each field is restored only when the consumer has not assigned it on that same mount: an
@@ -206,10 +198,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   session-only.
 - `minRailWidth: number | string = 190` (attribute `min-rail-width`) — minimum `railWidth` a
   drag/keyboard resize can reach: a CSS length or a number of pixels, resolved like `railWidth`.
-  Deprecated alias: `min-rail-width-px` (`minRailWidthPx`; use `min-rail-width`; removed in 23.0.0).
+
 - `maxRailWidth: number | string = 440` (attribute `max-rail-width`) — maximum `railWidth` a
-  drag/keyboard resize can reach, resolved the same way. Deprecated alias: `max-rail-width-px`
-  (`maxRailWidthPx`; use `max-rail-width`; removed in 23.0.0).
+  drag/keyboard resize can reach, resolved the same way.
 - `dragging: boolean = false` (reflected, read-only as of 9.0.0) — `true` for the duration of an
   active pointer-driven resize drag (not a keyboard step); reflected so a consumer (or this
   component's own styles) can suppress `[part='base']`'s `transition: inline-size` during the drag,
@@ -316,9 +307,7 @@ content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
-docked rail chrome). Deprecated aliases: `--lr-app-rail-background` and
-`--lr-app-rail-panel-background` (use `--lr-app-rail-bg` and `--lr-app-rail-panel-bg`; removed in
-23.0.0). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
+docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
 `--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
 reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
@@ -567,7 +556,7 @@ interpolated `{label}` (see Events below).
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated
-`open` key, removed in 23.0.0, carries the same value, matching `<lr-app-rail-group>`'s identical
+`open` key remains emitted and carries the same value, matching `<lr-app-rail-group>`'s identical
 event name and detail shape exactly). Call `preventDefault()` to keep the current state, or assign
 `expanded` from the listener to resolve it yourself; a write during the dispatch suppresses the
 default commit even when it assigns the value the property already held. Not emitted for a direct
@@ -731,12 +720,11 @@ never disagree with what is rendered inside it.
   pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
 - `collapsed: boolean = false` (reflected) — whether the content is hidden. `collapsed` governs
   visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely from its
-  own chrome. Deprecated alias: `open` (its inverse, so `open="false"` equals `collapsed`; use
-  `collapsed`; removed in 23.0.0). Both reflect and stay in step; the last write wins.
+  own chrome.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
 control (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated `open`
-key, removed in 23.0.0, carries the same value). Call `preventDefault()` to keep the current state,
+key remains emitted and carries the same value). Call `preventDefault()` to keep the current state,
 or assign `collapsed` from the listener to resolve it yourself; a write during the dispatch
 suppresses the default commit even when it assigns the value the property already held. Not
 emitted for a direct `collapsed` write. `lr-toggle` — non-cancelable, emitted after `collapsed` is

@@ -7,8 +7,6 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 installFormControlLabelSupport();
 import { srOnly } from '../../../internal/a11y.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
@@ -36,13 +34,11 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 type FileInputOutcomeMessageKey =
   | 'fileInputAcceptedOne'
@@ -268,19 +264,19 @@ export interface LyraFileInputEventMap {
  * @cssprop [--lr-file-input-dropzone-icon-size=var(--lr-font-size-xl)] - `[part="dropzone-icon"]`
  * glyph size. Retuned per `size` tier.
  * @cssprop [--lr-file-input-dropzone-padding=var(--lr-space-l)] - Padding inside `[part~="base"]`
- * and the stacked dropzone content. Retuned per `size` tier; the deprecated `compact` overrides it.
+ * and the stacked dropzone content. Retuned per `size` tier.
  * @cssprop [--lr-file-input-detail-font-size=var(--lr-font-size-sm)] - Size of the secondary text:
  * the hint, the validation error, and each selected file's formatted size. Retuned per `size` tier.
  * @cssprop [--lr-file-input-gap=var(--lr-space-xs)] - Gap between the dropzone's slotted
- * children. While the deprecated `compact` is set, this is the fallback when
+ * children. At `size="s"` or `size="small"`, this is the fallback when
  * `--lr-file-input-compact-gap` is unset.
  * @cssprop [--lr-file-input-radius=var(--lr-radius)] - Corner radius of `[part~="base"]`.
- * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part~="base"]` padding while
- * the deprecated `compact` is set.
- * @cssprop [--lr-file-input-compact-gap=var(--lr-space-2xs)] - Gap between the dropzone's slotted
- * children while the deprecated `compact` is set.
- * @cssprop [--lr-file-input-compact-font-size=var(--lr-font-size-sm)] - Dropzone instruction font
- * size while the deprecated `compact` is set.
+ * @cssprop [--lr-file-input-compact-padding] - `[part~="base"]` padding while
+ * `size="s"` or `size="small"` is set.
+ * @cssprop [--lr-file-input-compact-gap] - Gap between the dropzone's slotted
+ * children while `size="s"` or `size="small"` is set.
+ * @cssprop [--lr-file-input-compact-font-size] - Dropzone instruction font
+ * size while `size="s"` or `size="small"` is set.
  * @cssprop [--lr-file-input-accept-border-color=var(--lr-color-success)] - Border color of
  * `[part~="base"][data-drag-state="accept"]`.
  * @cssprop [--lr-file-input-accept-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
@@ -357,16 +353,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    paste: ['withoutPaste', invertAlias, invertAlias],
-  };
-
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'accessible-label' && newValue !== null) {
-      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
-    }
-  }
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -377,19 +363,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   };
 
   @property({ type: Boolean, reflect: true }) multiple = false;
-  /**
-   * Tighter dropzone padding, gap and dropzone instruction font for constrained spaces (a toolbar,
-   * a table cell). Defaults to `false`, i.e. the full `--lr-space-l` dropzone. The dashed border
-   * stays; only the internal spacing shrinks. It keeps rendering, and reflecting, exactly as before
-   * until its removal. The `size` ladder is the replacement: `size="s"` (or `xs`/`2xs`) gives a
-   * denser dropzone, though not a pixel-identical one, so review the result when migrating. The
-   * identical dropzone is the current size plus `--lr-file-input-dropzone-padding`,
-   * `--lr-file-input-dropzone-font-size` and `--lr-file-input-gap` set to `--lr-space-s`,
-   * `--lr-font-size-sm` and `--lr-space-2xs`. Setting it logs a one-time development warning.
-   *
-   * @deprecated Use `size="s"`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true }) compact = false;
   @property() accept = '';
   /** Mobile capture hint forwarded to the native file picker. */
   @property() capture: LyraFileInputCapture = '';
@@ -460,10 +433,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property({ type: Boolean, reflect: true }) directory = false;
   /** Ignores files pasted from the clipboard into the dropzone, which are otherwise accepted. */
   @property({ type: Boolean, reflect: true, attribute: 'without-paste' }) withoutPaste = false;
-  /** Enables files pasted from the clipboard into the dropzone. `true`-defaulting, so a plain
-   *  `paste="false"` attribute (not just a `.paste=${false}` property binding) actually disables it.
-   *  @deprecated Use `without-paste` (inverted); removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) paste = true;
   /** Form-control label, rendered in `form-control-label` and naming the dropzone button (unless
    *  a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone instruction --
    *  customize that with the `dropzone` slot or the `fileInputDefaultLabel` string. Omitted, `''`
@@ -494,14 +463,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: 'accessible-label' })
+  @property({ attribute: false })
   get accessibleLabel(): string {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string) {
-    if (!this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    }
+    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
     this.legacyAccessibleLabel = value;
   }
   /** The host `aria-label`: names the dropzone ahead of every other source, by presence, so an
@@ -711,11 +678,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    // Guarded on the value, not just the change: every defaulted property is in the first update's
-    // change set, and an alias left false is not a use of it.
-    if (changed.has('compact') && this.compact === true) {
-      warnDeprecatedUsage(this, 'property', 'compact', 'size="s"');
-    }
     if (changed.has('multiple') || changed.has('directory') || changed.has('files')) {
       if (!this.effectiveMultiple && this._files.length > 1) this.files = this._files.slice(0, 1);
       else this.syncFormValue();
@@ -1522,9 +1484,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   override render(): TemplateResult {
     const instruction = this.dropzoneInstruction;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').trim().length > 0;
-    // The deprecated `accessible-label` attribute keeps naming by presence, so an explicitly empty
-    // value still yields an empty name exactly as it did before it became an alias.
-    const explicitAccessibleLabel = this.hasAttribute('accessible-label') || this.accessibleLabel
+    const explicitAccessibleLabel = this.accessibleLabel
       ? this.accessibleLabel
       : null;
     const accessibleLabel = this.hostAccessibleLabel ?? explicitAccessibleLabel;

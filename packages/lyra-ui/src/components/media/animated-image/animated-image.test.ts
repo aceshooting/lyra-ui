@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './animated-image.js';
 import type { LyraAnimatedImage } from './animated-image.js';
@@ -350,7 +351,6 @@ describe('play / playing / reduced-motion arbitration', () => {
     try {
       const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       expect(el.ignoreReducedMotion).to.be.false;
-      expect(el.respectReducedMotion).to.be.true;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
       expect(button.disabled).to.be.true;
@@ -383,98 +383,33 @@ describe('play / playing / reduced-motion arbitration', () => {
       expect(el.playing).to.be.true;
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
       expect(button.disabled).to.be.false;
-      expect(el.respectReducedMotion, 'the alias syncs back from the canonical').to.be.false;
-      expect(el.getAttribute('respect-reduced-motion'), 'the alias reflects its synced value').to.equal('false');
+      expect(el.hasAttribute('respect-reduced-motion')).to.equal(false);
     } finally {
       stub.restore();
     }
   });
 
-  it('the deprecated respectReducedMotion=false property binding equals ignore-reduced-motion and warns once', async () => {
-    const stub = stubReducedMotion(true);
-    try {
-      const playing: boolean[] = [];
-      const warnings = await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
-        for (let index = 0; index < 2; index += 1) {
-          const el = (await fixture(
-            html`<lr-animated-image alt="Pixel" .respectReducedMotion=${false}></lr-animated-image>`,
-          )) as LyraAnimatedImage;
-          expect(el.ignoreReducedMotion).to.be.true;
-          await loaded(el);
-          el.play = true;
-          await el.updateComplete;
-          playing.push(el.playing);
-          const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
-          expect(button.disabled).to.be.false;
-        }
-      });
-      expect(playing).to.deep.equal([true, true]);
-      expect(warnings.map(({ key }) => key)).to.deep.equal([
-        'lyra-deprecated:lr-animated-image:property:respectReducedMotion',
-      ]);
-      expect(warnings[0]!.message).to.contain('ignore-reduced-motion');
-    } finally {
-      stub.restore();
-    }
-  });
-
-  it('the deprecated respect-reduced-motion="false" attribute also lets play take effect under OS reduced motion', async () => {
-    const stub = stubReducedMotion(true);
-    try {
-      await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
-        // A plain literal attribute value drives the true-defaulting alias back to false without
-        // requiring a JS property binding.
-        const el = (await fixture(
-          html`<lr-animated-image alt="Pixel" respect-reduced-motion="false"></lr-animated-image>`,
-        )) as LyraAnimatedImage;
-        expect(el.respectReducedMotion).to.be.false;
-        expect(el.ignoreReducedMotion).to.be.true;
+  it('ignores retired motion opt-outs under both platform preferences', async () => {
+    for (const reduced of [false, true]) {
+      const stub = stubReducedMotion(reduced);
+      try {
+        const el = await fixture<LyraAnimatedImage>(html`<lr-animated-image alt="Pixel" play respect-reduced-motion="false"></lr-animated-image>`);
         await loaded(el);
-        el.play = true;
+        expect(el.playing).to.equal(!reduced);
+        Reflect.set(el, 'respectReducedMotion', false);
+        el.requestUpdate();
         await el.updateComplete;
-
-        expect(el.playing).to.be.true;
-        const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
-        expect(button.disabled).to.be.false;
-      });
-    } finally {
-      stub.restore();
+        expect(el.playing).to.equal(!reduced);
+        el.ignoreReducedMotion = true;
+        await el.updateComplete;
+        expect(el.playing).to.equal(true);
+      } finally {
+        stub.restore();
+      }
     }
   });
 
-  it('removing respect-reduced-motion after setting it false restores the default arbitration', async () => {
-    const stub = stubReducedMotion(true);
-    try {
-      await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
-        const el = (await fixture(
-          html`<lr-animated-image alt="Pixel" respect-reduced-motion="false"></lr-animated-image>`,
-        )) as LyraAnimatedImage;
-        expect(el.respectReducedMotion).to.be.false;
-
-        el.removeAttribute('respect-reduced-motion');
-        await el.updateComplete;
-        expect(el.respectReducedMotion).to.be.true;
-        expect(el.ignoreReducedMotion).to.be.false;
-
-        await loaded(el);
-        const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
-        let playFired = false;
-        el.addEventListener('lr-play', () => {
-          playFired = true;
-        });
-        el.play = true;
-        await el.updateComplete;
-
-        expect(button.disabled).to.be.true;
-        expect(el.playing).to.be.false;
-        expect(playFired).to.be.false;
-      });
-    } finally {
-      stub.restore();
-    }
-  });
-
-  it('lets the later-written ignore-reduced-motion win over respect-reduced-motion', async () => {
+  it('keeps ignore-reduced-motion authoritative with the retired attribute present', async () => {
     const stub = stubReducedMotion(true);
     try {
       await captureDeprecationWarnings(RESPECT_REDUCED_MOTION, async () => {
@@ -889,3 +824,5 @@ describe('accessibility', () => {
     }
   });
 });
+
+expectStaleAttribute('lr-animated-image', 'respect-reduced-motion');

@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `showStop` / `show-stop` since `21.1.0`; use property `without-stop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -47,9 +47,7 @@ generated framework members are removed rather than retained as aliases.
   above; unset/non-finite values derive from `token-count`/elapsed time once one second has elapsed.
 - `withoutStop: boolean = false` (attribute `without-stop`, **not reflected**) — hides the built-in
   Stop button, for a host that renders its own cancel control. A plain presence attribute, so
-  `?without-stop=${hidden}` works in a Lit template. Deprecated alias: `show-stop`/`showStop` (use
-  `without-stop`; removed in 23.0.0) — inverted, so `show-stop="false"` equals `without-stop`; any
-  other `show-stop` value (or none) keeps the button.
+  `?without-stop=${hidden}` works in a Lit template.
 
 **Events:** `lr-stop` (`detail: null`) — fired when the built-in Stop button is clicked while
 `status="running"`.

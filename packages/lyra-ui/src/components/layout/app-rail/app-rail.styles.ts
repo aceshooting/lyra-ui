@@ -107,7 +107,7 @@ export const styles = css`
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     background: var(
       --lr-app-rail-bg,
-      var(--lr-app-rail-background, var(--lr-color-surface))
+      var(--lr-color-surface)
     );
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
@@ -215,7 +215,7 @@ export const styles = css`
        [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
     background: var(
       --lr-app-rail-panel-bg,
-      var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay))
+      var(--lr-color-surface-overlay)
     );
     padding-block-end: var(--lr-safe-area-bottom);
     /* Both axes are tokenized together, unlike [part="base"]/[part="nav"]'s plain overflow-x:clip:
@@ -393,7 +393,7 @@ export const styles = css`
   }
   :host([frame="plain"]) [part="base"] {
     border-inline-end: 0;
-    background: var(--lr-app-rail-bg, var(--lr-app-rail-background, transparent));
+    background: var(--lr-app-rail-bg, transparent);
   }
   @media (forced-colors: active) {
     :host([frame="plain"]) [part="base"] {
@@ -402,7 +402,7 @@ export const styles = css`
   }
 
   ${glassScrollLayerStyles}
-  ${glassSurface('[part="base"]', css`var(--lr-app-rail-bg, var(--lr-app-rail-background, var(--lr-color-surface)))`, undefined, true)}
-  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-app-rail-background, var(--lr-color-surface)))`, css`var(--lr-app-rail-bg, var(--lr-app-rail-background, transparent))`, true)}
-  ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-app-rail-panel-background, var(--lr-color-surface-overlay)))`, undefined, true)}
+  ${glassSurface('[part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, undefined, true)}
+  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, css`var(--lr-app-rail-bg, transparent)`, true)}
+  ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-color-surface-overlay))`, undefined, true)}
 `;

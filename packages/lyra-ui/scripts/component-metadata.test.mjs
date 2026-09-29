@@ -26,11 +26,13 @@ import {
   stampUnreleasedDeprecations,
   UNRELEASED_VERSION,
   validateComponentMetadata,
-  validateManifestMetadataProjection,
   validateRootComponentClassDeprecations,
+  validateManifestMetadataProjection,
 } from './component-metadata.mjs';
 import { generateManifest } from './generate-manifest.mjs';
+import { checkPublishedCompatibilitySync } from './check-published-compatibility.mjs';
 import { nextWriteMetadata } from './generate-component-metadata.mjs';
+import * as metadataContracts from './component-metadata.mjs';
 import cemConfig from '../custom-elements-manifest.config.js';
 import { expandManifestDeprecations } from './manifest-compact.mjs';
 import {
@@ -42,6 +44,52 @@ const packageDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..'
 );
+
+test('export inspection distinguishes genuine absence from invalid current source and policy', () => {
+  const source = `
+/** @deprecated Use Current instead. */
+export type Old = string;
+export type Current = string;
+export const live = 'lr-current-event';
+// lr-comment-event and data-lr-comment are only prose.
+export const attribute = 'data-lr-current';
+`;
+  const packageJson = { exports: {
+    './old.js': './dist/old.js', './missing.js': './dist/missing.js',
+    './broken.js': './dist/broken.js', './style.css': './dist/style.css',
+    './patterns/*': './dist/*.js', './patterns/blocked': null,
+    './invalid-target.js': 42, './unknown-conditions.js': { browser: './dist/old.js' },
+    './array-target.js': ['./dist/old.js'], './node-target.js': { node: './dist/old.js' },
+    './blocked-import.js': { import: null, default: './dist/old.js' },
+    './default.js': { default: './dist/old.js' },
+  } };
+  const readSource = file => ({ 'src/old.ts': source, 'src/broken.ts': 'export const = ;', 'src/style.css': ':root {}' })[file] ?? null;
+  const context = { packageJson, readSource, exportDeprecations: [{ kind: 'entry-point', name: './old.js' }] };
+  const inspect = entry => metadataContracts.inspectExportContract(entry, context);
+  assert.deepEqual(inspect({ kind: 'type', module: './old.js', name: 'Old' }), {
+    status: 'present', sourcePath: 'src/old.ts', isType: true, deprecated: true, findings: [],
+  });
+  assert.equal(inspect({ kind: 'type', module: './old.js', name: 'Current' }).deprecated, false);
+  assert.equal(inspect({ kind: 'constant', module: './old.js', name: 'live' }).isType, false);
+  assert.equal(inspect({ kind: 'entry-point', name: './old.js' }).deprecated, true);
+  assert.equal(inspect({ kind: 'stylesheet', name: './style.css' }).status, 'present');
+  assert.equal(inspect({ kind: 'type', module: './old.js', name: 'Gone' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './gone.js' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './patterns/old' }).status, 'present');
+  assert.equal(inspect({ kind: 'entry-point', name: './patterns/blocked' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './blocked-import.js' }).status, 'absent');
+  assert.equal(inspect({ kind: 'entry-point', name: './default.js' }).status, 'present');
+  for (const name of ['./missing.js', './broken.js', '../old.js', './patterns/*', './invalid-target.js', './unknown-conditions.js', './array-target.js', './node-target.js']) {
+    const result = inspect({ kind: 'entry-point', name });
+    assert.equal(result.status, 'invalid', name);
+    assert.ok(result.findings.length > 0, name);
+  }
+  for (const [kind, name, status] of [
+    ['window-event', 'lr-current-event', 'present'], ['window-event', 'lr-comment-event', 'absent'],
+    ['root-attribute', 'data-lr-current', 'present'], ['root-attribute', 'data-lr-comment', 'absent'],
+  ]) assert.equal(inspect({ kind, module: './old.js', name }).status, status);
+  assert.equal(inspect({ kind: 'window-event', module: './old.js', name: 'invalid' }).status, 'invalid');
+});
 
 function readJson(relativePath) {
   return JSON.parse(
@@ -65,7 +113,9 @@ function fixture() {
 
 test('every actual root component constructor has an exact deprecation policy', () => {
   const state = fixture();
-  assert.deepEqual(validateRootComponentClassDeprecations(state.metadata, state), []);
+  assert.deepEqual(validateRootComponentClassDeprecations(state.metadata, { ...state,
+    historicalClassAliases: checkPublishedCompatibilitySync().classAliases,
+  }), []);
 });
 
 function rootClassFixture() {
@@ -79,11 +129,11 @@ function rootClassFixture() {
       type WidgetOptions,
       type Widget as ConstructorType,
     } from '${module}';`,
-    'src/components/utility/widget/widget.class.ts': `export class Widget {}
+    'src/components/utility/widget/widget.class.ts': `export class Other {}
+      export class Widget {}
       export function helper() {}
       export const CONSTANT = 1;
-      export interface WidgetOptions { value: string }
-      export class Other {}`,
+      export interface WidgetOptions { value: string }`,
   };
   return {
     sources,
@@ -116,6 +166,48 @@ test('root constructor completeness resolves multiline aliases without deprecati
   assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [], 'a class-free root remains valid');
 });
 
+function overloadedRootHelperFixture() {
+  const state = rootClassFixture();
+  const module = 'src/components/utility/widget/widget.class.ts';
+  state.sources[module] = state.sources[module].replace('export function helper() {}', `
+    export function helper(value: string): string;
+    export function helper(value: number): number;
+    export function helper(value: string | number): string | number { return value; }`);
+  state.options.manifest.modules[0].declarations.push(
+    { kind: 'function', name: 'helper', parameters: [{ name: 'value', type: { text: 'string' } }] },
+    { kind: 'function', name: 'helper', parameters: [{ name: 'value', type: { text: 'number' } }] },
+    { kind: 'function', name: 'helper', parameters: [{ name: 'value', type: { text: 'string | number' } }] },
+  );
+  return state;
+}
+
+test('root constructor completeness accepts overloaded helpers without skipping component policies', () => {
+  const { metadata, options } = overloadedRootHelperFixture();
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  metadata.exportDeprecations = [];
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [
+    'root component class Renamed: expected exactly one class deprecation policy',
+  ]);
+});
+
+test('root constructor completeness rejects ambiguous and malformed declarations beside helper overloads', () => {
+  for (const mutate of [
+    declarations => { declarations.push(structuredClone(declarations[0])); },
+    declarations => { declarations[2] = { kind: 'class', name: 'helper' }; },
+    declarations => { declarations[3] = { kind: 'class', name: 'helper' }; },
+    declarations => { declarations[3].kind = ''; },
+    declarations => { declarations[3].name = ''; },
+    declarations => { declarations[3].customElement = true; declarations[3].tagName = 'lr-helper'; },
+    declarations => { declarations[3].customElement = 'false'; },
+    declarations => { declarations[3].tagName = 'lr-helper'; },
+    declarations => { declarations[3] = null; },
+  ]) {
+    const { metadata, options } = overloadedRootHelperFixture();
+    mutate(options.manifest.modules[0].declarations);
+    assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /invalid component manifest/);
+  }
+});
+
 test('root constructor completeness follows imported and barrel aliases', () => {
   const { metadata, options, sources } = rootClassFixture();
   sources['src/bridge.ts'] = `import { Widget as Local } from './components/utility/widget/widget.class.js'; export { Local as Public };`;
@@ -124,6 +216,56 @@ test('root constructor completeness follows imported and barrel aliases', () => 
   assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
   metadata.exportDeprecations = [];
   assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /Renamed: expected exactly one/);
+});
+
+test('direct immutable constructor aliases retain identity and require their own root notice', () => {
+  for (const form of ['direct', 'local-chain', 'barrel']) {
+    const { metadata, options, sources } = rootClassFixture();
+    const source = `import { Widget } from './components/utility/widget/widget.class.js';\n`;
+    if (form === 'barrel') {
+      sources['src/alias.ts'] = `${source}export const Binding = Widget;`;
+      sources['src/lyra.ts'] = `/** @deprecated Import the class subpath. */\nexport { Binding as Hidden } from './alias.js';`;
+    } else {
+      sources['src/lyra.ts'] = `${source}${form === 'local-chain' ? 'const Binding = Widget;\n' : ''}
+        /** @deprecated Import the class subpath. */
+        export const Hidden = ${form === 'local-chain' ? 'Binding' : 'Widget'};`;
+    }
+    metadata.exportDeprecations[0].name = 'Hidden';
+    assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [], form);
+    metadata.exportDeprecations[0].replacement.name = 'Other';
+    assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /changes constructor/, form);
+    metadata.exportDeprecations = [];
+    assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [
+      'root component class Hidden: expected exactly one class deprecation policy',
+    ], form);
+  }
+});
+
+test('constructor alias resolution excludes helper values and type-only aliases', () => {
+  const { metadata, options, sources } = rootClassFixture();
+  sources['src/lyra.ts'] = `import { helper, CONSTANT, type WidgetOptions } from './components/utility/widget/widget.class.js';
+    const HelperBinding = helper;
+    export const helperAlias = HelperBinding;
+    export const constantAlias = CONSTANT;
+    class IndependentHelper {}
+    export const helperClassAlias = IndependentHelper;
+    export type OptionsAlias = WidgetOptions;`;
+  metadata.exportDeprecations = [];
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+});
+
+test('constructor aliases fail closed on local cycles and mutable bindings', () => {
+  const { metadata, options, sources } = rootClassFixture();
+  metadata.exportDeprecations = [];
+  sources['src/lyra.ts'] = `const First = Second; const Second = First; export { First };`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /cyclic constructor alias/);
+  for (const kind of ['let', 'var']) {
+    sources['src/lyra.ts'] = `import { Widget, Other } from './components/utility/widget/widget.class.js';
+      ${kind} Binding = Widget;
+      export const Hidden = Binding;
+      Binding = Other;`;
+    assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /unsupported mutable constructor alias Binding/);
+  }
 });
 
 test('root constructor completeness rejects unsupported imported bindings instead of skipping them', () => {
@@ -148,19 +290,113 @@ test('root constructor completeness requires notice and same-constructor replace
   assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /not exported/);
 });
 
-test('root constructor completeness preserves explicitly recorded component-alias replacements', () => {
-  const { metadata, options } = rootClassFixture();
+function historicalWidgetAlias() {
+  const module = 'src/components/utility/widget/widget.class.ts';
+  return { sourceRelease: 'lyra-ui@22.0.0',
+    source: { module, name: 'Widget', tag: 'lr-widget' },
+    replacement: { module, name: 'Other', tag: 'lr-other' },
+    policy: { kind: 'component', tag: 'lr-widget', name: 'lr-widget',
+      replacement: { kind: 'component', name: 'lr-other' } },
+  };
+}
+
+test('a different constructor requires exact historical component identities and actual ancestry', () => {
+  const { metadata, options, sources } = rootClassFixture();
   metadata.exportDeprecations[0].replacement.name = 'Other';
-  metadata.deprecations = [{ kind: 'component', tag: 'lr-widget', name: 'lr-widget',
-    replacement: { kind: 'component', name: 'lr-other' } }];
+  const alias = historicalWidgetAlias();
+  metadata.deprecations = [alias.policy];
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /changes constructor/,
+    'an arbitrary current component policy cannot authorize a constructor change');
+  options.historicalClassAliases = [alias];
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /changes constructor/,
+    'a historical relation cannot authorize unrelated current constructors');
+  sources[alias.source.module] = sources[alias.source.module].replace('class Widget {}', 'class Widget extends Other {}');
   assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
-  metadata.deprecations[0].tag = 'lr-unrelated';
-  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /changes constructor/);
+  for (const mutate of [
+    entry => { entry.source.name = 'Unrelated'; },
+    entry => { entry.source.module = 'src/unrelated.ts'; },
+    entry => { entry.source.tag = 'lr-unrelated'; },
+    entry => { entry.replacement.name = 'Widget'; },
+    entry => { entry.replacement.tag = 'lr-unrelated'; },
+    entry => { entry.policy.replacement.name = 'lr-unrelated'; },
+    entry => { entry.policy.kind = 'property'; },
+    entry => { entry.sourceRelease = 'unreleased'; },
+  ]) {
+    const edited = structuredClone(alias); mutate(edited);
+    assert.match(validateRootComponentClassDeprecations(metadata, { ...options, historicalClassAliases: [edited] }).join('\n'), /changes constructor/);
+  }
+});
+
+function untaggedClassFixture() {
+  const state = rootClassFixture();
+  const { metadata, options, sources } = state;
+  const alias = historicalWidgetAlias();
+  options.manifest.modules[0].declarations[0] = { kind: 'class', name: 'Widget' };
+  sources[alias.source.module] = sources[alias.source.module].replace('class Widget {}', 'class Widget extends Base {}');
+  sources[alias.source.module] += `\nimport { Base } from '../../../base.js';`;
+  sources['src/base.ts'] = `export { Other as Base } from './components/utility/widget/widget.class.js';`;
+  options.historicalClassAliases = [alias];
+  return { ...state, alias };
+}
+
+test('an unregistered component subclass remains in the census through import and re-export ancestry', () => {
+  const { metadata, options, sources, alias } = untaggedClassFixture();
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  const records = metadata.exportDeprecations;
+  metadata.exportDeprecations = [];
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [
+    'root component class Renamed: expected exactly one class deprecation policy',
+  ]);
+  metadata.exportDeprecations = records;
+  // Root and family must preserve the same distinct compatibility subclass.
+  const family = './families/utility.js';
+  options.packageJson.exports[family] = './dist/families/utility.js';
+  sources['src/families/utility.ts'] = `export { Widget } from '../components/utility/widget/widget.class.js';`;
+  metadata.exportDeprecations[0].replacement = { kind: 'class', module: family, name: 'Widget' };
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  sources['src/families/utility.ts'] = `export { Other as Widget } from '../components/utility/widget/widget.class.js';`;
+  assert.match(validateRootComponentClassDeprecations(metadata, { ...options, historicalClassAliases: [] }).join('\n'), /changes constructor/);
+  metadata.exportDeprecations[0].replacement = { kind: 'class', module: './components/utility/widget/widget.class.js', name: 'Other' };
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  assert.equal(alias.source.name, 'Widget');
+});
+
+test('untagged subclasses cannot hide missing, altered, unsupported or cyclic ancestry', () => {
+  for (const [replacement, finding] of [
+    ['extends Missing', /unresolved superclass/],
+    ['extends helper', /unresolved superclass|not a class/],
+    ['extends factory()', /unsupported superclass/],
+    ['', /no longer has component ancestry/],
+    ['extends Widget', /cyclic class ancestry/],
+  ]) {
+    const { metadata, options, sources, alias } = untaggedClassFixture();
+    sources[alias.source.module] = sources[alias.source.module].replace('extends Base', replacement);
+    assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), finding);
+  }
+  const { metadata, options, sources } = untaggedClassFixture();
+  sources['src/base.ts'] = `export { Widget as Base } from './components/utility/widget/widget.class.js';`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /cyclic class ancestry/);
+  const tagged = rootClassFixture();
+  const module = 'src/components/utility/widget/widget.class.ts';
+  tagged.sources[module] = tagged.sources[module].replace('class Widget {}', 'class Widget extends Other {}')
+    .replace('class Other {}', 'class Other extends Widget {}');
+  assert.match(validateRootComponentClassDeprecations(tagged.metadata, tagged.options).join('\n'), /cyclic class ancestry/);
 });
 
 test('root constructor completeness fails closed on malformed or incomplete sources and manifests', () => {
   const { metadata, options, sources } = rootClassFixture();
   assert.match(validateRootComponentClassDeprecations(metadata, { ...options, manifest: {} }).join('\n'), /invalid component manifest/);
+  for (const mutate of [
+    manifest => { manifest.modules.push(structuredClone(manifest.modules[0])); },
+    manifest => { manifest.modules[0].declarations.push(structuredClone(manifest.modules[0].declarations[0])); },
+    manifest => { manifest.modules[0].declarations[0].tagName = ''; },
+    manifest => { manifest.modules[0].declarations[0].kind = 'variable'; },
+    manifest => { manifest.modules[0].declarations[0].customElement = false; },
+    manifest => { manifest.modules[0].declarations[0] = null; },
+  ]) {
+    const manifest = structuredClone(options.manifest); mutate(manifest);
+    assert.match(validateRootComponentClassDeprecations(metadata, { ...options, manifest }).join('\n'), /invalid component manifest/);
+  }
   assert.match(validateRootComponentClassDeprecations(metadata, { ...options, manifest: { schemaVersion: '1.0.0', modules: [] } }).join('\n'), /absent from the manifest/);
   const original = sources['src/lyra.ts'];
   sources['src/lyra.ts'] = 'export {';
@@ -174,10 +410,27 @@ test('root constructor completeness fails closed on malformed or incomplete sour
   assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /cyclic re-export/);
 });
 
+test('root census excludes independent helper classes and rejects namespace, default and ambiguous exports', () => {
+  const { metadata, options, sources } = rootClassFixture();
+  sources['src/helpers.ts'] = `export class LyraHelper {}\nexport const answer = 42;`;
+  sources['src/lyra.ts'] += `\nexport { LyraHelper, answer } from './helpers.js';`;
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  sources['src/lyra.ts'] = `export * as Widgets from './components/utility/widget/widget.class.js';`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /unsupported namespace/);
+  sources['src/lyra.ts'] = `export default () => {};`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /unsupported/);
+  sources['src/lyra.ts'] = `export const Hidden = class {};`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /unsupported exported class expression/);
+  sources['src/lyra.ts'] = `export * from './left.js'; export * from './right.js';`;
+  sources['src/left.ts'] = `export { Widget as Shared } from './components/utility/widget/widget.class.js';`;
+  sources['src/right.ts'] = `export { Other as Shared } from './components/utility/widget/widget.class.js';`;
+  assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /ambiguous star export/);
+});
+
 test('checked-in metadata covers the current manifest and inventory', () => {
   const state = fixture();
   assert.deepEqual(validateComponentMetadata(state.metadata, state), []);
-  assert.equal(state.metadata.assignments['published-stable'].length, 259);
+  assert.equal(state.metadata.assignments['published-stable'].length, 258);
   assert.equal(state.metadata.assignments['published-experimental'].length, 2);
   assert.equal(state.metadata.assignments['mapped-experimental'].length, 1);
   assert.equal(
@@ -187,45 +440,56 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
   // The eight older mirrored hooks stay while their upstream counterparts exist. The
-  // 391 published naming aliases retain their original removal floor; the new
-  // attribute, property and event notices must survive one whole subsequent major.
+  // eligible naming aliases have retired; the retained attribute, property and
+  // event notices must survive one whole subsequent major.
   const removalCohorts = {};
   for (const entry of state.metadata.deprecations) {
     removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
   }
   assert.deepEqual(removalCohorts, {
     '10.0.0': 8,
-    '23.0.0': 391,
     '24.0.0': 44,
   });
 });
 
 test('a subclass records an inherited alias against its full public surface', () => {
   const state = fixture();
-  const inherited = state.metadata.deprecations.find((entry) =>
-    entry.tag === 'lr-line-chart' && entry.kind === 'property' && entry.name === 'zoom');
-  assert.ok(inherited, 'lr-line-chart records the zoom alias it inherits from lr-chart');
-  const lineChart = state.manifest.modules
-    .flatMap((module) => module.declarations ?? [])
-    .find((entry) => entry.tagName === 'lr-line-chart');
+  const declarations = state.manifest.modules.flatMap((module) => module.declarations ?? []);
+  const base = declarations.find((entry) => entry.tagName === 'lr-chart');
+  const child = declarations.find((entry) => entry.tagName === 'lr-line-chart');
+  // Synthetic policy keeps the inheritance regression independent of any release's alias cohort.
+  const record = {
+    kind: 'property', name: 'fixtureLegacy', since: state.packageJson.version,
+    removalNotBefore: `${currentMajor(state) + 2}.0.0`,
+    replacement: { kind: 'property', name: 'fixtureCurrent', usage: '.fixtureCurrent' },
+    rationale: 'Use the canonical fixture property.',
+  };
+  base.members ??= [];
+  base.members.push(
+    { kind: 'field', name: 'fixtureLegacy', type: { text: 'boolean' }, deprecated: 'Use fixtureCurrent.' },
+    { kind: 'field', name: 'fixtureCurrent', type: { text: 'boolean' } },
+  );
+  for (const tag of ['lr-chart', 'lr-line-chart']) putDeprecation(state.metadata, { ...record, tag });
   assert.equal(
-    (lineChart.members ?? []).some((member) => member.name === 'zoom'),
+    (child.members ?? []).some((member) => member.name === 'fixtureLegacy'),
     false,
-    'the compact manifest keeps the inherited member on lr-chart only',
+    'the compact subclass has no own copy of its inherited member',
   );
   assert.deepEqual(validateEdited(state, state.metadata), []);
+  const projected = structuredClone(state.manifest);
+  applyComponentMetadataToManifest(state.metadata, projected, { packageVersion: state.packageJson.version });
   assert.deepEqual(
-    validateManifestMetadataProjection(state.metadata, state.manifest, {
+    validateManifestMetadataProjection(state.metadata, projected, {
       packageVersion: state.packageJson.version,
     }),
     [],
   );
 
   const metadata = structuredClone(state.metadata);
-  putDeprecation(metadata, { ...inherited, name: 'missingZoom', attribute: 'missing-zoom' });
+  putDeprecation(metadata, { ...record, tag: 'lr-line-chart', name: 'missingFixture' });
   assert.throws(
     () => validateEdited(state, metadata),
-    /lr-line-chart:property:missingZoom: deprecated public member does not exist/,
+    /lr-line-chart:property:missingFixture: deprecated public member does not exist/,
   );
 });
 
@@ -763,7 +1027,7 @@ test('applying metadata changes only maturity records and remains deterministic'
   assert.equal(
     applied.components.find((entry) => entry.tag === 'lr-icon').maturity
       .deprecations.length,
-    3
+    1
   );
   assert.equal(applied.pins.lyraVersion, state.packageJson.version);
 });
@@ -802,8 +1066,8 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   const autoWidthAttribute = icon.attributes.find(
     (entry) => entry.name === 'auto-width'
   );
-  // autoWidth, fixedWidth and --lr-icon-fixed-width.
-  assert.equal(icon.deprecations.length, 3);
+  // The mirrored autoWidth notice remains; fixedWidth and its CSS alias have retired.
+  assert.equal(icon.deprecations.length, 1);
   assert.equal(autoWidth.deprecation.since, '8.0.0');
   assert.deepEqual(autoWidth.deprecation.replacement, {
     kind: 'property',
@@ -893,7 +1157,7 @@ test('Storybook presentation exposes central maturity and structured deprecation
   );
   assert.deepEqual(
     presentation.deprecations.map((entry) => entry.subject),
-    ['css-property --lr-date-input-text-color']
+    []
   );
 
   const knownDatePresentation = componentMetadataPresentation(
@@ -1685,8 +1949,7 @@ test('export deprecations validate type records against the declaring source', (
 });
 
 /** Every exported name of one source module, with whether the export is type-only. */
-function sourceExportKinds(relativePath) {
-  const source = fs.readFileSync(path.join(packageDir, relativePath), 'utf8');
+function sourceExportKinds(relativePath, source = fs.readFileSync(path.join(packageDir, relativePath), 'utf8')) {
   const parsed = parseSync(relativePath, source);
   assert.deepEqual(parsed.errors, [], `${relativePath} parses`);
   const kinds = new Map();
@@ -1698,27 +1961,36 @@ function sourceExportKinds(relativePath) {
   return kinds;
 }
 
-test('the deprecated utilities/localization.js entry is superseded by localization.js', () => {
+test('the retired localization route preserves its published replacement bindings', async () => {
+  const { checkPublishedCompatibility } = await import('./check-published-compatibility.mjs');
+  const { decodeEvidence, sha256 } = await import('./published-compatibility-io.mjs');
+  const history = path.join(packageDir, 'scripts/fixtures/compatibility-history');
+  const verified = await checkPublishedCompatibility(history);
+  const { capture, facts } = verified.captures[0];
+  const record = facts.records.find(entry => entry.key.scope === 'export' && entry.key.kind === 'entry-point' && entry.key.name === './utilities/localization.js');
+  assert.equal(record.policy.replacement.kind, 'entry-point');
+  assert.equal(record.policy.replacement.name, './localization.js');
+  assert.match(record.policy.replacement.usage, /from '@aceshooting\/lyra-ui\/localization\.js'/);
+  assert.equal(record.policy.removalNotBefore, '23.0.0');
+  assert.ok(verified.retirements.some(entry => entry.key.scope === 'export' && entry.key.name === './utilities/localization.js' && entry.removedIn === '23.0.0'));
   const state = fixture();
-  const record = state.metadata.exportDeprecations.find(
-    (entry) => entry.kind === 'entry-point' && entry.name === './utilities/localization.js',
-  );
-  assert.ok(record, 'the ledger records the ./utilities/localization.js entry-point deprecation');
-  assert.equal(record.replacement.kind, 'entry-point');
-  assert.equal(record.replacement.name, './localization.js');
-  assert.match(record.replacement.usage, /from '@aceshooting\/lyra-ui\/localization\.js'/);
-  assert.equal(record.removalNotBefore, '23.0.0');
+  assert.ok(!state.metadata.exportDeprecations.some(entry => entry.kind === 'entry-point' && entry.name === './utilities/localization.js'));
+  assert.equal(fs.existsSync(path.join(packageDir, 'src/utilities/localization.ts')), false);
+  assert.equal(state.packageJson.exports['./utilities/localization.js'], undefined);
 
-  // The superset rule the migration depends on: every name the deprecated entry exports is
-  // exported by the replacement too, as a value or a type exactly as before, so moving an import
-  // is a specifier rename and nothing else. The identical-binding half is proven at runtime by
-  // check-localization-slices and the package-entrypoint browser test.
-  const deprecated = sourceExportKinds('src/utilities/localization.ts');
+  const evidence = fs.readFileSync(path.join(history, '22.0.0/evidence.json.gz'));
+  assert.equal(sha256(evidence), capture.evidenceArchiveSha256);
+  const archive = decodeEvidence(evidence);
+  const input = capture.inputs.find(entry => entry.origin === 'source-export' && entry.path === 'packages/lyra-ui/src/localization.ts');
+  const source = Buffer.from(archive.payloads[input.sha256], 'base64');
+  assert.equal(sha256(source), input.sha256);
+  // Preserve all published canonical bindings, including the former utility re-exports.
+  const published = sourceExportKinds('src/localization.ts', source.toString('utf8'));
   const replacement = sourceExportKinds('src/localization.ts');
-  assert.ok(deprecated.size > 0);
-  for (const [name, isType] of deprecated) {
-    assert.ok(replacement.has(name), `src/localization.ts must also export ${name}`);
-    assert.equal(replacement.get(name), isType, `${name} keeps its value/type kind on localization.js`);
+  assert.ok(published.size > 0);
+  for (const [name, isType] of published) {
+    assert.ok(replacement.has(name), `src/localization.ts must still export ${name}`);
+    assert.equal(replacement.get(name), isType, `${name} keeps its published value/type kind`);
   }
 });
 

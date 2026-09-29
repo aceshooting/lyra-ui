@@ -39,13 +39,13 @@ export const Gallery: Story = {
   `,
 };
 
-export const StartAndLegacyIconSlots: Story = {
-  name: 'Canonical and legacy icon slots',
+export const StartAndCaptionSlots: Story = {
+  name: 'Leading icons and rich captions',
   parameters: {
     docs: {
       description: {
         story:
-          'Use the canonical start slot for a leading icon. The unnamed slot is a deprecated leading-icon alias: it keeps working until a later major release removes it, and start takes precedence if both are filled.',
+          'Use the start slot for a leading icon and the caption slot for rich supporting text. A slotted caption takes precedence over the caption attribute.',
       },
     },
   },
@@ -54,8 +54,9 @@ export const StartAndLegacyIconSlots: Story = {
       <lr-stat label="Canonical start" value="128">
         <span slot="start" aria-hidden="true">◆</span>
       </lr-stat>
-      <lr-stat label="Deprecated unnamed slot" value="42">
-        <span aria-hidden="true">◇</span>
+      <lr-stat label="Rich caption" value="42" caption="Attribute caption">
+        <span slot="start" aria-hidden="true">◇</span>
+        <strong slot="caption">Last 30 days</strong>
       </lr-stat>
     </div>
   `,

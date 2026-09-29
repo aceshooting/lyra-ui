@@ -5,14 +5,14 @@ import '../xml-viewer/xml-viewer.js';
 import '../notebook-viewer/notebook-viewer.js';
 import '../../media/image-viewer/image-viewer.js';
 import '../../media/av-player/av-player.js';
-import { clearDocumentRenderers, findDocumentRenderer, type DocumentFile } from './registry.js';
+import { clearDocumentRenderers, findDocumentRenderer, type LyraDocumentFile } from './registry.js';
 import type { LyraDocumentViewer } from './document-viewer.js';
 
 afterEach(() => {
   clearDocumentRenderers();
 });
 
-const MSG_FILE: DocumentFile = {
+const MSG_FILE: LyraDocumentFile = {
   name: 'quarterly-update.msg',
   mimeType: 'application/vnd.ms-outlook',
   src: 'https://example.test/quarterly-update.msg',

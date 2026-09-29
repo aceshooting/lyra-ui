@@ -5,7 +5,6 @@ import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
@@ -37,7 +36,7 @@ export type {
   TextSelectDetail,
 } from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -50,7 +49,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_terminalDownload, LYRA_DEFAULT_terminalHighlightLine, LYRA_DEFAULT_terminalLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 interface TerminalCell {
   char: string;
@@ -105,12 +103,6 @@ const TONE_BACKGROUND_VAR: Record<LyraHighlightTone, string> = {
   danger: 'var(--lr-terminal-highlight-danger-bg, var(--lr-color-danger-quiet))',
   neutral: 'var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface))',
 };
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
-}
 
 function plainTextOfLine(line: TerminalLine): string {
   return line.cells.map((c) => c.char).join('');
@@ -308,12 +300,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    wrap: ['withoutWrap', invertAlias, invertAlias],
-    copyable: ['withoutCopyButton', invertAlias, invertAlias],
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) normalize to a
    *  1..10,000 range; total retained cells and cells per line have independent hard ceilings. */
@@ -321,14 +307,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */
   @property({ type: Boolean, attribute: 'without-wrap', reflect: true }) withoutWrap = false;
-  /** Soft-wraps long lines; `false` keeps each line on one horizontally scrollable row.
-   *  @deprecated Use `without-wrap`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) wrap = true;
   /** Hides the copy-to-clipboard toolbar button. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
-  /** Renders the copy-to-clipboard toolbar button.
-   *  @deprecated Use `without-copy-button`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
   @property({ type: Boolean, reflect: true }) downloadable = false;
   @property() filename = 'terminal.log';
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
@@ -361,13 +341,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    * stay, so use `frame="plain"` to drop the chrome.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Tightens the toolbar's padding/gap and each rendered line's inline padding for a terminal
-   *  embedded in an already-padded transcript row -- same convention as `lr-task-list`'s and
-   *  `lr-thinking-panel`'s `compact`. Defaults to `false`, i.e. the full padding. Purely a density
-   *  knob: the card border and background stay, so use `frame="plain"` to drop the chrome.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps `[part="base"]`'s border, corner radius, and raised surface; `'plain'` removes all

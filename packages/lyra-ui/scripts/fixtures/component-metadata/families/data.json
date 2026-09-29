@@ -1,0 +1,161 @@
+{
+  "family": "data",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-funnel"
+    ],
+    "published-stable": [
+      "lr-calendar",
+      "lr-context-meter",
+      "lr-document-library",
+      "lr-env-list",
+      "lr-file-tree",
+      "lr-flow-canvas",
+      "lr-flow-controls",
+      "lr-flow-minimap",
+      "lr-flow-node",
+      "lr-gauge",
+      "lr-graph-query-builder",
+      "lr-heatmap",
+      "lr-pagination",
+      "lr-sequence-strip",
+      "lr-sparkline",
+      "lr-stat",
+      "lr-table",
+      "lr-timeline",
+      "lr-timeline-item",
+      "lr-tree",
+      "lr-word-cloud"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [
+      "lr-data-grid"
+    ],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-condition-builder",
+      "lr-flow-run-status",
+      "lr-tree-item"
+    ]
+  },
+  "deprecations": [
+    {
+      "tag": "lr-context-meter",
+      "kind": "event",
+      "name": "lr-segment-activate",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-segment-activate-request",
+        "usage": "addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-data-grid",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-document-library",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-sequence-strip",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-sequence-strip",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-sparkline",
+      "kind": "part",
+      "name": "base",
+      "since": "8.0.0",
+      "replacement": {
+        "kind": "part",
+        "name": "sparkline",
+        "usage": "::part(sparkline)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "attribute",
+      "name": "accessible-label",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-table",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
+    }
+  ]
+}

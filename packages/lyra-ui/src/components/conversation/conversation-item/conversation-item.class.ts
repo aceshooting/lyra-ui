@@ -8,16 +8,10 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
-import {
-  autocorrectConverter,
-  normalizeAutocorrect,
-  presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
-  spellcheckConverter,
-} from '../../../internal/converters.js';
+import { autocorrectConverter, normalizeAutocorrect, spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -100,12 +94,6 @@ function defaultFormatTimestamp(
       : { month: 'short', day: 'numeric', year: 'numeric' }
   ).format(date);
 }
-
-/** Whether a `size` sits on the dense tier (`s` or smaller) the deprecated `compact` reads as. */
-const isDenseSize = (value: unknown): boolean => {
-  const step = normalizeSize(value as LyraSize);
-  return step === 's' || step === 'xs' || step === '2xs';
-};
 
 export interface LyraConversationItemEventMap {
   'lr-select': CustomEvent<ConversationItemSelectDetail>;
@@ -247,10 +235,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => (value ? 's' : 'm'), isDenseSize],
-    renamable: ['withoutRename', invertAlias, invertAlias],
-  };
 
   /** Stable domain identity included in selection and rename request details. */
   @property({ attribute: 'conversation-id' }) conversationId = '';
@@ -292,33 +276,10 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /**
-   * Deprecated boolean spelling of `size="s"`: setting it applies `size="s"`, and clearing it
-   * restores `size="m"`; it reads `true` while `size` is `s` or smaller. Setting it logs a one-time
-   * development warning.
-   *
-   * @deprecated Use `size="s"`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true }) compact = false;
-
   /** Turns off inline rename: the rename button never renders and the row can never enter its
    *  editing state. Set while a rename is already open, the in-progress edit is cancelled
    *  (discarded, like Escape) rather than left committable. */
   @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
-
-  /**
-   * Deprecated inverted alias of `without-rename` (`withoutRename`): `renamable="false"` equals
-   * `without-rename`, and removing it restores the default. Setting it logs a one-time development
-   * warning.
-   *
-   * @deprecated Use `without-rename`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  renamable = true;
 
   /** Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as false. */

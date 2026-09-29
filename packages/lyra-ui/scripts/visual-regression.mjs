@@ -33,6 +33,7 @@ import {
   visualCapturePlan,
 } from './visual-regression-shard.mjs';
 import { loadVisualStory } from './visual-story-readiness.mjs';
+import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -40,8 +41,7 @@ const staticRoot = join(repoRoot, 'storybook-static');
 const indexPath = join(staticRoot, 'index.json');
 const baselineDir = join(packageRoot, 'visual-baselines');
 const outputRootDir = join(packageRoot, '.visual-diff-output');
-const manifestPath = fileURLToPath(new URL('../visual-baselines/manifest.json', import.meta.url));
-const visualManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+const visualManifest = assembleVisualManifest(readVisualManifestSources({ packageDir: packageRoot }));
 const VISUAL_AXES = new Map(visualManifest.axes.map((axis) => [axis.name, axis]));
 const VISUAL_STORIES = visualManifest.stories;
 const EXPECTED_TAGS_BY_STORY = new Map(VISUAL_STORIES.map((story) => [story.id, []]));

@@ -300,7 +300,6 @@ export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
   'lr-bubble-chart',
   'lr-chart',
   'lr-doughnut-chart',
-  'lr-geojson-view',
   'lr-geojson-viewer',
   'lr-graph',
   'lr-histogram',

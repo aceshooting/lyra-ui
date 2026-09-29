@@ -2,9 +2,8 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraTranscriptEntry } from '../transcript-feed/transcript-feed.class.js';
 import type { AudioVisualizerState } from '../audio-visualizer/audio-visualizer.class.js';
 import type { LyraPushToTalkEventMap } from '../push-to-talk/push-to-talk.class.js';
@@ -104,9 +103,6 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showCapture: ['withoutCapture', invertAlias, invertAlias],
-  };
 
   private _state: RealtimeConnectionState = 'disconnected';
   @property({ reflect: true, converter: CONNECTION_STATE })
@@ -144,20 +140,6 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
    *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
   @property({ type: Boolean, attribute: 'without-capture', reflect: true }) withoutCapture = false;
 
-  /**
-   * Deprecated inverted alias of `without-capture` (`withoutCapture`): `show-capture="false"` equals
-   * `without-capture`, and removing it restores the default. Setting it logs a one-time development
-   * warning.
-   *
-   * @deprecated Use `without-capture`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    attribute: 'show-capture',
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  showCapture = true;
   /** Accessible name for the session shell. Omitting it localizes the default
    *  `realtimeSessionLabel` message; an explicit empty string (`label=""` or `.label = ''`)
    *  suppresses that default and renders no label. A host `aria-label` wins over both. */

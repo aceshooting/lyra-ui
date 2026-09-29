@@ -11,6 +11,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { sourceEventMapReferences } from './check-event-contracts.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifestFile = path.join(packageDir, 'custom-elements.json');
@@ -98,7 +99,14 @@ function referencedTypeSymbols(typeText) {
   ].sort(byName);
 }
 
-function collectElements(manifest) {
+function sharedClassNames(manifest) {
+  return new Set((manifest.modules ?? []).filter((module) => module.path?.endsWith('-shared.ts'))
+    .flatMap((module) => module.declarations ?? [])
+    .filter((declaration) => declaration.kind === 'class' && declaration.customElement !== true)
+    .map((declaration) => declaration.name));
+}
+
+function collectElements(manifest, eventMapReferences) {
   if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.modules)) {
     throw new TypeError('Custom Elements Manifest must contain a modules array');
   }
@@ -204,6 +212,7 @@ function collectElements(manifest) {
 
   elements.sort((a, b) => a.tagName.localeCompare(b.tagName));
   const byClassName = new Map(elements.map((element) => [element.className, element]));
+  const sharedClasses = sharedClassNames(manifest);
 
   function eventMapOwner(element, visited = new Set()) {
     if (element.eventNames.length === 0) return undefined;
@@ -228,6 +237,24 @@ function collectElements(manifest) {
     const owner = eventMapOwner(element);
     element.eventMapName = owner ? `${owner.className}EventMap` : undefined;
     element.eventMapSpecifier = owner?.specifier;
+    if (owner && sharedClasses.has(owner.superclassName)) {
+      const reference = eventMapReferences.get(owner.tagName);
+      if (!reference || typeof reference.name !== 'string' || !identifierPattern.test(reference.name)) {
+        throw new Error(`${owner.tagName}: shared superclass requires an exported source EventMap reference`);
+      }
+      const sourceSpecifier = moduleSpecifier(reference.module);
+      if (reference.exportedFrom !== undefined) moduleSpecifier(reference.exportedFrom);
+      // Keep an existing public class-module re-export of the same interface identity when one
+      // exists, rather than introducing a private implementation path into framework imports.
+      const publicOwner = elements.find((candidate) => {
+        const candidateReference = eventMapReferences.get(candidate.tagName);
+        return candidateReference?.name === reference.name && candidateReference.module === reference.module &&
+          candidateReference.exportedFrom !== undefined &&
+          moduleSpecifier(candidateReference.exportedFrom) === candidate.specifier;
+      });
+      element.eventMapName = reference.name;
+      element.eventMapSpecifier = publicOwner?.specifier ?? sourceSpecifier;
+    }
   }
 
   return elements;
@@ -569,8 +596,8 @@ declare global {
 `;
 }
 
-export function generateFrameworkTypes(manifest) {
-  const elements = collectElements(manifest);
+export function generateFrameworkTypes(manifest, { eventMapReferences = new Map() } = {}) {
+  const elements = collectElements(manifest, eventMapReferences);
   if (elements.length === 0) {
     throw new Error('Custom Elements Manifest contains no custom-element declarations');
   }
@@ -584,7 +611,13 @@ export function generateFrameworkTypes(manifest) {
 
 export function generate({ write = true } = {}) {
   const manifest = expandManifestInheritance(JSON.parse(readFileSync(manifestFile, 'utf8')));
-  const output = generateFrameworkTypes(manifest);
+  const sharedClasses = sharedClassNames(manifest);
+  const sharedOwners = { modules: manifest.modules.map((module) => ({
+    ...module,
+    declarations: (module.declarations ?? []).filter((declaration) => sharedClasses.has(declaration.superclass?.name)),
+  })) };
+  const eventMapReferences = sourceEventMapReferences(sharedOwners);
+  const output = generateFrameworkTypes(manifest, { eventMapReferences });
   if (write) {
     for (const [relative, text] of output) {
       writeFileSync(path.join(packageDir, relative), text);

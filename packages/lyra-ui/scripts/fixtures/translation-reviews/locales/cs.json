@@ -1,0 +1,359 @@
+{
+  "locale": "cs",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:91ea27244eb837b9bae7156f72a9fd5ca7631a05751805d74b48de5c44775d17"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Original cs catalog drafted from DEFAULT_STRINGS in source order, then checked for complete coverage, exact placeholders, locale CLDR plural categories, and syntax. No upstream translated text was copied. Updated 2026-09-27 for statusIncomplete (\"Incomplete\"), the visible status text of a tool call that ended without a result (an interrupted stream or a cancelled run), and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"), the matching lr-tool-call-block header verb. Both were translated in source order, reusing this catalog's own established tool-call wording from the neighbouring statusDenied and toolCallBlockHeaderDenied entries and preserving the single {name} placeholder with this catalog's existing spacing convention; neither is identical to the English source, so no allowlist entry was required. No upstream translated text was consulted; no human, native-speaker, or independent review is claimed for this increment. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "Independent review of the complete cs catalog checked every family for meaning, UI register, terminology, placeholders, ordering, plural forms, and English leftovers. Corrections were applied before approval; remaining exact matches are technical or formatting-only. Updated 2026-09-26: every englishIdenticalAllowlist rationale was replaced with an entry-specific classification (formatting template, keyboard key name, internationally standardized abbreviation/unit, Jupyter notebook convention, or a named cross-language cognate/loanword) instead of the previous single boilerplate sentence; the allowlist was also re-derived from a fresh comparison against the current catalog so it exactly matches englishIdenticalMessagePaths() again. AI-assisted; no human or native-speaker review is claimed for this pass. Updated 2026-09-27 for statusIncomplete (\"Incomplete\") and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"). An AI-assisted review, separate from the contributor that drafted them, checked both values in this catalog for the meaning of a tool call that ended without a result (an interrupted stream or a cancelled run), UI register, consistency with this catalog's neighbouring tool-call status and block-header wording, and exact single {name} preservation; both were approved without correction and no English-identical allowlist entry was required. No human or native-speaker review is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('×') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is the box-plot statistics notation for the first quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is the box-plot statistics notation for the third quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "browserFrameControllerAgent",
+      "rationale": "'Agent' names the agent span-kind / the browser frame's controlling agent; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "Uses the single-letter coordinate-geometry axis variables ('x'/'y'), which are mathematical symbols rather than English words, plus formatting punctuation; both are locale-invariant."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':  ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "commitCardLabel",
+      "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "connectorManagerKindMcp",
+      "rationale": "MCP names the protocol and 'server' is the standard Czech technical noun for this service role; the label is correctly identical to English."
+    },
+    {
+      "messagePath": "contactViewerTypeFax",
+      "rationale": "'Fax' names the facsimile contact-method type; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypeInternet",
+      "rationale": "'Internet' names the proper name of the global public network, essentially never translated in any locale; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "emojiPickerGridLabel",
+      "rationale": "'Emoji' names the Japanese-origin loanword for a pictographic character, adopted unchanged worldwide; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+ -') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the file-format acronym Portable Document Format, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTypeVideo",
+      "rationale": "'Video' names the video media type; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "'{rate} tok/s' names a token-generation throughput rate, using the ML-community abbreviation \"tok/s\" (tokens per second); Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusTokenCount",
+      "rationale": "'{count} token' names a single generated-token count, using the ML/LLM jargon word \"token\" unmodified; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "inputLabel",
+      "rationale": "'Text' names the plain-text input type; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "'Alt' is the conventional printed/spoken name of the Alt modifier key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdBackspaceWord",
+      "rationale": "'Backspace' is the conventional printed/spoken name of the Backspace key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "'Command' is the conventional printed/spoken name of the Mac keyboard's Command key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "'Ctrl' is the conventional printed/spoken name of the Ctrl modifier key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "'Control' is the conventional printed/spoken name of the Control modifier key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "'Del' is the conventional printed/spoken name of the Delete key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteWord",
+      "rationale": "'Delete' is the conventional printed/spoken name of the Delete key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEndWord",
+      "rationale": "'End' is the conventional printed/spoken name of the End key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEnterWord",
+      "rationale": "'Enter' is the conventional printed/spoken name of the Enter key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "'Esc' is the conventional printed/spoken name of the Esc key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeWord",
+      "rationale": "'Escape' is the conventional printed/spoken name of the Escape key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdHomeWord",
+      "rationale": "'Home' is the conventional printed/spoken name of the Home key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdMinusWord",
+      "rationale": "'Minus' is the conventional printed/spoken name of the keypad Minus key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "'Option' is the conventional printed/spoken name of the Mac keyboard's Option key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "'PgDn' is the conventional printed/spoken name of the Page Down key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownWord",
+      "rationale": "'Page Down' is the conventional printed/spoken name of the Page Down key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "'PgUp' is the conventional printed/spoken name of the Page Up key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpWord",
+      "rationale": "'Page Up' is the conventional printed/spoken name of the Page Up key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPlusWord",
+      "rationale": "'Plus' is the conventional printed/spoken name of the keypad Plus key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "'Shift' is the conventional printed/spoken name of the Shift modifier key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "'Tab' is the conventional printed/spoken name of the Tab key; Czech keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "knowledgeBasePermissionEditor",
+      "rationale": "'Editor' names the editor permission/role level; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', : ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "model",
+      "rationale": "'Model' names a trained AI/ML model; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', , ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "responsivePanel",
+      "rationale": "'Panel' names a UI panel/pane region; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "spanKindAgent",
+      "rationale": "'Agent' names the agent span-kind / the browser frame's controlling agent; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindEmbedding",
+      "rationale": "'Embedding' names the embedding span-kind in a trace (a vector-embedding model call); Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the AI/ML span-kind acronym for a large language model call, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "textareaLabel",
+      "rationale": "'Text' names the plain-text input type; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "videoPlaylistUntitled",
+      "rationale": "'Video {position}' names a numbered, still-untitled video item; Czech uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

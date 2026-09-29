@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -15,7 +16,9 @@ import {
   type AnchoredOverlayRuntime,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-tour', 'show-progress');
 
 class TourComposedFocusTarget extends HTMLElement {
   constructor() {
@@ -657,7 +660,7 @@ describe('lr-tour', () => {
     expect(tour.activeIndex, 'preventDefault() must keep activeIndex unchanged').to.equal(0);
   });
 
-  it('fires the deprecated lr-tour-step-change right after lr-tour-step-change-request with an equal detail', async () => {
+  it('does not emit the retired event and preserves canonical pre-commit veto behavior', async () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(3)} open></lr-tour>
@@ -666,76 +669,21 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
-    const seen: { type: string; cancelable: boolean; detail: unknown }[] = [];
-    const record = (event: Event): void => {
-      seen.push({ type: event.type, cancelable: event.cancelable, detail: (event as CustomEvent).detail });
-    };
-    tour.addEventListener('lr-tour-step-change-request', record);
-    tour.addEventListener('lr-tour-step-change', record);
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-tour', kind: 'event', name: 'lr-tour-step-change' }],
-      async () => {
-        tour.next();
-        await tour.updateComplete;
-      },
-    );
-    expect(warnings, 'a listener that does not veto is not a deprecated use').to.have.length(0);
-    expect(seen.map((entry) => entry.type)).to.deep.equal(['lr-tour-step-change-request', 'lr-tour-step-change']);
-    expect(seen.every((entry) => entry.cancelable)).to.be.true;
-    expect(seen[0]!.detail).to.deep.equal(seen[1]!.detail);
-    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail copy').to.be.false;
+    let requestedAt = -1;
+    let oldEvents = 0;
+    tour.addEventListener('lr-tour-step-change-request', () => { requestedAt = tour.activeIndex; });
+    tour.addEventListener('lr-tour-step-change', (event) => { oldEvents += 1; event.preventDefault(); });
+    tour.next();
+    await tour.updateComplete;
+    expect(requestedAt, 'the request is delivered before the active index changes').to.equal(0);
+    expect(oldEvents).to.equal(0);
     expect(tour.activeIndex).to.equal(1);
-  });
 
-  it('lets a listener bound only to the deprecated lr-tour-step-change still veto, warning once', async () => {
-    const el = (await fixture(
-      html`<div>
-        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
-        ${targetButtons(3)}
-      </div>`,
-    )) as HTMLDivElement;
-    const tour = el.querySelector('lr-tour') as LyraTour;
+    tour.addEventListener('lr-tour-step-change-request', (event) => event.preventDefault(), { once: true });
+    tour.next();
     await tour.updateComplete;
-    const veto = (event: Event): void => event.preventDefault();
-    tour.addEventListener('lr-tour-step-change', veto);
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-tour', kind: 'event', name: 'lr-tour-step-change' }],
-      async () => {
-        tour.next();
-        await tour.updateComplete;
-        tour.goToStep(2);
-        await tour.updateComplete;
-      },
-    );
-    tour.removeEventListener('lr-tour-step-change', veto);
-    expect(tour.activeIndex, 'the alias veto keeps the current step').to.equal(0);
-    expect(warnings.map((warning) => warning.key)).to.deep.equal(['lyra-deprecated:lr-tour:event:lr-tour-step-change']);
-  });
-
-  it('does not warn when the canonical lr-tour-step-change-request vetoes', async () => {
-    const el = (await fixture(
-      html`<div>
-        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
-        ${targetButtons(3)}
-      </div>`,
-    )) as HTMLDivElement;
-    const tour = el.querySelector('lr-tour') as LyraTour;
-    await tour.updateComplete;
-    let aliasSawVeto: boolean | undefined;
-    tour.addEventListener('lr-tour-step-change-request', (event) => event.preventDefault());
-    tour.addEventListener('lr-tour-step-change', (event) => {
-      aliasSawVeto = event.defaultPrevented;
-    });
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-tour', kind: 'event', name: 'lr-tour-step-change' }],
-      async () => {
-        tour.next();
-        await tour.updateComplete;
-      },
-    );
-    expect(warnings).to.have.length(0);
-    expect(aliasSawVeto, 'the alias is a separate event with its own veto state').to.equal(false);
-    expect(tour.activeIndex).to.equal(0);
+    expect(tour.activeIndex, 'only the canonical event can veto navigation').to.equal(1);
+    expect(oldEvents).to.equal(0);
   });
 
   it('next() on the last step ends the tour with reason "completed" and does not fire lr-tour-step-change-request', async () => {
@@ -1678,31 +1626,25 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     expect(tour.withoutProgress).to.be.true;
-    expect(tour.showProgress).to.be.false;
     expect(!!tour.shadowRoot!.querySelector('[part="progress"]')).to.be.false;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect(popover.getAttribute('aria-describedby') ?? '').to.not.contain('progress');
   });
 
-  it('keeps the deprecated show-progress alias working: show-progress="false" equals without-progress and warns once', async () => {
-    const usage = { tag: 'lr-tour', kind: 'property', name: 'showProgress' } as const;
-    let aliasTour!: LyraTour;
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      const el = (await fixture(
-        html`<div>
-          <lr-tour .steps=${makeSteps(3)} open show-progress="false"></lr-tour>
-          ${targetButtons(3)}
-        </div>`,
-      )) as HTMLDivElement;
-      aliasTour = el.querySelector('lr-tour') as LyraTour;
-      await aliasTour.updateComplete;
-      aliasTour.showProgress = false;
-      await aliasTour.updateComplete;
-    });
-    expect(warnings.map((warning) => warning.key)).to.deep.equal(['lyra-deprecated:lr-tour:property:showProgress']);
-    expect(aliasTour.showProgress).to.be.false;
-    expect(aliasTour.withoutProgress).to.be.true;
-    expect(!!aliasTour.shadowRoot!.querySelector('[part="progress"]')).to.be.false;
+  it('ignores show-progress and retains canonical progress visibility and accessible reference', async () => {
+    const legacy = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)} open show-progress="false"></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const legacyTour = legacy.querySelector('lr-tour') as LyraTour;
+    await legacyTour.updateComplete;
+    Reflect.set(legacyTour, 'showProgress', false);
+    await legacyTour.updateComplete;
+    expect(legacyTour.withoutProgress).to.be.false;
+    expect(legacyTour.shadowRoot!.querySelector('[part="progress"]')).to.not.equal(null);
+    expect(legacyTour.shadowRoot!.querySelector('[part="popover"]')!.getAttribute('aria-describedby') ?? '').to.contain('progress');
 
     const canonical = (await fixture(
       html`<div>
@@ -1714,63 +1656,8 @@ describe('lr-tour', () => {
     await canonicalTour.updateComplete;
     const describedBy = (tour: LyraTour): string | null =>
       tour.shadowRoot!.querySelector('[part="popover"]')!.getAttribute('aria-describedby');
-    const describedTokens = (tour: LyraTour): number => (describedBy(tour) ?? '').split(/\s+/).filter(Boolean).length;
-    expect(describedTokens(aliasTour)).to.equal(describedTokens(canonicalTour));
-    expect(describedBy(aliasTour) ?? '').to.not.contain('progress');
-    expect(!!canonicalTour.shadowRoot!.querySelector('[part="progress"]')).to.equal(
-      !!aliasTour.shadowRoot!.querySelector('[part="progress"]'),
-    );
-  });
-
-  it('never warns for the default progress indicator or the canonical attribute', async () => {
-    const usage = { tag: 'lr-tour', kind: 'property', name: 'showProgress' } as const;
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      const el = (await fixture(
-        html`<div>
-          <lr-tour .steps=${makeSteps(2)} open></lr-tour>
-          <lr-tour .steps=${makeSteps(2)} without-progress></lr-tour>
-          ${targetButtons(2)}
-        </div>`,
-      )) as HTMLDivElement;
-      for (const tour of el.querySelectorAll('lr-tour')) await (tour as LyraTour).updateComplete;
-    });
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps show-progress and without-progress in step, the last write winning in either direction', async () => {
-    const usage = { tag: 'lr-tour', kind: 'property', name: 'showProgress' } as const;
-    let canonicalLast!: LyraTour;
-    let aliasLast!: LyraTour;
-    let written!: LyraTour;
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      const el = (await fixture(
-        html`<div>
-          <lr-tour .steps=${makeSteps(2)} open show-progress without-progress></lr-tour>
-          <lr-tour .steps=${makeSteps(2)} without-progress show-progress></lr-tour>
-          <lr-tour .steps=${makeSteps(2)}></lr-tour>
-          ${targetButtons(2)}
-        </div>`,
-      )) as HTMLDivElement;
-      const tours = el.querySelectorAll<LyraTour>('lr-tour');
-      canonicalLast = tours[0]!;
-      aliasLast = tours[1]!;
-      written = tours[2]!;
-      await canonicalLast.updateComplete;
-      await aliasLast.updateComplete;
-      written.showProgress = false;
-      await written.updateComplete;
-    });
-    expect(warnings.map((warning) => warning.key)).to.deep.equal(['lyra-deprecated:lr-tour:property:showProgress']);
-    expect(canonicalLast.withoutProgress, 'the later without-progress attribute wins').to.be.true;
-    expect(canonicalLast.showProgress).to.be.false;
-    expect(!!canonicalLast.shadowRoot!.querySelector('[part="progress"]')).to.be.false;
-    expect(aliasLast.withoutProgress, 'the later show-progress attribute wins').to.be.false;
-    expect(aliasLast.showProgress).to.be.true;
-
-    expect(written.withoutProgress, 'a property write forwards to the canonical').to.be.true;
-    written.withoutProgress = false;
-    await written.updateComplete;
-    expect(written.showProgress, 'the alias syncs back from the canonical').to.be.true;
+    expect(!!canonicalTour.shadowRoot!.querySelector('[part="progress"]')).to.be.false;
+    expect(describedBy(canonicalTour) ?? '').to.not.contain('progress');
   });
 
   it('the Previous button is disabled (present) on the first step; hidePrevious removes it entirely', async () => {
@@ -2387,7 +2274,7 @@ describe('lr-tour', () => {
     await expect(tour).to.be.accessible();
   });
 
-  it('is accessible with showProgress disabled and a hidden Previous control', async () => {
+  it('is accessible with progress disabled and a hidden Previous control', async () => {
     const el = (await fixture(
       html`<div>
         <lr-tour .steps=${makeSteps(2, () => ({ hidePrevious: true }))} open without-progress></lr-tour>

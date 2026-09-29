@@ -278,3 +278,13 @@ export const Narrow320px: Story = {
       </lr-file-input>
     `),
 };
+
+export const SmallSizeOverrides: Story = {
+  render: () => html`
+    <lr-file-input
+      size="s"
+      label="Attachments"
+      style="--lr-file-input-compact-padding: var(--lr-space-s); --lr-file-input-compact-gap: var(--lr-space-2xs); --lr-file-input-compact-font-size: var(--lr-font-size-sm)"
+    ></lr-file-input>
+  `,
+};

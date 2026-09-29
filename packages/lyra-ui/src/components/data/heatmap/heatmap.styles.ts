@@ -172,7 +172,7 @@ export const styles = css`
     background: var(--lr-heatmap-tooltip-bg, var(--_lr-heatmap-tooltip-bg));
     color: var(
       --lr-heatmap-tooltip-color,
-      var(--lr-heatmap-tooltip-text, var(--_lr-heatmap-tooltip-color))
+      var(--_lr-heatmap-tooltip-color)
     );
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;

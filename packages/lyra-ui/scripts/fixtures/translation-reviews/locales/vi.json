@@ -1,0 +1,311 @@
+{
+  "locale": "vi",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:0386797fac28dc0b4131a8cf2614a02d8937d3c96bd1f6ce86b57af6f14c7af3"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Complete original Vietnamese catalog authored from DEFAULT_STRINGS in the project localization workflow; all 1315 messages are represented with locale-specific wording, placeholders, and plural forms. No upstream translated text was copied. Translation was AI-assisted; no human or native-speaker translator identity is claimed. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "Independent AI-assisted review, separate from the contributor that drafted this catalog, covered all 12 slices for meaning, UI register, terminology, and English leftovers. A source-parser pass confirmed all 1315 keys in DEFAULT_STRINGS order, placeholder names, and plural-category shape; the 71 exact English matches were individually classified with message-specific rationales as formatting templates, standard technical labels, keyboard names, units, or the Jupyter prompt convention. Corrections were applied before approval. AI-assisted; no human or native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "The accessibleLabelSeparator is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "'{rate}×' formats a dynamic playback rate with the multiplication sign; it contains no natural-language words."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is retained as the conventional short technical/proper-name label for boxPlotQ1; it is a term/acronym rather than an English sentence."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is retained as the conventional short technical/proper-name label for boxPlotQ3; it is a term/acronym rather than an English sentence."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "The calloutAnnouncementWithContext is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "The carouselSlideAnnouncement is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "'. ' is a punctuation-only separator between separately localized or dynamic announcement fragments."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "'{label}: {coordinates}' separates a dynamic point label from its coordinate template with punctuation; there is no English connective text."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "'x {x}, y {y}' is a coordinate template: x and y are conventional axis symbols and the braces contain dynamic coordinates."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "'. ' is a punctuation-only separator between separately localized or dynamic announcement fragments."
+    },
+    {
+      "messagePath": "chartTypeRadar",
+      "rationale": "'Radar' names the radar-chart visualization type and is the conventional loan term in this Vietnamese chart selector."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "The chartValueLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "The chartValuePercentageLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "This value only arranges dynamic postal-address fields onto separate lines; field values and locale-specific text are supplied by the contact data."
+    },
+    {
+      "messagePath": "contactViewerEmailLabel",
+      "rationale": "'Email' is a conventional Vietnamese contact-field label for electronic mail and is used as a technical loanword in this interface."
+    },
+    {
+      "messagePath": "contactViewerTypeFax",
+      "rationale": "'Fax' is the conventional Vietnamese label for the standardized fax contact type, used as a loanword rather than English sentence text."
+    },
+    {
+      "messagePath": "contactViewerTypeInternet",
+      "rationale": "'Internet' is the internationally used proper name for the network contact type and is conventionally retained in Vietnamese."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "The contactViewerTypedValue is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "The contextMeterLabeledSummary is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "The contextMeterSegmentLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "The emailViewerGroupAddress is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "The entityChipWithType is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "'B' is the standard B file-size unit abbreviation, not translatable interface prose."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "'GB' is the standard GB file-size unit abbreviation, not translatable interface prose."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "'KB' is the standard KB file-size unit abbreviation, not translatable interface prose."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "'MB' is the standard MB file-size unit abbreviation, not translatable interface prose."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "'TB' is the standard TB file-size unit abbreviation, not translatable interface prose."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "'+{additions} -{deletions}' uses conventional plus/minus diff notation for dynamic addition and deletion counts, with no English words."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the standardized Portable Document Format acronym shown as a file-type label, not natural-language prose."
+    },
+    {
+      "messagePath": "fileTypeVideo",
+      "rationale": "'Video' is a commonly used Vietnamese media-type loanword; here it is a short file/playlist label, not an untranslated sentence."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "The fileTypeWithSize is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "The flowRunStatusCount is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "The flowRunStepStatus is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "The flowStatusWithDetail is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "The flowStatusWithDuration is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "The gaugeValueLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "generationStatusTokenCount",
+      "rationale": "'token' is the established Vietnamese technical term for an LLM token; this is a dynamic count label rather than untranslated sentence prose."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "The graphTypedNode is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "The heatmapCalendarCellLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "The ingestionItemProgressLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "'Alt' is the conventional printed name of the Alt keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdBackspaceWord",
+      "rationale": "'Backspace' is the conventional printed name of the Backspace keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "'Command' is the conventional printed name of the Command keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "'Ctrl' is the conventional printed name of the Control keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "'Control' is the conventional printed name of the Control keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "'Del' is the conventional printed name of the Delete keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdEnterWord",
+      "rationale": "'Enter' is the conventional printed name of the Enter keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "'Esc' is the conventional printed name of the Escape keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "'Option' is the conventional printed name of the Option keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "'PgDn' is the conventional printed name of the Page Down keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "'PgUp' is the conventional printed name of the Page Up keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "'Shift' is the conventional printed name of the Shift keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "'Tab' is the conventional printed name of the Tab keyboard key; shortcut help keeps this physical key label recognizable instead of replacing it with translated prose."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "The liteChartBarLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "The neighborGroupHeader is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "The neighborRowLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "'In [{count}]' is Jupyter Notebook's fixed execution-count prompt marker; the viewer reproduces the notebook convention verbatim, so this label remains unchanged across locales."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "'In [ ]' is Jupyter Notebook's fixed empty execution-count prompt marker; the viewer reproduces the notebook convention verbatim, so this label remains unchanged across locales."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "The paginationEmptySummary is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "'{percent}%' is a dynamic zoom percentage format; the percent sign and placeholder are notation, not English prose."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "The resultFieldLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "The retrievalFilterChipLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "retrievalModeVector",
+      "rationale": "'Vector' is the established mathematical/technical term used as a Vietnamese retrieval-mode label; no English sentence prose is present."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "The sequenceStripCategoryCount is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "The showMoreCollapsed is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the established AI/ML acronym for a large-language-model span kind and is used internationally without translation."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "The statTrendAnnouncement is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "The traceTreeMetricLabel is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "The traceTreeSpanStatus is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "videoPlaylistUntitled",
+      "rationale": "'Video' is a commonly used Vietnamese media-type loanword; here it is a short file/playlist label, not an untranslated sentence."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "The wordCloudWordAnnouncement is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

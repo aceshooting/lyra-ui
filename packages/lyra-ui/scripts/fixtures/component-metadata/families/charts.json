@@ -1,0 +1,40 @@
+{
+  "family": "charts",
+  "assignments": {
+    "new-component-experimental": [],
+    "published-stable": [
+      "lr-bar-chart",
+      "lr-box-plot",
+      "lr-bubble-chart",
+      "lr-chart",
+      "lr-doughnut-chart",
+      "lr-histogram",
+      "lr-line-chart",
+      "lr-lite-chart",
+      "lr-pie-chart",
+      "lr-polar-area-chart",
+      "lr-radar-chart",
+      "lr-scatter-chart"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": []
+  },
+  "deprecations": [
+    {
+      "tag": "lr-lite-chart",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
+    }
+  ]
+}

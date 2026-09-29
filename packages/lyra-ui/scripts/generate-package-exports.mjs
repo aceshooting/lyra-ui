@@ -136,7 +136,6 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/icons.ts',
   'src/utilities/index.ts',
   'src/utilities/layered-layout.ts',
-  'src/utilities/localization.ts',
   'src/utilities/lyra-element.ts',
   'src/utilities/overlay-manager.ts',
   'src/utilities/positioner.ts',

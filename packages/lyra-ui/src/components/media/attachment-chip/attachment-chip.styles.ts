@@ -30,11 +30,7 @@ export const styles = css`
     --_lr-attachment-chip-compact-thumbnail-only-padding: var(--lr-size-0-125rem);
   }
 
-  /* The compact density: size s and the steps below it, or the deprecated compact attribute. One
-     :host([x]) selector per spelling keeps every branch at the same specificity. Once upgraded the
-     two are kept in sync, so the compact selector only matters while size is absent; that
-     qualifier sits in :where() to add no specificity. */
-  :host([compact]:where(:not([size]))) [part='base'],
+  /* Small density uses size s and the steps below it. Each spelling keeps equal specificity. */
   :host([size='2xs']) [part='base'],
   :host([size='xs']) [part='base'],
   :host([size='s']) [part='base'],
@@ -45,7 +41,6 @@ export const styles = css`
     font-size: var(--lr-attachment-chip-compact-font-size, var(--_lr-attachment-chip-compact-font-size));
     gap: var(--lr-attachment-chip-compact-gap, var(--_lr-attachment-chip-compact-gap));
   }
-  :host([compact]:where(:not([size]))) [part='thumbnail'],
   :host([size='2xs']) [part='thumbnail'],
   :host([size='xs']) [part='thumbnail'],
   :host([size='s']) [part='thumbnail'],
@@ -55,9 +50,6 @@ export const styles = css`
   }
   /* Action buttons keep the shared hit-area floor at the compact density, though the thumbnail
      shrinks. */
-  :host([compact]:where(:not([size]))) [part='retry-button'],
-  :host([compact]:where(:not([size]))) [part='preview-button'],
-  :host([compact]:where(:not([size]))) [part='remove-button'],
   :host([size='2xs']) [part='retry-button'],
   :host([size='xs']) [part='retry-button'],
   :host([size='s']) [part='retry-button'],

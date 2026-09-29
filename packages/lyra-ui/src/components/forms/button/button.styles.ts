@@ -133,7 +133,7 @@ export const styles = css`
   :host([appearance="quiet"]) {
     --_lr-button-resolved-color: var(
       --lr-button-quiet-color,
-      var(--lr-button-quiet-text, var(--_lr-button-quiet-text))
+      var(--_lr-button-quiet-text)
     );
     --_lr-button-resolved-border: var(
       --lr-button-quiet-border,
@@ -247,7 +247,7 @@ export const styles = css`
   }
   :host([appearance="quiet"]) [part~="base"] {
     background: transparent;
-    color: var(--lr-button-quiet-color, var(--lr-button-quiet-text, var(--_lr-button-quiet-text)));
+    color: var(--lr-button-quiet-color, var(--_lr-button-quiet-text));
     border-color: var(--lr-button-quiet-border, var(--_lr-button-quiet-border));
   }
   /* Two selectors for one state: the native <button> matches :disabled (own attribute or fieldset
@@ -271,7 +271,7 @@ export const styles = css`
   [part~="base"]:not(:disabled, [aria-disabled="true"]):hover {
     background: var(
       --lr-button-hover-bg,
-      var(--lr-button-hover-background, var(--_lr-button-hover-background))
+      var(--_lr-button-hover-background)
     );
     /* Plain chromatic text has a qualified pointer foreground; the remaining appearances
        retain their resting foreground. The public hover hook also owns the pressed state.
@@ -282,7 +282,7 @@ export const styles = css`
   [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
     background: var(
       --lr-button-active-bg,
-      var(--lr-button-active-background, var(--_lr-button-active-background))
+      var(--_lr-button-active-background)
     );
     color: var(--lr-button-hover-color, var(--_lr-button-active-color, var(--_lr-button-resolved-color)));
     transform: scale(var(--lr-button-active-scale, 0.9875));

@@ -48,7 +48,7 @@ export const styles = css`
     border-radius: var(--lr-export-button-radius, var(--lr-radius));
     background: var(
       --lr-export-button-bg,
-      var(--lr-export-button-background, var(--_lr-export-button-background))
+      var(--_lr-export-button-background)
     );
     color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;
@@ -62,7 +62,7 @@ export const styles = css`
   :where([part~='trigger']):hover:where(:not(:disabled)) {
     background: var(
       --lr-export-button-hover-bg,
-      var(--lr-export-button-hover-background, var(--_lr-export-button-hover-background))
+      var(--_lr-export-button-hover-background)
     );
     color: var(--lr-export-button-hover-color, var(--_lr-export-button-hover-color));
     border-color: var(--lr-export-button-hover-border, var(--_lr-export-button-hover-border));
@@ -72,7 +72,7 @@ export const styles = css`
   :where([part~='trigger']):active:where(:not(:disabled)) {
     background: var(
       --lr-export-button-active-bg,
-      var(--lr-export-button-active-background, var(--_lr-export-button-active-background))
+      var(--_lr-export-button-active-background)
     );
     color: var(--lr-export-button-active-color, var(--_lr-export-button-active-color));
     border-color: var(--lr-export-button-active-border, var(--_lr-export-button-active-border));

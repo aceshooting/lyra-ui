@@ -299,7 +299,9 @@ Release blockers for new components, bugs in existing ones. Full rules:
   `check:framework-types`).
 - New `@deprecated`: a `component-metadata.json#deprecations` record (`kind: 'slot-content'` for
   deprecated content in a surviving slot, whose description must not start with "Deprecated"); a
-  deprecated entry point or exported type goes in `#exportDeprecations`. A record after the current
+  deprecated entry point or exported type goes in `#exportDeprecations`. This JSON is generated:
+  author member records in `scripts/fixtures/component-metadata/families/<family>.json` and export
+  records in the adjacent `exports.json`, then run `pnpm component-metadata`. A record after the current
   release tag uses `since: 'unreleased'` (stamped on the version bump; otherwise `since` ≤ current
   version); `removalNotBefore` clears one whole later major; no doc, JSDoc or message names the
   pending version.

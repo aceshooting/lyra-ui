@@ -8,10 +8,8 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated event** `lr-feedback-submit` since `22.0.0`; use event `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated part** `edit-button__control` since `21.1.0`; use part `::part(edit-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated part** `regenerate-button__control` since `21.1.0`; use part `::part(regenerate-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,8 +86,7 @@ own tab stop, and its toggles contribute no actions while grouped.
 `regenerate-button-control` / `edit-button-control` (each built-in action's own native `<button>` —
 as of 16.0.0 both are composed `<lr-icon-button>`s, so `--lr-icon-button-*` retunes them and the
 toolbar's roving tab stop is leased on the native control rather than the host), and `feedback` (the
-embedded `lr-message-feedback`). Deprecated aliases: `regenerate-button__control` /
-`edit-button__control` (use the hyphenated names; removed in 23.0.0), on the same nodes.
+embedded `lr-message-feedback`).
 
 The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
 shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a

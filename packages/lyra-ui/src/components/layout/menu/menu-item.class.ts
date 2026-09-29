@@ -13,7 +13,6 @@ import {
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -83,10 +82,6 @@ export interface LyraMenuItemEventMap {
   'lr-menu-item-state-change': CustomEvent<MenuItemStateChangeDetail>;
   /** Cancelable proposed next `checked` value of a checkbox or radio item. */
   'lr-menu-item-change-request': CustomEvent<MenuItemChangeDetail>;
-  /** @deprecated Use `lr-menu-item-change-request`; removal not before 23.0.0. Fired right after it
-   *  from the same activation, with an equal detail; either event's `preventDefault()` vetoes the
-   *  proposed `checked` value. */
-  'lr-menu-item-change': CustomEvent<MenuItemChangeDetail>;
 }
 /**
  * `<lr-menu-item>` — a single action row inside `<lr-menu>`'s default
@@ -187,12 +182,7 @@ export interface LyraMenuItemEventMap {
  * prevent it to retain the current `checked` value. The usual
  * the parent menu's `lr-select` still follows, so selection and close
  * behavior are unchanged. Never fired for `type="normal"`. Unchecking a radio's group siblings
- * once this event commits fires no event of its own. Fires before `lr-menu-item-change`, from the
- * same activation; either event may veto.
- * @event lr-menu-item-change - Deprecated cancelable alias of `lr-menu-item-change-request`, kept
- * firing unchanged right after it with an equal `detail: { value, checked }`; either event may
- * veto, and a veto through this alias logs a one-time development warning. Removal not before
- * 23.0.0.
+ * once this event commits fires no event of its own.
  * @event lr-menu-item-state-change - Something that decides whether this item is navigable changed:
  *   `disabled`, `loading`, `hidden`, `inert`, or `aria-hidden`. `detail: { disabled, hidden, inert }`,
  *   where `disabled` is the effective `disabled || loading`. `<lr-menu>` consumes this to repair its
@@ -581,7 +571,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   /** Activates this item through its owning menu (no-op while `disabled` or `loading`). Called by
    *  this element's own click handler, and by `<lr-menu>`'s Enter/Space keydown handling.
    *  For `type="checkbox"`, first emits the cancelable proposed `lr-menu-item-change-request`
-   *  (then its deprecated `lr-menu-item-change` alias); it commits
+   *  and commits
    *  that proposed `checked` state only when the event is not prevented, then fires selection --
    *  see the class doc. For `type="radio"`, an already-`checked` item skips the proposal entirely
    *  (no event, no state change -- native radio semantics) and simply falls through to selection;
@@ -612,10 +602,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.owningMenu?.activate(this);
   }
 
-  /** Emits the cancelable `lr-menu-item-change-request` proposal, then its deprecated
-   *  `lr-menu-item-change` alias with its own equal detail, and reports whether neither vetoed. The
-   *  alias is dispatched unconditionally so a listener bound only to the old name can still veto,
-   *  exactly as one bound to the canonical name can. */
+  /** Emits the cancelable proposal before changing checked state and reports whether it was accepted. */
   private proposeChecked(checked: boolean): boolean {
     const value = this.value;
     const request = this.emit(
@@ -623,15 +610,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       { value, checked },
       { cancelable: true }
     );
-    const deprecatedAlias = this.emit(
-      'lr-menu-item-change',
-      { value, checked },
-      { cancelable: true }
-    );
-    if (deprecatedAlias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-menu-item-change', 'lr-menu-item-change-request');
-    }
-    return !request.defaultPrevented && !deprecatedAlias.defaultPrevented;
+    return !request.defaultPrevented;
   }
 
   /** Opens this item's submenu. A no-op without one, or while `disabled`/`loading`. `focus` uses

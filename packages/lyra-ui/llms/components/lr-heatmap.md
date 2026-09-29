@@ -7,10 +7,9 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated css-property** `--lr-heatmap-tooltip-text` since `21.1.0`; use css-property `--lr-heatmap-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated event** `lr-cell-click` since `21.1.0`; use event `addEventListener('lr-cell-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -395,9 +394,7 @@ For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and us
 For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
 **Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-activate` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode; its
-deprecated alias `lr-cell-click` still fires right after it from the same activation with an equal
-detail — use `lr-cell-activate`; removed in 23.0.0),
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
 `lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
 from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
 against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
@@ -456,8 +453,7 @@ dedicated token distinct from both the focus ring and the annotation ring so a h
 independently). `--lr-heatmap-tooltip-bg` (default
 `var(--lr-color-surface)`) and `--lr-heatmap-tooltip-color` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. Deprecated alias: `--lr-heatmap-tooltip-text` (use
-`--lr-heatmap-tooltip-color`; removed in 23.0.0), still read as its fallback. `--lr-heatmap-sticky-label-bg` (default
+directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
 `var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`

@@ -158,11 +158,11 @@ The entry points, then:
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
 - **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 288
-  root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
+  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer`, `lr-geojson-view`, and `lr-geojson-viewer`. Those always need their own subpath import,
+  `lr-knowledge-graph-explorer` and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
   isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.

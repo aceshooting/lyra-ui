@@ -15,24 +15,63 @@ const QUALIFICATION_LEDGER_SCHEMA_VERSION = 1;
 export function validateVisualQualificationManifest(manifest, inventory) {
   const findings = [];
   if (manifest?.schemaVersion !== 1) findings.push('visual qualification manifest must use schemaVersion 1');
+  const axes = new Map();
+  if (!Array.isArray(manifest?.axes) || !manifest.axes.length) findings.push('visual axes must be a nonempty array');
+  for (const axis of Array.isArray(manifest?.axes) ? manifest.axes : []) {
+    if (typeof axis?.name !== 'string' || !axis.name || axes.has(axis.name)) {
+      findings.push('visual axis names must be nonempty and unique');
+      continue;
+    }
+    axes.set(axis.name, axis);
+    if (!['tracked-baseline', 'evidence-only'].includes(axis.artifactPolicy)) findings.push(`${axis.name}: unknown visual axis artifact policy`);
+  }
+  const profiles = manifest?.coverageProfiles;
+  if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) findings.push('visual coverage profiles must be an object');
+  for (const [name, profile] of Object.entries(profiles ?? {})) {
+    if (!Array.isArray(profile?.axes) || !profile.axes.length) {
+      findings.push(`coverage profile ${name} must capture at least one axis`);
+      continue;
+    }
+    const covered = new Set(profile.axes);
+    const exempted = new Set(Object.keys(profile.exemptions ?? {}));
+    for (const axis of [...covered, ...exempted]) if (!axes.has(axis)) findings.push(`coverage profile ${name} names unknown axis ${axis}`);
+    for (const axis of axes.keys()) if (!covered.has(axis) && !exempted.has(axis)) findings.push(`coverage profile ${name} neither captures nor exempts ${axis}`);
+  }
   const tags = new Set((inventory.components ?? []).map((component) => component.tag));
   const stories = new Map();
-  for (const story of manifest?.stories ?? []) {
+  if (!Array.isArray(manifest?.stories)) findings.push('visual stories must be an array');
+  for (const story of Array.isArray(manifest?.stories) ? manifest.stories : []) {
     if (typeof story?.id !== 'string' || stories.has(story.id)) {
       findings.push(`visual manifest has an invalid or duplicate story id ${String(story?.id)}`);
       continue;
     }
     stories.set(story.id, story);
-    if (!manifest?.coverageProfiles?.[story.profile]) findings.push(`${story.id}: unknown visual coverage profile`);
+    const profile = profiles && Object.hasOwn(profiles, story.profile) ? profiles[story.profile] : undefined;
+    if (!profile) findings.push(`${story.id}: unknown visual coverage profile`);
+    if (story.forcedColorsProbe) {
+      if (!['intrinsic-color', 'swatch-colors', 'chart-encodings'].includes(story.forcedColorsProbe)) findings.push(`${story.id}: unknown forced-colors pixel probe`);
+      if (!Array.isArray(profile?.axes) || !profile.axes.includes('forced-colors')) findings.push(`${story.id}: forced-colors probe is never exercised by its profile`);
+    }
+    if (story.narrowProbe) {
+      if (story.narrowProbe !== 'viewport-fit') findings.push(`${story.id}: unknown narrow probe`);
+      if (!Array.isArray(profile?.axes) || !profile.axes.includes('narrow')) findings.push(`${story.id}: narrow probe is never exercised by its profile`);
+    }
+    if (story.comparisonPolicy === 'evidence-only') {
+      if (typeof story.comparisonReason !== 'string' || !story.comparisonReason.trim()) findings.push(`${story.id}: evidence-only comparison policy needs a review reason`);
+    } else if (story.comparisonPolicy !== undefined) findings.push(`${story.id}: unknown comparison policy`);
   }
   const enrolledStories = new Set();
   for (const [tag, ids] of Object.entries(manifest?.tagCoverage ?? {})) {
     if (!tags.has(tag)) findings.push(`${tag}: visual manifest tag is not in the public inventory`);
     if (!Array.isArray(ids) || ids.length === 0) findings.push(`${tag}: visual enrollment must name at least one story`);
-    for (const id of ids ?? []) {
+    for (const id of Array.isArray(ids) ? ids : []) {
       if (!stories.has(id)) findings.push(`${tag}: visual enrollment references unknown story ${id}`);
       enrolledStories.add(id);
     }
+  }
+  for (const [id, reason] of Object.entries(manifest?.untaggedStories ?? {})) {
+    if (!stories.has(id)) findings.push(`untagged visual exemption names unknown story ${id}`);
+    if (typeof reason !== 'string' || !reason.trim()) findings.push(`${id}: untagged visual exemption needs a reason`);
   }
   for (const id of stories.keys()) {
     if (!enrolledStories.has(id) && typeof manifest?.untaggedStories?.[id] !== 'string') {
@@ -44,7 +83,7 @@ export function validateVisualQualificationManifest(manifest, inventory) {
     if (review.reviewer !== null || review.reviewedAt !== null) findings.push('pending visual review must not invent a reviewer or date');
     if (manifest?.provenance?.humanVisualReview !== false) findings.push('pending visual review requires provenance.humanVisualReview=false');
   } else if (review?.status === 'complete') {
-    if (!review.reviewer || !/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt ?? '')) {
+    if (typeof review.reviewer !== 'string' || !review.reviewer.length || !/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt ?? '')) {
       findings.push('complete visual review requires reviewer and ISO review date');
     }
     if (manifest?.provenance?.humanVisualReview !== true) findings.push('complete visual review requires provenance.humanVisualReview=true');

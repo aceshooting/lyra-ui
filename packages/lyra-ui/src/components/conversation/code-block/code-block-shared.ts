@@ -786,7 +786,7 @@ function renderCodeBlockHeader(
           ? html`
               <lr-icon-button
                 part=${options.copyAppearance === 'icon' ? 'copy-button copy-button-icon' : 'copy-button copy-button-text'}
-                exportparts="button:copy-button-control, button:copy-button__control"
+                exportparts="button:copy-button-control"
                 aria-label=${codeBlockCopyLabel(
                   options.localize,
                   options.justCopied,

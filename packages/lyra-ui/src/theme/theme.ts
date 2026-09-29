@@ -1573,24 +1573,34 @@ const STYLE_FOLLOW: readonly string[] = [
 ];
 const STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: string; dark: string }>> = {
   'lyra': { light: '#ffffff', dark: '#1a1a1a' },
+  'data': { light: '#ffffff', dark: '#101820' },
+  'high-contrast': { light: '#ffffff', dark: '#000000' },
   'material': { light: '#fff8f5', dark: '#18120f' },
   'shadcn': { light: '#ffffff', dark: '#0a0a0a' },
+  'terminal': { light: '#fcfdf9', dark: '#0e1713' },
 };
 const STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {
   light: [
   '#ffffff',
   '#f6f8fa',
+  '#f2f5f8',
   '#fff8f5',
   '#f8eeea',
   '#fcf2ed',
   '#f2e7e0',
   '#ecdfd7',
   '#fafafa',
+  '#fcfdf9',
+  '#f1f5eb',
 ],
   dark: [
   '#1a1a1a',
   '#22272e',
   '#2b3038',
+  '#101820',
+  '#192630',
+  '#202e39',
+  '#000000',
   '#18120f',
   '#251d19',
   '#302621',
@@ -1599,6 +1609,9 @@ const STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string
   '#3a2f29',
   '#0a0a0a',
   '#171717',
+  '#0e1713',
+  '#18271e',
+  '#203227',
 ],
 };
 const STYLE_GEMSTONES: Readonly<Record<string, string>> = {

@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated event** `lr-reorder` since `21.1.0`; use event `addEventListener('lr-reorder-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-reorder-item` (same section below)
@@ -65,9 +65,7 @@ availability remain valid after dispatch — or, while `controlled`, starts wait
 own re-render to reach that `order` instead. `preventDefault()` holds the move instead: the
 internal list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
 `:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
-Synchronous finalize/revert calls from the canceling listener are supported. Deprecated alias:
-`lr-reorder` (use `lr-reorder-request`; removed in 23.0.0) — it still fires right after the request
-with an equal detail, and either event may hold the move.
+Synchronous finalize/revert calls from the canceling listener are supported.
 
 **Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()` (or, while
 `controlled`, starts waiting for the host's own re-render instead of moving the DOM itself).
@@ -119,8 +117,7 @@ between rows.
 - `value: string = ''` — required unique, nonempty stable identifier included in the parent's
   `lr-reorder-request` order array.
 - `aria-label` (host attribute) — names the row and is appended to each repeated move action's
-  accessible name in place of the row content. Deprecated alias: `accessible-label` (use
-  `aria-label`; removed in 23.0.0).
+  accessible name in place of the row content.
 - `accessibleLabel?: string` (attribute: false) — explicit row identity used while the host has no
   `aria-label`; when neither is present the item derives a bounded accessible text projection from
   its row content.
@@ -148,9 +145,7 @@ call it the same way.
 as of 16.0.0 the move controls are composed `<lr-icon-button>`s: the old part names keep placement,
 rotation and activation, while background, radius, hover/press mixes, focus ring and hit-area floor
 come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
-win over those defaults), `content` (default-slot wrapper). Deprecated aliases:
-`move-up-button__control` and `move-down-button__control` (use `move-up-button-control` and
-`move-down-button-control`; removed in 23.0.0).
+win over those defaults), `content` (default-slot wrapper).
 
 **Border reaches the composed move controls the same way background/color/radius do.** This
 component paints no resting border on either move control, so it relays no

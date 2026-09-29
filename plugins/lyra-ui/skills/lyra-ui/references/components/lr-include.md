@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated property** `cache` / `cache` since `21.1.0`; use property `without-cache`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,8 +57,7 @@ the source is loading and being sanitized. Build error UI from `lr-include-error
   bounded cache; `without-cache` opts this instance out of both deduplication and retention.
   Fragment ids are deliberately not part of the key: `/partial.html#one` and `/partial.html#two`
   share only the fragmentless fetch/sanitize work, then select and clone independently. Request
-  mode, byte cap, and sanitizer profile are part of the key. Deprecated alias: `cache` (use
-  `without-cache`; `cache="false"` equals `without-cache`; removed in 23.0.0).
+  mode, byte cap, and sanitizer profile are part of the key.
 
 **Methods:** `reload(): Promise<void>` invalidates the retained remote document for this URL and
 mode, then loads it again. A same-page source is simply re-cloned from its current DOM.

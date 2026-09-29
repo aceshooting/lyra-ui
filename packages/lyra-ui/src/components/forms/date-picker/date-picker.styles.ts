@@ -271,11 +271,11 @@ export const styles = css`
   }
   [part="weekdays"] {
     display: grid;
-    grid-template-columns: repeat(7, var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size))));
+    grid-template-columns: repeat(7, var(--lr-date-picker-cell-size, var(--_lr-cell-size)));
   }
   :host([with-week-numbers]) [part="weekdays"] {
     margin-inline-start: calc(
-      var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size))) + var(--lr-border-width-thin)
+      var(--lr-date-picker-cell-size, var(--_lr-cell-size)) + var(--lr-border-width-thin)
     );
   }
   [part="weekday"] {
@@ -286,7 +286,7 @@ export const styles = css`
   }
   [part="grid"] {
     display: grid;
-    grid-template-columns: repeat(7, var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size))));
+    grid-template-columns: repeat(7, var(--lr-date-picker-cell-size, var(--_lr-cell-size)));
   }
   .calendar-body {
     display: flex;
@@ -294,15 +294,15 @@ export const styles = css`
   }
   [part="weeknumbers"] {
     display: grid;
-    grid-template-rows: repeat(6, var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size))));
+    grid-template-rows: repeat(6, var(--lr-date-picker-cell-size, var(--_lr-cell-size)));
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="weeknumber"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
-    block-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
+    min-inline-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
+    block-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
@@ -310,8 +310,8 @@ export const styles = css`
     display: contents;
   }
   [part~="day"] {
-    inline-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
-    block-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
+    inline-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
+    block-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
     border: none;
     background: none;
     cursor: pointer;
@@ -346,8 +346,8 @@ export const styles = css`
     color: var(--lr-date-picker-range-color, var(--lr-color-text));
   }
   [part="day-placeholder"] {
-    inline-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
-    block-size: var(--lr-date-picker-cell-size, var(--lr-cell-size, var(--_lr-cell-size)));
+    inline-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
+    block-size: var(--lr-date-picker-cell-size, var(--_lr-cell-size));
   }
   [part~="day-today"] {
     outline: var(--lr-border-width-thin) solid

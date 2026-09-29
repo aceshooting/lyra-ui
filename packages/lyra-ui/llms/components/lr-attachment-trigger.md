@@ -7,12 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
-- **Deprecated part** `menu-trigger__control` since `21.1.0`; use part `::part(menu-trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated part** `trigger__control` since `21.1.0`; use part `::part(trigger-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,10 +38,9 @@ capability as a row.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
-- `accessibleLabel?: string` (attribute `accessible-label`, deprecated) — overrides either trigger shape's localized
+- `accessibleLabel?: string` (property only, deprecated; removal not before 24.0.0) — overrides either trigger shape's localized
   accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the
-  trigger with the host `aria-label`. The `accessible-label` attribute spelling is deprecated (use
-  `aria-label`; removed in 23.0.0) — it still sets `accessibleLabel`, so a host `aria-label` wins over it.
+  trigger with the host `aria-label`.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 - `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
@@ -79,8 +75,7 @@ contained inside the trigger. Only the attachment events listed above cross the 
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
 `trigger-control` / `menu-trigger-control` (each trigger's own native `<button>` — as of 16.0.0
 both triggers are composed `<lr-icon-button>`s, so `trigger`/`menu-trigger` name those hosts and the
-painted surface sits one boundary deeper; deprecated aliases on the same nodes: `trigger__control`
-and `menu-trigger__control`, removed in 23.0.0),
+painted surface sits one boundary deeper),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).

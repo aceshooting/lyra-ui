@@ -8,7 +8,6 @@ import type {
   PromptStudioVersion,
 } from './prompt-studio.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -644,7 +643,7 @@ it('emits a cancelable reorder request before applying an immutable next message
     'user',
     'assistant',
   ]);
-  expect(emitted).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder', 'lr-change-request', 'lr-change']);
+  expect(emitted).to.deep.equal(['lr-message-reorder-request', 'lr-change-request', 'lr-change']);
 });
 
 it('honors a prevented message reorder without mutating state or emitting lr-change', async () => {
@@ -781,57 +780,38 @@ it('mixes the selected version hover and press from --lr-prompt-studio-version-s
   }
 });
 
-describe('lr-prompt-studio deprecated lr-message-reorder alias', () => {
-  const REORDER: readonly DeprecatedUsage[] = [{ tag: 'lr-prompt-studio', kind: 'event', name: 'lr-message-reorder' }];
+describe('lr-prompt-studio retired lr-message-reorder event', () => {
   const moveFirstDown = (el: LyraPromptStudio): void =>
     el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="move-message-down"]')[0]!.click();
 
-  it('still fires the alias after the canonical request, with an equal but separate cancelable detail', async () => {
+  it('ignores the old event while the canonical request still commits the move', async () => {
     const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
-    const seen: CustomEvent<PromptStudioMessageReorderDetail>[] = [];
-    el.addEventListener('lr-message-reorder-request', (event) => seen.push(event));
-    el.addEventListener('lr-message-reorder', (event) => seen.push(event));
-    const warnings = await captureDeprecationWarnings(REORDER, async () => {
-      moveFirstDown(el);
-      await el.updateComplete;
-    });
-    expect(seen.map((event) => event.type)).to.deep.equal(['lr-message-reorder-request', 'lr-message-reorder']);
-    expect(seen.map((event) => event.cancelable)).to.deep.equal([true, true]);
-    expect(seen[1]!.detail).to.deep.equal(seen[0]!.detail);
-    expect(seen[1]!.detail === seen[0]!.detail).to.be.false;
-    expect(warnings, 'listening without vetoing is not a deprecated use').to.have.length(0);
+    const canonical: CustomEvent<PromptStudioMessageReorderDetail>[] = [];
+    let retiredCount = 0;
+    let changes = 0;
+    el.addEventListener('lr-message-reorder-request', (event) => canonical.push(event));
+    el.addEventListener('lr-change', () => changes++);
+    (el as HTMLElement).addEventListener('lr-message-reorder', () => retiredCount++);
+    moveFirstDown(el);
+    await el.updateComplete;
+    expect(canonical).to.have.length(1);
+    expect(canonical[0]!.cancelable).to.equal(true);
+    expect(retiredCount).to.equal(0);
+    expect(changes).to.equal(1);
     expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'system', 'assistant']);
   });
 
-  it('lets a listener bound only to the alias veto the move, warning once', async () => {
+  it('keeps canonical veto effective and the old event cannot veto or emit', async () => {
     const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
-    let changeCount = 0;
-    el.addEventListener('lr-change', () => changeCount++);
-    el.addEventListener('lr-message-reorder', (event) => event.preventDefault());
-    const warnings = await captureDeprecationWarnings(REORDER, async () => {
-      moveFirstDown(el);
-      await el.updateComplete;
-      moveFirstDown(el);
-      await el.updateComplete;
+    let retiredCount = 0;
+    (el as HTMLElement).addEventListener('lr-message-reorder', (event) => {
+      retiredCount++;
+      event.preventDefault();
     });
-    expect(changeCount).to.equal(0);
-    expect(el.messages.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-prompt-studio:event:lr-message-reorder']);
-  });
-
-  it('does not warn when the canonical request is the one that vetoes', async () => {
-    const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio reorderable .messages=${reorderMessages}></lr-prompt-studio>`);
     el.addEventListener('lr-message-reorder-request', (event) => event.preventDefault());
-    let aliasSawPrevented: boolean | undefined;
-    el.addEventListener('lr-message-reorder', (event) => {
-      aliasSawPrevented = event.defaultPrevented;
-    });
-    const warnings = await captureDeprecationWarnings(REORDER, async () => {
-      moveFirstDown(el);
-      await el.updateComplete;
-    });
-    expect(aliasSawPrevented).to.equal(false);
-    expect(warnings).to.have.length(0);
+    moveFirstDown(el);
+    await el.updateComplete;
+    expect(retiredCount).to.equal(0);
     expect(el.messages.map((message) => message.id)).to.deep.equal(['system', 'user', 'assistant']);
   });
 });

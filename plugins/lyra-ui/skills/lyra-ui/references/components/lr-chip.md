@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated event** `lr-chip-select` since `21.1.0`; use event `addEventListener('lr-chip-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip-group` (same section below)
@@ -87,9 +87,7 @@ relied on `<lr-chip selected>` to create an action.
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-toggle-request`
 (`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
 Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
-Calling `preventDefault()` keeps the current `selected` state unchanged). Deprecated alias:
-`lr-chip-select` (use `lr-chip-toggle-request`; removed in 23.0.0) — it still fires right after the
-request with an equal detail, and preventing either keeps the current state
+Calling `preventDefault()` keeps the current `selected` state unchanged).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`

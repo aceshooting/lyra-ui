@@ -18,7 +18,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-agent-run-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-agent-run-radius, var(--lr-radius));
-    background: var(--lr-agent-run-bg, var(--lr-agent-run-background, var(--lr-color-surface)));
+    background: var(--lr-agent-run-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
   }
   /* Density escape for the dense size tier. Inline var() fallbacks rather than a

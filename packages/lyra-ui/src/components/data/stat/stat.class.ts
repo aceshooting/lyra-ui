@@ -7,7 +7,6 @@ import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -21,10 +20,6 @@ import { styles } from './stat.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** The sizes that select the compact density, which the deprecated `compact` alias reads back. */
-const COMPACT_SIZES: ReadonlySet<unknown> = new Set(['2xs', 'xs', 's', 'small']);
-const isCompactSize = (size: unknown): boolean => COMPACT_SIZES.has(size);
 
 export type StatGoodDirection = 'up' | 'down';
 export type StatOrientation = LyraOrientation;
@@ -78,9 +73,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * "metric row" / "KPI card" pattern common to dashboard UIs.
  *
  * @customElement lr-stat
- * @slot start - Leading icon. Takes precedence over the deprecated default slot when both are filled.
- * @slot - Deprecated leading-icon alias (removal not before 23.0.0), rendered only while `start` is
- *   empty; use `slot="start"`.
+ * @slot start - Leading icon.
  * @slot caption - Rich caption content (overrides the `caption` attribute).
  * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
@@ -89,7 +82,7 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * slotted descendant is never nested inside the whole-card link. Passive slotted content forwards
  * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
  * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
- * @csspart icon - Container for the `start` slot (or the deprecated default-slot icon).
+ * @csspart icon - Container for the `start` slot.
  * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
  *   label-less stat doesn't leave a blank line above the value.
  * @csspart value-row - Wrapper around the value and unit.
@@ -163,9 +156,6 @@ export class LyraStat extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (compact) => (compact ? 's' : undefined), isCompactSize],
-  };
 
   @property() label = '';
   /** Host accessible-name override forwarded to the linked anchor when `href` is safe. */
@@ -257,14 +247,6 @@ export class LyraStat extends LyraElement {
     this._size = normalized;
     this.requestUpdate('size', old);
   }
-  /**
-   * Deprecated spelling of the compact density: `compact` sets `size="s"`, clearing it removes
-   * the size, and any `size` at or below `s` reads back as `compact`. Setting it logs a one-time
-   * development warning.
-   *
-   * @deprecated Use `size="s"`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true }) compact = false;
   /** Container treatment — the shared `frame` vocabulary, not a fill. `'card'` (the default) keeps
    *  the bordered, filled, padded box that stretches to fill its parent; `'plain'` removes the
    *  border, background, padding, corner radius and the `block-size: 100%` stretch so the stat can
@@ -314,7 +296,7 @@ export class LyraStat extends LyraElement {
       const lightChildren = Array.from(this.children ?? []);
       this.hasIcon = lightChildren.some((el) => {
         const slotName = el.getAttribute('slot');
-        return slotName === null || slotName === 'start';
+        return slotName === 'start';
       });
       this.hasCaptionSlot = lightChildren.some((el) => el.getAttribute('slot') === 'caption');
       this.hasSparkSlot = lightChildren.some((el) => el.getAttribute('slot') === 'spark');
@@ -333,7 +315,7 @@ export class LyraStat extends LyraElement {
   private onIconSlotChange = (): void => {
     this.hasIcon = Array.from(this.children ?? []).some((el) => {
       const slotName = el.getAttribute('slot');
-      return slotName === null || slotName === 'start';
+      return slotName === 'start';
     });
   };
 
@@ -442,8 +424,7 @@ export class LyraStat extends LyraElement {
 
     const content = html`
       <span part="icon" ?hidden=${!this.hasIcon}
-        ><slot name="start" @slotchange=${this.onIconSlotChange}
-          ><slot @slotchange=${this.onIconSlotChange}></slot></slot
+        ><slot name="start" @slotchange=${this.onIconSlotChange}></slot
         ></span
       >
       <span part="label" id=${this.labelId} ?hidden=${!this.label}>${this.label}</span>

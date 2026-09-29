@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './document-viewer.js';
-import { createDocumentRendererRegistry, findDocumentRenderer, type DocumentFile, type DocumentRendererDefinition } from './registry.js';
+import { createDocumentRendererRegistry, findDocumentRenderer, type LyraDocumentFile, type LyraDocumentRendererDefinition } from './registry.js';
 import type { LyraDocumentViewer } from './document-viewer.js';
 import { AudioVideoPayload, RegisteredRenderer } from './document-viewer.stories.js';
 
@@ -14,10 +14,10 @@ it('renders the existing public factory registry story', async () => {
 
 for (const route of ['scalar', 'payload'] as const) {
   it(`accepts the public immutable registry factory through ${route} file binding`, async () => {
-    const file: DocumentFile = { name: 'Factory.xml', mimeType: ' APPLICATION/X-FACTORY ; charset=UTF-8 ', src: 'https://example.test/factory', alt: 'Factory details' };
-    const received: DocumentFile[] = [];
-    const render = (value: DocumentFile) => { received.push(value); return html`<p data-factory>Factory renderer</p>`; };
-    const definition = { render, capabilities: { anchors: ['node-path'] } } as DocumentRendererDefinition;
+    const file: LyraDocumentFile = { name: 'Factory.xml', mimeType: ' APPLICATION/X-FACTORY ; charset=UTF-8 ', src: 'https://example.test/factory', alt: 'Factory details' };
+    const received: LyraDocumentFile[] = [];
+    const render = (value: LyraDocumentFile) => { received.push(value); return html`<p data-factory>Factory renderer</p>`; };
+    const definition = { render, capabilities: { anchors: ['node-path'] } } as LyraDocumentRendererDefinition;
     const registry = createDocumentRendererRegistry([['application/x-factory', definition]]);
     const element = await fixture<LyraDocumentViewer>(html`<lr-document-viewer open
       .registry=${registry} .name=${file.name} .mimeType=${file.mimeType} .src=${file.src} .alt=${file.alt}
@@ -61,7 +61,7 @@ it('keeps a factory snapshot functional after source-definition edits and repeat
 
 it('preserves native Map snapshot safety, mutation isolation and replacement', async () => {
   let reads = 0;
-  const source = new Map<string, DocumentRendererDefinition>([['application/x-native', { render: () => html`<p data-native>Native</p>` }]]);
+  const source = new Map<string, LyraDocumentRendererDefinition>([['application/x-native', { render: () => html`<p data-native>Native</p>` }]]);
   Object.defineProperty(source, Symbol.iterator, { get() { reads++; throw new Error('custom iterator must not execute'); } });
   Object.defineProperty(source, 'entries', { get() { reads++; throw new Error('custom entries must not execute'); } });
   const element = await fixture<LyraDocumentViewer>(html`<lr-document-viewer open mime-type="application/x-native" .registry=${source}></lr-document-viewer>`);
@@ -87,7 +87,7 @@ it('does not execute unrecognized readonly-map getters or iterators', async () =
     [Symbol.iterator]() { reads++; throw new Error('unrecognized iterator'); }
   }
   const element = await fixture<LyraDocumentViewer>(html`<lr-document-viewer></lr-document-viewer>`);
-  element.registry = new Unrecognized() as unknown as ReadonlyMap<string, DocumentRendererDefinition>;
+  element.registry = new Unrecognized() as unknown as ReadonlyMap<string, LyraDocumentRendererDefinition>;
   await element.updateComplete;
   expect(reads).to.equal(0);
   expect(Array.isArray(element.registry)).to.be.true;
@@ -123,7 +123,7 @@ it('applies the same entry and record budgets to factory and native Map sources'
 it('does not execute native Map definition accessors at assignment', async () => {
   let reads = 0;
   const definition = Object.defineProperty({}, 'render', { enumerable: true, get() { reads++; throw new Error('unsafe definition getter'); } });
-  const source = new Map([['application/x-accessor', definition]]) as unknown as ReadonlyMap<string, DocumentRendererDefinition>;
+  const source = new Map([['application/x-accessor', definition]]) as unknown as ReadonlyMap<string, LyraDocumentRendererDefinition>;
   const element = await fixture<LyraDocumentViewer>(html`<lr-document-viewer .registry=${source}></lr-document-viewer>`);
   expect(reads).to.equal(0);
   expect(Object.keys(element.registry!.get('application/x-accessor')!)).to.deep.equal([]);

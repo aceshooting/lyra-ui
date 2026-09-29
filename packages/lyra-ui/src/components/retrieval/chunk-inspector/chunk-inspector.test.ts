@@ -599,8 +599,8 @@ it('formats finite numeric page locators with the effective locale while retaini
   expect(names[1]).to.include('Appendix — p. 3');
 });
 
-describe('lr-chunk-inspector deprecated lr-expand alias', () => {
-  it('fires lr-chunk-toggle, then the lr-expand alias with its own equal detail, in both directions', async () => {
+describe('lr-chunk-inspector retired lr-expand alias', () => {
+  it('fires lr-chunk-toggle, without the retired lr-expand alias, in both directions', async () => {
     const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
     const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
     const details = new Set<unknown>();
@@ -619,11 +619,9 @@ describe('lr-chunk-inspector deprecated lr-expand alias', () => {
     const id = chunks[0]!.id;
     expect(seen).to.deep.equal([
       { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: true }, cancelable: false },
-      { type: 'lr-expand', detail: { chunkId: id, expanded: true }, cancelable: false },
       { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: false }, cancelable: false },
-      { type: 'lr-expand', detail: { chunkId: id, expanded: false }, cancelable: false },
     ]);
-    expect(details.size, 'each event carries its own detail object').to.equal(4);
+    expect(details.size, 'each canonical event carries its own detail object').to.equal(2);
   });
 
   it('never warns for the non-cancelable alias', async () => {
@@ -640,7 +638,7 @@ describe('lr-chunk-inspector deprecated lr-expand alias', () => {
   });
 });
 
-describe('lr-chunk-inspector size and the deprecated compact alias', () => {
+describe('lr-chunk-inspector size and the retired compact alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-chunk-inspector', kind: 'property', name: 'compact' }];
   const observe = (el: LyraChunkInspector): string =>
     ['text', 'toggle', 'open-button']
@@ -648,7 +646,7 @@ describe('lr-chunk-inspector size and the deprecated compact alias', () => {
       .join('|');
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraChunkInspector>(markup);
 
-  it('renders dense rows for size="s" without a deprecation warning', async () => {
+  it('renders dense rows for size="s" with canonical defaults and no deprecation warning', async () => {
     let dense = '';
     let regular = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -658,65 +656,5 @@ describe('lr-chunk-inspector size and the deprecated compact alias', () => {
     expect(dense).to.equal('0|0|3');
     expect(regular).to.equal('3|3|3');
     expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact equal to size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let readback: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-chunk-inspector size="s" .chunks=${chunks}></lr-chunk-inspector>`));
-      alias = observe(await mount(html`<lr-chunk-inspector compact .chunks=${chunks}></lr-chunk-inspector>`));
-      const el = await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = observe(el);
-      readback = [el.size, el.compact, el.getAttribute('size'), el.hasAttribute('compact')];
-      // The canonical property syncs back into the alias, which reflects as it always did.
-      el.size = 'm';
-      await el.updateComplete;
-      readback.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(readback).to.deep.equal(['s', true, 's', true, false, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-chunk-inspector:property:compact',
-    ]);
-    expect(warnings[0]!.message).to.contain('size');
-  });
-
-  it('restores size="m" when compact is cleared or removed', async () => {
-    let regular = '';
-    let cleared = '';
-    let removed = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      regular = observe(await mount(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`));
-      const el = await mount(html`<lr-chunk-inspector compact .chunks=${chunks}></lr-chunk-inspector>`);
-      el.compact = false;
-      await el.updateComplete;
-      cleared = observe(el);
-      el.compact = true;
-      await el.updateComplete;
-      el.removeAttribute('compact');
-      await el.updateComplete;
-      removed = observe(el);
-    });
-    expect(cleared).to.equal(regular);
-    expect(removed).to.equal(regular);
-  });
-
-  it('lets the last authored spelling win when markup carries both', async () => {
-    const sizes: string[] = [];
-    await captureDeprecationWarnings(ALIAS, async () => {
-      for (const markup of [
-        html`<lr-chunk-inspector size="m" compact></lr-chunk-inspector>`,
-        html`<lr-chunk-inspector compact size="m"></lr-chunk-inspector>`,
-      ]) {
-        sizes.push((await mount(markup)).size);
-      }
-    });
-    expect(sizes).to.deep.equal(['s', 'm']);
   });
 });

@@ -7,7 +7,6 @@ import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraTraceTree } from '../trace-tree/trace-tree.class.js';
 import type { LyraGraphLegend } from '../../retrieval/graph-legend/graph-legend.class.js';
 import type { LyraHandoffDivider } from '../../conversation/handoff-divider/handoff-divider.class.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Trip Planner', kind: 'agent', startMs: 0, endMs: 900, status: 'success' },
@@ -660,84 +659,5 @@ describe('active-handoff pointer feedback', () => {
       () => getComputedStyle(active).backgroundColor === 'rgb(0, 51, 102)',
       'the released active handoff entry never returned to its active fill',
     );
-  });
-});
-
-describe('lr-agent-trace deprecated column aliases', () => {
-  const ALIASES: readonly DeprecatedUsage[] = [
-    { tag: 'lr-agent-trace', kind: 'property', name: 'showTokens' },
-    { tag: 'lr-agent-trace', kind: 'property', name: 'showCost' },
-    { tag: 'lr-agent-trace', kind: 'property', name: 'showBars' },
-  ];
-  const forwarded = (el: LyraAgentTrace): string => {
-    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
-    return JSON.stringify([tree.withTokens, tree.withCost, tree.withoutBars, el.withTokens, el.withCost, el.withoutBars]);
-  };
-
-  it('keeps show-tokens, show-cost and show-bars="false" working like the canonical names, warning once per alias', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let aliasReads = '';
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      canonical = forwarded(
-        await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} with-tokens with-cost without-bars></lr-agent-trace>`),
-      );
-      const aliased = await fixture<LyraAgentTrace>(
-        html`<lr-agent-trace .spans=${SPANS} show-tokens show-cost show-bars="false"></lr-agent-trace>`,
-      );
-      alias = forwarded(aliased);
-      aliasReads = JSON.stringify([aliased.showTokens, aliased.showCost, aliased.showBars]);
-      const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`);
-      el.showTokens = true;
-      el.showCost = true;
-      el.showBars = false;
-      await el.updateComplete;
-      property = forwarded(el);
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(aliasReads).to.equal(JSON.stringify([true, true, false]));
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-agent-trace:property:showTokens',
-      'lyra-deprecated:lr-agent-trace:property:showCost',
-      'lyra-deprecated:lr-agent-trace:property:showBars',
-    ]);
-  });
-
-  it('treats show-bars="false" exactly like without-bars, and a bare or removed show-bars like its absence', async () => {
-    let states: boolean[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      const off = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} show-bars="false"></lr-agent-trace>`);
-      const on = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} show-bars></lr-agent-trace>`);
-      off.removeAttribute('show-bars');
-      await off.updateComplete;
-      states = [on.withoutBars, off.withoutBars];
-    });
-    expect(states).to.deep.equal([false, false]);
-  });
-
-  it('applies the last write when both show-bars and without-bars are authored', async () => {
-    let states: boolean[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      const aliasLast = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} without-bars show-bars></lr-agent-trace>`);
-      const canonicalLast = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS} show-bars without-bars></lr-agent-trace>`);
-      states = [aliasLast.withoutBars, canonicalLast.withoutBars];
-    });
-    expect(states).to.deep.equal([false, true]);
-  });
-
-  it('syncs the deprecated names back from the canonical properties without warning', async () => {
-    let reads = '';
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`);
-      el.withTokens = true;
-      el.withCost = true;
-      el.withoutBars = true;
-      await el.updateComplete;
-      reads = JSON.stringify([el.showTokens, el.showCost, el.showBars]);
-    });
-    expect(reads).to.equal(JSON.stringify([true, true, false]));
-    expect(warnings).to.have.length(0);
   });
 });

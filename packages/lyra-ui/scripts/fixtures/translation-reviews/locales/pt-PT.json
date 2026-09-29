@@ -1,0 +1,419 @@
+{
+  "locale": "pt-PT",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:4900f2cb5d44e663f07ef92bbfdea101d17091831444ccf5874c26fcf5a4793c"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Original pt-PT catalog drafted from DEFAULT_STRINGS in source order, then checked for complete coverage, exact placeholders, locale CLDR plural categories, and syntax. No upstream translated text was copied. Updated 2026-09-26 for emojiPickerSearchPlaceholder, the visible placeholder of the emoji picker's search field: each catalog's already-approved emojiPickerSearchLabel value followed by the ellipsis character, matching the ellipsis convention the same catalog already uses for search placeholders such as commandPalettePlaceholder. No upstream translated text was consulted; no human or native-speaker identity is claimed. Updated 2026-09-27: twenty-three values that still carried Brazilian forms were rewritten in European Portuguese: mcpAppLabel, mcpAppUnavailable and mcpAppLoading now say aplicação interativa (feminine, with agreeing article and demonstrative) instead of the Brazilian masculine app; artifactPanelLabel uses the European spelling Artefacto; traceTree, agentTraceFilterLabel, stackTraceLabel, stackTraceLimit and evaluationRunToolTraceHeading use rastreio instead of rastreamento; fileInputDefaultLabel and dropzoneReleaseToAdd use the European drag-and-drop verb largar instead of soltar; fileInputRejectedCount says um ficheiro de cada vez instead of por vez; browserFrameStatusConnecting, the six realtimeSession connection states and actions, the three flowConnect announcements and entityDegree use ligar/ligado/desligar/ligações, matching the ligação wording the same components already used for their error and cancellation messages, instead of conectar/conectado/desconectar/conexões. Placeholders are unchanged. No upstream translated text was consulted; no human or native-speaker identity is claimed. A further 60 values were rewritten on the same date for the Brazilian forms a wider sweep found. Examples: ruim (now mau/má), deu errado (now correu mal), rolar (now deslocar), reprodutor (now leitor), status (now estado), horário for a clock time (now hora), informe (now introduza), linha do tempo (now cronologia), relacionamento (now relação), caractere (now carácter), feição for a map feature (now elemento), grade (now grelha), redefinir (now repor), trilha (now trilho), centralizado (now centrado), prévia (now pré-visualização), travar for a stall (now bloquear), ao vivo (now em direto), rosca (now anel), restauração (now restauro), rodízio (now rotação), começa com (now começa por), revisar (now rever), a URL (now o URL), isso (now isto), and próximo on Next controls (now seguinte, paired with anterior). agentRunStatusAnnounce now reads Estado: {status}. and was removed from the English-identical allowlist. Placeholders and plural categories are unchanged. No upstream translated text was consulted; no human or native-speaker identity is claimed. Updated 2026-09-27 for statusIncomplete (\"Incomplete\"), the visible status text of a tool call that ended without a result (an interrupted stream or a cancelled run), and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"), the matching lr-tool-call-block header verb. Both were translated in source order, reusing this catalog's own established tool-call wording from the neighbouring statusDenied and toolCallBlockHeaderDenied entries and preserving the single {name} placeholder with this catalog's existing spacing convention; neither is identical to the English source, so no allowlist entry was required. No upstream translated text was consulted; no human, native-speaker, or independent review is claimed for this increment. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "Independent review of the complete pt-PT catalog checked every family for meaning, UI register, terminology, placeholders, ordering, plural forms, and English leftovers. Corrections were applied before approval; remaining exact matches are technical or formatting-only. On 2026-09-26 the added emojiPickerSearchPlaceholder value was checked against this catalog's approved emojiPickerSearchLabel and its existing ellipsis-terminated search placeholders: same meaning and register, no placeholders, locale ellipsis convention preserved. AI-assisted; no human or native-speaker review is claimed. Updated 2026-09-26: every englishIdenticalAllowlist rationale was replaced with an entry-specific classification (formatting template, keyboard key name, internationally standardized abbreviation/unit, Jupyter notebook convention, or a named cross-language cognate/loanword) instead of the previous single boilerplate sentence; the allowlist was also re-derived from a fresh comparison against the current catalog so it exactly matches englishIdenticalMessagePaths() again. AI-assisted; no human or native-speaker review is claimed for this pass. Updated 2026-09-27: the twenty-three rewritten values were checked for meaning, register, placeholder preservation and gender/article agreement, and the whole catalog was scanned for the Brazilian-only forms the pt-PT European-Portuguese regression test now bans catalog-wide. This check was AI-assisted and performed in the same pass as the rewrite; no independent human or native-speaker review is claimed for it. The further 60 values rewritten on 2026-09-27 were checked the same way, in the same AI-assisted pass. Again, no independent human or native-speaker review is claimed for them. Updated 2026-09-27 for statusIncomplete (\"Incomplete\") and toolCallBlockHeaderIncomplete (\"Did not finish using {name}\"). An AI-assisted review, separate from the contributor that drafted them, checked both values in this catalog for the meaning of a tool call that ended without a result (an interrupted stream or a cancelled run), UI register, consistency with this catalog's neighbouring tool-call status and block-header wording, and exact single {name} preservation; both were approved without correction and no English-identical allowlist entry was required. No human or native-speaker review is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('×') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is the box-plot statistics notation for the first quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is the box-plot statistics notation for the third quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlide",
+      "rationale": "'slide' names a carousel slide item; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartTotal",
+      "rationale": "'Total' names a numeric total/sum label; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "chartTypeRadar",
+      "rationale": "'Radar' names the radar chart type (named after the RADAR sensing technology, itself an acronym-turned-common-noun in most languages); European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':  ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "commitCardLabel",
+      "rationale": "'Commit' names the version-control action of recording a snapshot of staged changes; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('\n\n\n  \n') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contactViewerTypeFax",
+      "rationale": "'Fax' names the facsimile contact-method type; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypeInternet",
+      "rationale": "'Internet' names the proper name of the global public network, essentially never translated in any locale; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextInspectorSegmentTokens",
+      "rationale": "'{tokens} tokens' names a token-budget usage count in the context inspector, using the ML/LLM jargon word \"tokens\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "diffViewOldLabel",
+      "rationale": "'Original' names the \"before\" side of a two-way diff comparison; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "documentLibraryTagsColumn",
+      "rationale": "'Tags' names the metadata tags column/label; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "durationMilliseconds",
+      "rationale": "'{value}ms' names a duration value in milliseconds, using the SI unit symbol \"ms\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "durationSeconds",
+      "rationale": "'{value}s' names a duration value in seconds, using the SI unit symbol \"s\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "elapsedMinutesSecondsTemplate",
+      "rationale": "'{minutes}m {seconds}s' names a minutes-and-seconds duration split, using the SI unit symbols \"m\"/\"s\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "emojiPickerGridLabel",
+      "rationale": "'Emoji' names the Japanese-origin loanword for a pictographic character, adopted unchanged worldwide; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "evalDatasetColumnTags",
+      "rationale": "'Tags' names the metadata tags column/label; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "'KB' is the SI-style byte-size unit symbol for a kilobyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+ -') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the file-format acronym Portable Document Format, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "generationStatusElapsedSeconds",
+      "rationale": "'{seconds}s' names a generation-status elapsed-time value in seconds, using the SI unit symbol \"s\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "'{rate} tok/s' names a token-generation throughput rate, using the ML-community abbreviation \"tok/s\" (tokens per second); European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusTokenCount",
+      "rationale": "'{count} token' names a single generated-token count, using the ML/LLM jargon word \"token\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusTokensCount",
+      "rationale": "'{count} tokens' names a plural generated-token count, using the ML/LLM jargon word \"tokens\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "item",
+      "rationale": "'item' names a generic list item; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "items.one",
+      "rationale": "'item' names a generic list item; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "jsonArray",
+      "rationale": "'array' names the JSON specification's own type name for an array value; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "jsonItemCount.one",
+      "rationale": "'{count} item' names a single generic list-item count, using the shared Latin-root/loanword \"item\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "'Alt' is the conventional printed/spoken name of the Alt modifier key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdBackspaceWord",
+      "rationale": "'Backspace' is the conventional printed/spoken name of the Backspace key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "'Command' is the conventional printed/spoken name of the Mac keyboard's Command key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "'Ctrl' is the conventional printed/spoken name of the Ctrl modifier key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "'Control' is the conventional printed/spoken name of the Control modifier key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "'Del' is the conventional printed/spoken name of the Delete key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteWord",
+      "rationale": "'Delete' is the conventional printed/spoken name of the Delete key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEndWord",
+      "rationale": "'End' is the conventional printed/spoken name of the End key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEnterWord",
+      "rationale": "'Enter' is the conventional printed/spoken name of the Enter key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "'Esc' is the conventional printed/spoken name of the Esc key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeWord",
+      "rationale": "'Escape' is the conventional printed/spoken name of the Escape key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdHomeWord",
+      "rationale": "'Home' is the conventional printed/spoken name of the Home key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "'Option' is the conventional printed/spoken name of the Mac keyboard's Option key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "'PgDn' is the conventional printed/spoken name of the Page Down key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownWord",
+      "rationale": "'Page Down' is the conventional printed/spoken name of the Page Down key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "'PgUp' is the conventional printed/spoken name of the Page Up key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpWord",
+      "rationale": "'Page Up' is the conventional printed/spoken name of the Page Up key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "'Shift' is the conventional printed/spoken name of the Shift modifier key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "'Tab' is the conventional printed/spoken name of the Tab key; European Portuguese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "knowledgeBasePermissionEditor",
+      "rationale": "'Editor' names the editor permission/role level; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', : ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "menuLabel",
+      "rationale": "'Menu' names the French-origin word for a menu, borrowed identically for both food and UI menus; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', , ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "nodePaletteResultCount.one",
+      "rationale": "'{count} item' names a single generic list-item count, using the shared Latin-root/loanword \"item\" unmodified; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "'In [{count}]' reproduces Jupyter Notebook's own In[{count}] execution-count prompt convention verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "'In [ ]' reproduces Jupyter Notebook's own empty In[] execution-count prompt marker verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('%') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "popover",
+      "rationale": "'Popover' names the UI-toolkit's own name for a popover component (an established cross-framework term, not prose); European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "resizeValuePixels",
+      "rationale": "'{value} pixels' names a resize dimension in the CSS/screen pixel unit; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "retrievalCompareFinalScore",
+      "rationale": "'Final' names the retrieval comparison's final combined-ranking score; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sourcePageSuffix",
+      "rationale": "'{base} — p. {page}' names a source page-number suffix, using the abbreviation \"p.\" for page (matching this locale's own identical abbreviation); European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindEmbedding",
+      "rationale": "'Embedding' names the embedding span-kind in a trace (a vector-embedding model call); European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the AI/ML span-kind acronym for a large language model call, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "videoVolume",
+      "rationale": "'Volume' names the media player's audio volume control; European Portuguese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

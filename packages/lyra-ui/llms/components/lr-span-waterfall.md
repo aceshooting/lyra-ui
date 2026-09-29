@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated property** `hideAxis` / `hide-axis` since `21.1.0`; use property `without-axis`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,8 +42,7 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
-`label: string = ''`. Deprecated alias: `hide-axis`/`hideAxis` (use `without-axis`; removed in
-23.0.0).
+`label: string = ''`.
 
 The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports

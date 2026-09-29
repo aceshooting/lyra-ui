@@ -34,8 +34,8 @@ minimumReleaseAgeExclude:
   - '@oxc-parser/binding-android-arm-eabi@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-android-arm64@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-darwin-arm64@0.143.0 || 0.145.0 || 0.148.0'
-  - '@oxc-parser/binding-darwin-x64@0.143.0 || 0.145.0 || 0.148.0'
-  - '@oxc-parser/binding-freebsd-x64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-darwin-x64@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0'
+  - '@oxc-parser/binding-freebsd-x64@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0'
   - '@oxc-parser/binding-linux-arm-gnueabihf@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-linux-arm-musleabihf@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-linux-arm64-gnu@0.143.0 || 0.145.0 || 0.148.0'
@@ -44,16 +44,16 @@ minimumReleaseAgeExclude:
   - '@oxc-parser/binding-linux-riscv64-gnu@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-linux-riscv64-musl@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-linux-s390x-gnu@0.143.0 || 0.145.0 || 0.148.0'
-  - '@oxc-parser/binding-linux-x64-gnu@0.143.0 || 0.145.0 || 0.148.0'
-  - '@oxc-parser/binding-linux-x64-musl@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-x64-gnu@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0'
+  - '@oxc-parser/binding-linux-x64-musl@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0'
   - '@oxc-parser/binding-openharmony-arm64@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-win32-arm64-msvc@0.143.0 || 0.145.0 || 0.148.0'
   - '@oxc-parser/binding-win32-ia32-msvc@0.143.0 || 0.145.0 || 0.148.0'
-  - '@oxc-parser/binding-win32-x64-msvc@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-win32-x64-msvc@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0'
   - '@oxc-project/types@0.143.0 || 0.145.0 || 0.148.0'
   - dompurify@3.4.13 || 3.4.16
   - marked@18.0.9 || 18.0.10
-  - oxc-parser@0.143.0 || 0.145.0 || 0.148.0
+  - oxc-parser@0.143.0 || 0.145.0 || 0.148.0 || 0.152.0
   - '@shikijs/core@4.4.2 || 4.4.3'
   - '@shikijs/engine-javascript@4.4.2 || 4.4.3'
   - '@shikijs/engine-oniguruma@4.4.2 || 4.4.3'
@@ -120,6 +120,7 @@ minimumReleaseAgeExclude:
   - '@img/sharp-win32-ia32@0.35.5'
   - '@img/sharp-win32-x64@0.35.5'
   - sharp@0.35.5
+  - '@types/d3-zoom@3.0.9'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

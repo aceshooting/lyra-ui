@@ -100,8 +100,6 @@ then `lr-after-hide` after the transition. Tool dialogs also report `{ reason }`
 Close events bubble from descendants. Check `event.target === event.currentTarget` when handling
 only the owning dialog. The upstream-mirrored `lr-tab` close event retains its null detail.
 
-
-
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
 stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
@@ -172,9 +170,8 @@ so the default close button never wins merely because it appears first in shadow
 
 - An arrow pointing at the anchor is exposed as the `arrow` CSS part. Popover, dropdown and tooltip render
   it by default and `without-arrow` (boolean, reflected) suppresses it. Popup retains its own
-  false-defaulting `arrow` opt-in. Deprecated inverse alias: `arrow` on popover/tooltip
-  (removal not before 23.0.0) and dropdown (removal not before 24.0.0). `arrow="false"`
-  equals `without-arrow`. The part's attribute also carries the **resolved side** as
+  false-defaulting `arrow` opt-in. Dropdown retains the deprecated inverse `arrow` alias
+  (removal not before 24.0.0); there, `arrow="false"` equals `without-arrow`. The part's attribute also carries the **resolved side** as
   a second token — `arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right` — so
   `::part(arrow arrow-top)` styles one side. `::part(arrow)[data-side]` and
   `::part(arrow) .inner` are invalid selectors that silently never match; the state is in the part
@@ -439,9 +436,7 @@ later values restore the corresponding content.
   compact density — tighter, left-aligned rendering (less padding, a lighter heading weight) for
   use inside a constrained space like a widget body or table cell; `m` and above keep the
   centered/spacious full-page default, and leaving it unset renders exactly as before. An
-  unsupported value normalizes to unset and removes the attribute. Deprecated alias: `compact` (use
-  `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like `size="s"`; the two
-  stay in step, the last write winning, and `compact` reads `true` at `s` and every step below it
+  unsupported value normalizes to unset and removes the attribute.
 - `announce: boolean = false` (reflected) — announces the heading and description this empty state
   already carries when it first mounts, through the same shared light-DOM polite sink later changes
   use. Set it where the empty state replaces a result set the user just asked for; leave it unset
@@ -607,9 +602,7 @@ the slide animation are its own.
   hint), and `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming,
   chrome and dismissal options. A plain `aria-label` attribute on the host names the panel, inherited
   unchanged from `lr-dialog`: it is the strongest naming override, by attribute presence including
-  an explicitly empty value, ahead of `accessibleLabel` and any slotted heading. Deprecated aliases,
-  as on `lr-dialog`: `closable` (use `without-close-button`, which `closable="false"` equals; removed
-  in 23.0.0) and `accessible-label` (use `aria-label`; removed in 23.0.0).
+  an explicitly empty value, ahead of `accessibleLabel` and any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
@@ -651,7 +644,6 @@ controls, rendered before the built-in close button), `footer` — all inherited
 `header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
 Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
-Deprecated alias: `close-button__control` (use `close-button-control`; removed in 23.0.0).
 
 **Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
 `<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
@@ -739,15 +731,11 @@ read, and neither is deprecated.
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
   semantics. A direct light-DOM heading retains its own native/ARIA level.
 - `accessibleLabel: string = ''` (property only) — explicit accessible-only name; unlike `label`,
-  it never renders visible text. In markup, use the host `aria-label`. Deprecated alias:
-  `accessible-label` (use `aria-label`; removed in 23.0.0) — it still sets `accessibleLabel`, so a
-  host `aria-label` wins over it
+  it never renders visible text. In markup, use the host `aria-label`.
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
   it has no effect when a direct light-DOM heading already supplies custom chrome
 - `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected) — removes the
-  localized close (X) button, which renders by default. Deprecated alias: `closable` (use
-  `without-close-button`, which `closable="false"` equals; removing `closable` restores the default;
-  removed in 23.0.0).
+  localized close (X) button, which renders by default.
 - `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace's spelling
   (`sl-dialog`'s `no-header`), which suppresses the entire header row
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
@@ -861,8 +849,7 @@ empty). The `label` and `header-actions` slots are new in 8.0.0.
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
 `header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
 Names grouped together are additive aliases on the same functional node, so a mapped
-`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`. Deprecated alias:
-`close-button__control` (use `close-button-control`; removed in 23.0.0).
+`::part(title)` rule styles the same visible title as Lyra's `::part(heading)`.
 `close-button-control` is the composed `<lr-icon-button>`'s own native `<button>`: as of 16.0.0 the
 close button IS an `<lr-icon-button>`, so `close-button`/`close-button__base` name that host and the
 painted surface sits one boundary deeper. `<lr-drawer>` inherits this control and now registers
@@ -1178,9 +1165,7 @@ relied on `<lr-chip selected>` to create an action.
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-toggle-request`
 (`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
 Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
-Calling `preventDefault()` keeps the current `selected` state unchanged). Deprecated alias:
-`lr-chip-select` (use `lr-chip-toggle-request`; removed in 23.0.0) — it still fires right after the
-request with an equal detail, and preventing either keeps the current state
+Calling `preventDefault()` keeps the current `selected` state unchanged).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
@@ -1678,8 +1663,7 @@ If the import fails, leave the native disclosure visible and usable.
   over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
   `showAt()` virtual anchor still wins
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the arrow
-  that otherwise points at the anchor. Deprecated alias: `arrow` (use `without-arrow`, which
-  `arrow="false"` equals; removing `arrow` restores the default; removed in 23.0.0)
+  that otherwise points at the anchor.
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —
   `anchor` tracks the anchor's centre; `start`/`end` pin the arrow `arrow-padding` from one logical
   end of the edge (the two ends are the inline ones on a top/bottom placement, so they swap under
@@ -1935,8 +1919,7 @@ later text renders normally.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected),
   `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
   `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
-  documents (`llms/components/lr-popover.md`), new in 8.0.0. Deprecated alias: `arrow` (use
-  `without-arrow`, which `arrow="false"` equals; removed in 23.0.0)
+  documents (`llms/components/lr-popover.md`), new in 8.0.0.
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -1986,8 +1969,7 @@ and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the
 
 **Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and
 `--arrow-size`; retained `--lr-tooltip-max-inline-size`, `--lr-tooltip-bg`,
-`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. Deprecated alias:
-`--lr-tooltip-background` (use `--lr-tooltip-bg`; removed in 23.0.0). A tooltip popup has no inner
+`--lr-tooltip-color`, and `--lr-tooltip-arrow-size` remain fallbacks. A tooltip popup has no inner
 scroll wrapper to move overflow onto, so its default arrow trades internal scrolling for a visible
 arrow — use `<lr-popover>` when a floating surface needs both.
 
@@ -2216,8 +2198,7 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 clips across the `distance` gap between trigger and popup, rendered only while a `hover`-triggered
 dropdown with `hover-bridge` set is open, so a pointer travelling from the trigger to the popup
 never leaves both at once and the surface does not close underneath it. It paints nothing by
-default; style it only to debug the travel region. Deprecated aliases: `popup__popup` and `popup__arrow` (use `popup-popup` and `popup-arrow`;
-removed in 23.0.0), on the same nodes.
+default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
@@ -2570,9 +2551,7 @@ formatted percentage.
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `withValue` (`with-value`),
 and `label` (mapped accessible-name property), plus `accessibleLabel` (property only) — Lyra's own
 explicit name, read after `label`. In markup, name the bar with the host `aria-label`, which has
-the highest precedence. Deprecated aliases: `show-value`/`showValue` (use `with-value`; removed in 23.0.0) and
-`accessible-label` (use `aria-label`; removed in 23.0.0) — the latter still sets
-`accessibleLabel`, so a host `aria-label` wins over it. Also
+the highest precedence. Also
 `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
 `0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
@@ -2625,8 +2604,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 `withValue: boolean = false` (attribute `with-value`),
 `label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (property only; in markup, name the ring with the host
-`aria-label`). Deprecated aliases: `show-value` (use `with-value`; removed in 23.0.0) and
-`accessible-label` (use `aria-label`; removed in 23.0.0). Also
+`aria-label`). Also
 `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
 `2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
@@ -2816,8 +2794,7 @@ expands to exactly one timing function), `--lr-badge-pulse-color` (default
 _`lr-tag`'s own two_ (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
 retuning the tag's corner retunes the remove button's with it) and
 `--lr-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)` —
-the remove button's `:hover` fill). Deprecated alias: `--lr-tag-remove-hover-background` (use
-`--lr-tag-remove-hover-bg`; removed in 23.0.0), read only as its fallback.
+the remove button's `:hover` fill).
 
 **Known gotchas:**
 
@@ -3005,8 +2982,6 @@ carries when it first mounts; see the announcement paragraph that closes this se
 semantic content and hides the host surface), and `accessibleLabel: string = ''` (property only;
 used only when the host has no `aria-label` attribute). In markup, name the callout with the host
 `aria-label`, which has highest precedence by presence, including an explicitly empty value.
-Deprecated alias: `accessible-label` (use `aria-label`; removed in 23.0.0) — it still sets
-`accessibleLabel`, so a host `aria-label` wins over it.
 
 Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
 unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
@@ -3028,8 +3003,7 @@ configured semantic heading wrapper), `icon`.
 `message` (wrapper around the default slot), `close-button` (the close control, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button-control`,
 `close-icon` (the visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
-target never does). Deprecated alias: `close-button__control` (use `close-button-control`; removed
-in 23.0.0), on the same node.
+target never does).
 
 As of 16.0.0 the close control is a composed `<lr-icon-button>`: `close-button` names that host —
 it still owns the grid placement, the accessible name and the click/focus API — while
@@ -3066,8 +3040,7 @@ as one set directly on the callout. `--lr-callout-close-hover-bg`
 decoupled from `--lr-callout-bg` (which every explicit `variant`, including `neutral`,
 retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
-panel background, and vice versa. Deprecated alias: `--lr-callout-background` (use `--lr-callout-bg`;
-removed in 23.0.0), read only as its fallback.
+panel background, and vice versa.
 
 Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit

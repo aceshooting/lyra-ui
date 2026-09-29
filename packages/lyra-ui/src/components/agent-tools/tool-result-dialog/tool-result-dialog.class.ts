@@ -9,7 +9,6 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -23,7 +22,6 @@ import { styles } from './tool-result-dialog.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Same status vocabulary as `<lr-tool-call-chip>`, including `incomplete` for a call that ended
  *  without a result. */
@@ -53,10 +51,6 @@ export interface LyraToolResultDialogEventMap {
   'lr-close': CustomEvent<LyraToolResultDialogCloseDetail>;
   /** Cancelable request to toggle `maximized`, fired before it changes. */
   'lr-maximize-change-request': CustomEvent<{ readonly maximized: boolean }>;
-  /** @deprecated Use `lr-maximize-change-request`; removal not before 23.0.0. Fired right after it
-   *  from the same click, with an equal detail; either event's `preventDefault()` vetoes the
-   *  toggle. */
-  'lr-maximize-change': CustomEvent<{ readonly maximized: boolean }>;
 }
 
 /** A "restore from maximized" glyph -- the mirror image of `expandIcon()`,
@@ -141,11 +135,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * new `maximized` state), fired when the header's maximize/restore toggle is clicked, *before*
  * `maximized` itself changes. Calling `preventDefault()` vetoes the toggle and leaves `maximized`
  * unchanged -- e.g. a host persisting a per-user "prefers maximized" layout preference can hold the
- * transition until a save round-trip completes. Fires before `lr-maximize-change`, from the same
- * click; either event may veto.
- * @event lr-maximize-change - Deprecated cancelable alias of `lr-maximize-change-request`, kept
- * firing right after it with an equal `detail: { maximized }`; either event may veto, and a veto
- * through this alias logs a one-time development warning. Removal not before 23.0.0.
+ * transition until a save round-trip completes.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
  * @csspart header - The row containing the tool name, status, duration, and toggle/close buttons.
@@ -342,13 +332,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   private toggleMaximized = (): void => {
     const next = !this.maximized;
     const request = this.emit('lr-maximize-change-request', Object.freeze({ maximized: next }), { cancelable: true });
-    // Deprecated alias -- dispatched unconditionally, with its own equal detail, so a listener
-    // bound only to the old name can still veto, exactly as one bound to the canonical name can.
-    const deprecatedAlias = this.emit('lr-maximize-change', Object.freeze({ maximized: next }), { cancelable: true });
-    if (deprecatedAlias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-maximize-change', 'lr-maximize-change-request');
-    }
-    if (request.defaultPrevented || deprecatedAlias.defaultPrevented) return;
+    if (request.defaultPrevented) return;
     this.maximized = next;
   };
 
@@ -441,7 +425,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

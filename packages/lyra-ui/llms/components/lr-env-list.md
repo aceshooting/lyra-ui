@@ -7,8 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `revealable` / `revealable` since `21.1.0`; use property `without-reveal`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,9 +28,7 @@ changes), `withoutReveal: boolean = false` (attribute `without-reveal`, reflecte
 secret entry's reveal toggle and re-masks any revealed entry), `withoutCopyButton: boolean = false`
 (attribute `without-copy-button`, reflected; omits every entry's copy button), and
 `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty string remains
-empty. A host `aria-label` wins by attribute presence, including when empty. Deprecated aliases:
-`revealable` (use `without-reveal`; removed in 23.0.0) and `copyable` (use `without-copy-button`;
-removed in 23.0.0) — `revealable="false"`/`copyable="false"` still equal the `without-` attributes.
+empty. A host `aria-label` wins by attribute presence, including when empty.
 
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal

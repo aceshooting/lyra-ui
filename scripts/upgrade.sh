@@ -2,7 +2,7 @@
 # Upgrade dependency ranges in the root package and every pnpm workspace package, install the
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
-# libphonenumber-js and MapLibre peer ranges keep their tested compatibility bounds; their dev
+# libphonenumber-js, MapLibre and postal-mime peer ranges keep their compatibility bounds; their dev
 # dependencies are still upgraded by the first pass.
 set -euo pipefail
 
@@ -112,7 +112,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl \
+  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime \
   --target latest \
   --install never \
   --upgrade
@@ -167,11 +167,13 @@ echo "==> Regenerating upstream inventory, editor data, and component metadata"
 node packages/lyra-ui/scripts/check-pinned-upstream-manifests.mjs --write-inventory
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 node packages/lyra-ui/scripts/generate-component-metadata.mjs --write
+pnpm --filter @aceshooting/lyra-ui run visual-manifest
 
 echo
 echo "==> Regenerating default-string slices and translation slices"
 node packages/lyra-ui/scripts/generate-default-string-slices.mjs --write
 pnpm --filter @aceshooting/lyra-ui run translation-slices
+pnpm --filter @aceshooting/lyra-ui run translation-review-fixture
 pnpm --filter @aceshooting/lyra-ui run locale-manifest
 
 echo

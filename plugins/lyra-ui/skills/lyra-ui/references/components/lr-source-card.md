@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `title` / `title` since `21.1.0`; use property `heading`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 3 custom properties — see `lr-source-list.md`
 - **Documented with** `lr-source-list`: see [lr-source-list.md](./lr-source-list.md).

@@ -2,7 +2,6 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './realtime-session.js';
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
   return Array.from(
@@ -300,60 +299,6 @@ it('moves focus from the capture control when withoutCapture removes it without 
   await el.updateComplete;
 
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
-});
-
-it('keeps the deprecated show-capture alias equal to without-capture, warning once', async () => {
-  let el!: LyraRealtimeSession;
-  let both!: LyraRealtimeSession;
-  const warnings = await captureDeprecationWarnings(
-    [{ tag: 'lr-realtime-session', kind: 'property', name: 'showCapture' }],
-    async () => {
-      el = (await fixture(
-        html`<lr-realtime-session state="connected" show-capture="false"></lr-realtime-session>`
-      )) as LyraRealtimeSession;
-      both = (await fixture(
-        html`<lr-realtime-session state="connected" show-capture without-capture></lr-realtime-session>`
-      )) as LyraRealtimeSession;
-      expect(el.withoutCapture).to.be.true;
-      expect(el.showCapture).to.be.false;
-      expect(el.shadowRoot!.querySelector('[part="capture"]') === null).to.equal(true);
-      el.removeAttribute('show-capture');
-      await el.updateComplete;
-    }
-  );
-  expect(warnings.map((warning) => warning.key)).to.deep.equal([
-    'lyra-deprecated:lr-realtime-session:property:showCapture',
-  ]);
-  expect(both.withoutCapture, 'the later without-capture attribute wins').to.be.true;
-  expect(both.showCapture).to.be.false;
-  expect(el.withoutCapture).to.be.false;
-  expect(el.shadowRoot!.querySelector('[part="capture"]') !== null).to.equal(true);
-});
-
-it('forwards a showCapture write, syncs back from withoutCapture, and lets the last write win', async () => {
-  let el!: LyraRealtimeSession;
-  let both!: LyraRealtimeSession;
-  await captureDeprecationWarnings(
-    [{ tag: 'lr-realtime-session', kind: 'property', name: 'showCapture' }],
-    async () => {
-      el = (await fixture(
-        html`<lr-realtime-session state="connected"></lr-realtime-session>`
-      )) as LyraRealtimeSession;
-      el.showCapture = false;
-      await el.updateComplete;
-      both = (await fixture(
-        html`<lr-realtime-session without-capture show-capture></lr-realtime-session>`
-      )) as LyraRealtimeSession;
-    }
-  );
-  expect(el.withoutCapture).to.be.true;
-  expect(el.hasAttribute('without-capture')).to.equal(true);
-  el.withoutCapture = false;
-  await el.updateComplete;
-  expect(el.showCapture).to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="capture"]') !== null).to.equal(true);
-  expect(both.withoutCapture, 'the later show-capture attribute wins').to.be.false;
-  expect(both.showCapture).to.be.true;
 });
 
 it('moves focus from capture to the visible Unmute action when muting disables capture', async () => {

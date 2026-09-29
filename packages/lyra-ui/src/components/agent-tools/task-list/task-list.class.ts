@@ -10,8 +10,7 @@ import {
 import { repeat } from 'lit/directives/repeat.js';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
@@ -20,12 +19,10 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
@@ -162,12 +159,6 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
   error: 'statusError',
 };
 
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
-}
-
 /**
  * `<lr-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with
  * per-step lifecycle status and one level of nested sub-steps, embedded in the transcript.
@@ -232,7 +223,6 @@ function isDenseSize(size: LyraSize): boolean {
  * @cssprop [--lr-task-list-error-color=var(--lr-color-danger)] - Error status icon color.
  * @cssprop [--lr-task-list-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-task-list-background=var(--lr-color-surface)] - Deprecated alias of `--lr-task-list-bg`; removal not before 23.0.0.
  * @cssprop [--lr-task-list-border-color=var(--lr-color-border)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-task-list-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -272,13 +262,6 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    label: 'heading',
-    expanded: ['collapsed', invertAlias, invertAlias],
-    collapsible: ['withoutCollapse', invertAlias, invertAlias],
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it.
    *  Runtime non-record rows and rows without a nonempty string id are omitted before rendering,
    *  summaries, announcements, and reorder validation. */
@@ -294,11 +277,6 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  including `'Tasks'` or `''`, is rendered verbatim. */
   @property() heading?: string;
 
-  /** Optional header-text override. Omission localizes `taskListLabel`; any supplied string,
-   *  including `'Tasks'` or `''`, is rendered verbatim.
-   *  @deprecated Use `heading`; removal not before 23.0.0. */
-  @property() label?: string;
-
   /** Semantic level of the visible header. Use `none` to keep the visual header without exposing
    *  it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level', reflect: true })
@@ -308,19 +286,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  details disclosure a reader opts into. */
   @property({ type: Boolean, reflect: true }) collapsed = false;
 
-  /** Whether the body (item list) is currently shown. Defaults open -- this is a progress surface,
-   *  not a details disclosure a reader opts into.
-   *  @deprecated Use `collapsed`; removal not before 23.0.0. */
-  @property({ reflect: true, converter: trueDefaultBooleanConverter }) expanded = true;
-
   /** Renders the header as a static heading (no button, no toggle affordance); `collapsed` can
    *  still be set programmatically by the host, just not toggled via the UI. */
   @property({ type: Boolean, attribute: 'without-collapse' }) withoutCollapse = false;
-
-  /** When `false`, the header renders as a static heading (no button, no toggle affordance) and
-   *  `expanded` can still be set programmatically by the host, just not toggled via the UI.
-   *  @deprecated Use `without-collapse`; removal not before 23.0.0. */
-  @property({ converter: trueDefaultBooleanConverter }) collapsible = true;
 
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the header/body
@@ -330,13 +298,6 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    * to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Tighter header/body padding and item gap for dense contexts (a plan tracker nested in an
-   *  already-padded transcript row) -- same convention as `lr-agent-run`/`lr-source-card`'s
-   *  `compact`. Defaults to `false`, i.e. the full padding. Purely a density knob: the border and
-   *  background stay, so use `frame="plain"` instead to drop the chrome entirely.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled box. `'plain'` removes `[part="base"]`'s border, background, and

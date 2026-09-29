@@ -51,7 +51,7 @@ import type {
   ChipSelectDetail,
   LyraMapChoroplethLayer,
   LyraMapEventMap,
-  LyraGraphLink,
+  LyraGraphEdge,
   LyraGraphNode,
   HeatmapSelectedCell,
   KbdLocalize,
@@ -78,6 +78,7 @@ import type {
   LyraHeatmapEventMap,
   LyraLiteChartEventMap,
   LyraMediaCardEventMap,
+  LyraMediaCardOpenDetail,
   LyraSelectEventMap,
   LyraSourceCardEventMap,
   LyraMultiSplitEventMap,
@@ -133,7 +134,7 @@ import type {
   LyraEnvListEventMap,
   LyraFileTreeEventMap,
   LyraFlowCanvasEventMap,
-  LyraGeojsonViewEventMap,
+  LyraGeoJsonViewerEventMap,
   LyraGraphLegendEventMap,
   LyraHighlightLayerEventMap,
   LyraHtmlViewerEventMap,
@@ -261,11 +262,16 @@ const composedEventMapTypes: [
 ] | undefined = undefined;
 void composedEventMapTypes;
 
-// Compile-only guard: the canonical media-card download veto and its deprecated alias carry one
-// event type, so a listener moves from `lr-before-media-download` to the canonical name unchanged.
-const mediaCardDownloadRequest: LyraMediaCardEventMap['lr-media-download-request'] | undefined =
-  undefined as LyraMediaCardEventMap['lr-before-media-download'] | undefined;
-void mediaCardDownloadRequest;
+// The canonical media-card request retains its public open-detail payload.
+declare const mediaCardDownloadRequest: LyraMediaCardEventMap['lr-media-download-request'];
+const mediaCardDownloadEvent: CustomEvent<LyraMediaCardOpenDetail> = mediaCardDownloadRequest;
+const mediaCardDownloadDetail: LyraMediaCardOpenDetail = mediaCardDownloadRequest.detail;
+// @ts-expect-error The retired media download alias is absent from the event map.
+type RemovedMediaDownloadEvent = LyraMediaCardEventMap['lr-before-media-download'];
+declare const removedMediaDownloadEvent: RemovedMediaDownloadEvent;
+void mediaCardDownloadEvent;
+void mediaCardDownloadDetail;
+void removedMediaDownloadEvent;
 
 // Compile-only guard: fails to typecheck if the root barrel (src/lyra.ts) ever
 // stops re-exporting one of these component event-map types, even though the
@@ -337,7 +343,7 @@ const additionalBarrelEventMapTypes: [
   LyraEnvListEventMap,
   LyraFileTreeEventMap,
   LyraFlowCanvasEventMap,
-  LyraGeojsonViewEventMap,
+  LyraGeoJsonViewerEventMap,
   LyraGraphLegendEventMap,
   LyraHighlightLayerEventMap,
   LyraHtmlViewerEventMap,
@@ -410,7 +416,7 @@ const barrelPublicSurfaceTypes: [
   LyraBoxPlotSeries,
   LyraBoxPlotSummary,
   LyraGraphNode,
-  LyraGraphLink,
+  LyraGraphEdge,
   LyraMapLegendEntry,
   LyraMapChoroplethLayer,
   LyraMapEventMap,

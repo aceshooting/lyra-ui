@@ -30,7 +30,7 @@ export const styles = css`
       in oklab,
       var(
         --lr-icon-button-bg-hover,
-        var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet))
+        var(--lr-color-brand-quiet)
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );

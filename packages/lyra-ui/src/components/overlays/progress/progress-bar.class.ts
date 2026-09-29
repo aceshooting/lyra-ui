@@ -1,7 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
@@ -19,7 +18,6 @@ import { styles } from './progress.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The library's one semantic-tone vocabulary. */
 export type LyraProgressVariant = LyraVariant;
@@ -71,13 +69,9 @@ export class LyraProgressBar extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { showValue: 'withValue' };
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'accessible-label' && newValue !== null) {
-      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
-    }
   }
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
@@ -89,8 +83,6 @@ export class LyraProgressBar extends LyraElement {
   @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
   /** Appends the locale-formatted percentage to the label row while determinate. */
   @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
-  /** @deprecated Use `with-value`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Visual thickness of the track/indicator, on the library's shared six-step size ladder. `'m'`
    *  (the default) is this component's pre-existing behaviour, unchanged: an unset bar still
    *  renders at `--lr-progress-track-height`'s literal `1rem` default. Every other tier scales that
@@ -104,14 +96,12 @@ export class LyraProgressBar extends LyraElement {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: 'accessible-label' })
+  @property({ attribute: false })
   get accessibleLabel(): string {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string) {
-    if (!this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    }
+    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
     this.legacyAccessibleLabel = value;
   }
   /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an

@@ -3,13 +3,11 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   firstByRetrievalIdentity,
   isNonBlankIdentity,
 } from '../retrieval-identity.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import '../../charts/chart/lite-chart.class.js';
 import '../../data/stat/stat.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -121,9 +119,6 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   ]);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showChart: ['withoutChart', invertAlias, invertAlias],
-  };
 
   /** Metric definitions shown as controls and used to format run values. */
   @property({ attribute: false }) metrics: readonly LyraRagEvaluationMetric[] =
@@ -145,15 +140,6 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   /** Omits the trend chart that otherwise renders when an active metric and matching runs exist. */
   @property({ type: Boolean, attribute: 'without-chart', reflect: true })
   withoutChart = false;
-  /** Whether a trend chart is rendered when an active metric and matching runs exist.
-   *  @deprecated Use `without-chart`; removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    attribute: 'show-chart',
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  showChart = true;
   /** CSS block size forwarded to the composed trend chart. */
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
 

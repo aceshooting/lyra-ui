@@ -51,9 +51,9 @@ rename on a Lyra component. The inventory records these exclusions explicitly.
 ## Migrating from Lyra 21 to Lyra 22 (`--origin=lyra-v21`)
 
 Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes, properties, events, CSS parts,
-custom properties and slots. Each previous name keeps working as a deprecated alias until
-Lyra 23 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading, within Lyra 21 or to Lyra 22. It
+custom properties and slots. Published names retired in this installed release remain migration inputs.
+Removed aliases no longer work at runtime. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading; historical profiles remain available. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -70,7 +70,7 @@ selectors that name the component; and calls rooted at `querySelector('lr-…')`
 other component already dispatches the new name, and an unowned listener or any custom-property
 use only when, in addition, every component with the old name renamed it the same way and the
 scanned code never dispatches the old name itself. Everything else is reported with a location;
-the old name keeps working meanwhile.
+review removed names before running the migrated application.
 
 | Code | Reported when |
 |---|---|
@@ -774,14 +774,14 @@ need manual inspection. Review event detail, saved preferences and selector scop
 
 | Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |
 |---|---|---|---|
-| entry-point | `./components/lr-geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
-| entry-point | `./components/viewers/geojson-view/geojson-view.class.js` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
-| entry-point | `./components/viewers/geojson-view/geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
-| entry-point | `./utilities/localization.js` | import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js'; | 23.0.0 |
-| type | `./components/retrieval/graph/graph.class.js#LyraGraphLink` | import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | 23.0.0 |
-| type | `./components/viewers/document-viewer/registry.js#DocumentFile` | import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
-| type | `./components/viewers/document-viewer/registry.js#DocumentRendererDefinition` | import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
-| type | `./components/viewers/geojson-view/geojson-view.class.js#LyraGeojsonViewEventMap` | import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
+| entry-point | `./components/lr-geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | Removed in 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.class.js` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | Removed in 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | Removed in 23.0.0 |
+| entry-point | `./utilities/localization.js` | import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js'; | Removed in 23.0.0 |
+| type | `./components/retrieval/graph/graph.class.js#LyraGraphLink` | import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentFile` | import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentRendererDefinition` | import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/geojson-view/geojson-view.class.js#LyraGeojsonViewEventMap` | import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | Removed in 23.0.0 |
 
 ## Migrating from Lyra 22 to Lyra 23 (`--origin=lyra-v22`)
 
@@ -897,14 +897,11 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraAgentWorkspace` | import { LyraAgentWorkspace } from '@aceshooting/lyra-ui/components/conversation/agent-workspace/agent-workspace.class.js'; | 24.0.0 |
 | class | `.#LyraAlert` | import { LyraAlert } from '@aceshooting/lyra-ui/components/overlays/alert/alert.class.js'; | 24.0.0 |
 | class | `.#LyraAnimatedImage` | import { LyraAnimatedImage } from '@aceshooting/lyra-ui/components/media/animated-image/animated-image.class.js'; | 24.0.0 |
-| class | `.#LyraAnimation` | import { LyraAnimation } from '@aceshooting/lyra-ui/components/media/animation/animation.class.js'; | 24.0.0 |
-| class | `.#LyraAppRail` | import { LyraAppRail } from '@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js'; | 24.0.0 |
 | class | `.#LyraAppRailGroup` | import { LyraAppRailGroup } from '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.class.js'; | 24.0.0 |
 | class | `.#LyraAppRailItem` | import { LyraAppRailItem } from '@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js'; | 24.0.0 |
 | class | `.#LyraApprovalQueue` | import { LyraApprovalQueue } from '@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js'; | 24.0.0 |
 | class | `.#LyraArchiveViewer` | import { LyraArchiveViewer } from '@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js'; | 24.0.0 |
 | class | `.#LyraArtifactPanel` | import { LyraArtifactPanel } from '@aceshooting/lyra-ui/components/agent-tools/artifact-panel/artifact-panel.class.js'; | 24.0.0 |
-| class | `.#LyraAttachmentChip` | import { LyraAttachmentChip } from '@aceshooting/lyra-ui/components/media/attachment-chip/attachment-chip.class.js'; | 24.0.0 |
 | class | `.#LyraAttachmentTrigger` | import { LyraAttachmentTrigger } from '@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js'; | 24.0.0 |
 | class | `.#LyraAudioVisualizer` | import { LyraAudioVisualizer } from '@aceshooting/lyra-ui/components/conversation/audio-visualizer/audio-visualizer.class.js'; | 24.0.0 |
 | class | `.#LyraAvPlayer` | import { LyraAvPlayer } from '@aceshooting/lyra-ui/components/media/av-player/av-player.class.js'; | 24.0.0 |
@@ -951,7 +948,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraConfirmBar` | import { LyraConfirmBar } from '@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js'; | 24.0.0 |
 | class | `.#LyraContactViewer` | import { LyraContactViewer } from '@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.class.js'; | 24.0.0 |
 | class | `.#LyraContextInspector` | import { LyraContextInspector } from '@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js'; | 24.0.0 |
-| class | `.#LyraContextMenu` | import { LyraContextMenu } from '@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.class.js'; | 24.0.0 |
 | class | `.#LyraContextMeter` | import { LyraContextMeter } from '@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js'; | 24.0.0 |
 | class | `.#LyraControlGroup` | import { LyraControlGroup } from '@aceshooting/lyra-ui/components/layout/control-group/control-group.class.js'; | 24.0.0 |
 | class | `.#LyraConversationItem` | import { LyraConversationItem } from '@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js'; | 24.0.0 |
@@ -976,7 +972,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraDrawer` | import { LyraDrawer } from '@aceshooting/lyra-ui/components/overlays/drawer/drawer.class.js'; | 24.0.0 |
 | class | `.#LyraDrilldownPanel` | import { LyraDrilldownPanel } from '@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js'; | 24.0.0 |
 | class | `.#LyraDropZone` | import { LyraDropZone } from '@aceshooting/lyra-ui/components/media/drop-zone/drop-zone.class.js'; | 24.0.0 |
-| class | `.#LyraDropdown` | import { LyraDropdown } from '@aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js'; | 24.0.0 |
 | class | `.#LyraDropdownItem` | import { LyraDropdownItem } from '@aceshooting/lyra-ui/components/layout/menu/dropdown-item.class.js'; | 24.0.0 |
 | class | `.#LyraEbookViewer` | import { LyraEbookViewer } from '@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js'; | 24.0.0 |
 | class | `.#LyraEmailViewer` | import { LyraEmailViewer } from '@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js'; | 24.0.0 |
@@ -992,10 +987,8 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraEvalRun` | import { LyraEvalRun } from '@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js'; | 24.0.0 |
 | class | `.#LyraExportButton` | import { LyraExportButton } from '@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js'; | 24.0.0 |
 | class | `.#LyraFileIcon` | import { LyraFileIcon } from '@aceshooting/lyra-ui/components/media/file-icon/file-icon.class.js'; | 24.0.0 |
-| class | `.#LyraFileInput` | import { LyraFileInput } from '@aceshooting/lyra-ui/components/media/file-input/file-input.class.js'; | 24.0.0 |
 | class | `.#LyraFileTree` | import { LyraFileTree } from '@aceshooting/lyra-ui/components/data/file-tree/file-tree.class.js'; | 24.0.0 |
 | class | `.#LyraFilterBar` | import { LyraFilterBar } from '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js'; | 24.0.0 |
-| class | `.#LyraFlag` | import { LyraFlag } from '@aceshooting/lyra-ui/components/media/flag/flag.class.js'; | 24.0.0 |
 | class | `.#LyraFlowCanvas` | import { LyraFlowCanvas } from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js'; | 24.0.0 |
 | class | `.#LyraFlowControls` | import { LyraFlowControls } from '@aceshooting/lyra-ui/components/data/flow-controls/flow-controls.class.js'; | 24.0.0 |
 | class | `.#LyraFlowMinimap` | import { LyraFlowMinimap } from '@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.class.js'; | 24.0.0 |
@@ -1028,7 +1021,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraIntersectionObserver` | import { LyraIntersectionObserver } from '@aceshooting/lyra-ui/components/utility/intersection-observer/intersection-observer.class.js'; | 24.0.0 |
 | class | `.#LyraJsonSchemaViewer` | import { LyraJsonSchemaViewer } from '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js'; | 24.0.0 |
 | class | `.#LyraJsonViewer` | import { LyraJsonViewer } from '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js'; | 24.0.0 |
-| class | `.#LyraKbd` | import { LyraKbd } from '@aceshooting/lyra-ui/components/overlays/kbd/kbd.class.js'; | 24.0.0 |
 | class | `.#LyraKnowledgeBase` | import { LyraKnowledgeBase } from '@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js'; | 24.0.0 |
 | class | `.#LyraKnowledgeBaseAdmin` | import { LyraKnowledgeBaseAdmin } from '@aceshooting/lyra-ui/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js'; | 24.0.0 |
 | class | `.#LyraKnowledgeGraphExplorer` | import { LyraKnowledgeGraphExplorer } from '@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js'; | 24.0.0 |
@@ -1073,7 +1065,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraPanZoom` | import { LyraPanZoom } from '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.class.js'; | 24.0.0 |
 | class | `.#LyraPathStrip` | import { LyraPathStrip } from '@aceshooting/lyra-ui/components/retrieval/path-strip/path-strip.class.js'; | 24.0.0 |
 | class | `.#LyraPdfViewer` | import { LyraPdfViewer } from '@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js'; | 24.0.0 |
-| class | `.#LyraPhoneInput` | import { LyraPhoneInput } from '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js'; | 24.0.0 |
 | class | `.#LyraPieChart` | import { LyraPieChart } from '@aceshooting/lyra-ui/components/charts/chart/pie-chart.class.js'; | 24.0.0 |
 | class | `.#LyraPolarAreaChart` | import { LyraPolarAreaChart } from '@aceshooting/lyra-ui/components/charts/chart/polar-area-chart.class.js'; | 24.0.0 |
 | class | `.#LyraPolicySummary` | import { LyraPolicySummary } from '@aceshooting/lyra-ui/components/agent-tools/policy-summary/policy-summary.class.js'; | 24.0.0 |
@@ -1102,7 +1093,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraReorderItem` | import { LyraReorderItem } from '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-item.class.js'; | 24.0.0 |
 | class | `.#LyraReorderList` | import { LyraReorderList } from '@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js'; | 24.0.0 |
 | class | `.#LyraResizeObserver` | import { LyraResizeObserver } from '@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.class.js'; | 24.0.0 |
-| class | `.#LyraResponsivePanel` | import { LyraResponsivePanel } from '@aceshooting/lyra-ui/components/layout/responsive-panel/responsive-panel.class.js'; | 24.0.0 |
 | class | `.#LyraResultCard` | import { LyraResultCard } from '@aceshooting/lyra-ui/components/agent-tools/result-card/result-card.class.js'; | 24.0.0 |
 | class | `.#LyraResultField` | import { LyraResultField } from '@aceshooting/lyra-ui/components/agent-tools/result-card/result-field.class.js'; | 24.0.0 |
 | class | `.#LyraRetrievalCompare` | import { LyraRetrievalCompare } from '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.class.js'; | 24.0.0 |
@@ -1125,13 +1115,11 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraSpanWaterfall` | import { LyraSpanWaterfall } from '@aceshooting/lyra-ui/components/agent-tools/span-waterfall/span-waterfall.class.js'; | 24.0.0 |
 | class | `.#LyraSparkline` | import { LyraSparkline } from '@aceshooting/lyra-ui/components/data/sparkline/sparkline.class.js'; | 24.0.0 |
 | class | `.#LyraSpinner` | import { LyraSpinner } from '@aceshooting/lyra-ui/components/overlays/spinner/spinner.class.js'; | 24.0.0 |
-| class | `.#LyraSplitPanel` | import { LyraSplitPanel } from '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.class.js'; | 24.0.0 |
 | class | `.#LyraSpreadsheetViewer` | import { LyraSpreadsheetViewer } from '@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js'; | 24.0.0 |
 | class | `.#LyraStackTrace` | import { LyraStackTrace } from '@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.class.js'; | 24.0.0 |
 | class | `.#LyraStat` | import { LyraStat } from '@aceshooting/lyra-ui/components/data/stat/stat.class.js'; | 24.0.0 |
 | class | `.#LyraStepper` | import { LyraStepper } from '@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js'; | 24.0.0 |
 | class | `.#LyraStreamStatus` | import { LyraStreamStatus } from '@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js'; | 24.0.0 |
-| class | `.#LyraStreamingText` | import { LyraStreamingText } from '@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js'; | 24.0.0 |
 | class | `.#LyraStreamingTextCore` | import { LyraStreamingTextCore } from '@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text-core.class.js'; | 24.0.0 |
 | class | `.#LyraSubagentPanel` | import { LyraSubagentPanel } from '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js'; | 24.0.0 |
 | class | `.#LyraSuggestionChips` | import { LyraSuggestionChips } from '@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.class.js'; | 24.0.0 |
@@ -1145,7 +1133,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraTag` | import { LyraTag } from '@aceshooting/lyra-ui/components/overlays/badge/tag.class.js'; | 24.0.0 |
 | class | `.#LyraTaskList` | import { LyraTaskList } from '@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js'; | 24.0.0 |
 | class | `.#LyraTerminal` | import { LyraTerminal } from '@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js'; | 24.0.0 |
-| class | `.#LyraTestResults` | import { LyraTestResults } from '@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js'; | 24.0.0 |
 | class | `.#LyraTextarea` | import { LyraTextarea } from '@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js'; | 24.0.0 |
 | class | `.#LyraThinkingPanel` | import { LyraThinkingPanel } from '@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js'; | 24.0.0 |
 | class | `.#LyraThreadList` | import { LyraThreadList } from '@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js'; | 24.0.0 |
@@ -1176,7 +1163,6 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | class | `.#LyraUsageBadge` | import { LyraUsageBadge } from '@aceshooting/lyra-ui/components/conversation/usage-badge/usage-badge.class.js'; | 24.0.0 |
 | class | `.#LyraVideo` | import { LyraVideo } from '@aceshooting/lyra-ui/components/media/video/video.class.js'; | 24.0.0 |
 | class | `.#LyraVideoPlaylist` | import { LyraVideoPlaylist } from '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js'; | 24.0.0 |
-| class | `.#LyraVirtualList` | import { LyraVirtualList } from '@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js'; | 24.0.0 |
 | class | `.#LyraVisuallyHidden` | import { LyraVisuallyHidden } from '@aceshooting/lyra-ui/components/utility/visually-hidden/visually-hidden.class.js'; | 24.0.0 |
 | class | `.#LyraVoicePicker` | import { LyraVoicePicker } from '@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.class.js'; | 24.0.0 |
 | class | `.#LyraWidget` | import { LyraWidget } from '@aceshooting/lyra-ui/components/layout/widget/widget.class.js'; | 24.0.0 |

@@ -1,9 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -250,9 +247,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, srOnly, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showCounter: ['withoutCounter', invertAlias, invertAlias],
-  };
 
   private _open = false;
 
@@ -307,17 +301,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  Deliberately not reflected: nothing styles or queries it, so reflection would only churn
    *  attributes on a modal that already churns them. */
   @property({ type: Boolean, attribute: 'without-counter' }) withoutCounter = false;
-
-  /** Shows/hides only the visible `part="counter"`. The accessibility `part="live-region"`
-   *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
-   *  Mirrors `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses the shared
-   *  parse-only `trueDefaultBooleanConverter` rather than Lit's default presence-based
-   *  `type: Boolean` handling, so a plain-HTML consumer with no way to write a `.showCounter`
-   *  property binding can still turn this off with `show-counter="false"`. Deliberately not
-   *  reflected: nothing styles or queries `[show-counter]`, so the serializing half of a
-   *  reflecting converter would be dead code on a modal that already churns attributes.
-   *  @deprecated Use `without-counter` (inverted); removal not before 23.0.0. */
-  @property({ attribute: 'show-counter', converter: trueDefaultBooleanConverter }) showCounter = true;
 
   /** Base image sizing policy, using the same vocabulary as `<lr-image-viewer>`. `actual`
    * preserves the current natural-size behavior; `contain` fits the complete image inside the

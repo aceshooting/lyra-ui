@@ -4,6 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compactManifest } from './manifest-compact.mjs';
+import { checkPublishedCompatibilitySync } from './check-published-compatibility.mjs';
+import {
+  assembleComponentMetadata,
+  commitComponentMetadataWritePlan,
+  componentMetadataSourceFindings,
+  createComponentMetadataWritePlan,
+  readComponentMetadataSources,
+} from './component-metadata-source.mjs';
 
 import {
   annotateComponentSource,
@@ -22,7 +30,6 @@ import {
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.resolve(scriptDir, '..');
 const repoRoot = path.resolve(packageDir, '..', '..');
-const metadataPath = path.join(scriptDir, 'fixtures', 'component-metadata.json');
 const inventoryPath = path.join(scriptDir, 'fixtures', 'component-inventory.json');
 const manifestPath = path.join(packageDir, 'custom-elements.json');
 const packageJsonPath = path.join(packageDir, 'package.json');
@@ -31,15 +38,11 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function writeJson(file, value) {
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function sourceAnnotationChanges(inventory) {
+function sourceAnnotationChanges(inventory, readSource) {
   const changes = [];
   for (const component of inventory.components ?? []) {
     const file = path.join(packageDir, component.classModule);
-    const source = fs.readFileSync(file, 'utf8');
+    const source = readSource(component.classModule);
     const expected = annotateComponentSource(source, {
       tag: component.tag,
       status: component.maturity.status,
@@ -53,17 +56,6 @@ function sourceAnnotationChanges(inventory) {
 function sourceAnnotationFindings(changes) {
   return changes.map(({ component }) =>
     `${component.tag}: source @status/@since annotations drifted`);
-}
-
-function writeSourceAnnotations(changes) {
-  for (const { component, file, original } of changes) {
-    if (fs.readFileSync(file, 'utf8') !== original) {
-      throw new Error(`${component.tag}: source changed while component metadata was being prepared`);
-    }
-  }
-  for (const { file, expected } of changes) {
-    fs.writeFileSync(file, expected);
-  }
 }
 
 /**
@@ -104,15 +96,28 @@ function parseArguments(argv) {
 export function run(argv = process.argv.slice(2)) {
   const options = parseArguments(argv);
   requireCompleteGitHistory(repoRoot);
-  let metadata = readJson(metadataPath);
+  const sources = readComponentMetadataSources(packageDir);
+  let metadata = assembleComponentMetadata(sources);
   let inventory = readJson(inventoryPath);
   const rawManifest = fs.readFileSync(manifestPath, 'utf8');
   const manifest = JSON.parse(rawManifest);
-  const packageJson = readJson(packageJsonPath);
+  const rawPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
+  const packageJson = JSON.parse(rawPackageJson);
+  const sourceGuards = new Map();
+  const readSource = relative => {
+    const file = path.join(packageDir, relative);
+    if (sourceGuards.has(file)) return sourceGuards.get(file).original;
+    let original;
+    try { original = fs.readFileSync(file, 'utf8'); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; original = null; }
+    sourceGuards.set(file, { file, original });
+    return original;
+  };
   let nextCurrent = currentHistoryRecord(packageJson.version, rawManifest, manifest);
   let validationManifest = manifest;
   let validationRawManifest = rawManifest;
   let sourceChanges = [];
+  let committedWrites = [];
   let nextReleases = metadata.history?.releases ?? [];
   let nextTaggedCurrent = metadata.history?.taggedCurrent ?? null;
   const rolloverCurrent = packageJson.version !== metadata.history?.current?.version;
@@ -172,7 +177,7 @@ export function run(argv = process.argv.slice(2)) {
     // Build every source edit before touching disk. A detached/malformed component JSDoc or a
     // central policy/CEM mismatch must be detected before any file changes instead of validation
     // leaving a partial mass annotation behind.
-    sourceChanges = sourceAnnotationChanges(inventory);
+    sourceChanges = sourceAnnotationChanges(inventory, readSource);
   }
 
   const findings = validateComponentMetadata(metadata, {
@@ -180,24 +185,46 @@ export function run(argv = process.argv.slice(2)) {
     manifest: validationManifest,
     packageJson,
     rawManifest: validationRawManifest,
+    readSource,
   });
+  // Capture authority is independent of the still-stale on-disk inventory during a write.
+  // Use one verified snapshot for the complete census and guard it through commit.
+  const published = checkPublishedCompatibilitySync(path.join(scriptDir, 'fixtures/compatibility-history'));
   findings.push(...validateRootComponentClassDeprecations(metadata, {
     manifest: validationManifest,
     packageJson,
+    readSource,
+    historicalClassAliases: published.classAliases,
   }));
   if (findings.length) {
     throw new Error(`Component metadata validation failed:\n- ${findings.join('\n- ')}`);
   }
-  if (!options.write) sourceChanges = sourceAnnotationChanges(inventory);
+  if (!options.write) sourceChanges = sourceAnnotationChanges(inventory, readSource);
   const annotationFindings = sourceAnnotationFindings(sourceChanges);
   if (!options.write && annotationFindings.length) {
     throw new Error(`Component source metadata validation failed:\n- ${annotationFindings.join('\n- ')}`);
   }
+  if (!options.write) {
+    const sourceFindings = componentMetadataSourceFindings(sources);
+    if (sourceFindings.length) throw new Error(sourceFindings.join('\n'));
+  }
 
   if (options.write) {
-    writeSourceAnnotations(sourceChanges);
-    writeJson(metadataPath, metadata);
-    writeJson(inventoryPath, inventory);
+    const originalInventory = sources.snapshots.find(entry => entry.file === inventoryPath).original;
+    const plan = createComponentMetadataWritePlan(sources, metadata, {
+      guards: [
+        { file: manifestPath, original: rawManifest },
+        { file: packageJsonPath, original: rawPackageJson },
+        ...sourceGuards.values(),
+        ...published.snapshots,
+      ],
+      extraWrites: [
+        ...sourceChanges,
+        { file: inventoryPath, original: originalInventory, expected: `${JSON.stringify(inventory, null, 2)}\n` },
+      ],
+    });
+    commitComponentMetadataWritePlan(plan);
+    committedWrites = plan.entries.filter(entry => entry.original !== entry.expected);
   }
 
   if (options.check) {
@@ -207,6 +234,7 @@ export function run(argv = process.argv.slice(2)) {
     });
   }
   console.log(`Component metadata covers ${inventory.components.length} components with reproducible history.`);
+  return committedWrites;
 }
 
 if (isMainModule(import.meta.url)) run();

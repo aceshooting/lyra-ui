@@ -609,12 +609,12 @@ it('resolves each distinct palette slot once per render, not once per legend ent
   }
 });
 
-describe('lr-graph-legend deprecated interactive alias', () => {
+describe('lr-graph-legend retired interactive alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-graph-legend', kind: 'property', name: 'interactive' }];
   const observe = (el: LyraGraphLegend): string => String(el.shadowRoot!.querySelectorAll('button[part~="item"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraGraphLegend>(markup);
 
-  it('applies without-interaction without a deprecation warning', async () => {
+  it('applies without-interaction with canonical defaults and no deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -623,66 +623,5 @@ describe('lr-graph-legend deprecated interactive alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
-  });
-
-  it('keeps interactive="false" equal to without-interaction, warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let readback: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
-      alias = observe(await mount(html`<lr-graph-legend .types=${types} interactive="false"></lr-graph-legend>`));
-      const el = await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
-      el.interactive = false;
-      await el.updateComplete;
-      property = observe(el);
-      readback = [el.withoutInteraction, el.interactive, el.getAttribute('interactive')];
-      // The canonical property syncs back into the alias.
-      el.withoutInteraction = false;
-      await el.updateComplete;
-      readback.push(el.interactive, el.hasAttribute('interactive'));
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(readback).to.deep.equal([true, false, 'false', true, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-graph-legend:property:interactive',
-    ]);
-    expect(warnings[0]!.message).to.contain('without-interaction');
-  });
-
-  it('restores the default when interactive is true or removed', async () => {
-    let plain = '';
-    let restored = '';
-    let removed = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      plain = observe(await mount(html`<lr-graph-legend .types=${types}></lr-graph-legend>`));
-      const el = await mount(html`<lr-graph-legend .types=${types} interactive="false"></lr-graph-legend>`);
-      el.interactive = true;
-      await el.updateComplete;
-      restored = observe(el);
-      el.interactive = false;
-      await el.updateComplete;
-      el.removeAttribute('interactive');
-      await el.updateComplete;
-      removed = observe(el);
-    });
-    expect(restored).to.equal(plain);
-    expect(removed).to.equal(plain);
-  });
-
-  it('lets the later attribute win when markup carries both spellings', async () => {
-    let canonical = '';
-    let both = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-graph-legend .types=${types} without-interaction></lr-graph-legend>`));
-      const el = await mount(html`<lr-graph-legend .types=${types} interactive without-interaction></lr-graph-legend>`);
-      expect(el.withoutInteraction).to.equal(true);
-      both = observe(el);
-      const reversed = await mount(html`<lr-graph-legend .types=${types} without-interaction interactive></lr-graph-legend>`);
-      expect(reversed.withoutInteraction, 'the later alias attribute wins').to.equal(false);
-    });
-    expect(both).to.equal(canonical);
   });
 });

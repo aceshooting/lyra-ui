@@ -58,8 +58,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 304,
-    "automatedAccessibility": 303,
+    "componentCount": 303,
+    "automatedAccessibility": 302,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
     "visualEnrolled": 92,
@@ -618,7 +618,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 530,
+              "line": 507,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -1740,7 +1740,7 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 35,
+              "line": 36,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -1909,7 +1909,7 @@
           "evidence": [
             {
               "file": "src/components/media/animation/animation.test.ts",
-              "line": 27,
+              "line": 20,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2344,7 +2344,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail-group/app-rail-group.test.ts",
-              "line": 2,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -3276,7 +3276,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1401,
+              "line": 1245,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3536,7 +3536,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 392,
+              "line": 379,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4770,7 +4770,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4996,7 +4996,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5914,7 +5914,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7994,7 +7994,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8104,7 +8104,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 37,
+              "line": 36,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9085,7 +9085,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/checkpoint/checkpoint.class.ts",
-              "line": 176,
+              "line": 145,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10212,7 +10212,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 298,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10400,7 +10400,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 298,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11000,7 +11000,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2753,
+              "line": 2735,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11364,7 +11364,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 324,
+              "line": 298,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12974,7 +12974,8 @@
         "tests": [
           "src/components/data/context-meter/context-meter-interactive.test.ts",
           "src/components/data/context-meter/context-meter-requests.test.ts",
-          "src/components/data/context-meter/context-meter.test.ts"
+          "src/components/data/context-meter/context-meter.test.ts",
+          "src/components/data/context-meter/retired-properties.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -13281,7 +13282,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 524,
+              "line": 485,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13318,7 +13319,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/conversation-item/conversation-item-remediation.test.ts",
-          "src/components/conversation/conversation-item/conversation-item.test.ts"
+          "src/components/conversation/conversation-item/conversation-item.test.ts",
+          "src/components/conversation/conversation-item/conversation-retirements.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -13472,7 +13474,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 573,
+              "line": 571,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13726,7 +13728,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 3,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -13754,7 +13756,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 2557,
+              "line": 2561,
               "kind": "320px allocation test signal"
             }
           ]
@@ -14033,7 +14035,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2544,
+              "line": 2532,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14918,7 +14920,7 @@
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "test": "names the panel through the host aria-label, and the deprecated accessible-label still names it",
+              "test": "names the panel through host aria-label while ignoring accessible-label",
               "target": "canonical",
               "state": "open"
             },
@@ -16606,7 +16608,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16699,7 +16701,7 @@
             },
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "test": "names the panel through the host aria-label, and the deprecated accessible-label still names it",
+              "test": "names the panel through host aria-label while ignoring accessible-label",
               "target": "canonical",
               "state": "open"
             },
@@ -16718,7 +16720,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 3,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -17358,7 +17360,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1105,
+              "line": 1095,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17400,6 +17402,10 @@
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
+          "src/components/overlays/overlay/retired-events.test.ts",
+          "src/components/overlays/overlay/retired-naming-arrow.test.ts",
+          "src/components/overlays/overlay/retired-properties.test.ts",
+          "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -17575,6 +17581,7 @@
         "tests": [
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
+          "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -18391,7 +18398,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 168,
+              "line": 147,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19930,7 +19937,7 @@
           "evidence": [
             {
               "file": "src/components/media/file-input/file-input.test.ts",
-              "test": "is accessible while compact",
+              "test": "is accessible at the small size",
               "target": "el",
               "state": "populated"
             },
@@ -22421,7 +22428,7 @@
       }
     },
     {
-      "tag": "lr-geojson-view",
+      "tag": "lr-geojson-viewer",
       "family": "viewers",
       "maturity": "stable",
       "qualification": {
@@ -22446,171 +22453,7 @@
               "test": "is accessible once loaded",
               "target": "el",
               "state": "populated"
-            }
-          ],
-          "exemption": null
-        },
-        "keyboard": {
-          "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
-        },
-        "rtl": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/viewers/geojson-view/geojson-view.test.ts",
-              "test": "keeps GeoJSON metadata left-to-right under RTL",
-              "kind": "rendered RTL test signal"
-            }
-          ]
-        },
-        "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
-        },
-        "narrowAllocation": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/viewers/geojson-view/geojson-view.test.ts",
-              "test": "contains long unbroken metadata at a 320px allocation",
-              "kind": "320px allocation test signal"
-            }
-          ]
-        },
-        "engines": {
-          "applicability": "applicable",
-          "status": "configured-automation",
-          "evidence": [
-            {
-              "file": ".github/workflows/ci.yml",
-              "kind": "Chromium full suite and Firefox/WebKit contract subset"
             },
-            {
-              "file": ".github/workflows/full-engine.yml",
-              "kind": "weekly/manual Firefox and WebKit full-suite shards"
-            }
-          ],
-          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
-        },
-        "ssrHydration": {
-          "applicability": "applicable",
-          "status": "declared-and-gated",
-          "mode": "render-and-hydrate",
-          "reason": null,
-          "evidence": [
-            {
-              "file": "src/ssr.ts",
-              "kind": "machine-readable SSR support matrix"
-            },
-            {
-              "file": "scripts/check-ssr.mjs",
-              "kind": "server render crawl"
-            },
-            {
-              "file": "scripts/check-hydration.mjs",
-              "kind": "browser hydration identity crawl"
-            }
-          ],
-          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
-        },
-        "visual": {
-          "applicability": "applicable",
-          "status": "not-enrolled",
-          "stories": [],
-          "axes": [],
-          "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
-          "limitation": "No visual-regression story is enrolled for this tag."
-        },
-        "peerFailure": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/viewers/geojson-view/geojson-view.test.ts",
-              "test": "keeps the nested loading skeleton decorative while the shared sink owns announcements",
-              "kind": "optional-peer failure-path test signal"
-            }
-          ],
-          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
-        },
-        "security": {
-          "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-              "line": 13,
-              "kind": "remote-content or trust-boundary source signal"
-            }
-          ],
-          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
-        },
-        "forcedColors": {
-          "applicability": "applicable",
-          "status": "not-enrolled",
-          "stories": [],
-          "evidence": [],
-          "limitation": "No forced-colors visual capture is enrolled for this tag."
-        },
-        "assistiveTechnology": {
-          "applicability": "applicable",
-          "status": "not-verified",
-          "evidence": [],
-          "reviewer": null,
-          "reviewedAt": null,
-          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
-        }
-      },
-      "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-owned motion declaration or programmatic animation was detected.",
-        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
-        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
-        "No visual-regression story is enrolled for this tag.",
-        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
-        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
-        "No forced-colors visual capture is enrolled for this tag.",
-        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
-      ],
-      "provenance": {
-        "inventory": "scripts/fixtures/component-inventory.json",
-        "tests": [
-          "src/components/viewers/geojson-view/geojson-view.test.ts"
-        ],
-        "visual": "visual-baselines/manifest.json",
-        "ssr": "src/ssr.ts"
-      }
-    },
-    {
-      "tag": "lr-geojson-viewer",
-      "family": "viewers",
-      "maturity": "stable",
-      "qualification": {
-        "status": "incomplete",
-        "humanReview": "pending",
-        "reviewer": null,
-        "reviewedAt": null,
-        "evidenceGaps": [
-          "keyboard",
-          "visual",
-          "forcedColors",
-          "assistiveTechnology"
-        ]
-      },
-      "dimensions": {
-        "accessibility": {
-          "applicability": "applicable",
-          "status": "automated",
-          "evidence": [
             {
               "file": "src/components/viewers/geojson-view/geojson-view.test.ts",
               "test": "is accessible once loaded through the canonical lr-geojson-viewer tag",
@@ -22955,7 +22798,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 1051,
+              "line": 989,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23000,7 +22843,8 @@
           "src/components/retrieval/graph/graph-layout.test.ts",
           "src/components/retrieval/graph/graph-loader.test.ts",
           "src/components/retrieval/graph/graph-remediation.test.ts",
-          "src/components/retrieval/graph/graph.test.ts"
+          "src/components/retrieval/graph/graph.test.ts",
+          "src/components/retrieval/graph/retrieval-retirements.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -23866,7 +23710,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2476,
+              "line": 2469,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24041,7 +23885,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 215,
+              "line": 192,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24225,7 +24069,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25660,6 +25504,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
@@ -25835,7 +25680,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -25871,9 +25715,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/schema-viewer/schema-viewer.test.ts",
+              "test": "reads --lr-json-schema-viewer-max-indent, falls back to --lr-schema-viewer-max-indent, and lets the canonical name win",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -25963,7 +25812,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -26052,7 +25900,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1627,
+              "line": 1631,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26799,7 +26647,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 573,
+              "line": 545,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27321,7 +27169,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27548,7 +27396,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27941,7 +27789,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1200,
+              "line": 1188,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28202,7 +28050,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3661,
+              "line": 3635,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29619,6 +29467,7 @@
         "tests": [
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
+          "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -29857,6 +29706,7 @@
         "tests": [
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
+          "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -30039,6 +29889,7 @@
         "tests": [
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
+          "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -30589,7 +30440,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 864,
+              "line": 859,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32048,6 +31899,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
@@ -33139,6 +32991,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
@@ -33297,7 +33150,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2753,
+              "line": 2735,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35276,7 +35129,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35485,7 +35338,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36041,7 +35894,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1105,
+              "line": 1095,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36083,6 +35936,10 @@
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
+          "src/components/overlays/overlay/retired-events.test.ts",
+          "src/components/overlays/overlay/retired-naming-arrow.test.ts",
+          "src/components/overlays/overlay/retired-properties.test.ts",
+          "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -36876,7 +36733,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 597,
+              "line": 580,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37704,7 +37561,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 430,
+              "line": 427,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37890,7 +37747,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39562,7 +39419,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 3,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39653,7 +39510,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 387,
+              "line": 375,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39739,7 +39596,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 3,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39830,7 +39687,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 387,
+              "line": 375,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41029,7 +40886,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 564,
+              "line": 542,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41724,7 +41581,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 596,
+              "line": 564,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42846,7 +42703,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 488,
+              "line": 474,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43212,7 +43069,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 873,
+              "line": 868,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43735,7 +43592,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 560,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44351,7 +44208,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 192,
+              "line": 193,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44786,7 +44643,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 339,
+              "line": 306,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48066,7 +47923,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 853,
+              "line": 826,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49018,6 +48875,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
@@ -52017,7 +51875,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1105,
+              "line": 1095,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52059,6 +51917,10 @@
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
+          "src/components/overlays/overlay/retired-events.test.ts",
+          "src/components/overlays/overlay/retired-naming-arrow.test.ts",
+          "src/components/overlays/overlay/retired-properties.test.ts",
+          "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -52101,7 +51963,7 @@
             },
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "test": "is accessible with showProgress disabled and a hidden Previous control",
+              "test": "is accessible with progress disabled and a hidden Previous control",
               "target": "tour",
               "state": "open"
             }
@@ -52114,7 +51976,7 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 3,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -53606,7 +53468,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.test.ts",
-              "line": 73,
+              "line": 74,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -53708,7 +53570,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 604,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54234,7 +54096,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 992,
+              "line": 971,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55156,7 +55018,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 360,
+              "line": 357,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

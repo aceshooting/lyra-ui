@@ -340,15 +340,9 @@ for the native download action's hover and pressed backgrounds.
 
 **Renderer registry exports:**
 
-- `DocumentFile` (deprecated, removal not before 23.0.0; use the structurally identical
-  `LyraDocumentFile`) — the compatible mutable lookup input passed to `matches(file)` callbacks:
-  `{ name, mimeType, src, anchor?, highlights?, alt? }`. Adapter and legacy-render boundaries
-  receive an immutable file snapshot whose highlights use the shared trimmed, nonempty,
-  first-wins identity projection. Exported signatures, listed below, keep this name until its
-  removal; the two names are assignable to each other, so annotate your own code with
-  `LyraDocumentFile`.
-- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload, and the
-  supported name for the file type.
+- `LyraDocumentFile` — readonly file data `{ name, mimeType, src, anchor?, highlights?, alt? }`
+  passed to renderer matching and wrapped by discriminated payloads. Adapter and legacy-render
+  boundaries snapshot it; highlights use the shared trimmed, nonempty, first-wins identity projection.
 - `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
   immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
   cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
@@ -358,8 +352,7 @@ for the native download action's hover and pressed backgrounds.
 - `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
   authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
   file to one payload kind, derive capabilities from that retained payload, and render it.
-- `LyraDocumentRendererDefinition` (the deprecated `DocumentRendererDefinition` names the same
-  union until its removal, no earlier than 23.0.0) — a validated direct
+- `LyraDocumentRendererDefinition` — a validated direct
   `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
   `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
   required. Static capabilities are rejected on adapted definitions so their adapter remains the
@@ -368,7 +361,7 @@ for the native download action's hover and pressed backgrounds.
 - `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
   registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
   is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
-- `DocumentRendererRegistry` — `ReadonlyMap<string, DocumentRendererDefinition>`.
+- `DocumentRendererRegistry` — `ReadonlyMap<string, LyraDocumentRendererDefinition>`.
 - `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
   while producing the validated adapter accepted by a registry definition.
 - `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an
@@ -535,13 +528,6 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
-Deprecated aliases: `--lr-docx-viewer-table-header-background`,
-`--lr-docx-viewer-highlight-accent-background`, `--lr-docx-viewer-highlight-success-background`,
-`--lr-docx-viewer-highlight-warning-background`, `--lr-docx-viewer-highlight-danger-background`,
-`--lr-docx-viewer-highlight-neutral-background`, `--lr-docx-viewer-highlight-active-background`,
-`--lr-docx-viewer-search-match-background` and `--lr-docx-viewer-search-match-active-background`
-(use the matching `-bg` names) and `--lr-docx-viewer-search-match-active-foreground` (use
-`--lr-docx-viewer-search-match-active-color`); removed in 23.0.0.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -776,12 +762,6 @@ background of their own and therefore show the viewer's `--lr-color-surface`, so
 falling back to that same token would render as unhighlighted.
 `--lr-archive-viewer-highlight-active-bg` and
 `--lr-archive-viewer-highlight-active-outline` control the active quote.
-Deprecated aliases: `--lr-archive-viewer-highlight-accent-background`,
-`--lr-archive-viewer-highlight-success-background`,
-`--lr-archive-viewer-highlight-warning-background`,
-`--lr-archive-viewer-highlight-danger-background`,
-`--lr-archive-viewer-highlight-neutral-background` and
-`--lr-archive-viewer-highlight-active-background` (use the matching `-bg` names; removed in 23.0.0).
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
@@ -1566,9 +1546,7 @@ mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `withoutHeaderRow: boolean = false`
 (attribute `without-header-row`) renders the first parsed row as an ordinary data row instead of the
-persistent header above the virtualized row scrollport. Deprecated alias: `has-header-row`
-(`hasHeaderRow`; use `without-header-row`; `has-header-row="false"` equals `without-header-row`;
-removed in 23.0.0).
+persistent header above the virtualized row scrollport.
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —
@@ -1675,8 +1653,7 @@ the source is loading and being sanitized. Build error UI from `lr-include-error
   bounded cache; `without-cache` opts this instance out of both deduplication and retention.
   Fragment ids are deliberately not part of the key: `/partial.html#one` and `/partial.html#two`
   share only the fragmentless fetch/sanitize work, then select and clone independently. Request
-  mode, byte cap, and sanitizer profile are part of the key. Deprecated alias: `cache` (use
-  `without-cache`; `cache="false"` equals `without-cache`; removed in 23.0.0).
+  mode, byte cap, and sanitizer profile are part of the key.
 
 **Methods:** `reload(): Promise<void>` invalidates the retained remote document for this URL and
 mode, then loads it again. A same-page source is simply re-cloned from its current DOM.
@@ -1765,8 +1742,6 @@ only when `x`/`y`/`width`/`height` are finite numbers and both dimensions are no
 with a missing/non-array `rects` collection and each invalid rectangle are omitted from paint, focus,
 and activation. With `without-interaction`, the base is `aria-hidden` pure paint with no group role,
 accessible name, or controls. If every rectangle is invalid, no shadow subtree is rendered.
-Deprecated alias: `interactive` (use `without-interaction`; `interactive="false"` equals
-`without-interaction`; it no longer reflects; removed in 23.0.0).
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).
@@ -1789,11 +1764,7 @@ one `highlight-action` button per rendered highlight.
 `--lr-highlight-layer-neutral-bg`, and `--lr-highlight-layer-neutral-outline` control each
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
-`--lr-color-brand`). Deprecated aliases: `--lr-highlight-layer-accent-background`,
-`--lr-highlight-layer-success-background`, `--lr-highlight-layer-warning-background`,
-`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-neutral-background` and
-`--lr-highlight-layer-flash-background` (use the matching `-bg` names; removed in 23.0.0).
-
+`--lr-color-brand`).
 ## `lr-page-rail`
 
 A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
@@ -1968,13 +1939,7 @@ the element or on any ancestor.
 `--lr-notebook-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are
 each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-outline` (default
 `var(--lr-focus-ring-color)`) outlines the highlighted cell whose highlight `id` equals
-`activeHighlightId`. Deprecated aliases: `--lr-notebook-viewer-highlight-accent-background`,
-`--lr-notebook-viewer-highlight-success-background`,
-`--lr-notebook-viewer-highlight-warning-background`,
-`--lr-notebook-viewer-highlight-danger-background` and
-`--lr-notebook-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in
-23.0.0).
-
+`activeHighlightId`.
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
 `text/plain`).
@@ -2023,8 +1988,7 @@ already configured `src`, or exposes idle when none exists. `source: LyraXmlView
 readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
 `null`). `name: string = ''` — accessible label. `expandDepth?: number` (attribute
 `expand-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed, so only the
-levels above it start expanded; unset, nothing auto-collapses. Deprecated alias: `collapsed-depth`
-(`collapsedDepth`; use `expand-depth`, same value and meaning; removed in 23.0.0). `copyable:
+levels above it start expanded; unset, nothing auto-collapses. `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
@@ -2113,11 +2077,7 @@ ancestor; unset, they fall back to the same shared tokens the rules used before.
 `--lr-xml-viewer-highlight-neutral-bg` (default `var(--lr-color-surface-raised)`) are the row
 backgrounds of a resolved `highlights` entry per tone. The neutral default is deliberately
 `--lr-color-surface-raised` and not `--lr-color-surface`: the viewer paints its own surface with the
-latter, so a neutral highlight tinted with it would render as unhighlighted. Deprecated aliases:
-`--lr-xml-viewer-highlight-accent-background`, `--lr-xml-viewer-highlight-success-background`,
-`--lr-xml-viewer-highlight-warning-background`, `--lr-xml-viewer-highlight-danger-background` and
-`--lr-xml-viewer-highlight-neutral-background` (use the matching `-bg` names; removed in 23.0.0).
-`--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
+latter, so a neutral highlight tinted with it would render as unhighlighted. `--lr-xml-viewer-highlight-active-outline` (default `var(--lr-color-brand)`) outlines the entry named
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
 `--lr-xml-viewer-tag-color` (default `var(--lr-color-brand)`) retints every rendered `[part='tag']`
@@ -2172,8 +2132,7 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `language` is treated as `''` without coercion.
 - `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
   side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
-  turns that off. Deprecated alias: `sync-scroll` (`syncScroll`; use `without-sync-scroll`;
-  `sync-scroll="false"` equals `without-sync-scroll`; removed in 23.0.0).
+  turns that off.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
   preview panes; repeated assignment of the same value still re-runs.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides
@@ -2204,16 +2163,14 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.
 
-## `lr-geojson-viewer` / `lr-geojson-view`
+## `lr-geojson-viewer`
 
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
-`dataLayers`. The canonical class is `LyraGeoJsonViewer`. The pre-v9 `lr-geojson-view` tag, its
-`LyraGeojsonView` class and `LyraGeojsonViewEventMap` type are deprecated compatibility aliases
-(removal not before 23.0.0; this replaces the earlier promise to keep them permanently): they keep
-working unchanged until then, and connecting `lr-geojson-view` logs a one-time development warning.
-Rename them to `lr-geojson-viewer`, `LyraGeoJsonViewer` and `LyraGeoJsonViewerEventMap`. The
-document registry renders the canonical tag and matches `application/geo+json` and `.geojson`
-filenames.
+`dataLayers`. The canonical class is `LyraGeoJsonViewer`, with `LyraGeoJsonViewerEventMap`.
+The old `lr-geojson-view` tag and `LyraGeojsonViewEventMap` type were removed in 23.0.0.
+The root and viewers family barrels still expose the same distinct `LyraGeojsonView` subclass
+for compatibility; importing it does not register the removed tag. Prefer the canonical class.
+The document registry renders `lr-geojson-viewer` for `application/geo+json` and `.geojson` filenames.
 
 Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
 `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
@@ -2285,11 +2242,9 @@ size of `[part="base"]`, matching every other viewer in this family. It is also 
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
 The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
-`components/viewers/geojson-view/geojson-viewer.js`). The deprecated `components/lr-geojson-view.js`,
-`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes register or
-export the alias (the registration routes also register `lr-geojson-viewer`) and keep working until
-their removal, no earlier than 23.0.0; an application importing one of them only to register the
-canonical tag switches to `components/lr-geojson-viewer.js`.
+`components/viewers/geojson-view/geojson-viewer.js`). The former `components/lr-geojson-view.js`,
+`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
+in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
 Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
@@ -2461,33 +2416,24 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-viewers-document-viewer-registry-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `adaptDocumentRenderer(candidate: LyraResolvedDocumentRendererDefinition, file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraAdaptedDocumentRenderer`
+  `adaptDocumentRenderer(candidate: LyraResolvedDocumentRendererDefinition, file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraAdaptedDocumentRenderer`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `clearDocumentRenderers(): void`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `createDocumentRendererAdapter<K extends LyraDocumentRendererPayloadKind>(definition: LyraDocumentRendererAdapterDefinition<K>): LyraDocumentRendererAdapter`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `createDocumentRendererRegistry(overrides?: Iterable<readonly [string, DocumentRendererDefinition]>): DocumentRendererRegistry`
+  `createDocumentRendererRegistry(overrides?: Iterable<readonly [string, LyraDocumentRendererDefinition]>): DocumentRendererRegistry`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `DirectDocumentRendererDefinition extends DocumentRendererDefinitionBase {
-    readonly render: (file: DocumentFile) => unknown;
+    readonly render: (file: LyraDocumentFile) => unknown;
     readonly capabilities?: AnchorTargetCapabilities;
     readonly adapter?: never;
     readonly load?: never;
     // Inherited from DocumentRendererDefinitionBase.
-    readonly matches?: (file: DocumentFile) => boolean;
+    readonly matches?: (file: LyraDocumentFile) => boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `DocumentFile {
-    readonly name: string;
-    readonly mimeType: string;
-    readonly src: string;
-    readonly anchor?: LyraAnchor | string;
-    readonly highlights?: readonly LyraHighlight[];
-    readonly alt?: string;
-  }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `findDocumentRenderer(file: DocumentFile, registry?: DocumentRendererRegistry): DocumentRendererDefinition | undefined`
+  `findDocumentRenderer(file: LyraDocumentFile, registry?: DocumentRendererRegistry): LyraDocumentRendererDefinition | undefined`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `getDefaultDocumentRendererRegistry(): DocumentRendererRegistry`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
@@ -2499,12 +2445,12 @@ These named interfaces and helper signatures are available to typed integrations
       default: DirectDocumentRendererDefinition;
     }>;
     // Inherited from DocumentRendererDefinitionBase.
-    readonly matches?: (file: DocumentFile) => boolean;
+    readonly matches?: (file: LyraDocumentFile) => boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `loadDocumentRenderer(candidate: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition): Promise<DirectDocumentRendererDefinition>;
   loadDocumentRenderer(candidate: LyraAdaptedDocumentRendererDefinition): Promise<LyraAdaptedDocumentRendererDefinition>;
-  loadDocumentRenderer(candidate: DocumentRendererDefinition): Promise<LyraResolvedDocumentRendererDefinition>;`
+  loadDocumentRenderer(candidate: LyraDocumentRendererDefinition): Promise<LyraResolvedDocumentRendererDefinition>;`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
     readonly adapter: LyraDocumentRendererAdapter;
@@ -2512,7 +2458,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly capabilities?: never;
     readonly load?: never;
     // Inherited from DocumentRendererDefinitionBase.
-    readonly matches?: (file: DocumentFile) => boolean;
+    readonly matches?: (file: LyraDocumentFile) => boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraAdaptedDocumentRenderer {
@@ -2539,7 +2485,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraDocumentRendererAdapterDefinition<K extends LyraDocumentRendererPayloadKind> {
     readonly kind: K;
-    readonly adapt: (file: DocumentFile, supplied?: LyraDocumentRendererPayload) => LyraDocumentRendererPayloadFor<K>;
+    readonly adapt: (file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload) => LyraDocumentRendererPayloadFor<K>;
     readonly capabilities: (payload: LyraDocumentRendererPayloadFor<K>) => AnchorTargetCapabilities | undefined;
     readonly render: (payload: LyraDocumentRendererPayloadFor<K>) => unknown;
   }`
@@ -2547,7 +2493,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraDocumentRendererAdapter {
     readonly kind: LyraDocumentRendererPayloadKind;
     readonly [DOCUMENT_RENDERER_ADAPTER]: true;
-    adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
+    adapt(file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
     capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined;
     render(payload: LyraDocumentRendererPayload): unknown;
   }`
@@ -2557,7 +2503,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly file: LyraDocumentFile;
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `registerDocumentRenderer(key: string, definition: DocumentRendererDefinition): void`
+  `registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `snapshotLyraDocumentRendererPayload(value: LyraDocumentRendererPayload): LyraDocumentRendererPayload`
 

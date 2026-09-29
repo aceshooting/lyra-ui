@@ -1010,7 +1010,9 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     if (this.indicator) {
       const list = this.listElement;
       if (list) wanted.add(list);
-      if (this.openItem) wanted.add(this.openItem);
+      // A sibling can move the open trigger while the list and trigger keep their sizes.
+      // Observe every assigned item's box so the cached indicator offset follows that move.
+      for (const item of this.items) wanted.add(item);
     }
     for (const target of this.observedIndicatorTargets) {
       if (!wanted.has(target)) observer.unobserve(target);

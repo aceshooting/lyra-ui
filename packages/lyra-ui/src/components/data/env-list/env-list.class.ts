@@ -3,8 +3,6 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import {
   writeClipboardText,
@@ -16,18 +14,8 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 const MASK = '•'.repeat(8);
 const MAX_ENV_ENTRIES = 10_000;
-
-/**
- * The deprecated `revealable`/`copyable` aliases parse with the shared `true`-defaulting boolean
- * converter. Lit's built-in `type: Boolean` converter is presence-based -- the attribute's mere
- * presence (regardless of its string value) maps to `true`, so a plain-markup consumer writing the
- * literal `revealable="false"`/`copyable="false"` would actually get `true`, the opposite of what
- * that string reads as. Their canonical `without-reveal`/`without-copy-button` replacements are
- * ordinary false-defaulting presence booleans.
- */
 
 export interface EnvEntry {
   readonly name: string;
@@ -89,10 +77,6 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    revealable: ['withoutReveal', invertAlias, invertAlias],
-    copyable: ['withoutCopyButton', invertAlias, invertAlias],
-  };
 
   private _entries: readonly EnvEntry[] = [];
 
@@ -133,22 +117,6 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   /** Omits every entry's copy-to-clipboard button. */
   @property({ type: Boolean, reflect: true, attribute: 'without-copy-button' })
   withoutCopyButton = false;
-
-  /**
-   * Whether each secret entry gets a reveal/hide toggle. Deprecated inverted alias of
-   * `without-reveal`: `revealable="false"` equals `without-reveal`.
-   *
-   * @deprecated Use `without-reveal`; removal not before 23.0.0.
-   */
-  @property({ reflect: true, converter: trueDefaultBooleanConverter }) revealable = true;
-
-  /**
-   * Whether each entry gets a copy-to-clipboard button. Deprecated inverted alias of
-   * `without-copy-button`: `copyable="false"` equals `without-copy-button`.
-   *
-   * @deprecated Use `without-copy-button`; removal not before 23.0.0.
-   */
-  @property({ reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** Accessible name for the list; falls back to a localized default when unset. An explicitly
    *  empty string renders as an empty label rather than falling back. */

@@ -52,32 +52,32 @@ export const styles = css`
   [part='node'][data-highlight] {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-accent-bg,
-      var(--lr-xml-viewer-highlight-accent-background, var(--lr-color-brand-quiet))
+      var(--lr-color-brand-quiet)
     );
     background: var(--_lr-xml-viewer-highlight-background);
   }
   [part='node'][data-highlight='success'] {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-success-bg,
-      var(--lr-xml-viewer-highlight-success-background, var(--lr-color-success-quiet))
+      var(--lr-color-success-quiet)
     );
   }
   [part='node'][data-highlight='warning'] {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-warning-bg,
-      var(--lr-xml-viewer-highlight-warning-background, var(--lr-color-warning-quiet))
+      var(--lr-color-warning-quiet)
     );
   }
   [part='node'][data-highlight='danger'] {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-danger-bg,
-      var(--lr-xml-viewer-highlight-danger-background, var(--lr-color-danger-quiet))
+      var(--lr-color-danger-quiet)
     );
   }
   [part='node'][data-highlight='neutral'] {
     --_lr-xml-viewer-highlight-background: var(
       --lr-xml-viewer-highlight-neutral-bg,
-      var(--lr-xml-viewer-highlight-neutral-background, var(--lr-color-surface-raised))
+      var(--lr-color-surface-raised)
     );
   }
   [part='node'][data-active-highlight] {

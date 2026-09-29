@@ -1,0 +1,40 @@
+{
+  "family": "utility",
+  "stories": [
+    {
+      "id": "jsonviewer--default",
+      "profile": "standard"
+    },
+    {
+      "id": "styles-native-and-utilities--layout-and-prose",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Preview layer order corrected so the docs-only CSS reset no longer overrides Lyra's light-DOM styles; the new capture awaits human visual review."
+    },
+    {
+      "id": "styles-typography--specimen",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New story; awaits human visual review before baselines are promoted."
+    },
+    {
+      "id": "styles-typography--narrow-allocation",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "New story; awaits human visual review before baselines are promoted."
+    },
+    {
+      "id": "utility-visually-hidden--skip-link",
+      "profile": "standard"
+    }
+  ],
+  "tagCoverage": {
+    "lr-json-viewer": [
+      "jsonviewer--default"
+    ],
+    "lr-visually-hidden": [
+      "utility-visually-hidden--skip-link"
+    ]
+  }
+}

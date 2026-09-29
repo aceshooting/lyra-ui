@@ -583,6 +583,71 @@ it("measures each row's real height via ResizeObserver in row-height='auto' mode
   expect(measuredTotal).to.be.greaterThan(400);
 });
 
+for (const external of [false, true]) {
+  for (const indexed of [false, true]) {
+    it(`remeasures unchanged auto-height rows after ${indexed ? 'indexed source' : 'equivalent keyFunction'} replacement (${external ? 'light projection, external scroller' : 'default shadow projection, internal scroller'})`, async () => {
+      const items = Array.from({ length: 10 }, (_, id) => ({ id }));
+      const keyOf = (item: unknown) => (item as { id: number }).id;
+      const makeSource = (): LyraVirtualListIndexedSource => ({
+        count: items.length,
+        itemAt: (index) => items[index],
+        keyAt: (index) => index,
+      });
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="block-size:240px;overflow:auto">
+          <lr-virtual-list
+            style="--lr-virtual-list-height:240px"
+            .items=${items}
+            .keyFunction=${indexed ? undefined : keyOf}
+            .source=${indexed ? makeSource() : undefined}
+            .renderItem=${() => html`<div style="block-size:120px">row</div>`}
+          ></lr-virtual-list>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-virtual-list') as LyraVirtualList;
+      if (external) {
+        el.rowProjection = 'light';
+        el.scrollElement = wrapper;
+      }
+      const rowAt = (index: number): HTMLElement =>
+        el.shadowRoot!.querySelector<HTMLElement>(
+          `[part="row"][data-row-index="${index}"]`
+        )!;
+      const settleMeasurements = async (): Promise<void> => {
+        await waitUntil(
+          () => Math.abs(el.offsetForIndex(1) - 120) < 0.5,
+          'the unchanged first row contributes its measured 120px height'
+        );
+        await nextFrame();
+        await el.updateComplete;
+      };
+      await el.updateComplete;
+      await settleMeasurements();
+      const first = rowAt(0);
+      const second = rowAt(1);
+      expect(first.getBoundingClientRect().height).to.be.closeTo(120, 0.5);
+
+      for (let update = 0; update < 2; update++) {
+        if (indexed) el.source = makeSource();
+        else el.keyFunction = (item: unknown) => keyOf(item);
+        await el.updateComplete;
+        await settleMeasurements();
+
+        expect(rowAt(0) === first, 'the first row keeps its DOM identity').to.be.true;
+        expect(rowAt(1) === second, 'the second row keeps its DOM identity').to.be.true;
+        const firstBounds = first.getBoundingClientRect();
+        const secondBounds = second.getBoundingClientRect();
+        expect(firstBounds.height).to.be.closeTo(120, 0.5);
+        expect(el.offsetForIndex(1)).to.be.closeTo(firstBounds.height, 0.5);
+        expect(
+          secondBounds.top - firstBounds.bottom,
+          'adjacent rows do not overlap'
+        ).to.be.closeTo(0, 0.5);
+      }
+    });
+  }
+}
+
 it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize", async () => {
   interface ResizeRecord {
     callback: ResizeObserverCallback;
@@ -798,6 +863,69 @@ it("keeps a measured group height when a fresh-but-content-identical groups arra
     ).ResizeObserver = originalResizeObserver;
   }
 });
+
+for (const external of [false, true]) {
+  it(`remeasures unchanged group boxes after their labels change (${external ? 'light projection, external scroller' : 'default shadow projection, internal scroller'})`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="block-size:240px;overflow:auto">
+        <style>
+          lr-virtual-list.group-cache-regression::part(group) {
+            block-size: 64px;
+            box-sizing: border-box;
+          }
+        </style>
+        <lr-virtual-list
+          class="group-cache-regression"
+          style="--lr-virtual-list-height:240px"
+          row-height="40"
+          .items=${[0, 1, 2, 3, 4]}
+          .groups=${[{ key: 'first', label: 'First', startIndex: 0 }]}
+          .renderItem=${renderText}
+        ></lr-virtual-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-virtual-list') as LyraVirtualList;
+    if (external) {
+      el.rowProjection = 'light';
+      el.scrollElement = wrapper;
+    }
+    const settleMeasurements = async (): Promise<void> => {
+      await waitUntil(
+        () => Math.abs(el.offsetForIndex(0) - 64) < 0.5,
+        'the unchanged group marker contributes its measured 64px height'
+      );
+      await nextFrame();
+      await el.updateComplete;
+    };
+    await el.updateComplete;
+    await settleMeasurements();
+    const marker = el.shadowRoot!.querySelector<HTMLElement>('[part="group"]')!;
+    expect(marker.getBoundingClientRect().height).to.be.closeTo(64, 0.5);
+
+    for (const label of ['Other', 'Third']) {
+      el.groups = [{ key: 'first', label, startIndex: 0 }];
+      await el.updateComplete;
+      await settleMeasurements();
+
+      expect(
+        el.shadowRoot!.querySelector('[part="group"]') === marker,
+        'the group marker keeps its DOM identity'
+      ).to.be.true;
+      expect(marker.textContent?.trim()).to.equal(label);
+      const markerBounds = marker.getBoundingClientRect();
+      const firstRow = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="row"][data-row-index="0"]'
+      )!.getBoundingClientRect();
+      expect(markerBounds.height).to.be.closeTo(64, 0.5);
+      expect(el.offsetForIndex(0)).to.be.closeTo(markerBounds.height, 0.5);
+      expect(el.offsetForIndex(1)).to.be.closeTo(104, 0.5);
+      expect(
+        firstRow.top - markerBounds.bottom,
+        'the first row remains directly below its group marker'
+      ).to.be.closeTo(0, 0.5);
+    }
+  });
+}
 
 it("adjusts an indexed source's offset by real measured deltas from earlier auto-height rows", async () => {
   interface ResizeRecord {
@@ -2729,6 +2857,22 @@ describe("public offset/index queries", () => {
     await el.updateComplete;
 
     expect(measuredHeights.size).to.equal(0);
+    await waitUntil(
+      () => Math.abs(el.offsetForIndex(1) - 30) < 0.5 &&
+        Math.abs(el.offsetForIndex(2) - 120) < 0.5,
+      'reused keys converge to the new owning rows\' measured heights'
+    );
+    await nextFrame();
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="row"][data-row-index="0"]'
+    )!.getBoundingClientRect();
+    const second = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="row"][data-row-index="1"]'
+    )!.getBoundingClientRect();
+    expect(first.height).to.be.closeTo(30, 0.5);
+    expect(second.height).to.be.closeTo(90, 0.5);
+    expect(second.top - first.bottom).to.be.closeTo(0, 0.5);
   });
 
   it("clamps indexAtOffset and reports -1 for an empty list", async () => {

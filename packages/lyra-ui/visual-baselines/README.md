@@ -1,13 +1,19 @@
 # Visual-regression baselines
 
 PNG screenshots that `scripts/visual-regression.mjs` diffs new Storybook captures against.
-`manifest.json` is the authority for story enrollment, light/dark/RTL plus targeted real
+`manifest.json` is the generated facade for story enrollment, light/dark/RTL plus targeted real
 forced-colors and 320px narrow axes, and reasoned per-profile exemptions. Each story id has a
 subdirectory containing its historical light/dark/RTL baselines. Forced-colors and narrow pixels
 are ephemeral evidence (`artifactPolicy: "evidence-only"`), so CI executes their semantic probes
 without requiring an unreviewed PNG to be committed. A story whose current pixels await review can
 likewise declare `comparisonPolicy: "evidence-only"` with a reason while retaining its historical
 baseline. Capture generation never marks pixels as human-reviewed.
+
+Author story and tag-coverage records in `manifest-sources/families/<family>.json`; the source
+index records each story's owner and stable ordering. `manifest-sources/global.json` owns axes,
+profiles, provenance, and baseline review. Run `pnpm --filter @aceshooting/lyra-ui visual-manifest`
+after a reviewed source edit. Do not edit the generated aggregate directly. The generator preserves
+authored review decisions; it does not approve or promote screenshots.
 
 ## Reproducibility vs. correctness
 
@@ -50,8 +56,9 @@ change, chase down the determinism gap rather than weakening the comparison.
    #   packages/lyra-ui/.visual-diff-output/summary.md
    ```
 3. A human reviews the exact files under `.visual-diff-output/current`. For the reviewed scope,
-   update `baselineReview` to `complete` with the real reviewer/date and set
-   `provenance.humanVisualReview` to `true`. Remove that story's `comparisonPolicy` exemption; to
+   update `manifest-sources/global.json`'s `baselineReview` to `complete` with the real reviewer/date
+   and set `provenance.humanVisualReview` to `true`. Remove that story's `comparisonPolicy` exemption
+   in its family source and regenerate the manifest; to
    begin tracking a reviewed forced-colors/narrow axis, deliberately change its `artifactPolicy`
    to `tracked-baseline`. Then promote the already-reviewed candidate files with the same filter:
    ```bash

@@ -2,8 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
@@ -17,8 +16,6 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './agent-run.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { agentStatusKind, agentStatusMessage } from '../agent-status-presentation.js';
-
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
@@ -33,12 +30,6 @@ const TICKING_KINDS: ReadonlySet<string> = new Set(['running', 'collecting', 'wa
 /** Terminal statuses for which a static (not live-ticking) duration applies, and for which the
  *  built-in Retry button becomes relevant (a subset -- see `canRetry`). */
 const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled']);
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
-}
 
 /** Badge label per status. `running`/`error` reuse this library's existing generic `statusRunning`/
  *  `statusError` keys (identical wording already used by `<lr-task-list>`'s own per-item status
@@ -227,7 +218,6 @@ export interface LyraAgentRunEventMap {
  *   and body while `size` is `s` or smaller.
  * @cssprop [--lr-agent-run-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-agent-run-background=var(--lr-color-surface)] - Deprecated alias of `--lr-agent-run-bg`; removal not before 23.0.0.
  * @cssprop [--lr-agent-run-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-agent-run-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -276,12 +266,6 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showCancel: ['withoutCancel', invertAlias, invertAlias],
-    showRetry: ['withoutRetry', invertAlias, invertAlias],
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   /** The run to display. Controlled and never mutated by this component -- pass a new object to
    *  update it. `null` renders the shared `<lr-empty>` `noData` state. A runtime summary record
    *  without `steps` renders an empty task slot, and a step without a status renders as pending. */
@@ -313,20 +297,9 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
    *  viewer. */
   @property({ type: Boolean, attribute: 'without-cancel' }) withoutCancel = false;
 
-  /** Whether the built-in Cancel button can render at all -- still gated by the run's own status
-   *  being cancelable (`running`/`collecting`/`waiting-input`/`waiting-approval`). Set `false` for a read-only
-   *  viewer.
-   *  @deprecated Use `without-cancel`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-cancel', converter: trueDefaultBooleanConverter }) showCancel = true;
-
   /** Suppresses the built-in Retry button, which otherwise renders while the run's own status is
    *  retryable (`error`/`cancelled`). */
   @property({ type: Boolean, attribute: 'without-retry' }) withoutRetry = false;
-
-  /** Whether the built-in Retry button can render at all -- still gated by the run's own status
-   *  being retryable (`error`/`cancelled`).
-   *  @deprecated Use `without-retry`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-retry', converter: trueDefaultBooleanConverter }) showRetry = true;
 
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the root padding
@@ -335,13 +308,6 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
    * background stay, so use `frame="plain"` instead to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Tighter root padding and header/body gap for dense contexts (a run rendered as a row in a
-   *  list, a side panel) -- same convention as `lr-empty`'s `compact`. Defaults to `false`, i.e.
-   *  the full card padding. Purely a density knob: the border and background stay, so use
-   *  `frame="plain"` instead to drop the chrome entirely.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and

@@ -186,7 +186,7 @@ function runtimeDefaultSurfaces(mapping) {
  * `lyraVersion`, the installed @aceshooting/lyra-ui version when known, withholds rename-profile
  * entries that start in a later release.
  */
-export function buildMigrationContract(inventory, { renameLedger = null, exportDeprecations = [], lyraVersion = null } = {}) {
+export function buildMigrationContract(inventory, { renameLedger = null, exportDeprecations = [], lyraVersion = null, compatibilityContext = null } = {}) {
   invariant(inventory?.schemaVersion === 1, 'schemaVersion must be 1');
   const runtimeInventory = Object.hasOwn(inventory, 'migrationRuntimeSchemaVersion');
   if (runtimeInventory) {
@@ -206,7 +206,7 @@ export function buildMigrationContract(inventory, { renameLedger = null, exportD
     runtimeInventory
       ? inventory.lyraRenames
       : renameLedger
-        ? projectRenameLedger(renameLedger, inventory, { exportDeprecations })
+        ? projectRenameLedger(renameLedger, inventory, { exportDeprecations, compatibilityContext })
         : emptyRenameProjection(),
     { lyraVersion },
   );
@@ -468,13 +468,13 @@ export function buildMigrationContract(inventory, { renameLedger = null, exportD
  * projected Lyra rename ledger. The ledger is a required argument so a build can never silently
  * publish a CLI whose rename profiles are empty.
  */
-export function createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations = [] } = {}) {
+export function createMigrationRuntimeInventory(inventory, { renameLedger, exportDeprecations = [], compatibilityContext = null } = {}) {
   invariant(
     !Object.hasOwn(inventory ?? {}, 'migrationRuntimeSchemaVersion'),
     'cannot project an already-packaged migration runtime inventory',
   );
   invariant(renameLedger && typeof renameLedger === 'object', 'createMigrationRuntimeInventory needs the rename ledger');
-  buildMigrationContract(inventory, { renameLedger, exportDeprecations });
+  buildMigrationContract(inventory, { renameLedger, exportDeprecations, compatibilityContext });
 
   const targetTags = new Set(inventory.mappings.map((mapping) => mapping.targetTag).filter(Boolean));
   const localAttributes = new Map();
@@ -527,7 +527,7 @@ export function createMigrationRuntimeInventory(inventory, { renameLedger, expor
       parity: structuredClone(mapping.parity),
       rewrites: structuredClone(mapping.rewrites),
     })),
-    lyraRenames: projectRenameLedger(renameLedger, inventory, { exportDeprecations }),
+    lyraRenames: projectRenameLedger(renameLedger, inventory, { exportDeprecations, compatibilityContext }),
   };
 }
 

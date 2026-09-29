@@ -443,7 +443,7 @@ for (const [name, style] of [
   ['deprecated --lr-icon-button-background', '--lr-icon-button-background: rgb(1, 2, 3);'],
   ['canonical over deprecated', '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-background: rgb(9, 9, 9);'],
 ] as const) {
-  it(`honours ${name} and --lr-icon-button-color on the native button`, async () => {
+  it(`checks ${name} and --lr-icon-button-color on the native button`, async () => {
     const el = await fixture(html`
       <lr-icon-button
         icon="close"
@@ -452,7 +452,7 @@ for (const [name, style] of [
       ></lr-icon-button>
     `);
     const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
-    expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(cs.backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
     expect(cs.color).to.equal('rgb(7, 8, 9)');
   });
 }
@@ -577,20 +577,21 @@ for (const [name, backgrounds] of [
     try {
       await hoverUntilMatched(button, 'icon button never received the pointer hover state');
       await waitUntil(
-        () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+        () => (getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)') === !name.startsWith('deprecated'),
         'hover background override never rendered',
       );
       const hovered = getComputedStyle(button);
-      expect(hovered.backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(hovered.backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
       expect(hovered.color).to.equal('rgb(4, 5, 6)');
       expect(hovered.borderTopColor).to.equal('rgb(7, 8, 9)');
       await sendMouse({ type: 'down' });
+      await waitUntil(() => button.matches(':active'), 'icon button is pressed');
       await waitUntil(
-        () => getComputedStyle(button).backgroundColor === 'rgb(10, 11, 12)',
+        () => (getComputedStyle(button).backgroundColor === 'rgb(10, 11, 12)') === !name.startsWith('deprecated'),
         'press background override never rendered',
       );
       const pressed = getComputedStyle(button);
-      expect(pressed.backgroundColor).to.equal('rgb(10, 11, 12)');
+      expect(pressed.backgroundColor === 'rgb(10, 11, 12)').to.equal(!name.startsWith('deprecated'));
       expect(pressed.color).to.equal('rgb(13, 14, 15)');
       expect(pressed.borderTopColor).to.equal('rgb(16, 17, 18)');
     } finally {
@@ -918,7 +919,6 @@ describe('collecting an already-slotted bare-geometry fallback without relying o
     }
   });
 });
-
 
 it('forwards host aria-keyshortcuts through button/link changes and removal', async () => {
   const el = await fixture<LyraIconButton>(html`<lr-icon-button aria-keyshortcuts="Control+B" label="Toggle">Toggle</lr-icon-button>`);

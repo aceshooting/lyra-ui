@@ -1,0 +1,263 @@
+{
+  "locale": "ml",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:c4444da8b54a8738bb15bcc8d0b5fb8e9cdcb062692ffe7b410c28ed6e978f51"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "Original AI-assisted translation covers all 1,315 English source messages in 12 family slices; technical identifiers and fixed notation were retained where appropriate. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "AI-assisted independent semantic review read all 1,315 Malayalam messages across 12 slices for meaning, register, and script. Corrected untranslated Hindi/English overflow labels, degraded health wording, expansion-limit wording, and carousel terminology; audited exact English-identical templates. This is not native-speaker certification. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "This is punctuation-only separation with no natural-language wording to translate."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "This is punctuation-only separation with no natural-language wording to translate."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "Conventional x/y axis symbols and interpolation placeholders form the coordinate notation."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "This is punctuation-only separation with no natural-language wording to translate."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "This is a placeholder-only address layout with line breaks, not English prose."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "durationMilliseconds",
+      "rationale": "Standard technical unit abbreviations accompany dynamic numeric placeholders."
+    },
+    {
+      "messagePath": "durationSeconds",
+      "rationale": "Standard technical unit abbreviations accompany dynamic numeric placeholders."
+    },
+    {
+      "messagePath": "elapsedMinutesSecondsTemplate",
+      "rationale": "Standard technical unit abbreviations accompany dynamic numeric placeholders."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "Standardized byte-unit symbol; changing it would depart from common technical notation."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "Standardized byte-unit symbol; changing it would depart from common technical notation."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "Standardized byte-unit symbol; changing it would depart from common technical notation."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "Standardized byte-unit symbol; changing it would depart from common technical notation."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "Standardized byte-unit symbol; changing it would depart from common technical notation."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "PDF is the standard file-format acronym and is conventionally unchanged."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "generationStatusElapsedSeconds",
+      "rationale": "Standard technical unit abbreviations accompany dynamic numeric placeholders."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "Standard technical unit abbreviations accompany dynamic numeric placeholders."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "sourcePageSuffix",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "LLM is a standard technical acronym used as a type label."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

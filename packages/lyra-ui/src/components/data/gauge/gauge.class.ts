@@ -4,8 +4,6 @@ import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -19,7 +17,6 @@ import { styles } from './gauge.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The rendered geometry of a gauge. */
 export type GaugeShape = 'radial' | 'ring' | 'linear';
@@ -129,9 +126,6 @@ export class LyraGauge extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showValue: ['withoutValue', invertAlias, invertAlias],
-  };
 
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'role'])];
@@ -174,16 +168,6 @@ export class LyraGauge extends LyraElement {
    *  hiding the caption is the opt-out rather than the opt-in. Deliberately not reflected: nothing
    *  styles or queries it. */
   @property({ type: Boolean, attribute: 'without-value' }) withoutValue = false;
-  /**
-   * Whether the decorative `part="value"` caption renders at all. Deprecated inverted alias of
-   * `without-value`: `show-value="false"` equals `without-value`. Uses the shared parse-only
-   * `trueDefaultBooleanConverter`, so `show-value="false"` turns the caption off from plain HTML.
-   * Deliberately not reflected.
-   *
-   * @deprecated Use `without-value`; removal not before 23.0.0.
-   */
-  @property({ attribute: 'show-value', converter: trueDefaultBooleanConverter })
-  showValue = true;
   /** Semantic palette for the fill, read from the library's shared semantic-tone vocabulary
    *  (the same one `<lr-progress-bar>` uses). This is the fallback color: whenever `thresholds`
    *  is non-empty and `value` matches at least one entry, the matching entry's variant wins
@@ -481,7 +465,6 @@ export class LyraGauge extends LyraElement {
     return this.renderRadial();
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated property** `showChart` / `show-chart` since `21.1.0`; use property `without-chart`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -26,8 +26,7 @@ display when unset/unmatched); `slice: string = ''`; `label?: string` (visible h
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `withoutChart: boolean = false` (attribute `without-chart`, reflected — omits the trend chart);
-`chartHeight: string = '220px'` (attribute `chart-height`). Deprecated alias: `show-chart`/`showChart` (use
-`without-chart`; `show-chart="false"` equals `without-chart`; removed in 23.0.0).
+`chartHeight: string = '220px'` (attribute `chart-height`).
 
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.

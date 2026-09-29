@@ -3,7 +3,6 @@ import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 function sinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -669,67 +668,6 @@ describe('collecting already-slotted default content without relying on the init
   });
 });
 
-describe('lr-browser-frame deprecated controls alias', () => {
-  const CONTROLS: readonly DeprecatedUsage[] = [{ tag: 'lr-browser-frame', kind: 'property', name: 'controls' }];
-  const buttons = (el: LyraBrowserFrame): number =>
-    el.shadowRoot!.querySelectorAll('[part="take-over-button"], [part="stop-button"]').length;
-
-  it('does not warn for the canonical without-controls or the default', async () => {
-    const warnings = await captureDeprecationWarnings(CONTROLS, async () => {
-      await fixture(html`<lr-browser-frame></lr-browser-frame>`);
-      await fixture(html`<lr-browser-frame without-controls></lr-browser-frame>`);
-    });
-    expect(warnings).to.have.length(0);
-  });
-
-  it('treats controls="false" and .controls=false exactly like without-controls, warning once', async () => {
-    let canonical = -1;
-    let attribute = -1;
-    let property = -1;
-    let reads: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(CONTROLS, async () => {
-      canonical = buttons(await fixture<LyraBrowserFrame>(html`<lr-browser-frame without-controls></lr-browser-frame>`));
-      const aliased = await fixture<LyraBrowserFrame>(html`<lr-browser-frame controls="false"></lr-browser-frame>`);
-      attribute = buttons(aliased);
-      const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame></lr-browser-frame>`);
-      el.controls = false;
-      await el.updateComplete;
-      property = buttons(el);
-      reads = [aliased.controls, aliased.withoutControls, el.controls, el.withoutControls];
-    });
-    expect(canonical).to.equal(0);
-    expect(attribute).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal([false, true, false, true]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-browser-frame:property:controls']);
-  });
-
-  it('applies the last write when controls and without-controls are both authored', async () => {
-    let counts: number[] = [];
-    await captureDeprecationWarnings(CONTROLS, async () => {
-      counts = [
-        buttons(await fixture<LyraBrowserFrame>(html`<lr-browser-frame controls without-controls></lr-browser-frame>`)),
-        buttons(await fixture<LyraBrowserFrame>(html`<lr-browser-frame without-controls controls></lr-browser-frame>`)),
-      ];
-    });
-    expect(counts).to.deep.equal([0, 2]);
-  });
-
-  it('syncs and reflects controls back from the canonical without-controls without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(CONTROLS, async () => {
-      const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame></lr-browser-frame>`);
-      el.withoutControls = true;
-      await el.updateComplete;
-      reads.push(el.controls, el.getAttribute('controls'));
-      el.withoutControls = false;
-      await el.updateComplete;
-      reads.push(el.controls, el.getAttribute('controls'));
-    });
-    expect(reads).to.deep.equal([false, 'false', true, null]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-browser-frame deprecated --lr-browser-frame-controller-background alias', () => {
   const fill = (el: LyraBrowserFrame): string =>
@@ -748,7 +686,7 @@ describe('lr-browser-frame deprecated --lr-browser-frame-controller-background a
       ></lr-browser-frame>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });

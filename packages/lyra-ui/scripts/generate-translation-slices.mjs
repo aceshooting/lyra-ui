@@ -29,68 +29,20 @@ import { existsSync } from 'node:fs';
 import { readFile, readdir, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSync } from 'oxc-parser';
+import { readTranslationCatalogModule } from './check-translations.mjs';
 import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-function parseProgram(file, source) {
-  const result = parseSync(file, source);
-  if (result.errors.length > 0) {
-    throw new SyntaxError(
-      `${file} could not be parsed:\n${result.errors.map((error) => error.message ?? String(error)).join('\n')}`,
-    );
-  }
-  return result.program;
-}
-
-function visitAst(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  if (typeof node.type === 'string') visitor(node);
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'start' || key === 'end') continue;
-    if (Array.isArray(value)) for (const child of value) visitAst(child, visitor);
-    else if (value && typeof value === 'object') visitAst(value, visitor);
-  }
-}
-
-function literalString(node) {
-  if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;
-  if (node?.type === 'TemplateLiteral' && node.expressions.length === 0) {
-    return node.quasis[0]?.value.cooked ?? node.quasis[0]?.value.raw;
-  }
-  return undefined;
-}
-
-/** The `registerLyraLocale('<tag>', <identifier>[, <meta>])` call a catalog/slice file must make. */
-function findRegistration(program, source, file) {
-  let call;
-  visitAst(program, (node) => {
-    if (call || node.type !== 'CallExpression') return;
-    if (node.callee?.type !== 'Identifier' || node.callee.name !== 'registerLyraLocale') return;
-    call = node;
-  });
-  if (!call) return undefined;
-  const tag = literalString(call.arguments?.[0]);
-  const identifierArg = call.arguments?.[1];
-  const metaArg = call.arguments?.[2];
-  if (!tag || identifierArg?.type !== 'Identifier') {
-    throw new Error(`${file}: expected a registerLyraLocale('<tag>', <identifier>[, meta]) call`);
-  }
-  return {
-    tag,
-    identifierName: identifierArg.name,
-    metaText: metaArg ? source.slice(metaArg.start, metaArg.end).trim() : undefined,
-  };
-}
-
 async function readCatalogFile(file) {
   const source = await readFile(file, 'utf8');
-  const program = parseProgram(file, source);
-  const registration = findRegistration(program, source, file);
-  if (!registration) throw new Error(`${file}: no registerLyraLocale(...) call found`);
-  const entries = catalogEntries(source, file, registration.identifierName);
-  return { tag: registration.tag, metaText: registration.metaText, entries };
+  const { registration, imports } = readTranslationCatalogModule(source, file);
+  const { tag, parent, meta, identifier } = registration;
+  if (!/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u.test(tag) ||
+      (parent && !/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u.test(parent)))
+    throw new Error(`${file}: locale and parent must be literal locale tags`);
+  const entries = catalogEntries(source, file, identifier);
+  return { tag, parent, imports, metaText: meta ? source.slice(meta.start, meta.end).trim() : undefined, entries };
 }
 
 /**
@@ -103,12 +55,18 @@ async function readCatalogFile(file) {
 async function readSlicedCatalog(localeDir, sliceNames) {
   const entries = new Map();
   let tag;
+  let parent;
   let metaText;
   for (const sliceName of sliceNames) {
     const file = path.join(localeDir, `${sliceName}.ts`);
     if (!existsSync(file)) continue;
     const slice = await readCatalogFile(file);
+    const expectedImports = slice.parent ? [`../${slice.parent}/${sliceName}.js`] : [];
+    if (JSON.stringify(slice.imports) !== JSON.stringify(expectedImports))
+      throw new Error(`${file}: parent imports must exactly match the declared parent family`);
     tag ??= slice.tag;
+    if (parent !== undefined && parent !== slice.parent) throw new Error(`${file}: parent declaration disagrees with a sibling slice`);
+    if (parent === undefined) parent = slice.parent;
     if (slice.tag !== tag) {
       throw new Error(`${file}: registers "${slice.tag}" but a sibling slice registers "${tag}"`);
     }
@@ -126,7 +84,7 @@ async function readSlicedCatalog(localeDir, sliceNames) {
     }
   }
   if (!tag) throw new Error(`${localeDir}: contains no recognised translation slice file`);
-  return { tag, metaText, entries };
+  return { tag, parent, metaText, entries };
 }
 
 function relativeImport(fromFile, toFile) {
@@ -135,15 +93,15 @@ function relativeImport(fromFile, toFile) {
   return specifier.replace(/\.ts$/, '.js');
 }
 
-function sliceSource({ tag, metaText, entries, runtimeImport, typeImport }) {
+function sliceSource({ tag, parent, parentImport, metaText, entries, runtimeImport, typeImport }) {
   const lines = entries.map(([key, text]) => `  ${key}: ${text},`);
-  const registration = metaText
-    ? `registerLyraLocale('${tag}', strings, ${metaText});`
-    : `registerLyraLocale('${tag}', strings);`;
+  const register = parent ? 'registerLyraLocaleDelta' : 'registerLyraLocale';
+  const args = `'${tag}', ${parent ? `'${parent}', ` : ''}strings${metaText ? `, ${metaText}` : ''}`;
+  const registration = `${register}(${args});`;
   return `// GENERATED by scripts/generate-translation-slices.mjs -- do not edit by hand.
 // String values ARE hand-edited here and survive regeneration verbatim; regenerate structure with
 // node scripts/generate-translation-slices.mjs --write.
-import { registerLyraLocale } from '${runtimeImport}';
+${parentImport ? `import '${parentImport}';\n` : ''}import { ${register} } from '${runtimeImport}';
 import type { LyraLocaleStrings } from '${typeImport}';
 
 const strings: LyraLocaleStrings = {
@@ -193,6 +151,45 @@ export async function generateTranslationSlices({
     .map((entry) => entry.name)
     .sort();
 
+  const catalogs = new Map();
+  for (const name of localeFiles) {
+    const tag = name.slice(0, -'.ts'.length);
+    const localeDir = path.join(translationsRoot, tag);
+    const current = existsSync(localeDir)
+      ? await readSlicedCatalog(localeDir, sliceNames)
+      : await readCatalogFile(path.join(translationsRoot, name));
+    if (current.tag !== tag) throw new Error(`${name}: registered tag does not match its file name`);
+    if (!existsSync(localeDir) && current.parent &&
+        JSON.stringify(current.imports) !== JSON.stringify([`./${current.parent}.js`]))
+      throw new Error(`${name}: parent import must match the declared parent aggregate`);
+    catalogs.set(tag, current);
+  }
+  for (const tag of catalogs.keys()) {
+    const visited = new Set();
+    let current = tag;
+    while (current) {
+      if (visited.has(current)) throw new Error(`Locale parent cycle at ${current}`);
+      if (visited.size > 32) throw new Error('Locale parent chain exceeds 32 edges');
+      visited.add(current);
+      const catalog = catalogs.get(current);
+      if (!catalog) throw new Error(`Unknown locale parent ${current}`);
+      current = catalog.parent;
+    }
+  }
+  const resolved = new Map();
+  function resolve(tag, chain = []) {
+    if (chain.includes(tag)) throw new Error(`Locale parent cycle: ${[...chain, tag].join(' -> ')}`);
+    if (chain.length > 32) throw new Error('Locale parent chain exceeds 32 edges');
+    if (resolved.has(tag)) return resolved.get(tag);
+    const current = catalogs.get(tag);
+    if (!current) throw new Error(`Unknown locale parent ${tag}`);
+    const entries = new Map([...(current.parent ? resolve(current.parent, [...chain, tag]) : []), ...current.entries]);
+    if (current.parent && englishOrder.some((key) => !entries.has(key))) throw new Error(`${tag}: parent and own messages leave missing resolved keys`);
+    resolved.set(tag, entries);
+    return entries;
+  }
+  for (const tag of catalogs.keys()) resolve(tag);
+
   const writes = [];
   const results = [];
   const keepByLocaleDir = new Map();
@@ -202,9 +199,7 @@ export async function generateTranslationSlices({
     const aggregateFile = path.join(translationsRoot, name);
     const localeDir = path.join(translationsRoot, tag);
 
-    const current = existsSync(localeDir)
-      ? await readSlicedCatalog(localeDir, sliceNames)
-      : await readCatalogFile(aggregateFile);
+    const current = catalogs.get(tag);
     if (current.tag !== tag) {
       throw new Error(`${name}: registers "${current.tag}" but the file is named "${tag}.ts" -- they must agree`);
     }
@@ -226,7 +221,14 @@ export async function generateTranslationSlices({
       );
     }
 
-    const emittedSliceNames = sliceNames.filter((sliceName) => bySlice.get(sliceName).length > 0);
+    const inheritedSlices = new Set();
+    if (current.parent) {
+      for (const key of resolved.get(current.parent).keys()) {
+        const owners = keyToFamilies.get(key);
+        inheritedSlices.add(owners && owners.size === 1 ? [...owners][0] : 'shared');
+      }
+    }
+    const emittedSliceNames = sliceNames.filter((sliceName) => bySlice.get(sliceName).length > 0 || inheritedSlices.has(sliceName));
     const keep = new Set();
     for (const sliceName of emittedSliceNames) {
       const sliceFile = path.join(localeDir, `${sliceName}.ts`);
@@ -236,6 +238,8 @@ export async function generateTranslationSlices({
         kind: 'slice',
         source: sliceSource({
           tag,
+          parent: current.parent,
+          parentImport: current.parent ? `../${current.parent}/${sliceName}.js` : undefined,
           metaText: current.metaText,
           entries: bySlice.get(sliceName),
           runtimeImport: relativeImport(sliceFile, runtimeFile),

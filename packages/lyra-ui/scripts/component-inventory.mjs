@@ -486,6 +486,7 @@ const UNDOCUMENTED_PUBLIC_FIELDS = new Set(['title']);
 const UNSPECIFIED_PUBLIC_DOCUMENTATION = 'unspecified-public-documentation';
 const FRAMEWORK_CONTROLLER_FIELDS = new Set(['localize']);
 const PROPERTY_ONLY_FIELDS = new Set([
+  'accessibleLabel',
   'config',
   'chart',
   'currentTime',

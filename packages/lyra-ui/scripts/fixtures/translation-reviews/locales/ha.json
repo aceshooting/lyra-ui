@@ -1,0 +1,259 @@
+{
+  "locale": "ha",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1384,
+    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+  },
+  "catalog": {
+    "keyCount": 1384,
+    "sha256": "sha256:aa4bd038e0ef279e022a1e5bb6b7f1996adbd1bdfb5f963d4770223e696da2f6"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-09-28",
+    "evidence": "The catalog contains original locale-specific wording across the complete 1,315-message source; component identifiers and supplied placeholders are retained where needed, and technical notation is handled deliberately. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-09-28",
+    "evidence": "Reviewed all 12 Hausa slices for meaning, UI register, Hausa Latin orthography, and English carryover; checked all 1,315 entries against the source for keys, ordering, placeholders, and plural categories. No further clear corrections were justified. The 58 exact matches are formatting, standard symbols, keyboard or notebook notation, acronyms, and established technical terms/loanwords. AI-assisted; no human or native-speaker review is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "This value contains only punctuation used to join localized message parts, so there is no translatable prose."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "“{rate}×” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "“Q1” is chart notation or a value/placeholder template; axis symbols, quartile labels, and supplied data retain their conventional forms."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "“Q3” is chart notation or a value/placeholder template; axis symbols, quartile labels, and supplied data retain their conventional forms."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "“{context}: {content}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "This value contains only punctuation used to join localized message parts, so there is no translatable prose."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "“x {x}, y {y}” is chart notation or a value/placeholder template; axis symbols, quartile labels, and supplied data retain their conventional forms."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "This value contains only punctuation used to join localized message parts, so there is no translatable prose."
+    },
+    {
+      "messagePath": "chartTypeRadar",
+      "rationale": "“Radar” is the established technical name for this chart type."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "“{label}: {value}” is chart notation or a value/placeholder template; axis symbols, quartile labels, and supplied data retain their conventional forms."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "“{label}: {value} ({percentage})” is chart notation or a value/placeholder template; axis symbols, quartile labels, and supplied data retain their conventional forms."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "This is a line-break-preserving interpolation template; every displayed address field is consumer data, not English prose."
+    },
+    {
+      "messagePath": "contactViewerTypeFax",
+      "rationale": "“Fax” is an established cross-language loanword for fax."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "“{value} ({types})” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "contextMeterLabeledSummary",
+      "rationale": "“{label}: {summary}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "“{label}: {count}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "durationMilliseconds",
+      "rationale": "“{value}ms” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "durationSeconds",
+      "rationale": "“{value}s” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "elapsedMinutesSecondsTemplate",
+      "rationale": "“{minutes}m {seconds}s” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "“{name}: {members}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "emojiPickerGridLabel",
+      "rationale": "“Emoji” is the internationally established name for this character category."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "“{label}, {type}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "“B” is the internationally standardized byte-size unit symbol; localizing the symbol would change its meaning."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "“GB” is the internationally standardized byte-size unit symbol; localizing the symbol would change its meaning."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "“KB” is the internationally standardized byte-size unit symbol; localizing the symbol would change its meaning."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "“MB” is the internationally standardized byte-size unit symbol; localizing the symbol would change its meaning."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "“TB” is the internationally standardized byte-size unit symbol; localizing the symbol would change its meaning."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "The plus/minus count pattern is the standard compact diff notation used by version-control tools."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "“PDF” is the standardized PDF document-format acronym, which should remain unchanged in a file-type label."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "“{label} ({size})” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "“{status}: {count}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "“{label}: {status}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "“{status} — {detail}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "“{status} ({duration})” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "“{label}: {value}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "generationStatusElapsedSeconds",
+      "rationale": "“{seconds}s” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "“{rate} tok/s” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "“{label} ({type})” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "“{date}: {value}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "“{name} — {stage}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "“Alt” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "“Ctrl” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "“Del” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "“Esc” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "“PgDn” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "“PgUp” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "“Tab” is the physical keyboard key name or conventional short key label used by browser interfaces."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "“{relation} ({count})” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "“{label}, {relation}, {direction}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "This is the conventional Jupyter notebook input-prompt notation, where the bracketed execution count is part of the file format."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "This is the conventional Jupyter notebook input-prompt notation, where the bracketed execution count is part of the file format."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "“{total} {itemLabel}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "“{percent}%” uses standard compact time, rate, multiplier, or percent notation with a supplied value."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "“{key}: {value}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "“{label}: {count}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "“+{count}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "“LLM” is the standard acronym for a large language model."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "“{trend}, {polarity}” is a compact value/template label whose meaning comes from localized caller-provided fields and standard notation."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

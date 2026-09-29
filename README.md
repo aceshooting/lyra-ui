@@ -44,12 +44,12 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 304 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 303 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [v21 highlights](#v21-highlights)
+- [Highlights](#highlights)
 - [Principles & Guidelines](#principles--guidelines)
 - [Components](#components)
 - [Theming, internationalization & RTL](#theming-internationalization--rtl)
@@ -128,19 +128,24 @@ pnpm run test:migrate-wa     # run migration fixture/tests
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
 
-## v21 highlights
+<a id="v21-highlights"></a>
 
-- **Two visual looks:** Lyra and the opt-in shadcn preset, with independent light/dark mode,
-  gemstone or custom accents, and persistent runtime token presets.
+## Highlights
+
+- **Six composable looks:** Lyra, shadcn, Material, data, terminal and high contrast, with
+  independent solid/glass surfaces, density, mode and gemstone or custom accents. Additional looks
+  and styling options load only when imported.
+- **Documentation theme builder:** preview real controls, import and export validated presets,
+  inspect contrast, and edit typography, motion, shape, elevation and chart palettes.
 - **Navigation and actions:** context menus, menubars, navigation menus, pressed toggles and toggle
   groups; app-rail sidebar controls, shortcuts and persistence; multi-split external launchers.
 - **Conversation UI:** progressive Markdown, code headers with copy controls, scrollable GFM tables,
   styled task lists, and expandable tool-call blocks.
-- **Localization and styling:** 32 optional translation catalogs plus built-in English, typography
+- **Localization and styling:** 66 optional complete translation catalogs plus built-in English, typography
   utilities, and separate decorative and control-border tokens.
 
-See the [feature guide](./packages/lyra-ui/README.md#v21-highlights) for APIs and examples.
-The [roadmap](./docs/roadmap.md) covers switchable styling, glass surfaces, and density presets.
+See the [feature guide](./packages/lyra-ui/README.md#highlights) for APIs and examples.
+The [roadmap](./docs/roadmap.md) describes the remaining release commitments.
 For version-by-version changes and older upgrades, use the
 [package changelog](./packages/lyra-ui/CHANGELOG.md).
 
@@ -164,7 +169,7 @@ For version-by-version changes and older upgrades, use the
 
 ## Components
 
-304 custom elements across eleven component families. Every tag has a live, interactive example on the
+303 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -189,13 +194,14 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-Every one of the 304 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 303 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
-  no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`, and an
-  opt-in `themes/shadcn.css` preset gives every component the shadcn/ui look. The generated
-  runtime preset supports switching and persistence without swapping stylesheets; mode and accent
-  remain independent of the look.
+  no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`; optional
+  `looks/*.css`, surface and density sheets provide additional choices. The independent style API
+  supports scoped switching and persistence while keeping look, surface, density, mode and accent
+  separate. The [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)
+  shows the required imports and shadow-root setup.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
   is translatable without a rebuild or a per-locale bundle.
@@ -363,7 +369,7 @@ main `$lyra-ui` skill remains the exact API reference.
 
 ## Status
 
-`@aceshooting/lyra-ui` source is versioned at `22.1.0`; `@aceshooting/lyra-flags` source at `2.3.0`
+`@aceshooting/lyra-ui` source is versioned at `23.0.0`; `@aceshooting/lyra-flags` source at `2.3.0`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
 source versions while a release is being qualified. The two are versioned independently (not
 always lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.

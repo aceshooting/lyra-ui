@@ -464,24 +464,14 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   `[part="cell"]` currently targeted by an anchor or the active search match.
  * @cssprop [--lr-notebook-viewer-highlight-accent-bg=var(--lr-color-brand-quiet)] -
  *   Background of an `accent`-tone (the default) highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
- *   Deprecated alias of `--lr-notebook-viewer-highlight-accent-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-success-bg=var(--lr-color-success-quiet)] -
  *   Background of a `success`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
- *   Deprecated alias of `--lr-notebook-viewer-highlight-success-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-warning-bg=var(--lr-color-warning-quiet)] -
  *   Background of a `warning`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
- *   Deprecated alias of `--lr-notebook-viewer-highlight-warning-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-danger-bg=var(--lr-color-danger-quiet)] -
  *   Background of a `danger`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
- *   Deprecated alias of `--lr-notebook-viewer-highlight-danger-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-neutral-bg=var(--lr-color-surface-raised)] -
  *   Background of a `neutral`-tone highlighted cell.
- * @cssprop [--lr-notebook-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
- *   Deprecated alias of `--lr-notebook-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop [--lr-notebook-viewer-highlight-active-outline=var(--lr-focus-ring-color)] - Outline of
  *   the highlighted cell whose highlight `id` equals `activeHighlightId`.
  * @status stable

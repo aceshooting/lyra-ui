@@ -1,0 +1,96 @@
+{
+  "family": "layout",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-app-rail-group",
+      "lr-menubar",
+      "lr-menubar-item",
+      "lr-navigation-menu",
+      "lr-navigation-menu-item"
+    ],
+    "published-stable": [
+      "lr-accordion",
+      "lr-accordion-item",
+      "lr-app-rail",
+      "lr-app-rail-item",
+      "lr-breadcrumb",
+      "lr-breadcrumb-item",
+      "lr-button-group",
+      "lr-card",
+      "lr-carousel",
+      "lr-carousel-item",
+      "lr-command-palette",
+      "lr-control-group",
+      "lr-dashboard-grid",
+      "lr-details",
+      "lr-dock-panel",
+      "lr-drilldown-panel",
+      "lr-dropdown-item",
+      "lr-filter-bar",
+      "lr-menu",
+      "lr-menu-item",
+      "lr-reorder-item",
+      "lr-reorder-list",
+      "lr-responsive-panel",
+      "lr-scroller",
+      "lr-segmented",
+      "lr-stepper",
+      "lr-virtual-list",
+      "lr-widget"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-menu-label",
+      "lr-multi-split",
+      "lr-page",
+      "lr-split-panel",
+      "lr-tab",
+      "lr-tab-group",
+      "lr-tab-panel"
+    ]
+  },
+  "deprecations": [
+    {
+      "tag": "lr-accordion-item",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "accordion-item",
+        "usage": "::part(accordion-item)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-carousel",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
+    },
+    {
+      "tag": "lr-reorder-item",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
+    }
+  ]
+}

@@ -63,7 +63,7 @@ describe('lr-copy-button: composed lr-icon-button', () => {
     await el.updateComplete;
     const exported = (control(el).getAttribute('exportparts') ?? '').split(',').map((entry) => entry.trim());
     expect(exported).to.include('button:base-control');
-    expect(exported, 'the deprecated alias stays on the same node').to.include('button:base__control');
+    expect(exported, 'only the canonical public control part is forwarded').to.not.include('button:base__control');
   });
 
   it('copies on Enter from the actually focused control', async () => {

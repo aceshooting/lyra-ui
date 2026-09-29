@@ -1,0 +1,156 @@
+{
+  "family": "conversation",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-streaming-text-core"
+    ],
+    "published-stable": [
+      "lr-agent-workspace",
+      "lr-audio-visualizer",
+      "lr-branch-picker",
+      "lr-chat-composer",
+      "lr-chat-message",
+      "lr-chat-viewport",
+      "lr-checkpoint",
+      "lr-code-block",
+      "lr-code-block-core",
+      "lr-conversation-item",
+      "lr-handoff-divider",
+      "lr-markdown",
+      "lr-markdown-core",
+      "lr-message-actions",
+      "lr-message-feedback",
+      "lr-message-parts",
+      "lr-model-select",
+      "lr-model-settings-panel",
+      "lr-prompt-input",
+      "lr-prompt-queue",
+      "lr-push-to-talk",
+      "lr-realtime-session",
+      "lr-selection-toolbar",
+      "lr-stream-status",
+      "lr-streaming-text",
+      "lr-suggestion-chips",
+      "lr-thread-list",
+      "lr-transcript-feed",
+      "lr-typing-indicator",
+      "lr-usage-badge",
+      "lr-voice-picker",
+      "lr-widget-renderer"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-generation-metrics"
+    ]
+  },
+  "deprecations": [
+    {
+      "tag": "lr-markdown-core",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-link-activate",
+        "usage": "lr-link-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
+    },
+    {
+      "tag": "lr-markdown",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-link-activate",
+        "usage": "lr-link-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
+    },
+    {
+      "tag": "lr-message-actions",
+      "kind": "event",
+      "name": "lr-feedback-submit",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-feedback-submit-request",
+        "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-message-feedback",
+      "kind": "event",
+      "name": "lr-feedback-submit",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-feedback-submit-request",
+        "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-message-parts",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-link-activate",
+        "usage": "lr-link-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
+    },
+    {
+      "tag": "lr-message-parts",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "aria-label",
+        "usage": "element.setAttribute('aria-label', 'Message content');"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window."
+    },
+    {
+      "tag": "lr-thread-list",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-thread-list",
+      "kind": "property",
+      "name": "compact",
+      "attribute": "compact",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "property",
+        "name": "size",
+        "usage": "Use size=\"s\" for compact rows and size=\"m\" for the default row density."
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window."
+    }
+  ]
+}

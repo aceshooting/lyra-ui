@@ -1,7 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -20,7 +19,6 @@ import { ringStyles } from './progress.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /**
  * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator. `variant`
@@ -81,13 +79,9 @@ export class LyraProgressRing extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, ringStyles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { showValue: 'withValue' };
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'accessible-label' && newValue !== null) {
-      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
-    }
   }
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
@@ -103,13 +97,6 @@ export class LyraProgressRing extends LyraElement {
    *  gated: a consumer who slots their own content always sees that content instead, with or
    *  without `with-value` (native `<slot>` projection semantics, unaffected by this property). */
   @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
-  /** Shows the formatted percentage as the default slot's fallback content while determinate.
-   *  `false` by default, matching sibling `<lr-progress-bar>`'s `showValue`/`show-value` exactly --
-   *  a determinate ring with no `show-value` renders no percentage text. Only the fallback is
-   *  gated: a consumer who slots their own content always sees that content instead, with or
-   *  without `show-value` (native `<slot>` projection semantics, unaffected by this property).
-   *  @deprecated Use `with-value`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Outer diameter of the ring, on the library's shared six-step size ladder. `'m'` (the default)
    *  is this component's pre-existing behaviour, unchanged: an unset ring still renders at
    *  `--lr-progress-ring-size`'s literal `2.5rem` default. Every other tier scales that same
@@ -124,14 +111,12 @@ export class LyraProgressRing extends LyraElement {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: 'accessible-label' })
+  @property({ attribute: false })
   get accessibleLabel(): string {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string) {
-    if (!this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    }
+    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
     this.legacyAccessibleLabel = value;
   }
   /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an

@@ -208,3 +208,5 @@ try {
 }
 
 console.log('check-translation-catalog-size.test.mjs: all assertions passed');
+
+assert.equal(registrationIdentifier("registerLyraLocaleDelta('de-CH', 'de', strings, { dir: 'ltr' });"), 'strings');

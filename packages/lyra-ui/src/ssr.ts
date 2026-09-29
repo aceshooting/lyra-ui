@@ -242,9 +242,6 @@ export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
   [tag('geojson-viewer')]: {
     remoteContent: 'client-only', // renders feature geometry fetched and parsed from the src document
   },
-  [tag('geojson-view')]: {
-    remoteContent: 'client-only', // extends lr-geojson-viewer and shares its fetched-content dependency
-  },
   [tag('document-viewer')]: {
     remoteContent: 'client-only', // lazily loads and composes the renderer matching the requested document, so its body has no content until that load resolves
   },

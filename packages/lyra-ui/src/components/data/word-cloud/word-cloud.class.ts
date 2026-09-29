@@ -13,7 +13,6 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -291,9 +290,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showLegend: 'withLegend',
-  };
 
   private _words: readonly WordCloudWord[] = [];
   private inputDroppedCount = 0;
@@ -392,14 +388,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   /** Renders the supplied or derived legend entries below the cloud. It is non-interactive and
    *  does not alter word activation or palette selection. */
   @property({ type: Boolean, reflect: true, attribute: 'with-legend' }) withLegend = false;
-
-  /**
-   * Deprecated alias of `with-legend`, with identical behavior. Setting it logs a one-time
-   * development warning.
-   *
-   * @deprecated Use `with-legend`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
 

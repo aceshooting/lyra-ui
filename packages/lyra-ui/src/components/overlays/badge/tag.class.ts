@@ -23,7 +23,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraTagEventMap {
   'lr-remove': CustomEvent<null>;
 }
@@ -111,9 +110,6 @@ function isSourceLabelAvailable(node: Node): boolean {
  * defaulting to the tag's own corner so retuning one retunes both.
  * @cssprop [--lr-tag-remove-hover-bg=color-mix(in srgb, currentColor 16%, transparent)] -
  * Background of the remove button on hover.
- * @cssprop [--lr-tag-remove-hover-background=color-mix(in srgb, currentColor 16%, transparent)] -
- * Deprecated alias of `--lr-tag-remove-hover-bg`, read only as its fallback; removal not before
- * 23.0.0.
  * @status stable
  * @since 4.0.0
  */

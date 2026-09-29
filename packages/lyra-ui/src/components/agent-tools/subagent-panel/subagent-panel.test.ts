@@ -3,7 +3,6 @@ import './subagent-panel.js';
 import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 type CssEscapeHost = { escape?: (identifier: string) => string };
 
@@ -774,110 +773,44 @@ describe('run-row chrome theming hooks', () => {
   });
 });
 
-describe('lr-subagent-panel size and its deprecated compact alias', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-subagent-panel', kind: 'property', name: 'compact' }];
-  const density = (el: LyraSubagentPanel): string => {
-    const trigger = getComputedStyle(el.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement);
-    const task = getComputedStyle(el.shadowRoot!.querySelector('[part="task"]') as HTMLElement);
-    return JSON.stringify([trigger.padding, trigger.gap, task.fontSize]);
-  };
-
-  it('defaults size to m without a deprecation warning', async () => {
-    let size = '';
-    let compact: boolean | undefined;
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
-      size = el.size;
-      compact = el.compact;
-      await fixture(html`<lr-subagent-panel size="s" .runs=${runs}></lr-subagent-panel>`);
-    });
-    expect(size).to.equal('m');
-    expect(compact).to.equal(false);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact working as size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      canonical = density(await fixture<LyraSubagentPanel>(html`<lr-subagent-panel size="s" .runs=${runs}></lr-subagent-panel>`));
-      const aliased = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel compact .runs=${runs}></lr-subagent-panel>`);
-      alias = density(aliased);
-      const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = density(el);
-      el.compact = false;
-      await el.updateComplete;
-      reads = [aliased.size, aliased.compact, el.size, el.compact];
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal(['s', true, 'm', false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-subagent-panel:property:compact']);
-  });
-
-  it('applies the last write when compact and size are both authored or set', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const sizeLast = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel compact size="l" .runs=${runs}></lr-subagent-panel>`);
-      const compactLast = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel size="l" compact .runs=${runs}></lr-subagent-panel>`);
-      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
-    });
-    expect(reads).to.deep.equal(['l', false, 's', true]);
-  });
-
-  it('syncs and reflects compact back from the canonical size without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
-      el.size = 'xs';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-      el.size = 'l';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(reads).to.deep.equal([true, true, false, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-subagent-panel deprecated --lr-subagent-panel-background/-hover-background aliases', () => {
   const fill = (el: LyraSubagentPanel): string =>
     getComputedStyle(el.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement).backgroundColor;
 
-  it('paints the resting fill from --lr-subagent-panel-bg, still honours the old name, and lets the canonical name win', async () => {
+  it('paints the resting fill from --lr-subagent-panel-bg and ignores the retired name', async () => {
     const canonical = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs} style="--lr-subagent-panel-bg: rgb(1, 2, 3)"></lr-subagent-panel>`);
     const alias = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs} style="--lr-subagent-panel-background: rgb(1, 2, 3)"></lr-subagent-panel>`);
     const both = await fixture<LyraSubagentPanel>(
       html`<lr-subagent-panel .runs=${runs} style="--lr-subagent-panel-bg: rgb(4, 5, 6); --lr-subagent-panel-background: rgb(1, 2, 3)"></lr-subagent-panel>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 
-  it('paints the hovered fill from --lr-subagent-panel-hover-bg, still honours the old name, and lets the canonical name win', async () => {
-    const expectHovered = async (style: string, expected: string): Promise<void> => {
+  it('paints the hovered fill from --lr-subagent-panel-hover-bg and ignores the retired name', async () => {
+    const expectHovered = async (style: string, expected: string, shouldMatch = true): Promise<void> => {
       const el = await fixture<LyraSubagentPanel>(
         html`<lr-subagent-panel .runs=${runs} style=${`--lr-transition-fast: 0s; ${style}`}></lr-subagent-panel>`,
       );
       const trigger = el.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement;
       try {
         await hoverUntilMatched(trigger, 'the run trigger never registered :hover');
-        await waitUntil(
-          () => getComputedStyle(trigger).backgroundColor === expected,
-          `the hovered run trigger never painted ${expected} for ${style}`,
-        );
+        if (shouldMatch) {
+          await waitUntil(
+            () => getComputedStyle(trigger).backgroundColor === expected,
+            `the hovered run trigger never painted ${expected} for ${style}`,
+          );
+        } else {
+          expect(getComputedStyle(trigger).backgroundColor, `retired token had an effect for ${style}`).to.not.equal(expected);
+        }
       } finally {
         await resetMouse();
       }
     };
     await expectHovered('--lr-subagent-panel-hover-bg: rgb(7, 8, 9)', 'rgb(7, 8, 9)');
-    await expectHovered('--lr-subagent-panel-hover-background: rgb(7, 8, 9)', 'rgb(7, 8, 9)');
+    await expectHovered('--lr-subagent-panel-hover-background: rgb(7, 8, 9)', 'rgb(7, 8, 9)', false);
     await expectHovered(
       '--lr-subagent-panel-hover-bg: rgb(4, 5, 6); --lr-subagent-panel-hover-background: rgb(7, 8, 9)',
       'rgb(4, 5, 6)',

@@ -10,7 +10,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noData, LYRA_DEFAULT_trendOf } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 const VIEW = 100;
 const MAX_POINTS = 500;
 
@@ -57,17 +56,12 @@ function normalizeCurve(value: unknown): LyraSparklineCurve {
  * @csspart base - Deprecated alias for `sparkline` on the same SVG wrapper.
  * @csspart fill - The filled area rendered by `appearance="solid"` and `appearance="gradient"`.
  * @csspart line - The stroked trend path.
- * @csspart area - Deprecated alias for `fill` on the same path; use `::part(fill)`. Removal not
- *   before 23.0.0. A stylesheet's use of a part cannot be observed, so it never logs a warning.
  * @csspart bar - Each rectangle rendered by the additive `mark="bar"` mode.
  * @cssprop [--fill-color=var(--lr-color-brand-quiet)] - Area fill color. A `trend` supplies a
  *   semantic token default, while an authored value always wins.
  * @cssprop [--line-color=var(--lr-color-brand)] - Trend line color. A `trend` supplies a semantic
  *   token default, while an authored value always wins.
  * @cssprop [--line-width=var(--lr-border-width-medium)] - Trend line width.
- * @cssprop [--lr-sparkline-stroke-width=var(--lr-border-width-medium)] - Deprecated alias read only
- *   as the fallback for `--line-width`, so it has no effect wherever `--line-width` is set; set
- *   `--line-width` on `lr-sparkline` instead. Removal not before 23.0.0.
  * @status stable
  * @since 4.0.0
  */
@@ -269,7 +263,7 @@ export class LyraSparkline extends LyraElement {
         : html`
             ${showFill
               ? svg`<path
-                  part="fill area"
+                  part="fill"
                   d=${fillPath}
                   style=${
                     appearance === 'gradient'

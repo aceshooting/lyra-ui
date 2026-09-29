@@ -558,3 +558,17 @@ export const DrawWhenVisible: Story = {
     </div>
   `,
 };
+
+export const CompactTableAndZoom: Story = {
+  parameters: {
+    docs: { description: { story: 'The size scale controls plot density. with-data-table exposes the numbers, without-zero-baseline follows their range, and zoomable enables wheel, drag and pinch exploration. Point activation uses lr-point-activate for pointer and keyboard input.' } },
+  },
+  render: () => html`
+    <lr-chart type="line" size="s" with-data-table without-zero-baseline zoomable
+      aria-label="Quarterly revenue" height="12rem"
+      style="inline-size:24rem;max-inline-size:100%;--lr-chart-tooltip-color:var(--lr-color-brand)"
+      .labels=${['Q1', 'Q2', 'Q3']}
+      .datasets=${[{ label: 'Revenue', data: [90, 95, 100] }]}
+    ></lr-chart>
+  `,
+};

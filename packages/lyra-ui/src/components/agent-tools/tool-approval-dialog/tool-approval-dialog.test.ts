@@ -6,7 +6,6 @@ import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 const ARGS = { query: 'solar inverters', max_results: 5 };
 
@@ -1505,107 +1504,6 @@ it('renders the disabled edit action with the shared disabled opacity token', as
   expect(getComputedStyle(edit).opacity).not.to.equal('1');
 });
 
-describe('lr-tool-approval-dialog deprecated editable and pending aliases', () => {
-  const ALIASES: readonly DeprecatedUsage[] = [
-    { tag: 'lr-tool-approval-dialog', kind: 'property', name: 'editable' },
-    { tag: 'lr-tool-approval-dialog', kind: 'property', name: 'pending' },
-  ];
-  const hasEdit = (el: LyraToolApprovalDialog): boolean => el.shadowRoot!.querySelector('[part="edit-button"]') !== null;
-
-  it('treats editable="false" exactly like readonly, keeps a bare editable meaning the default, and warns once', async () => {
-    let results: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const canonical = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" readonly></lr-tool-approval-dialog>`);
-      const off = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable="false"></lr-tool-approval-dialog>`);
-      const bare = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable></lr-tool-approval-dialog>`);
-      const both = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t" editable readonly></lr-tool-approval-dialog>`);
-      const property = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog tool-name="t"></lr-tool-approval-dialog>`);
-      property.editable = false;
-      await property.updateComplete;
-      results = [hasEdit(canonical), hasEdit(off), hasEdit(bare), hasEdit(both), hasEdit(property), off.readonly, off.editable];
-    });
-    expect(results).to.deep.equal([false, false, true, false, false, true, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-approval-dialog:property:editable']);
-  });
-
-  it('keeps pending reading and writing the pending-action state, warning once', async () => {
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
-      );
-      el.pending = 'deny';
-      await el.updateComplete;
-      reads = [el.pendingAction, el.pending, el.getAttribute('pending-action'), denyButton(el).loading, approveButton(el).disabled];
-      el.pending = null;
-      await el.updateComplete;
-      reads.push(el.pendingAction, el.hasAttribute('pending-action'));
-    });
-    expect(reads).to.deep.equal(['deny', 'deny', 'deny', true, true, null, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-approval-dialog:property:pending']);
-  });
-
-  it('lets a vetoing listener that writes the deprecated pending alias win over the built-in fallback', async () => {
-    let state: unknown[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
-      );
-      el.addEventListener('lr-approve-request', (e) => {
-        e.preventDefault();
-        el.pending = null;
-      });
-      approveButton(el).click();
-      await el.updateComplete;
-      state = [el.pendingAction, el.open, approveButton(el).loading];
-    });
-    expect(state).to.deep.equal([null, true, false]);
-  });
-
-  it('applies the last authored spelling when pending and pending-action or editable and readonly are both present', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      const canonicalLast = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" pending="approve" pending-action="deny"></lr-tool-approval-dialog>`,
-      );
-      const aliasLast = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" pending-action="deny" pending="approve"></lr-tool-approval-dialog>`,
-      );
-      const editableLast = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" readonly editable></lr-tool-approval-dialog>`,
-      );
-      reads = [
-        canonicalLast.pendingAction,
-        canonicalLast.pending,
-        aliasLast.pendingAction,
-        aliasLast.pending,
-        editableLast.readonly,
-        hasEdit(editableLast),
-      ];
-    });
-    expect(reads).to.deep.equal(['deny', 'deny', 'approve', 'approve', false, true]);
-  });
-
-  it('syncs and reflects editable and pending back from the canonical properties without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraToolApprovalDialog>(
-        html`<lr-tool-approval-dialog tool-name="t" .args=${ARGS} open></lr-tool-approval-dialog>`,
-      );
-      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.hasAttribute('pending'));
-      el.readonly = true;
-      el.pendingAction = 'approve';
-      await el.updateComplete;
-      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.getAttribute('pending'));
-      el.readonly = false;
-      el.pendingAction = null;
-      await el.updateComplete;
-      reads.push(el.editable, el.getAttribute('editable'), el.pending, el.hasAttribute('pending'));
-    });
-    expect(reads).to.deep.equal([true, null, null, false, false, 'false', 'approve', 'approve', true, null, null, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 expectDeprecatedUsage('lr-tool-approval-dialog', 'event', 'lr-approve');
 

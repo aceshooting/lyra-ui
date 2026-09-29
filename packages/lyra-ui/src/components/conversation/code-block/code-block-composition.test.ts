@@ -40,8 +40,8 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
       expect(copyButton(el).getAttribute('exportparts')).to.contain(
         'button:copy-button-control'
       );
-      // The deprecated double-underscore spelling stays forwarded from the same native button.
-      expect(copyButton(el).getAttribute('exportparts')).to.contain(
+      // The retired double-underscore spelling is no longer forwarded.
+      expect(copyButton(el).getAttribute('exportparts')).to.not.contain(
         'button:copy-button__control'
       );
     });

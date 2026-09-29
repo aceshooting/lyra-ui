@@ -1,0 +1,37 @@
+{
+  "family": "viewers",
+  "assignments": {
+    "new-component-experimental": [],
+    "published-stable": [
+      "lr-archive-viewer",
+      "lr-calendar-viewer",
+      "lr-contact-viewer",
+      "lr-csv-viewer",
+      "lr-dataset-viewer",
+      "lr-document-compare",
+      "lr-document-preview",
+      "lr-document-viewer",
+      "lr-docx-viewer",
+      "lr-ebook-viewer",
+      "lr-email-viewer",
+      "lr-highlight-layer",
+      "lr-html-viewer",
+      "lr-include",
+      "lr-notebook-viewer",
+      "lr-page-rail",
+      "lr-pdf-viewer",
+      "lr-pptx-viewer",
+      "lr-spreadsheet-viewer",
+      "lr-svg-viewer",
+      "lr-xml-viewer"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": [
+      "lr-geojson-viewer"
+    ]
+  },
+  "deprecations": []
+}

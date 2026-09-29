@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -5,6 +6,9 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-callout', 'accessible-label');
 
 /** The close control's own native button, one shadow boundary deeper than `[part="close-button"]`
  *  since 16.0.0 composed it from `<lr-icon-button>`. Every painted surface lives here. */
@@ -1321,21 +1325,19 @@ describe('renamed callout members', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('keeps the deprecated accessible-label attribute naming the panel, warning once', async () => {
+  it('ignores the removed accessible-label attribute', async () => {
     let el!: LyraCallout;
     const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
       el = (await fixture(html`<lr-callout accessible-label="Storage">Message</lr-callout>`)) as LyraCallout;
       await fixture(html`<lr-callout accessible-label="Other">Message</lr-callout>`);
     });
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('group');
-    expect(base.getAttribute('aria-label')).to.equal('Storage');
-    expect(el.accessibleLabel).to.equal('Storage');
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-callout:attribute:accessible-label']);
-    expect(warnings[0]!.message).to.contain('aria-label');
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+    expect(el.accessibleLabel).to.equal('');
+    expect(warnings).to.have.length(0);
   });
 
-  it('lets the host aria-label win over the deprecated attribute, whose removal clears the name', async () => {
+  it('lets the host aria-label win over the deprecated attribute, without giving the removed spelling a fallback', async () => {
     await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
       const el = (await fixture(
         html`<lr-callout accessible-label="Alias" aria-label="Host">Message</lr-callout>`,
@@ -1344,14 +1346,14 @@ describe('renamed callout members', () => {
       expect(base.getAttribute('aria-label')).to.equal('Host');
       el.removeAttribute('aria-label');
       await el.updateComplete;
-      expect(base.getAttribute('aria-label')).to.equal('Alias');
+      expect(base.getAttribute('aria-label')).to.equal(null);
       el.removeAttribute('accessible-label');
       await el.updateComplete;
       expect(base.hasAttribute('aria-label')).to.be.false;
     });
   });
 
-  it('paints the host from --lr-callout-bg, with --lr-callout-background as its deprecated fallback', async () => {
+  it('paints the host from --lr-callout-bg, ignoring --lr-callout-background', async () => {
     const wrapper = await fixture(html`
       <div>
         <lr-callout style="--lr-callout-bg: rgb(1, 2, 3)">Canonical</lr-callout>
@@ -1362,10 +1364,12 @@ describe('renamed callout members', () => {
     const fills = Array.from(wrapper.querySelectorAll('lr-callout')).map(
       (callout) => getComputedStyle(callout).backgroundColor,
     );
-    expect(fills).to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(1, 2, 3)']);
+    expect(fills[0]).to.equal('rgb(1, 2, 3)');
+    expect(fills[1]).to.not.equal('rgb(1, 2, 3)');
+    expect(fills[2]).to.equal('rgb(1, 2, 3)');
   });
 
-  it('forwards the close control under close-button-control and its deprecated close-button__control alias', async () => {
+  it('forwards the close control under close-button-control without its removed close-button__control alias', async () => {
     const wrapper = await fixture(html`
       <div>
         <style>
@@ -1383,7 +1387,7 @@ describe('renamed callout members', () => {
         '[part~="button"]',
       )!;
     expect(getComputedStyle(control(canonical!)).backgroundColor).to.equal('rgb(1, 2, 3)');
-    expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(control(alias!)).backgroundColor).to.not.equal('rgb(4, 5, 6)');
   });
 });
 

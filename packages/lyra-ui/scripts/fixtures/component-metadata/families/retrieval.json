@@ -1,0 +1,112 @@
+{
+  "family": "retrieval",
+  "assignments": {
+    "new-component-experimental": [
+      "lr-research-progress"
+    ],
+    "published-stable": [
+      "lr-chunk-inspector",
+      "lr-citation-badge",
+      "lr-claim-evidence",
+      "lr-community-card",
+      "lr-embedding-explorer",
+      "lr-entity-card",
+      "lr-entity-chip",
+      "lr-entity-dossier",
+      "lr-graph",
+      "lr-graph-legend",
+      "lr-grounding-summary",
+      "lr-ingestion-queue",
+      "lr-knowledge-base",
+      "lr-knowledge-base-admin",
+      "lr-knowledge-graph-explorer",
+      "lr-memory-panel",
+      "lr-mind-map",
+      "lr-neighbor-list",
+      "lr-node-palette",
+      "lr-path-strip",
+      "lr-provenance-panel",
+      "lr-rag-answer",
+      "lr-rag-eval-dashboard",
+      "lr-retrieval-compare",
+      "lr-retrieval-results",
+      "lr-retrieval-search",
+      "lr-retrieval-trace",
+      "lr-source-card",
+      "lr-source-list",
+      "lr-source-picker"
+    ],
+    "published-experimental": [],
+    "mapped-experimental": [],
+    "introduced-mapped-experimental": [],
+    "compatibility-stable": [],
+    "introduced-stable": []
+  },
+  "deprecations": [
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-activate",
+        "usage": "lr-edge-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-graph",
+      "kind": "event",
+      "name": "lr-node-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-node-activate",
+        "usage": "lr-node-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-knowledge-base",
+      "kind": "event",
+      "name": "lr-retry",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-retry-request",
+        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "event",
+      "name": "lr-link-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-edge-activate",
+        "usage": "lr-edge-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    },
+    {
+      "tag": "lr-knowledge-graph-explorer",
+      "kind": "event",
+      "name": "lr-node-click",
+      "since": "22.0.0",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-node-activate",
+        "usage": "lr-node-activate"
+      },
+      "removalNotBefore": "24.0.0",
+      "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -8,6 +9,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-reorder-item', 'accessible-label');
 
 const ANCESTOR_TOKENS =
   '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';
@@ -34,7 +38,7 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
     );
   });
 
-  it('forwards each native control under its hyphenated name and its deprecated __ alias', async () => {
+  it('forwards each native control under its hyphenated name without its removed __ alias', async () => {
     const el = (await fixture(html`
       <div>
         <style>
@@ -46,7 +50,7 @@ describe('lr-reorder-item: composed move lr-icon-buttons', () => {
     `)).querySelector<LyraReorderItem>('lr-reorder-item')!;
     await el.updateComplete;
     expect(getComputedStyle(nativeControl(el, 'move-up-button')).outlineColor).to.equal('rgb(10, 20, 30)');
-    expect(getComputedStyle(nativeControl(el, 'move-down-button')).outlineColor).to.equal('rgb(40, 50, 60)');
+    expect(getComputedStyle(nativeControl(el, 'move-down-button')).outlineColor).to.not.equal('rgb(40, 50, 60)');
   });
 
   it('takes its paint from the shared --lr-icon-button-* contract on an ancestor', async () => {
@@ -163,7 +167,7 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
     await expect(el.parentElement!).to.be.accessible();
   });
 
-  it('keeps the accessible-label alias naming both move actions, and warns once naming aria-label', async () => {
+  it('ignores accessible-label and names both move actions from content', async () => {
     const labels: string[] = [];
     const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       for (let index = 0; index < 2; index += 1) {
@@ -174,11 +178,8 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
         labels.push(labelledText(el, 'move-up-button'));
       }
     });
-    expect(labels).to.deep.equal(['Move up Invoices', 'Move up Invoices']);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-reorder-item:attribute:accessible-label',
-    ]);
-    expect(warnings[0]!.message).to.contain('aria-label');
+    expect(labels).to.deep.equal(['Move up Row', 'Move up Row']);
+    expect(warnings).to.have.length(0);
   });
 
   it('lets the host aria-label win over the accessible-label alias', async () => {
@@ -192,7 +193,7 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
     expect(labelledText(el, 'move-up-button')).to.equal('Move up New');
     el.removeAttribute('aria-label');
     await el.updateComplete;
-    expect(labelledText(el, 'move-up-button')).to.equal('Move up Old');
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up Row');
   });
 
   it('does not warn for a property-only accessibleLabel assignment', async () => {

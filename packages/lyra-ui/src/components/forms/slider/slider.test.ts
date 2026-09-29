@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   aTimeout,
   fixture,
@@ -25,6 +26,9 @@ expectDeprecatedUsage("lr-slider", "property", "showValue");
 // below can render without tripping the dev-mode locale-fallback warning that strict-console
 // platform lanes treat as fatal.
 import "../../../translations/ar/forms.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-slider', 'show-value');
 
 function mockTrackWidth(el: LyraSlider, width: number): void {
   const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
@@ -4375,43 +4379,6 @@ describe("deprecated show-value alias", () => {
   const readout = (el: LyraSlider) =>
     el.shadowRoot!.querySelector<HTMLElement>('[part="value"]');
 
-  it("renders the same readout as with-value and warns once", async () => {
-    const canonical = await fixture<LyraSlider>(
-      html`<lr-slider value="42" with-value></lr-slider>`
-    );
-    let aliased: LyraSlider[] = [];
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      aliased = [
-        await fixture<LyraSlider>(html`<lr-slider value="42" show-value></lr-slider>`),
-        await fixture<LyraSlider>(html`<lr-slider value="42" show-value></lr-slider>`),
-      ];
-    });
-    for (const el of aliased) {
-      expect(el.withValue).to.equal(true);
-      expect(el.showValue).to.equal(true);
-      expect(readout(el)?.textContent).to.equal(readout(canonical)!.textContent);
-      expect(readout(el)?.getAttribute("aria-hidden")).to.equal("true");
-      expect(el.hasAttribute("with-value"), "the canonical attribute is not reflected").to.equal(false);
-    }
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      "lyra-deprecated:lr-slider:property:showValue",
-    ]);
-    expect(warnings[0]!.message).to.contain("with-value");
-  });
-
-  it('treats show-value="false" and an unset alias as off', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      const off = await fixture<LyraSlider>(
-        html`<lr-slider value="42" show-value="false"></lr-slider>`
-      );
-      expect(off.withValue).to.equal(false);
-      expect(readout(off) === null).to.equal(true);
-      const unset = await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
-      expect(unset.showValue).to.equal(false);
-    });
-    expect(warnings, "an alias write that leaves the default unchanged is not a change").to.have.length(0);
-  });
-
   it("does not warn for the canonical with-value or an unset alias", async () => {
     const warnings = await captureDeprecationWarnings(usage, async () => {
       await fixture<LyraSlider>(html`<lr-slider value="42" with-value></lr-slider>`);
@@ -4420,25 +4387,7 @@ describe("deprecated show-value alias", () => {
     expect(warnings).to.have.length(0);
   });
 
-  it("forwards a .showValue property write to withValue", async () => {
-    const el = await fixture<LyraSlider>(html`<lr-slider value="42"></lr-slider>`);
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      el.showValue = true;
-      await el.updateComplete;
-    });
-    expect(el.withValue).to.equal(true);
-    expect(readout(el) !== null).to.equal(true);
-    expect(warnings).to.have.length(1);
-    el.showValue = false;
-    await el.updateComplete;
-    expect(el.withValue).to.equal(false);
-    expect(readout(el) === null).to.equal(true);
-    el.withValue = true;
-    await el.updateComplete;
-    expect(el.showValue, "a canonical write syncs back to the alias").to.equal(true);
-  });
-
-  it("lets the last-written spelling win when both are present", async () => {
+  it("uses only with-value in either attribute order", async () => {
     let shown: LyraSlider | undefined;
     let hidden: LyraSlider | undefined;
     let aliasLast: LyraSlider | undefined;
@@ -4455,7 +4404,7 @@ describe("deprecated show-value alias", () => {
     });
     expect(readout(shown!) !== null).to.equal(true);
     expect(readout(hidden!) === null).to.equal(true);
-    expect(aliasLast!.withValue, "show-value is parsed last").to.equal(false);
-    expect(readout(aliasLast!) === null).to.equal(true);
+    expect(aliasLast!.withValue).to.equal(true);
+    expect(readout(aliasLast!) !== null).to.equal(true);
   });
 });

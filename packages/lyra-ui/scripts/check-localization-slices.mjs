@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /** Verifies the emitted, unbundled Node graph rather than relying on a tree-shaking simulation. */
 export async function checkLocalizationSlices(packageDir) {
+  const requireFromPackage = createRequire(path.join(packageDir, 'package.json'));
+  const requireFromLoader = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
+  const { build } = requireFromLoader('esbuild');
   const dist = path.join(packageDir, 'dist');
   const nonce = `?localization-slice-check=${Date.now()}`;
   // Keep the shared runtime dependency on its canonical URL. Adding a query only to this direct
@@ -13,14 +17,10 @@ export async function checkLocalizationSlices(packageDir) {
   const { LyraButton } = await import(
     pathToFileURL(path.join(dist, 'components', 'forms', 'button', 'button.class.js')) + nonce
   );
-  const localization = await import(pathToFileURL(path.join(dist, 'localization.js')) + nonce);
-  // Deliberately imported from `utilities/localization.js`, never `localization.js` (the
-  // full-catalog entry) or `internal/localization.js` (where DEFAULT_STRINGS lives): resolving
-  // through it below, successfully, is the proof that the scoped resolver never needed the
-  // compatibility catalog module to answer a real component's own key.
-  const utilitiesLocalization = await import(
-    pathToFileURL(path.join(dist, 'utilities', 'localization.js')) + nonce
-  );
+  // Keep the implementing module query-free so every facade shares its bridge WeakMap.
+  const localization = await import(pathToFileURL(path.join(dist, 'localization.js')));
+  const utilities = await import(pathToFileURL(path.join(dist, 'utilities', 'index.js')));
+  const root = await import(pathToFileURL(path.join(dist, 'lyra.js')));
 
   const host = {
     parentElement: null,
@@ -65,14 +65,13 @@ export async function checkLocalizationSlices(packageDir) {
     getAttribute: (name) => (name === 'lang' ? 'x-scoped-defaults-only' : null),
   };
   assert.equal(
-    utilitiesLocalization.resolveLyraScopedString(unregisteredHost, 'fieldRequired', defaults),
-    'This field is required.',
-    'the scoped resolver on utilities/localization.js must resolve a real component key against ' +
-      'caller-supplied defaults alone, from a graph that never imported the full catalog',
+    localization.resolveLyraScopedString(unregisteredHost, 'fieldRequired', { fieldRequired: 'Caller sentinel' }),
+    'Caller sentinel',
+    'the scoped resolver must use caller defaults even when the complete English catalog is loaded',
   );
   localization.registerLyraLocale('x-node-slice-scoped', { fieldRequired: 'Node scoped requis' });
   assert.equal(
-    utilitiesLocalization.resolveLyraScopedString(
+    localization.resolveLyraScopedString(
       { ...host, getAttribute: (name) => (name === 'lang' ? 'x-node-slice-scoped' : null) },
       'fieldRequired',
       defaults,
@@ -81,25 +80,39 @@ export async function checkLocalizationSlices(packageDir) {
     'the scoped resolver must still prefer a registered locale catalog over the supplied defaults',
   );
 
-  // `localization.js` supersedes the deprecated `utilities/localization.js` entry by re-exporting
-  // its bindings, not by copying them. Compare against the canonical, query-free URL: that is the
-  // module instance the public entry's own relative re-export resolves to.
-  const canonicalUtilitiesLocalization = await import(
-    pathToFileURL(path.join(dist, 'utilities', 'localization.js'))
-  );
   for (const name of ['bridgeLyraLocale', 'resolveLyraScopedString', 'subscribeLyraLocale']) {
     assert.equal(typeof localization[name], 'function', `localization.js must export ${name}`);
-    assert.ok(
-      localization[name] === canonicalUtilitiesLocalization[name],
-      `localization.js ${name} must be the identical utilities/localization.js binding`,
-    );
+    assert.equal(localization[name], utilities[name], `${name} must share the utility barrel binding`);
+    if (name !== 'resolveLyraScopedString') {
+      assert.equal(localization[name], root[name], `${name} must share the root binding`);
+    }
   }
-  assert.equal(
-    localization.resolveLyraScopedString(unregisteredHost, 'fieldRequired', defaults),
-    'This field is required.',
-    'the scoped resolver on localization.js must resolve a real component key against ' +
-      'caller-supplied defaults',
+
+  // Unbundled canonical imports include the public catalog. A scoped-only bundle must drop it.
+  const bundled = await build({
+    stdin: {
+      contents: "export { bridgeLyraLocale, resolveLyraScopedString } from './dist/localization.js';",
+      resolveDir: packageDir,
+      sourcefile: 'scoped-localization.js',
+    },
+    bundle: true,
+    write: false,
+    metafile: true,
+    format: 'esm',
+    platform: 'browser',
+    treeShaking: true,
+  });
+  const emittedInputs = Object.values(bundled.metafile.outputs).flatMap((output) =>
+    Object.entries(output.inputs),
   );
+  assert.ok(emittedInputs.some(([name, contribution]) =>
+    name.endsWith('/internal/localization-runtime.js') && contribution.bytesInOutput > 0,
+  ), 'the bundled scoped helper must retain the shared runtime');
+  for (const [name, contribution] of emittedInputs) {
+    if (name.endsWith('/internal/localization.js') || name.endsWith('/internal/default-strings.generated.js')) {
+      assert.equal(contribution.bytesInOutput, 0, `${name} must not contribute full-catalog bytes`);
+    }
+  }
 
   const declaration = await readFile(
     path.join(dist, 'components', 'forms', 'button', 'button.class.d.ts'),

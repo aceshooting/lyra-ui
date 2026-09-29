@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 
 import { analyzeRenameLedger, analyzeRetiredEventHistory } from './check-migration-coverage.mjs';
@@ -59,6 +60,7 @@ const ledger = syntheticLedger();
 const contract = buildMigrationContract(inventory, { renameLedger: ledger });
 const expectedReports = readJson(path.join(fixtureDir, 'expected-reports.json'));
 const checkedInventory = readJson(path.join(scriptDir, 'fixtures', 'component-inventory.json'));
+const checkedCompatibilityContext = readCurrentCompatibilityContextSync(packageDir, checkedInventory);
 const sharedTokens = new Set(Object.keys(readJson(path.join(packageDir, 'tokens', 'canonical-tokens.json')).tokens));
 
 const describeChanges = (entries) => entries.map((entry) =>
@@ -86,13 +88,14 @@ function moduleMigrationFixture() {
 test('module reviews derive canonical guidance, cover both cohorts, and retain the whole v23 compatibility window', () => {
   const records = readExportDeprecations();
   const checked = readRenameLedger();
-  assert.equal(checked.profiles[0].moduleReviews.length, records.filter((record) => record.removalNotBefore === '23.0.0').length);
+  const publishedRecords = Object.values(checkedCompatibilityContext.records).filter(entry => entry.key.scope === 'export').map(entry => entry.policy);
+  assert.equal(checked.profiles[0].moduleReviews.length, publishedRecords.filter((record) => record.removalNotBefore === '23.0.0').length);
   assert.equal(checked.profiles[1].moduleReviews.length, records.filter((record) => record.removalNotBefore === '24.0.0').length);
-  assert.deepEqual(validateRenameLedger(checked, { inventory: checkedInventory, exportDeprecations: records, requireCoverage: true, sharedTokens }), []);
-  const projection = projectRenameLedger(checked, checkedInventory, { exportDeprecations: records });
+  assert.deepEqual(validateRenameLedger(checked, { inventory: checkedInventory, exportDeprecations: records, compatibilityContext: checkedCompatibilityContext, requireCoverage: true, sharedTokens }), []);
+  const projection = projectRenameLedger(checked, checkedInventory, { exportDeprecations: records, compatibilityContext: checkedCompatibilityContext });
   for (const profile of projection.profiles) {
     for (const entry of profile.moduleReviews) {
-      const record = records.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
+      const record = publishedRecords.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
       assert.equal(entry.replacement, record.replacement.usage);
       assert.equal(entry.since, record.since);
       assert.equal(entry.removalNotBefore, `${profile.aliasRemovalMajor}.0.0`);
@@ -274,7 +277,7 @@ function assertFinding(findings, pattern) {
 test('the checked-in ledger is valid and complete against the checked-in inventory', () => {
   const checkedLedger = readRenameLedger();
   assert.deepEqual(
-    validateRenameLedger(checkedLedger, { inventory: checkedInventory, exportDeprecations: readExportDeprecations(), requireCoverage: true, sharedTokens }),
+    validateRenameLedger(checkedLedger, { inventory: checkedInventory, exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext, requireCoverage: true, sharedTokens }),
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
@@ -1256,7 +1259,7 @@ test('the packaged CLI previews with --diff, gates with --check, applies, and cl
 });
 
 test('the checked-in lyra-v21 entries rewrite exact aliases and report every other retired name', () => {
-  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations() });
   const input = fixture('lyra-v21.input.html');
   const result = run(input, 'lyra-v21.html', checkedContract);
   assert.equal(result.content, fixture('lyra-v21.expected.html'));
@@ -1291,7 +1294,7 @@ test('the checked-in lyra-v21 entries rewrite exact aliases and report every oth
   // would replace an attributeFilter, and a fixed-width box or stroke keeps the author's value.
   assert.match(
     messageOf('attributes'),
-    /The lr-mutation-observer attribute attributes is deprecated and scheduled for removal in 23\.0\.0; migrate to attr="\*" \(or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set\) by hand\./,
+    /The lr-mutation-observer attribute attributes was removed in 23\.0\.0; migrate to attr="\*" \(or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set\) by hand\./,
   );
   assert.match(messageOf('fixed-width'), /migrate to inline-size: var\(--lr-size-1-5em\) on that icon \(or the --lr-icon-fixed-width value it used\) by hand/);
   assert.match(messageOf('--lr-icon-fixed-width'), /migrate to inline-size \(the same value, on the fixed-width icons only\) by hand/);
@@ -1309,14 +1312,14 @@ test('the checked-in lyra-v21 entries rewrite exact aliases and report every oth
   );
 
   // Before the release that ships these records, a known 21.0.0 install withholds every entry.
-  const released = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), lyraVersion: '21.0.0' });
+  const released = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations(), lyraVersion: '21.0.0' });
   const early = run(input, 'lyra-v21.html', released);
   assert.equal(early.content, input);
   assert.deepEqual(early.warnings, []);
 });
 
 test('a listener is reported, not renamed, where its receiver already listens to the new name with the same handler', () => {
-  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations() });
   const source = [
     "card.addEventListener('lr-media-download-request', onDownload);",
     "card.addEventListener('lr-before-media-download', onDownload);",
@@ -1560,7 +1563,7 @@ test('all nine published retired aliases have policy-backed reports and replacem
   const wrong = structuredClone(current);
   wrong.profiles[0].retiredEvents[0].replacement = 'lr-unrelated';
   assertFinding(analyzeRetiredEventHistory(wrong, history), /replacement differs from published policy/);
-  const contract = buildMigrationContract(checkedInventory, { renameLedger: current, exportDeprecations: readExportDeprecations() });
+  const contract = buildMigrationContract(checkedInventory, { renameLedger: current, exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext });
   for (const entry of current.profiles[0].retiredEvents) {
     const input = `<${entry.tag} @${entry.event}=\${handler}></${entry.tag}>`;
     const result = run(input, 'retired.html', contract);
@@ -1574,6 +1577,73 @@ test('all nine published retired aliases have policy-backed reports and replacem
   const global = run("window.addEventListener('lr-open', handler);", 'global.ts', contract);
   assert.equal(global.content, "window.addEventListener('lr-open', handler);");
   assert.match(global.warnings.find((entry) => entry.warningCode === 'RETIRED_EVENT_REVIEW').message, /document-library and source-card/);
-  const docs = buildLyraRenameReference(current, checkedInventory, { exportDeprecations: readExportDeprecations() }).join('\n');
+  const docs = buildLyraRenameReference(current, checkedInventory, { exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext }).join('\n');
   for (const entry of current.profiles[0].retiredEvents) assert.ok(docs.includes(entry.event) && docs.includes(entry.replacement));
+});
+
+test('historical context preserves projection and scanner actions after an eligible paired alias retires', async () => {
+  const { assembleCompatibilityContext, policyKey } = await import('./published-compatibility.mjs');
+  const original = syntheticInventory(); const candidate = structuredClone(original);
+  const panel = panelOf(candidate); const policy = panel.maturity.deprecations.find(record => record.name === 'arrow');
+  panel.maturity.deprecations = panel.maturity.deprecations.filter(record => record !== policy);
+  panel.surface.properties = panel.surface.properties.filter(member => member.name !== 'arrow');
+  panel.surface.attributes = panel.surface.attributes.filter(member => member.name !== 'arrow');
+  const exposure = Object.fromEntries(['event', 'part', 'css-property'].map(kind => [kind, {}]));
+  const capture = { sourceRelease: 'lyra-ui@22.0.0', sourceVersion: '22.0.0', components: original.components, mirrors: [], exposure,
+    records: original.components.flatMap(component => (component.maturity?.deprecations ?? []).map(record => ({ key: policyKey(record), policy: record }))) };
+  const context = assembleCompatibilityContext({ packageVersion: '23.0.0', currentInventory: candidate, captures: [capture],
+    retirementIndex: [{ key: policyKey(policy), removedIn: '23.0.0', sourceRelease: capture.sourceRelease }] });
+  const expected = projectRenameLedger(ledger, original);
+  assert.deepEqual(validateRenameLedger(ledger, { inventory: candidate, compatibilityContext: context }), []);
+  assert.deepEqual(projectRenameLedger(ledger, candidate, { compatibilityContext: context }), expected);
+  const next = buildMigrationContract(candidate, { renameLedger: ledger, compatibilityContext: context });
+  const input = '<lr-sample-panel arrow></lr-sample-panel><lr-sample-panel .arrow=${false}></lr-sample-panel>';
+  assert.deepEqual(run(input, 'old.html', next), run(input, 'old.html'));
+  assert.ok(validateRenameLedger(ledger, { inventory: candidate }).length > 0);
+});
+
+test('retired member reviews retain warning identity and use installed-version-aware removal wording', async () => {
+  const { assembleCompatibilityContext, policyKey } = await import('./published-compatibility.mjs');
+  const original = syntheticInventory(); const candidate = structuredClone(original);
+  const panel = panelOf(candidate); const policy = panel.maturity.deprecations.find(record => record.name === 'refresh');
+  panel.maturity.deprecations = panel.maturity.deprecations.filter(record => record !== policy);
+  panel.surface.methods = panel.surface.methods.filter(member => member.name !== 'refresh');
+  const capture = { sourceRelease: 'lyra-ui@22.0.0', sourceVersion: '22.0.0', components: original.components, mirrors: [], exposure: { event: {}, part: {}, 'css-property': {} },
+    records: original.components.flatMap(component => (component.maturity?.deprecations ?? []).map(record => ({ key: policyKey(record), policy: record }))) };
+  const context = assembleCompatibilityContext({ packageVersion: '23.0.0', currentInventory: candidate, captures: [capture],
+    retirementIndex: [{ key: policyKey(policy), removedIn: '23.0.0', sourceRelease: capture.sourceRelease }] });
+  const projection = projectRenameLedger(ledger, candidate, { compatibilityContext: context });
+  const review = projection.profiles[0].reviews.find(entry => entry.name === 'refresh');
+  assert.equal(review.removedIn, '23.0.0');
+  assert.equal(createRenameProfiles(projection, { lyraVersion: '22.0.0' }).get('lyra-v21').data.reviews.find(entry => entry.name === 'refresh').removedIn, undefined);
+  const input = "const panel = document.querySelector('lr-sample-panel'); panel.refresh();";
+  const next = buildMigrationContract(candidate, { renameLedger: ledger, compatibilityContext: context, lyraVersion: '23.0.0' });
+  const before = run(input, 'removed.ts'); const after = run(input, 'removed.ts', next);
+  assert.deepEqual(warningIdentity(after.warnings), warningIdentity(before.warnings));
+  assert.match(after.warnings.find(entry => entry.upstreamMember === 'refresh').message, /was removed in 23\.0\.0/u);
+  const malformed = structuredClone(projection); malformed.profiles[0].reviews.find(entry => entry.name === 'refresh').removedIn = '22.0.0';
+  assert.ok(validateRenameLedgerShape(malformed, { projected: true }).some(entry => entry.includes('removedIn')));
+});
+
+test('retired event exposure preserves global add/remove pairing and rejects a newly conflicting owner', async () => {
+  const { assembleCompatibilityContext, policyKey } = await import('./published-compatibility.mjs');
+  const original = syntheticInventory(); const candidate = structuredClone(original);
+  const panel = panelOf(candidate); const policy = panel.maturity.deprecations.find(record => record.name === 'lr-panel-open-change');
+  panel.maturity.deprecations = panel.maturity.deprecations.filter(record => record !== policy);
+  panel.surface.events = panel.surface.events.filter(member => member.name !== policy.name);
+  const capture = { sourceRelease: 'lyra-ui@22.0.0', sourceVersion: '22.0.0', components: original.components, mirrors: [],
+    exposure: projectRenameLedger(ledger, original).profiles[0].exposure,
+    records: original.components.flatMap(component => (component.maturity?.deprecations ?? []).map(record => ({ key: policyKey(record), policy: record }))) };
+  const options = { packageVersion: '23.0.0', currentInventory: candidate, captures: [capture],
+    retirementIndex: [{ key: policyKey(policy), removedIn: '23.0.0', sourceRelease: capture.sourceRelease }] };
+  const migrate = () => run("document.addEventListener('lr-panel-open-change', handler); document.removeEventListener('lr-panel-open-change', handler);", 'global.ts',
+    buildMigrationContract(candidate, { renameLedger: ledger, compatibilityContext: assembleCompatibilityContext(options) }));
+  const safe = migrate();
+  assert.equal(safe.changes.filter(change => change.upstreamMember === 'lr-panel-open-change').length, 2);
+  candidate.components.push({ ...structuredClone(panel), tag: 'lr-later-owner', maturity: { deprecations: [] }, surface: { events: [{ name: 'lr-open-change' }] } });
+  const conflict = migrate();
+  assert.equal(conflict.changes.filter(change => change.upstreamMember === 'lr-panel-open-change').length, 0);
+  assert.ok(conflict.warnings.length >= 2);
+  assert.match(conflict.content, /addEventListener\('lr-panel-open-change'/u);
+  assert.match(conflict.content, /removeEventListener\('lr-panel-open-change'/u);
 });

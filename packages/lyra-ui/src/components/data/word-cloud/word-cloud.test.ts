@@ -822,9 +822,9 @@ it('bounds per-item text and explicit legend nodes with visible localized disclo
   await el.updateComplete;
 
   const wordText = el.shadowRoot!.querySelector('[part="word"]')!.textContent!;
-  const legendLabels = Array.from(el.shadowRoot!.querySelectorAll('[part="legend-label"]'));
   expect(wordText.length).to.be.at.most(256);
   expect(wordText.endsWith('…')).to.be.true;
+  const legendLabels = [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')];
   expect(legendLabels.length).to.be.at.most(100);
   expect(legendLabels.every((label) => (label.textContent?.length ?? 0) <= 256)).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
@@ -1438,77 +1438,16 @@ it('requests an update for a redundant scale/wordRotation assignment that still 
   }
 });
 
-describe('lr-word-cloud deprecated show-legend alias', () => {
+describe('lr-word-cloud legend visibility', () => {
   const SHOW_LEGEND: readonly DeprecatedUsage[] = [{ tag: 'lr-word-cloud', kind: 'property', name: 'showLegend' }];
-  const legendLabels = (el: LyraWordCloud): string[] =>
-    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
-
-  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
-    const canonical = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend .words=${[{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }]}></lr-word-cloud>`);
-    let aliased!: LyraWordCloud;
-    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      aliased = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${[{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }]}></lr-word-cloud>`);
-      const second = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
-      await second.updateComplete;
-    });
-    await canonical.updateComplete;
-    await aliased.updateComplete;
-    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
-    expect(legendLabels(aliased).length).to.be.greaterThan(0);
-    expect(aliased.withLegend).to.equal(true);
-    expect(aliased.showLegend).to.equal(true);
-    expect(aliased.hasAttribute('with-legend')).to.equal(true);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-word-cloud:property:showLegend']);
-    expect(warnings[0]!.message).to.contain('with-legend');
-  });
 
   it('never warns for with-legend or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
       const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
-      expect(el.showLegend).to.equal(false);
       el.withLegend = true;
       await el.updateComplete;
     });
     expect(warnings).to.deep.equal([]);
   });
 
-  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
-    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const words = [{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }];
-      const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${words}></lr-word-cloud>`);
-      expect(el.withLegend).to.equal(true);
-      el.removeAttribute('show-legend');
-      await el.updateComplete;
-      expect(el.withLegend).to.equal(false);
-      expect(el.hasAttribute('with-legend')).to.equal(false);
-      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-      el.showLegend = true;
-      await el.updateComplete;
-      expect(el.withLegend).to.equal(true);
-      expect(legendLabels(el).length).to.be.greaterThan(0);
-      el.withLegend = false;
-      await el.updateComplete;
-      expect(el.showLegend).to.equal(false);
-      expect(el.hasAttribute('show-legend')).to.equal(false);
-      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-    });
-  });
-
-  it('lets the last write win in both directions', async () => {
-    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const words = [{ text: 'alpha', weight: 10, group: 'a', color: 'rgb(1, 2, 3)' }, { text: 'beta', weight: 5, group: 'b', color: 'rgb(4, 5, 6)' }];
-      const aliasLast = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend show-legend .words=${words}></lr-word-cloud>`);
-      aliasLast.showLegend = false;
-      await aliasLast.updateComplete;
-      expect(aliasLast.withLegend).to.equal(false);
-      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-
-      const canonicalLast = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend with-legend .words=${words}></lr-word-cloud>`);
-      canonicalLast.removeAttribute('with-legend');
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.showLegend).to.equal(false);
-      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
-      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-    });
-  });
 });

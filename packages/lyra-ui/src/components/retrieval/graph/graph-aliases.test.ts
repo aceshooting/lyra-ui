@@ -1,6 +1,7 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './graph.js';
-import type { LyraGraph, LyraGraphEdge, LyraGraphLink } from './graph.js';
+import type { LyraGraph, LyraGraphEdge } from './graph.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -12,9 +13,6 @@ const nodes = [
   { id: 'b', label: 'B' },
 ];
 const edges: LyraGraphEdge[] = [{ id: 'ab', source: 'a', target: 'b', label: 'knows' }];
-// The deprecated `LyraGraphLink` interface stays assignable to and from `LyraGraphEdge`, so data
-// typed with either name keeps compiling against both the `links` alias and `edges`.
-const legacyEdges: readonly LyraGraphLink[] = edges;
 
 const ALIASES: readonly DeprecatedUsage[] = [
   { tag: 'lr-graph', kind: 'property', name: 'links' },
@@ -75,121 +73,32 @@ describe('lr-graph edge vocabulary', () => {
     expect(warnings).to.have.length(0);
   });
 
-  it('keeps links, selectedLinkIds and dimmedLinkIds working as aliases, each warning once', async () => {
-    const canonical = linkState(
-      await drawn(
-        await fixture<LyraGraph>(html`<lr-graph
-          selection-mode="multiple"
-          .nodes=${nodes}
-          .edges=${edges}
-          .selectedEdgeIds=${['ab']}
-          .dimmedEdgeIds=${['ab']}
-        ></lr-graph>`)
-      )
-    );
-    const states: string[] = [];
-    const readback: string[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = await fixture<LyraGraph>(html`<lr-graph selection-mode="multiple"></lr-graph>`);
-        el.nodes = nodes;
-        el.links = legacyEdges;
-        el.selectedLinkIds = ['ab'];
-        el.dimmedLinkIds = ['ab'];
-        await drawn(el);
-        const readEdges: readonly LyraGraphEdge[] = el.links;
-        states.push(linkState(el));
-        readback.push(
-          JSON.stringify([
-            JSON.stringify(readEdges) === JSON.stringify(el.edges),
-            el.selectedLinkIds,
-            el.selectedEdgeIds,
-            el.dimmedLinkIds,
-            el.dimmedEdgeIds,
-          ])
-        );
-      }
-    });
-    expect(states).to.deep.equal([canonical, canonical]);
-    expect(readback[0]).to.equal('[true,["ab"],["ab"],["ab"],["ab"]]');
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-graph:property:links',
-      'lyra-deprecated:lr-graph:property:selectedLinkIds',
-      'lyra-deprecated:lr-graph:property:dimmedLinkIds',
-    ]);
-    expect(warnings[0]!.message).to.contain('edges');
+  it('ignores retired attributes regardless of their order next to canonical values', async () => {
+    for (const markup of [
+      html`<lr-graph edge-distance="20" link-distance="300" show-edge-labels></lr-graph>`,
+      html`<lr-graph link-distance="300" show-edge-labels edge-distance="20"></lr-graph>`,
+    ]) {
+      const el = await fixture<LyraGraph>(markup);
+      expect(el.edgeDistance).to.equal(20);
+      expect(el.withEdgeLabels).to.equal(false);
+    }
   });
 
-  it('keeps show-edge-labels and link-distance working as attribute aliases, warning once each', async () => {
-    const canonical = linkState(
-      await drawn(
-        await fixture<LyraGraph>(html`<lr-graph
-          with-edge-labels
-          edge-distance="42"
-          .nodes=${nodes}
-          .edges=${edges}
-        ></lr-graph>`)
-      )
-    );
-    let state = '';
-    let values: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await drawn(
-        await fixture<LyraGraph>(html`<lr-graph
-          show-edge-labels
-          link-distance="42"
-          .nodes=${nodes}
-          .edges=${edges}
-        ></lr-graph>`)
-      );
-      state = linkState(el);
-      values = [el.withEdgeLabels, el.showEdgeLabels, el.edgeDistance, el.linkDistance];
-    });
-    expect(state).to.equal(canonical);
-    expect(values).to.deep.equal([true, true, 42, 42]);
-    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
-      'lyra-deprecated:lr-graph:property:linkDistance',
-      'lyra-deprecated:lr-graph:property:showEdgeLabels',
-    ]);
+  it('owns canonical edge collections without reviving retired aliases', async () => {
+    const input = [{ id: 'ab', source: 'a', target: 'b', label: 'Original' }];
+    const el = await drawn(await fixture<LyraGraph>(html`<lr-graph .nodes=${nodes} .edges=${input}></lr-graph>`));
+    input[0]!.label = 'Caller mutation';
+    expect(el.edges[0]!.label).to.equal('Original');
+    expect(Object.isFrozen(el.edges)).to.equal(true);
+    expect('links' in el).to.equal(false);
+    el.selectedEdgeIds = ['ab'];
+    el.dimmedEdgeIds = ['ab'];
+    await el.updateComplete;
+    expect('selectedLinkIds' in el).to.equal(false);
+    expect('dimmedLinkIds' in el).to.equal(false);
   });
 
-  it('lets the later of edge-distance and link-distance win in markup', async () => {
-    const distances: number[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      for (const markup of [
-        html`<lr-graph edge-distance="20" link-distance="300"></lr-graph>`,
-        html`<lr-graph link-distance="300" edge-distance="20"></lr-graph>`,
-      ]) {
-        const el = await fixture<LyraGraph>(markup);
-        distances.push(el.edgeDistance);
-      }
-    });
-    expect(distances).to.deep.equal([300, 20]);
-  });
-
-  it('syncs every canonical edge property back into its alias without warning', async () => {
-    let readback = '';
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraGraph>(html`<lr-graph .nodes=${nodes}></lr-graph>`);
-      el.edges = edges;
-      el.selectedEdgeIds = ['ab'];
-      el.dimmedEdgeIds = ['ab'];
-      el.edgeDistance = 64;
-      el.withEdgeLabels = true;
-      await el.updateComplete;
-      readback = JSON.stringify([
-        el.links,
-        el.selectedLinkIds,
-        el.dimmedLinkIds,
-        el.linkDistance,
-        el.showEdgeLabels,
-      ]);
-    });
-    expect(readback).to.equal(JSON.stringify([edges, ['ab'], ['ab'], 64, true]));
-    expect(warnings).to.have.length(0);
-  });
-
-  it('fires edge hover events with edgeId, then legacy link hover aliases with linkId, never warning', async () => {
+  it('fires edge hover events with edgeId, without retired link aliases, never warning', async () => {
     const seen: { type: string; detail: string; cancelable: boolean }[] = [];
     const details = new Set<unknown>();
     const warnings = await captureDeprecationWarnings(ALIASES, async () => {
@@ -208,18 +117,15 @@ describe('lr-graph edge vocabulary', () => {
       link.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     });
     const canonical = JSON.stringify({ sourceNodeId: 'a', targetNodeId: 'b', edgeId: 'ab' });
-    const legacy = JSON.stringify({ sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' });
     expect(seen).to.deep.equal([
       { type: 'lr-edge-enter', detail: canonical, cancelable: false },
-      { type: 'lr-link-enter', detail: legacy, cancelable: false },
       { type: 'lr-edge-leave', detail: canonical, cancelable: false },
-      { type: 'lr-link-leave', detail: legacy, cancelable: false },
     ]);
-    expect(details.size, 'each event carries its own detail object').to.equal(4);
+    expect(details.size, 'each event carries its own detail object').to.equal(2);
     expect(warnings).to.have.length(0);
   });
 
-  it('fires lr-community-activate, then the lr-community-click alias, never warning', async () => {
+  it('fires lr-community-activate, without the retired alias, never warning', async () => {
     const seen: string[] = [];
     const warnings = await captureDeprecationWarnings(ALIASES, async () => {
       const el = await drawn(
@@ -244,9 +150,7 @@ describe('lr-graph edge vocabulary', () => {
     const detail = JSON.stringify({ communityId: 'team-1' });
     expect(seen).to.deep.equal([
       `lr-community-activate:${detail}`,
-      `lr-community-click:${detail}`,
       `lr-community-activate:${detail}`,
-      `lr-community-click:${detail}`,
     ]);
     expect(warnings).to.have.length(0);
   });
@@ -268,9 +172,26 @@ describe('lr-graph custom properties', () => {
     expect(painted).to.deep.equal({ stroke: 'rgb(1, 2, 3)', fill: 'rgb(4, 5, 6)' });
   });
 
-  it('keeps the deprecated --lr-link-color and --lr-node-fill working as fallbacks', async () => {
+  it('ignores retired color tokens and retains canonical defaults', async () => {
+    const baseline = await paint('');
     const painted = await paint('--lr-link-color: rgb(1, 2, 3); --lr-node-fill: rgb(4, 5, 6)');
-    expect(painted).to.deep.equal({ stroke: 'rgb(1, 2, 3)', fill: 'rgb(4, 5, 6)' });
+    expect(painted).to.deep.equal(baseline);
+  });
+
+  it('ignores retired color fallbacks in the canvas painter and honors canonical colors', async () => {
+    async function paintCanvas(style: string): Promise<string[]> {
+      const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" layout="layered"
+        style=${style} .nodes=${nodes} .edges=${edges}></lr-graph>`);
+      type CanvasPaint = { canvasScene?: { nodes: { fill: string }[]; links: { color: string }[] } };
+      await waitUntil(() => Boolean((el as unknown as CanvasPaint).canvasScene), 'canvas paint never completed', { timeout: TIMEOUT });
+      const scene = (el as unknown as CanvasPaint).canvasScene!;
+      expect(el.shadowRoot!.querySelector('canvas')!.width).to.be.greaterThan(0);
+      return [scene.links[0]!.color, scene.nodes[0]!.fill];
+    }
+    const baseline = await paintCanvas('');
+    expect(await paintCanvas('--lr-link-color:rgb(1,2,3);--lr-node-fill:rgb(4,5,6)')).to.deep.equal(baseline);
+    expect(await paintCanvas('--lr-graph-edge-color:rgb(1,2,3);--lr-graph-node-fill:rgb(4,5,6)'))
+      .to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
   });
 
   it('lets the canonical custom properties win over the deprecated ones', async () => {
@@ -338,3 +259,7 @@ describe('lr-graph CSS-length width and height', () => {
     expect(getComputedStyle(el).blockSize).to.equal('600px');
   });
 });
+
+expectStaleAttribute('lr-graph', 'link-distance');
+
+expectStaleAttribute('lr-graph', 'show-edge-labels');

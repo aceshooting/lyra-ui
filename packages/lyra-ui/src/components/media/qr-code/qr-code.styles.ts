@@ -7,7 +7,7 @@ export const styles = css`
        aliases deliberately have no token defaults: inherited color and a
        transparent host background are the mirrored renderer defaults. */
     color: var(--lr-qr-code-fill, inherit);
-    background-color: var(--lr-qr-code-bg, var(--lr-qr-code-background, initial));
+    background-color: var(--lr-qr-code-bg, initial);
   }
   [part~='base'] {
     display: inline-flex;

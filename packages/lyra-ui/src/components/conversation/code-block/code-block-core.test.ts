@@ -22,7 +22,6 @@ import {
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 const sharedJsonLanguages = { json: jsonGrammar };
 
@@ -88,38 +87,6 @@ describe("lr-code-block-core", () => {
     await el.updateComplete;
     expect(el.hasAttribute("without-copy-button")).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
-  });
-
-  it('keeps the deprecated copyable="false" alias equal to without-copy-button, warning once', async () => {
-    const usage = { tag: "lr-code-block-core", kind: "property", name: "copyable" } as const;
-    let declarative!: LyraCodeBlockCore;
-    let both!: LyraCodeBlockCore;
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      declarative = (await fixture(
-        html`<lr-code-block-core copyable="false"></lr-code-block-core>`
-      )) as LyraCodeBlockCore;
-      both = (await fixture(
-        html`<lr-code-block-core without-copy-button copyable></lr-code-block-core>`
-      )) as LyraCodeBlockCore;
-      declarative.copyable = true;
-      await declarative.updateComplete;
-      expect(declarative.withoutCopyButton).to.be.false;
-      declarative.copyable = false;
-      await declarative.updateComplete;
-    });
-    expect(warnings.map((warning) => warning.key)).to.deep.equal([
-      "lyra-deprecated:lr-code-block-core:property:copyable",
-    ]);
-    expect(declarative.withoutCopyButton).to.be.true;
-    expect(declarative.copyable).to.be.false;
-    expect(declarative.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
-    expect(both.withoutCopyButton, "the later copyable attribute wins").to.be.false;
-    expect(both.copyable).to.be.true;
-    both.withoutCopyButton = true;
-    await both.updateComplete;
-    expect(both.copyable, "the alias syncs back from the canonical").to.be.false;
-    expect(both.hasAttribute("copyable"), "the alias keeps its presence reflection").to.be.false;
-    expect(both.shadowRoot!.querySelectorAll('[part~="copy-button"]')).to.have.lengthOf(0);
   });
 
   it("applies per-instance strings overrides to visible and accessible controls", async () => {

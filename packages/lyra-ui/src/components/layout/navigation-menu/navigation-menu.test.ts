@@ -1202,6 +1202,42 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       return Math.abs(rect.right - trigger.right) <= 1 && Math.abs(rect.width - trigger.width) <= 1;
     }, 'RTL indicator did not match its trigger');
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`keeps the indicator aligned when a preceding sibling resizes in ${direction}`, async () => {
+      const menu = await menuFixture(html`<lr-navigation-menu indicator dir=${direction}
+        style="inline-size: 900px">${items()}</lr-navigation-menu>`);
+      const preceding = item(menu, 'products');
+      const target = item(menu, 'resources');
+      const indicator = part(menu, 'indicator')!;
+      const list = part(menu, 'list')!;
+      target.open = true;
+      await waitPlaced(target);
+      const aligned = (): boolean => {
+        const actual = indicator.getBoundingClientRect();
+        const trigger = base(target).getBoundingClientRect();
+        return Math.abs(actual.left - trigger.left) <= 1 && Math.abs(actual.width - trigger.width) <= 1;
+      };
+      await waitUntil(aligned, 'the initial indicator did not align');
+      await nextFrame();
+      await nextFrame();
+      const previousTrigger = base(target).getBoundingClientRect();
+      const previousList = list.getBoundingClientRect();
+      const previousHost = menu.getBoundingClientRect();
+      const previousTarget = target.getBoundingClientRect();
+
+      preceding.style.inlineSize = `${preceding.getBoundingClientRect().width + 70}px`;
+      await waitUntil(() => Math.abs(base(target).getBoundingClientRect().left - previousTrigger.left) > 32,
+        'the sibling resize did not move the open trigger');
+      // None of the previously observed boxes resized: only a sibling reports this movement.
+      for (const [element, previous] of [[menu, previousHost], [list, previousList], [target, previousTarget]] as const) {
+        const current = element.getBoundingClientRect();
+        expect(current.width).to.be.closeTo(previous.width, 1);
+        expect(current.height).to.be.closeTo(previous.height, 1);
+      }
+      await waitUntil(aligned, 'the indicator kept the offset from before its sibling resized');
+    });
+  }
 });
 
 describe('<lr-navigation-menu> motion', () => {

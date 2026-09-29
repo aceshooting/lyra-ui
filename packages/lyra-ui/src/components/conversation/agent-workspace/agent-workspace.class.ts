@@ -5,7 +5,6 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
@@ -32,7 +31,6 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const MAX_RENDERED_MESSAGES = 500;
 
@@ -181,10 +179,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   ]);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showDetails: ['withoutDetails', invertAlias, invertAlias],
-    showComposer: ['withoutComposer', invertAlias, invertAlias],
-  };
 
   /** Forwarded to each message's `<lr-message-parts>`; see `lr-markdown`'s `streamingRender`. */
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
@@ -246,28 +240,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Turns off the built-in details pane, even when data is present. */
   @property({ type: Boolean, attribute: 'without-details', reflect: true }) withoutDetails = false;
 
-  /**
-   * Deprecated inverted alias of `without-details` (`withoutDetails`): `show-details="false"` equals
-   * `without-details`, and removing it restores the default. Setting it logs a one-time development
-   * warning.
-   *
-   * @deprecated Use `without-details`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'show-details', reflect: true, converter: trueDefaultBooleanConverter })
-  showDetails = true;
-
   /** Turns off the built-in plain-frame composer shown when no `composer` slot is supplied. */
   @property({ type: Boolean, attribute: 'without-composer', reflect: true }) withoutComposer = false;
-
-  /**
-   * Deprecated inverted alias of `without-composer` (`withoutComposer`): `show-composer="false"`
-   * equals `without-composer`, and removing it restores the default. Setting it logs a one-time
-   * development warning.
-   *
-   * @deprecated Use `without-composer`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'show-composer', reflect: true, converter: trueDefaultBooleanConverter })
-  showComposer = true;
 
   /** Controlled value of the built-in composer. */
   @property({ attribute: 'composer-value' }) composerValue = '';

@@ -1,0 +1,4040 @@
+{
+  "schemaVersion": 1,
+  "captures": [
+    {
+      "directory": "22.0.0",
+      "captureSha256": "02f79d81c3812f94fa63aa152d5dce42926e415b94795de112d9867a13c9a36a"
+    }
+  ],
+  "retirements": [
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-geojson-view",
+        "kind": "component",
+        "name": "lr-geojson-view"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/lr-geojson-view.js"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/geojson-view/geojson-view.class.js"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/geojson-view/geojson-view.js"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./utilities/localization.js"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./components/retrieval/graph/graph.class.js",
+        "name": "LyraGraphLink"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./components/viewers/document-viewer/registry.js",
+        "name": "DocumentFile"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./components/viewers/document-viewer/registry.js",
+        "name": "DocumentRendererDefinition"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./components/viewers/geojson-view/geojson-view.class.js",
+        "name": "LyraGeojsonViewEventMap"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-activity-feed",
+        "kind": "css-property",
+        "name": "--lr-activity-feed-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-activity-feed",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-activity-feed",
+        "kind": "property",
+        "name": "showTimestamps"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-eval-dashboard",
+        "kind": "css-property",
+        "name": "--lr-agent-eval-dashboard-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-eval-dashboard",
+        "kind": "property",
+        "name": "showChart"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-run",
+        "kind": "css-property",
+        "name": "--lr-agent-run-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-run",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-run",
+        "kind": "property",
+        "name": "showCancel"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-run",
+        "kind": "property",
+        "name": "showRetry"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-trace",
+        "kind": "property",
+        "name": "showBars"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-trace",
+        "kind": "property",
+        "name": "showCost"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-trace",
+        "kind": "property",
+        "name": "showTokens"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-workspace",
+        "kind": "property",
+        "name": "showComposer"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-agent-workspace",
+        "kind": "property",
+        "name": "showDetails"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-animated-image",
+        "kind": "property",
+        "name": "respectReducedMotion"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-animation",
+        "kind": "property",
+        "name": "respectReducedMotion"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail-group",
+        "kind": "property",
+        "name": "open"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "css-property",
+        "name": "--lr-app-rail-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "css-property",
+        "name": "--lr-app-rail-panel-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "property",
+        "name": "hideToggle"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "property",
+        "name": "maxRailWidthPx"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "property",
+        "name": "minRailWidthPx"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-app-rail",
+        "kind": "property",
+        "name": "railWidthPx"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-approval-queue",
+        "kind": "property",
+        "name": "editable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-archive-viewer",
+        "kind": "css-property",
+        "name": "--lr-archive-viewer-highlight-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-chip",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-chip",
+        "kind": "property",
+        "name": "previewable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-chip",
+        "kind": "property",
+        "name": "removable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-trigger",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-trigger",
+        "kind": "part",
+        "name": "menu-trigger__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-trigger",
+        "kind": "part",
+        "name": "trigger__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-avatar-group",
+        "kind": "event",
+        "name": "lr-overflow-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bar-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-box-plot",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-box-plot",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-box-plot",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-box-plot",
+        "kind": "property",
+        "name": "legend"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-box-plot",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-browser-frame",
+        "kind": "css-property",
+        "name": "--lr-browser-frame-controller-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-browser-frame",
+        "kind": "property",
+        "name": "controls"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-bubble-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-button",
+        "kind": "css-property",
+        "name": "--lr-button-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-button",
+        "kind": "css-property",
+        "name": "--lr-button-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-button",
+        "kind": "css-property",
+        "name": "--lr-button-quiet-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-callout",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-callout",
+        "kind": "css-property",
+        "name": "--lr-callout-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-callout",
+        "kind": "part",
+        "name": "close-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-carousel",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chat-composer",
+        "kind": "css-property",
+        "name": "--lr-chat-composer-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chat-composer",
+        "kind": "property",
+        "name": "stoppable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chat-composer",
+        "kind": "property",
+        "name": "submitOnEnter"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chat-message",
+        "kind": "property",
+        "name": "actionsPosition"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chat-message",
+        "kind": "property",
+        "name": "attachmentsPosition"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-checkpoint",
+        "kind": "property",
+        "name": "confirmRestore"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-checkpoint",
+        "kind": "property",
+        "name": "restorable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chip",
+        "kind": "event",
+        "name": "lr-chip-select"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chunk-inspector",
+        "kind": "event",
+        "name": "lr-expand"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-chunk-inspector",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-claim-evidence",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-code-block-core",
+        "kind": "part",
+        "name": "copy-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-code-block-core",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-code-block",
+        "kind": "part",
+        "name": "copy-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-code-block",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-code-editor",
+        "kind": "property",
+        "name": "lineNumbers"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-combobox",
+        "kind": "css-property",
+        "name": "--lr-combobox-text-color"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-combobox",
+        "kind": "property",
+        "name": "showUnknownOption"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-commit-card",
+        "kind": "css-property",
+        "name": "--lr-commit-card-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-commit-card",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-commit-card",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-community-card",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-compare-panel",
+        "kind": "css-property",
+        "name": "--lr-compare-panel-selected-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-confirm-bar",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-confirm-bar",
+        "kind": "property",
+        "name": "pending"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-context-meter",
+        "kind": "property",
+        "name": "showLegend"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-conversation-item",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-conversation-item",
+        "kind": "property",
+        "name": "renamable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-copy-button",
+        "kind": "part",
+        "name": "base__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-csv-viewer",
+        "kind": "property",
+        "name": "hasHeaderRow"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dashboard-grid",
+        "kind": "property",
+        "name": "locked"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-control-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-control-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-page-size-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-row-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-sortable-header-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "css-property",
+        "name": "--lr-data-grid-sortable-header-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-date-input",
+        "kind": "css-property",
+        "name": "--lr-date-input-text-color"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-date-picker",
+        "kind": "css-property",
+        "name": "--lr-cell-size"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dialog",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dialog",
+        "kind": "part",
+        "name": "close-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dialog",
+        "kind": "property",
+        "name": "closable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-add-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-fold-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-highlight-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-highlight-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-highlight-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-highlight-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-highlight-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-diff-view",
+        "kind": "css-property",
+        "name": "--lr-diff-view-remove-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dock-panel",
+        "kind": "property",
+        "name": "edge"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dock-panel",
+        "kind": "property",
+        "name": "resizable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-document-compare",
+        "kind": "property",
+        "name": "syncScroll"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-highlight-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-search-match-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-search-match-active-foreground"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-search-match-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-docx-viewer",
+        "kind": "css-property",
+        "name": "--lr-docx-viewer-table-header-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-doughnut-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-drawer",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-drawer",
+        "kind": "part",
+        "name": "close-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-drawer",
+        "kind": "property",
+        "name": "closable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-drilldown-panel",
+        "kind": "property",
+        "name": "showFocusButton"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dropdown-item",
+        "kind": "event",
+        "name": "lr-menu-item-change"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dropdown-item",
+        "kind": "part",
+        "name": "spinner__base"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dropdown",
+        "kind": "part",
+        "name": "popup__arrow"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dropdown",
+        "kind": "part",
+        "name": "popup__popup"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-empty",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-entity-card",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-entity-card",
+        "kind": "property",
+        "name": "showFocusButton"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-entity-dossier",
+        "kind": "event",
+        "name": "lr-expand"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-entity-dossier",
+        "kind": "property",
+        "name": "showFocusButton"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-env-list",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-env-list",
+        "kind": "property",
+        "name": "revealable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-export-button",
+        "kind": "css-property",
+        "name": "--lr-export-button-active-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-export-button",
+        "kind": "css-property",
+        "name": "--lr-export-button-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-export-button",
+        "kind": "css-property",
+        "name": "--lr-export-button-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-file-input",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-file-input",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-file-input",
+        "kind": "property",
+        "name": "paste"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-flow-canvas",
+        "kind": "property",
+        "name": "locked"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-flow-controls",
+        "kind": "property",
+        "name": "hideLock"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-flow-node",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-flow-run-status",
+        "kind": "property",
+        "name": "hideSummary"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-funnel",
+        "kind": "property",
+        "name": "dropoff"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-gauge",
+        "kind": "property",
+        "name": "showValue"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-generation-metrics",
+        "kind": "property",
+        "name": "showStop"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph-legend",
+        "kind": "property",
+        "name": "interactive"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "css-property",
+        "name": "--lr-link-color"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "css-property",
+        "name": "--lr-node-fill"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-community-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-enter"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-leave"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "property",
+        "name": "dimmedLinkIds"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "property",
+        "name": "linkDistance"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "property",
+        "name": "links"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "property",
+        "name": "selectedLinkIds"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "property",
+        "name": "showEdgeLabels"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-grounding-summary",
+        "kind": "property",
+        "name": "showClaims"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-heatmap",
+        "kind": "css-property",
+        "name": "--lr-heatmap-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-heatmap",
+        "kind": "event",
+        "name": "lr-cell-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-flash-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "css-property",
+        "name": "--lr-highlight-layer-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-highlight-layer",
+        "kind": "property",
+        "name": "interactive"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-histogram",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-icon-button",
+        "kind": "css-property",
+        "name": "--lr-icon-button-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-icon-button",
+        "kind": "css-property",
+        "name": "--lr-icon-button-background-active"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-icon-button",
+        "kind": "css-property",
+        "name": "--lr-icon-button-background-hover"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-icon",
+        "kind": "css-property",
+        "name": "--lr-icon-fixed-width"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-icon",
+        "kind": "property",
+        "name": "fixedWidth"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-include",
+        "kind": "property",
+        "name": "cache"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-error-bg"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-error-border"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-info-bg"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-info-border"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-max-indent"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-selected-border"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-warning-bg"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-schema-viewer",
+        "kind": "css-property",
+        "name": "--lr-schema-viewer-warning-border"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-viewer",
+        "kind": "property",
+        "name": "collapsedDepth"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-json-viewer",
+        "kind": "property",
+        "name": "search"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-base-admin",
+        "kind": "property",
+        "name": "hideIngestion"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-base",
+        "kind": "property",
+        "name": "hideCreate"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-base",
+        "kind": "property",
+        "name": "hideSummary"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-graph-explorer",
+        "kind": "event",
+        "name": "lr-community-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-graph-explorer",
+        "kind": "property",
+        "name": "links"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-graph-explorer",
+        "kind": "property",
+        "name": "searchQuery"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lightbox",
+        "kind": "property",
+        "name": "showCounter"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-line-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "property",
+        "name": "legend"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-locale-picker",
+        "kind": "property",
+        "name": "showFlags"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-map",
+        "kind": "event",
+        "name": "lr-map-legend-panel-toggle"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-map",
+        "kind": "event",
+        "name": "lr-map-legend-toggle"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown-core",
+        "kind": "property",
+        "name": "codeBlockChrome"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown-core",
+        "kind": "property",
+        "name": "gfm"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown-core",
+        "kind": "property",
+        "name": "highlightCode"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown",
+        "kind": "property",
+        "name": "codeBlockChrome"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown",
+        "kind": "property",
+        "name": "gfm"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown",
+        "kind": "property",
+        "name": "highlightCode"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-media-card",
+        "kind": "event",
+        "name": "lr-before-media-download"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-memory-panel",
+        "kind": "event",
+        "name": "lr-expand"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-menu-item",
+        "kind": "event",
+        "name": "lr-menu-item-change"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-menu",
+        "kind": "slot-content",
+        "name": ""
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-actions",
+        "kind": "part",
+        "name": "edit-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-actions",
+        "kind": "part",
+        "name": "regenerate-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-parts",
+        "kind": "css-property",
+        "name": "--lr-message-parts-error-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-parts",
+        "kind": "property",
+        "name": "codeBlockChrome"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-parts",
+        "kind": "property",
+        "name": "showReasoning"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-mutation-observer",
+        "kind": "property",
+        "name": "characterData"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-mutation-observer",
+        "kind": "property",
+        "name": "observeAttributes"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-mutation-observer",
+        "kind": "property",
+        "name": "subtree"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-native-time-input",
+        "kind": "property",
+        "name": "noSpinButtons"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-notebook-viewer",
+        "kind": "css-property",
+        "name": "--lr-notebook-viewer-highlight-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-notebook-viewer",
+        "kind": "css-property",
+        "name": "--lr-notebook-viewer-highlight-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-notebook-viewer",
+        "kind": "css-property",
+        "name": "--lr-notebook-viewer-highlight-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-notebook-viewer",
+        "kind": "css-property",
+        "name": "--lr-notebook-viewer-highlight-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-notebook-viewer",
+        "kind": "css-property",
+        "name": "--lr-notebook-viewer-highlight-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-number-input",
+        "kind": "property",
+        "name": "steppers"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-page",
+        "kind": "event",
+        "name": "lr-nav-toggle"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-pie-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-polar-area-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-popover",
+        "kind": "property",
+        "name": "arrow"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-bar",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-bar",
+        "kind": "property",
+        "name": "showValue"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-ring",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-ring",
+        "kind": "property",
+        "name": "showValue"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-prompt-input",
+        "kind": "property",
+        "name": "submitOnEnter"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-prompt-queue",
+        "kind": "property",
+        "name": "editable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-prompt-studio",
+        "kind": "event",
+        "name": "lr-message-reorder"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-provenance-panel",
+        "kind": "event",
+        "name": "lr-expand"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-push-to-talk",
+        "kind": "property",
+        "name": "showTimer"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-qr-code",
+        "kind": "css-property",
+        "name": "--lr-qr-code-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-radar-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-rag-answer",
+        "kind": "property",
+        "name": "showClaims"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-rag-answer",
+        "kind": "property",
+        "name": "showSources"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-rag-eval-dashboard",
+        "kind": "property",
+        "name": "showChart"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-realtime-session",
+        "kind": "property",
+        "name": "showCapture"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-reorder-item",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-reorder-item",
+        "kind": "part",
+        "name": "move-down-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-reorder-item",
+        "kind": "part",
+        "name": "move-up-button__control"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-reorder-list",
+        "kind": "event",
+        "name": "lr-reorder"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-result-card",
+        "kind": "css-property",
+        "name": "--lr-result-card-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-result-card",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-retrieval-results",
+        "kind": "property",
+        "name": "dedupe"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-retrieval-results",
+        "kind": "property",
+        "name": "selectable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "css-property",
+        "name": "--lr-chart-tooltip-text"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "event",
+        "name": "lr-point-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "property",
+        "name": "beginAtZero"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "property",
+        "name": "showDataTable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-scatter-chart",
+        "kind": "property",
+        "name": "zoom"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-select",
+        "kind": "property",
+        "name": "showUnknownOption"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sequence-playback",
+        "kind": "property",
+        "name": "loop"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sequence-strip",
+        "kind": "property",
+        "name": "showLegend"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-slider",
+        "kind": "property",
+        "name": "showValue"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-source-card",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-source-card",
+        "kind": "property",
+        "name": "title"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-source-list",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-source-picker",
+        "kind": "property",
+        "name": "searchable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-source-picker",
+        "kind": "property",
+        "name": "showSelectAll"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-span-waterfall",
+        "kind": "property",
+        "name": "hideAxis"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sparkline",
+        "kind": "css-property",
+        "name": "--lr-sparkline-stroke-width"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sparkline",
+        "kind": "part",
+        "name": "area"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-split-panel",
+        "kind": "part",
+        "name": "split-panel"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stack-trace",
+        "kind": "css-property",
+        "name": "--lr-stack-trace-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stack-trace",
+        "kind": "property",
+        "name": "collapseInternal"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stack-trace",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stack-trace",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stat",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-stat",
+        "kind": "slot",
+        "name": ""
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text-core",
+        "kind": "property",
+        "name": "codeBlockChrome"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text-core",
+        "kind": "property",
+        "name": "gfm"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text-core",
+        "kind": "property",
+        "name": "highlightCode"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text",
+        "kind": "property",
+        "name": "codeBlockChrome"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text",
+        "kind": "property",
+        "name": "gfm"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-streaming-text",
+        "kind": "property",
+        "name": "highlightCode"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-subagent-panel",
+        "kind": "css-property",
+        "name": "--lr-subagent-panel-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-subagent-panel",
+        "kind": "css-property",
+        "name": "--lr-subagent-panel-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-subagent-panel",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "event",
+        "name": "lr-row-click"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "property",
+        "name": "emptyCompact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "property",
+        "name": "hideColumnsLabel"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "property",
+        "name": "noColumnsDescription"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "property",
+        "name": "noColumnsHeading"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tag",
+        "kind": "css-property",
+        "name": "--lr-tag-remove-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-task-list",
+        "kind": "css-property",
+        "name": "--lr-task-list-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-task-list",
+        "kind": "property",
+        "name": "collapsible"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-task-list",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-task-list",
+        "kind": "property",
+        "name": "expanded"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-task-list",
+        "kind": "property",
+        "name": "label"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-terminal",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-terminal",
+        "kind": "property",
+        "name": "copyable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-terminal",
+        "kind": "property",
+        "name": "wrap"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-test-results",
+        "kind": "property",
+        "name": "autoExpandFailures"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thinking-panel",
+        "kind": "css-property",
+        "name": "--lr-thinking-panel-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thinking-panel",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "css-property",
+        "name": "--lr-thread-list-excerpt-highlight-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "css-property",
+        "name": "--lr-thread-list-excerpt-highlight-foreground"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "property",
+        "name": "renamable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "property",
+        "name": "showArchived"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-toggle",
+        "kind": "css-property",
+        "name": "--lr-toggle-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-toggle",
+        "kind": "css-property",
+        "name": "--lr-toggle-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-toggle",
+        "kind": "css-property",
+        "name": "--lr-toggle-pressed-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-token-input",
+        "kind": "event",
+        "name": "lr-add"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-token-input",
+        "kind": "event",
+        "name": "lr-remove"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-token-input",
+        "kind": "event",
+        "name": "lr-token-edit"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-approval-dialog",
+        "kind": "property",
+        "name": "editable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-approval-dialog",
+        "kind": "property",
+        "name": "pending"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-call-block",
+        "kind": "css-property",
+        "name": "--lr-tool-call-block-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-call-block",
+        "kind": "property",
+        "name": "error"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-result-dialog",
+        "kind": "event",
+        "name": "lr-maximize-change"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-timeline",
+        "kind": "property",
+        "name": "approvalEditable"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tooltip",
+        "kind": "css-property",
+        "name": "--lr-tooltip-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tooltip",
+        "kind": "property",
+        "name": "arrow"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tour",
+        "kind": "event",
+        "name": "lr-tour-step-change"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tour",
+        "kind": "property",
+        "name": "showProgress"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-trace-tree",
+        "kind": "property",
+        "name": "hideBars"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-trace-tree",
+        "kind": "property",
+        "name": "showCost"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-trace-tree",
+        "kind": "property",
+        "name": "showTokens"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-transcript-feed",
+        "kind": "property",
+        "name": "showTimestamps"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-typing-indicator",
+        "kind": "css-property",
+        "name": "--lr-typing-dot-size"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-typing-indicator",
+        "kind": "css-property",
+        "name": "--lr-typing-dot-stagger-1"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-typing-indicator",
+        "kind": "css-property",
+        "name": "--lr-typing-dot-stagger-2"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-typing-indicator",
+        "kind": "css-property",
+        "name": "--lr-typing-duration"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-typing-indicator",
+        "kind": "css-property",
+        "name": "--lr-typing-gap"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-video-playlist",
+        "kind": "css-property",
+        "name": "--lr-video-playlist-item-current-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-video-playlist",
+        "kind": "property",
+        "name": "autoAdvance"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-video",
+        "kind": "css-property",
+        "name": "--lr-video-poster-play-button-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-voice-picker",
+        "kind": "property",
+        "name": "preview"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-widget",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-word-cloud",
+        "kind": "property",
+        "name": "showLegend"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "css-property",
+        "name": "--lr-xml-viewer-highlight-accent-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "css-property",
+        "name": "--lr-xml-viewer-highlight-danger-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "css-property",
+        "name": "--lr-xml-viewer-highlight-neutral-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "css-property",
+        "name": "--lr-xml-viewer-highlight-success-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "css-property",
+        "name": "--lr-xml-viewer-highlight-warning-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-xml-viewer",
+        "kind": "property",
+        "name": "collapsedDepth"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-zoomable-frame",
+        "kind": "css-property",
+        "name": "--lr-zoomable-frame-control-hover-background"
+      },
+      "removedIn": "23.0.0",
+      "sourceRelease": "lyra-ui@22.0.0"
+    }
+  ],
+  "policyWitnesses": {
+    "file": "policy-witnesses.json.gz",
+    "sha256": "a77e182cf9215fd4abcd6984f04218370b156a6cc2f3ad7bf376d7b5c439930d"
+  },
+  "guidanceTransitions": [
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-enter"
+      },
+      "fromPolicySha256": "596714b2a679ff1aba7e77fb60d5b7898ff2a1f463b2b40aa0faa70a1a91e380",
+      "toPolicySha256": "73cf1f15b76ad7d3e2e6882e5ce3a14dfca9f54d39e2e187e154b990aa9d0178",
+      "rationale": "Published guidance makes the unchanged canonical graph event detail migration explicit."
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-leave"
+      },
+      "fromPolicySha256": "b42a9faad4d09dfc48ee3c9e76b985f1ad703caa81f484724efb14e0110ecc54",
+      "toPolicySha256": "c857dc2a945cf545c49736b0e2114b84c4befb226c64863878357ccf23b4bb05",
+      "rationale": "Published guidance makes the unchanged canonical graph event detail migration explicit."
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/geojson-view/geojson-view.js"
+      },
+      "fromPolicySha256": "59a385b84bc1e69e5d2137ef7fdd19c35c6827404e8753099157d4bf4adb2a03",
+      "toPolicySha256": "04d6393adde5433b663b088cf42be97e62ec49eef4298f688818a679713e7ce4",
+      "rationale": "Published guidance selects the stable registration route for the same canonical GeoJSON viewer."
+    }
+  ]
+}

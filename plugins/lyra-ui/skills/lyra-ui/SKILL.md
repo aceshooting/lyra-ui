@@ -77,8 +77,8 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
   `import '@aceshooting/lyra-ui';` is registration-free in v8. `all.js` gives the explicit
   compatibility registration set — prefer per-component entries in application code — and omits
-  the 16 peer-gated tags (the chart family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
-  `lr-geojson-view`, `lr-geojson-viewer`).
+  the 15 peer-gated tags (the chart family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
+  `lr-geojson-viewer`).
 
 - **Theme only through `--lr-theme-*` custom properties.** Never hardcode a color, spacing or font
   value that fights the token system; override the relevant `--lr-theme-*` property on any ancestor

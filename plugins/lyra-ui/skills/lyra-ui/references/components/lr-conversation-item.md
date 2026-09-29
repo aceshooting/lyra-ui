@@ -7,8 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `renamable` / `renamable` since `21.1.0`; use property `without-rename`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -43,8 +42,7 @@ after composition.
 - `withoutRename: boolean = false` (attribute `without-rename`, reflected) — turns off inline
   rename: the rename button never renders and the row can never enter its editing state; setting it
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
-  than leaving it stranded and still committable. Deprecated alias: `renamable` (use
-  `without-rename`; removed in 23.0.0) — inverted, so `renamable="false"` equals `without-rename`.
+  than leaving it stranded and still committable.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) gives the tighter row padding and gaps of the dense history sidebars these rows
   usually render in; `m` and larger keep the full row padding. The dense tier tightens
@@ -54,7 +52,7 @@ after composition.
   `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
   sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
   size plus the dense padding, while a row with `without-rename` and no actions collapses much
-  further. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
+  further.
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute

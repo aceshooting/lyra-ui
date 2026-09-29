@@ -7,15 +7,9 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated css-property** `--lr-data-grid-control-active-background` since `21.1.0`; use css-property `--lr-data-grid-control-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-data-grid-control-hover-background` since `21.1.0`; use css-property `--lr-data-grid-control-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-data-grid-page-size-active-background` since `21.1.0`; use css-property `--lr-data-grid-page-size-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-data-grid-row-active-background` since `21.1.0`; use css-property `--lr-data-grid-row-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-data-grid-sortable-header-active-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-active-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-data-grid-sortable-header-hover-background` since `21.1.0`; use css-property `--lr-data-grid-sortable-header-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Optional peers** none
-- **Themeable via** 59 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -328,11 +322,7 @@ rows; and `--lr-data-grid-sortable-header-hover-bg` and
 live `color-mix()` values of the effective grid accent and transparent, using the corresponding
 `--lr-color-mix-hover` or `--lr-color-mix-active` token (the page-size pressed state intentionally
 uses the hover mix), so an accent override remains coherent while each surface can still be
-overridden independently. Deprecated aliases: `--lr-data-grid-control-hover-background`,
-`--lr-data-grid-control-active-background`, `--lr-data-grid-page-size-active-background`,
-`--lr-data-grid-row-active-background`, `--lr-data-grid-sortable-header-hover-background` and
-`--lr-data-grid-sortable-header-active-background` (use the same names ending in `-bg`; removed in
-23.0.0). Each is still read as the fallback of its `-bg` name.
+overridden independently.
 
 ```html
 <lr-data-grid

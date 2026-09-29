@@ -5,11 +5,6 @@ import '../../conversation/chat-message/chat-message.js';
 import type { LyraMediaCard } from './media-card.js';
 import * as mediaCardExports from './media-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-  type DeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
@@ -17,9 +12,6 @@ expectLocaleFallback('ar', ['mediaCardOpenName', 'promptStudioRoleAssistant']);
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-media-card', 'appearance');
-// The compatibility tests below deliberately veto through the deprecated alias event, which must
-// keep vetoing until its removal.
-expectDeprecatedUsage('lr-media-card', 'event', 'lr-before-media-download');
 
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -528,7 +520,7 @@ describe('kind="file" (generic chip)', () => {
     expect(filenamePart.getAttribute('title')).to.equal('a-very-long-quarterly-report.pdf');
   });
 
-  it('emits cancelable lr-before-media-download when the safe file link is activated', async () => {
+  it('emits cancelable lr-media-download-request when the safe file link is activated', async () => {
     const el = (await fixture(
       html`<lr-media-card
         src="https://example.test/report.pdf"
@@ -542,14 +534,14 @@ describe('kind="file" (generic chip)', () => {
     // as <lr-document-preview>'s identical download-link test).
     link.addEventListener('click', (e) => e.preventDefault());
     setTimeout(() => link.click());
-    const ev = await oneEvent(el, 'lr-before-media-download');
+    const ev = await oneEvent(el, 'lr-media-download-request');
     expect(ev.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
     expect(ev.cancelable).to.be.true;
   });
 
-  it('propagates lr-before-media-download prevention to the native file-link click', async () => {
+  it('propagates lr-media-download-request prevention to the native file-link click', async () => {
     const el = (await fixture(
       html`<lr-media-card
         src="https://example.test/report.pdf"
@@ -557,7 +549,7 @@ describe('kind="file" (generic chip)', () => {
         filename="report.pdf"
       ></lr-media-card>`,
     )) as LyraMediaCard;
-    el.addEventListener('lr-before-media-download', (e) => e.preventDefault());
+    el.addEventListener('lr-media-download-request', (e) => e.preventDefault());
     const link = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
     // A synthetic dispatchEvent() (unlike a real `.click()`) never invokes
     // the anchor's own built-in navigation behavior, so this safely
@@ -570,7 +562,7 @@ describe('kind="file" (generic chip)', () => {
     expect(clickEvent.defaultPrevented).to.be.true;
   });
 
-  it('does not prevent the native click when lr-before-media-download is left uncancelled', async () => {
+  it('does not prevent the native click when lr-media-download-request is left uncancelled', async () => {
     const el = (await fixture(
       html`<lr-media-card src="https://example.test/report.pdf" kind="file" filename="report.pdf"></lr-media-card>`,
     )) as LyraMediaCard;
@@ -590,10 +582,7 @@ describe('kind="file" (generic chip)', () => {
   });
 });
 
-describe('lr-media-download-request and its deprecated lr-before-media-download alias', () => {
-  const aliasUsage: readonly DeprecatedUsage[] = [
-    { tag: 'lr-media-card', kind: 'event', name: 'lr-before-media-download' },
-  ];
+describe('lr-media-download-request retirement contract', () => {
 
   async function fileCard(disabled = false): Promise<{ el: LyraMediaCard; activate: () => boolean }> {
     const el = (await fixture(
@@ -625,119 +614,48 @@ describe('lr-media-download-request and its deprecated lr-before-media-download 
     return { el, activate };
   }
 
-  it('fires the canonical request first, then the alias, as separate equal cancelable details', async () => {
+  it('emits one canonical request and ignores retired download vetoes', async () => {
     const { el, activate } = await fileCard();
-    const seen: CustomEvent<{ src: string; filename: string }>[] = [];
-    const record = (event: Event) => seen.push(event as CustomEvent<{ src: string; filename: string }>);
-    el.addEventListener('lr-media-download-request', record);
-    el.addEventListener('lr-before-media-download', record);
-    const prevented = activate();
-    expect(seen.map((event) => event.type)).to.deep.equal([
-      'lr-media-download-request',
-      'lr-before-media-download',
-    ]);
-    const expected = { src: 'https://example.test/report.pdf', filename: 'report.pdf' };
-    expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
-      JSON.stringify(expected),
-      JSON.stringify(expected),
-    ]);
-    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail object').to.equal(false);
-    expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
-      [true, true, true],
-      [true, true, true],
-    ]);
-    expect(prevented).to.equal(false);
+    const seen: string[] = [];
+    el.addEventListener('lr-media-download-request', (event) => {
+      seen.push(event.type);
+      expect(event.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
+      expect([event.cancelable, event.bubbles, event.composed]).to.deep.equal([true, true, true]);
+    });
+    el.addEventListener('lr-before-media-download', (event) => { seen.push(event.type); event.preventDefault(); });
+    expect(activate()).to.equal(false);
+    expect(seen).to.deep.equal(['lr-media-download-request']);
   });
 
-  it('keeps both request details on the activated file when a listener updates the card', async () => {
+  it('emits no download request when a disabled card is synthetically activated', async () => {
+    const { el, activate } = await fileCard(true);
+    const events: string[] = [];
+    el.addEventListener('lr-media-download-request', (event) => events.push(event.type));
+    el.addEventListener('lr-before-media-download', (event) => events.push(event.type));
+    expect(activate()).to.equal(true);
+    expect(events).to.deep.equal([]);
+  });
+
+  it('suppresses native download when the canonical request is vetoed', async () => {
     const { el, activate } = await fileCard();
-    const details: { src: string; filename: string }[] = [];
+    el.addEventListener('lr-media-download-request', (event) => event.preventDefault());
+    expect(activate()).to.equal(true);
+  });
+
+  it('keeps the activated detail when a request listener changes the card', async () => {
+    const { el, activate } = await fileCard();
+    const details: unknown[] = [];
     el.addEventListener('lr-media-download-request', (event) => {
-      details.push({ ...event.detail });
       el.src = 'https://example.test/next.pdf';
       el.filename = 'next.pdf';
-      Object.assign(event.detail, { filename: 'listener-only.pdf' });
-    });
-    el.addEventListener('lr-before-media-download', (event) => {
       details.push(event.detail);
-      if (event.detail.filename === 'report.pdf') event.preventDefault();
     });
-    expect(activate(), 'the alias still vetoes the activated file').to.equal(true);
-    expect(details).to.deep.equal([
-      { src: 'https://example.test/report.pdf', filename: 'report.pdf' },
-      { src: 'https://example.test/report.pdf', filename: 'report.pdf' },
-    ]);
+    expect(activate()).to.equal(false);
+    expect(details).to.deep.equal([{ src: 'https://example.test/report.pdf', filename: 'report.pdf' }]);
     await el.updateComplete;
     expect(el.filename).to.equal('next.pdf');
   });
 
-  it('suppresses the native download when the canonical request is vetoed, without a warning', async () => {
-    const { el, activate } = await fileCard();
-    let aliasPrevented: boolean | undefined;
-    el.addEventListener('lr-media-download-request', (event) => event.preventDefault());
-    el.addEventListener('lr-before-media-download', (event) => {
-      aliasPrevented = event.defaultPrevented;
-    });
-    let prevented = false;
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => {
-      prevented = activate();
-    });
-    expect(prevented).to.equal(true);
-    expect(aliasPrevented, 'the alias still fires, with its own undecided default').to.equal(false);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('still lets the alias alone veto, and warns once naming lr-media-download-request', async () => {
-    const results: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const { el, activate } = await fileCard();
-        el.addEventListener('lr-before-media-download', (event) => event.preventDefault());
-        results.push(activate());
-      }
-    });
-    expect(results).to.deep.equal([true, true]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-media-card:event:lr-before-media-download',
-    ]);
-    expect(warnings[0]!.message).to.contain('lr-media-download-request');
-  });
-
-  it('detects a delegated document listener vetoing the alias', async () => {
-    const { activate } = await fileCard();
-    const veto = (event: Event) => event.preventDefault();
-    document.addEventListener('lr-before-media-download', veto);
-    let prevented = false;
-    try {
-      const warnings = await captureDeprecationWarnings(aliasUsage, () => {
-        prevented = activate();
-      });
-      expect(warnings).to.have.length(1);
-    } finally {
-      document.removeEventListener('lr-before-media-download', veto);
-    }
-    expect(prevented).to.equal(true);
-  });
-
-  it('does not warn when an alias listener only observes', async () => {
-    const { el, activate } = await fileCard();
-    let observed = 0;
-    el.addEventListener('lr-before-media-download', () => (observed += 1));
-    const warnings = await captureDeprecationWarnings(aliasUsage, () => {
-      activate();
-    });
-    expect(observed).to.equal(1);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('fires neither event from a disabled card', async () => {
-    const { el, activate } = await fileCard(true);
-    const seen: string[] = [];
-    el.addEventListener('lr-media-download-request', (event) => seen.push(event.type));
-    el.addEventListener('lr-before-media-download', (event) => seen.push(event.type));
-    activate();
-    expect(seen).to.deep.equal([]);
-  });
 });
 
 describe('max-height', () => {

@@ -28,7 +28,7 @@
     "plugin:sync": "node scripts/sync-plugin-version.mjs",
     "skill:check": "node --test scripts/sync-plugin-version.test.mjs scripts/skill-reference-context.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/check-skill-manifest.mjs",
     "check:framework-recipes": "node --test scripts/check-framework-recipes.test.mjs && node scripts/check-framework-recipes.mjs",
-    "test:packed-consumer-tooling": "node --test scripts/check-packed-consumer.test.mjs scripts/check-packed-attw.test.mjs",
+    "test:packed-consumer-tooling": "node --test scripts/check-packed-consumer.test.mjs scripts/check-packed-attw.test.mjs scripts/packed-migration-consumer.test.mjs",
     "check:packed-attw": "node --test scripts/check-packed-attw.test.mjs && node scripts/check-packed-attw.mjs",
     "check:packed-consumer:contracts": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs --skip-attw && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:packed-consumer": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
@@ -41,7 +41,9 @@
     "release:prepare": "node scripts/release-prepare.mjs",
     "migrate-wa": "pnpm --filter @aceshooting/lyra-ui run migrate-wa",
     "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
-    "lint:parallel": "pnpm --filter @aceshooting/lyra-ui run lint:parallel"
+    "lint:parallel": "pnpm --filter @aceshooting/lyra-ui run lint:parallel",
+    "test:theme-builder": "node --test scripts/theme-builder-model.test.mjs scripts/theme-builder-option-data.test.mjs scripts/theme-builder-recovery.test.mjs scripts/docs-load-boundaries.test.mjs",
+    "check:theme-builder": "node scripts/theme-builder-browser.mjs"
   },
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:*",

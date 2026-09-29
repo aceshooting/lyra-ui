@@ -25,7 +25,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type LyraVideoControls = 'none' | 'standard' | 'full';
 export type LyraVideoPreload = 'auto' | 'metadata' | 'none';
 
@@ -237,8 +236,6 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  *   background.
  * @cssprop [--lr-video-poster-play-button-hover-bg=color-mix(...)] - Poster play-button hover
  *   background.
- * @cssprop [--lr-video-poster-play-button-hover-background=color-mix(...)] - Deprecated alias of
- *   `--lr-video-poster-play-button-hover-bg`; removal not before 23.0.0.
  * @cssprop [--lr-video-poster-play-button-hover-border-color=var(--lr-color-brand)] - Poster
  *   play-button hover border color.
  * @status experimental

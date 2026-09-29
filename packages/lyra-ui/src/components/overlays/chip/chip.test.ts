@@ -1458,7 +1458,6 @@ describe('a slotted [hidden] adornment', () => {
   });
 });
 
-
 /**
  * Regression: an accessible name computed from slotted content must not depend on whether the
  * component currently sits inside a rendered container. A closed overlay popup, an inactive slide
@@ -1582,10 +1581,10 @@ describe('chip control-guard hardening', () => {
   });
 });
 
-describe('deprecated lr-chip-select alias', () => {
+describe('retired lr-chip-select alias', () => {
   const CHIP_SELECT: readonly DeprecatedUsage[] = [{ tag: 'lr-chip', kind: 'event', name: 'lr-chip-select' }];
 
-  it('fires after lr-chip-toggle-request with an equal detail and no warning while nothing vetoes', async () => {
+  it('fires only lr-chip-toggle-request with the proposed detail', async () => {
     const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     const order: string[] = [];
@@ -1598,15 +1597,14 @@ describe('deprecated lr-chip-select alias', () => {
       });
     }
     const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
-    expect(order).to.deep.equal(['lr-chip-toggle-request', 'lr-chip-select']);
+    expect(order).to.deep.equal(['lr-chip-toggle-request']);
     expect(details[0]).to.deep.equal({ value: 'v1', selected: true });
-    expect(details[1]).to.deep.equal(details[0]);
-    expect(details[1]).to.not.equal(details[0]);
+    expect(details).to.have.length(1);
     expect(el.selected).to.be.true;
     expect(warnings).to.have.length(0);
   });
 
-  it('lets a listener bound only to the alias veto the change, warning once', async () => {
+  it('ignores the retired listener while toggling twice', async () => {
     const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     el.addEventListener('lr-chip-select', (event) => event.preventDefault());
@@ -1617,11 +1615,10 @@ describe('deprecated lr-chip-select alias', () => {
     });
     expect(el.selected).to.be.false;
     expect(button.getAttribute('aria-pressed')).to.equal('false');
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-chip:event:lr-chip-select']);
-    expect(warnings[0]!.message).to.contain('lr-chip-toggle-request');
+    expect(warnings).to.have.length(0);
   });
 
-  it('vetoes through the canonical event without warning, and the alias still hears the proposal', async () => {
+  it('vetoes through the canonical event without a retired notification', async () => {
     const el = (await fixture(html`<lr-chip toggleable selected value="v1">Tag</lr-chip>`)) as LyraChip;
     const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
     el.addEventListener('lr-chip-toggle-request', (event) => event.preventDefault());
@@ -1630,7 +1627,7 @@ describe('deprecated lr-chip-select alias', () => {
       aliasDetail = (event as CustomEvent).detail;
     });
     const warnings = await captureDeprecationWarnings(CHIP_SELECT, () => button.click());
-    expect(aliasDetail).to.deep.equal({ value: 'v1', selected: false });
+    expect(aliasDetail).to.equal(undefined);
     expect(el.selected).to.be.true;
     expect(warnings).to.have.length(0);
   });

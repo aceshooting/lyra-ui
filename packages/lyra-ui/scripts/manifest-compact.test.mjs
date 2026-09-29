@@ -157,7 +157,6 @@ assert.deepEqual(
   );
 }
 
-console.log('manifest compaction and inheritance expansion tests passed.');
 
 
 const deprecatedRecord = {
@@ -178,3 +177,58 @@ assert.deepEqual(expandManifestInheritance(compactDeprecated), deprecatedFixture
 assert.deepEqual(compactManifest(compactDeprecated), compactDeprecated);
 compactDeclaration.members[0].deprecationRef = 'property:missing';
 assert.throws(() => expandManifestInheritance(compactDeprecated), /dangling deprecation reference/);
+
+// A subclass may override rendered parts without overriding its JavaScript inheritance.
+// Complete per-tag lists must not regain the base-only parts during flattening.
+{
+  const marked = createManifestInheritanceFixture();
+  const sourceChild = marked.modules[1].declarations[0];
+  sourceChild.lyraCssPartsComplete = true;
+  sourceChild.cssParts = [{ name: 'control', description: 'The child control.' }];
+  const original = structuredClone(marked);
+  const packed = compactManifest(marked);
+  const effective = expandManifestInheritance(packed);
+  const effectiveChild = effective.modules[1].declarations[0];
+  assert.deepEqual(effectiveChild.cssParts, sourceChild.cssParts);
+  assert.deepEqual(effective.modules[0].declarations[0].cssParts, [{ name: 'base', description: 'The inherited base.' }]);
+  assert.deepEqual(effectiveChild.superclass, sourceChild.superclass);
+  assert.ok(effectiveChild.members.some(({ name }) => name === 'locale'));
+  assert.ok(effectiveChild.events.some(({ name }) => name === 'lr-ready'));
+  assert.ok(effectiveChild.attributes.some(({ name }) => name === 'locale'));
+  assert.ok(effectiveChild.slots.some(({ name }) => name === 'label'));
+  assert.ok(effectiveChild.cssProperties.some(({ name }) => name === '--lr-fixture-base-color'));
+  assert.deepEqual(compactManifest(packed), packed);
+  assert.deepEqual(expandManifestInheritance(effective), effective);
+  assert.deepEqual(publicStorybookManifest(packed).modules[1].declarations[0].cssParts, sourceChild.cssParts);
+  assert.deepEqual(marked, original, 'readers do not mutate their source manifest');
+
+  sourceChild.cssParts = [];
+  const emptyPacked = compactManifest(marked);
+  assert.deepEqual(emptyPacked.modules[1].declarations[0].cssParts, []);
+  assert.deepEqual(expandManifestInheritance(emptyPacked).modules[1].declarations[0].cssParts, []);
+
+  delete sourceChild.lyraCssPartsComplete;
+  sourceChild.cssParts = [{ name: 'control' }];
+  assert.deepEqual(
+    expandManifestInheritance(compactManifest(marked)).modules[1].declarations[0].cssParts.map(({ name }) => name),
+    ['base', 'control'],
+    'unmarked historical sparse manifests retain inheritance',
+  );
+}
+
+for (const invalid of [
+  { lyraCssPartsComplete: false, cssParts: [] },
+  { lyraCssPartsComplete: 'true', cssParts: [] },
+  { lyraCssPartsComplete: null, cssParts: [] },
+  { lyraCssPartsComplete: undefined, cssParts: [] },
+  { lyraCssPartsComplete: true },
+  { lyraCssPartsComplete: true, cssParts: null },
+  { lyraCssPartsComplete: true, cssParts: {} },
+]) {
+  const manifest = { modules: [{ path: 'invalid.ts', declarations: [{ name: 'InvalidParts', ...invalid }] }] };
+  for (const read of [compactManifest, expandManifestInheritance]) {
+    assert.throws(() => read(manifest), /InvalidParts: lyraCssPartsComplete requires true and an own cssParts array/);
+  }
+}
+
+console.log('manifest compaction and inheritance expansion tests passed.');

@@ -20,6 +20,10 @@ import {
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
 
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-dock-panel', 'edge');
+expectStaleAttribute('lr-dock-panel', 'resizable');
+
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-dock-panel', 'size');
 expectStaleAttribute('lr-dock-panel', 'min-size');
@@ -1611,39 +1615,21 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
 describe("lr-dock-panel canonical names and their deprecated aliases", () => {
   const usage = (name: string): DeprecatedUsage => ({ tag: "lr-dock-panel", kind: "property", name });
 
-  it('renders resizable="false" exactly like without-resize, and warns once naming without-resize', async () => {
+  it('keeps the resize handle when only resizable="false" is set', async () => {
     const handles: boolean[] = [];
     const warnings = await captureDeprecationWarnings([usage("resizable")], async () => {
       for (let index = 0; index < 2; index += 1) {
         const el = await dockedFixture('resizable="false"');
         await elementUpdated(el);
-        expect(el.withoutResize).to.equal(true);
+        expect(el.withoutResize).to.equal(false);
         handles.push(el.shadowRoot!.querySelector('[part="handle"]') === null);
       }
     });
-    expect(handles).to.deep.equal([true, true]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-dock-panel:property:resizable"]);
-    expect(warnings[0]!.message).to.contain("without-resize");
+    expect(handles).to.deep.equal([false, false]);
+    expect(warnings).to.have.length(0);
   });
 
-  it("keeps the resizable property working as the inverse, both sides reflecting", async () => {
-    const el = await dockedFixture();
-    expect(el.resizable).to.equal(true);
-    await captureDeprecationWarnings([usage("resizable")], async () => {
-      el.resizable = false;
-      await elementUpdated(el);
-    });
-    expect(el.withoutResize).to.equal(true);
-    expect(el.hasAttribute("without-resize")).to.equal(true);
-    expect(el.getAttribute("resizable")).to.equal("false");
-    el.withoutResize = false;
-    await elementUpdated(el);
-    expect(el.resizable).to.equal(true);
-    expect(el.hasAttribute("resizable")).to.equal(false);
-    expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);
-  });
-
-  it("keeps the edge alias docking the panel exactly like placement, and warns once", async () => {
+  it("ignores edge and retains the default dock placement", async () => {
     const wrap = async (attr: string) =>
       ((await fixture(
         `<div style="position: relative; height: 20rem; display: flex;"><lr-dock-panel ${attr} extent="120px">x</lr-dock-panel></div>`
@@ -1659,18 +1645,17 @@ describe("lr-dock-panel canonical names and their deprecated aliases", () => {
       }
     });
     for (const el of aliased) {
-      expect(el.placement).to.equal("top");
-      expect(el.getAttribute("placement"), "the canonical attribute reflects").to.equal("top");
-      expect(el.shadowRoot!.querySelector('[part="handle"]')!.getAttribute("aria-orientation")).to.equal(
+      expect(el.placement).to.equal("end");
+      expect(el.getAttribute("placement")).to.not.equal("top");
+      expect(el.shadowRoot!.querySelector('[part="handle"]')!.getAttribute("aria-orientation")).to.not.equal(
         canonical.shadowRoot!.querySelector('[part="handle"]')!.getAttribute("aria-orientation")
       );
-      expect(getComputedStyle(el).blockSize).to.equal(getComputedStyle(canonical).blockSize);
+      expect(getComputedStyle(el).blockSize).to.not.equal(getComputedStyle(canonical).blockSize);
     }
-    expect(warnings.map(({ key }) => key)).to.deep.equal(["lyra-deprecated:lr-dock-panel:property:edge"]);
-    expect(warnings[0]!.message).to.contain("placement");
+    expect(warnings).to.have.length(0);
   });
 
-  it("lets the last authored attribute win between canonical names and their aliases", async () => {
+  it("uses canonical placement and resize state in either attribute order", async () => {
     const results: string[] = [];
     await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
       for (const attrs of [
@@ -1684,48 +1669,22 @@ describe("lr-dock-panel canonical names and their deprecated aliases", () => {
         results.push(`${el.placement}:${el.withoutResize}`);
       }
     });
-    expect(results).to.deep.equal(["bottom:true", "start:false"]);
+    expect(results).to.deep.equal(["bottom:true", "bottom:true"]);
   });
 
-  it("lets the last write win in both directions after the first render", async () => {
-    const warnings = await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
-      const el = await dockedFixture("without-resize", "start");
-      await elementUpdated(el);
-      el.setAttribute("edge", "top");
-      el.setAttribute("resizable", "");
-      await elementUpdated(el);
-      expect(el.placement).to.equal("top");
-      expect(el.getAttribute("placement")).to.equal("top");
-      expect(el.withoutResize).to.equal(false);
-      expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);
-      el.placement = "bottom";
-      el.withoutResize = true;
-      await elementUpdated(el);
-      expect(el.edge).to.equal("bottom");
-      expect(el.getAttribute("edge")).to.equal("bottom");
-      expect(el.resizable).to.equal(false);
-      expect(el.getAttribute("resizable")).to.equal("false");
-      expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(true);
-    });
-    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
-      "lyra-deprecated:lr-dock-panel:property:edge",
-      "lyra-deprecated:lr-dock-panel:property:resizable",
-    ]);
-  });
-
-  it("keeps a lone alias driving its canonical attribute after the first render", async () => {
+  it("ignores removed placement and resize attributes after the first render", async () => {
     await captureDeprecationWarnings([usage("edge"), usage("resizable")], async () => {
       const el = ((await fixture(
         `<div style="position: relative; height: 20rem; display: flex;"><lr-dock-panel edge="start" resizable="false">x</lr-dock-panel></div>`
       )) as HTMLDivElement).querySelector("lr-dock-panel") as LyraDockPanel;
       await elementUpdated(el);
-      expect(el.getAttribute("placement"), "reflected from the alias").to.equal("start");
-      expect(el.hasAttribute("without-resize"), "reflected from the alias").to.equal(true);
+      expect(el.placement).to.equal("end");
+      expect(el.hasAttribute("without-resize")).to.equal(false);
       el.setAttribute("edge", "top");
       el.removeAttribute("resizable");
       await elementUpdated(el);
-      expect(el.placement).to.equal("top");
-      expect(el.getAttribute("placement")).to.equal("top");
+      expect(el.placement).to.equal("end");
+      expect(el.getAttribute("placement")).to.not.equal("top");
       expect(el.withoutResize).to.equal(false);
       expect(el.hasAttribute("without-resize")).to.equal(false);
       expect(el.shadowRoot!.querySelector('[part="handle"]') !== null).to.equal(true);

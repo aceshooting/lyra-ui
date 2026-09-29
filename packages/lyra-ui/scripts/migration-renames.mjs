@@ -462,7 +462,7 @@ function reportModuleReviews(text, file, reviews, openingTokens, inComment, warn
     member: review.name,
     code: 'DEPRECATED_MODULE_REVIEW',
     target: review.replacement,
-    message: `${context}${review.kind} ${review.module ? `${review.module}#` : ''}${review.name} is deprecated and scheduled for removal in ${review.removalNotBefore}; review ${review.replacement}.`,
+    message: `${context}${review.kind} ${review.module ? `${review.module}#` : ''}${review.name} ${review.removedIn ? `was removed in ${review.removedIn}` : `is deprecated and scheduled for removal in ${review.removalNotBefore}`}; review ${review.replacement}.`,
   });
   const namedFor = (specifier) => named.filter((entry) => specifier === packageName || specifier === specifierOf(entry.module));
   const strings = quotedStringRanges(text, inComment);
@@ -679,7 +679,7 @@ export function migrateRenameText(original, contract, options) {
       : review.kind === 'slot' && review.name === ''
         ? `Content in the default slot of ${review.tag}`
         : `The ${review.tag} ${review.kind} ${review.name}`;
-    return `${subject} is deprecated and scheduled for removal in ${review.removalNotBefore}; migrate to ${review.replacement} by hand.`;
+    return `${subject} ${review.removedIn ? `was removed in ${review.removedIn}` : `is deprecated and scheduled for removal in ${review.removalNotBefore}`}; migrate to ${review.replacement} by hand.`;
   };
   const reportReview = (offset, review) =>
     warn(offset, { tag: review.tag, member: review.name, code: DEPRECATED_MEMBER_REVIEW, target: review.replacement, message: reviewMessage(review) });

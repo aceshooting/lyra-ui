@@ -126,7 +126,6 @@ import '../components/utility/format/format-number.js';
 import '../components/data/funnel/funnel.js';
 import '../components/data/gauge/gauge.js';
 import '../components/conversation/generation-metrics/generation-metrics.js';
-import '../components/viewers/geojson-view/geojson-view.js';
 import '../components/viewers/geojson-view/geojson-viewer.js';
 import '../components/retrieval/graph/graph.js';
 import '../components/retrieval/graph-legend/graph-legend.js';

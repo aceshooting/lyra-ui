@@ -7,18 +7,13 @@ import type { MarkdownStreamingRenderMode } from './markdown-base.class.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
 import {
   captureDeprecationWarnings,
-  expectDeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
 
 const tags = ['lr-markdown', 'lr-markdown-core'] as const;
-// The header tests below keep exercising the deprecated `codeBlockChrome` spelling as parity
-// coverage for `codeBlockHeader`; it must keep enabling the header until its removal.
-for (const tagName of tags) expectDeprecatedUsage(tagName, 'property', 'codeBlockChrome');
 const fencedSource = 'const message = "<b> & café 🚀";\n';
 const fencedContent = `\`\`\`json\n${fencedSource}\`\`\``;
 
 interface MarkdownChromeElement extends HTMLElement {
-  codeBlockChrome: boolean;
   codeBlockHeader: boolean;
   content: string;
   withoutSyntaxHighlighting: boolean;
@@ -33,7 +28,7 @@ interface MarkdownChromeElement extends HTMLElement {
 
 async function mount(
   tagName: (typeof tags)[number],
-  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockChrome' | 'codeBlockHeader' | 'withoutSyntaxHighlighting' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
+  options: Partial<Pick<MarkdownChromeElement, 'content' | 'codeBlockHeader' | 'withoutSyntaxHighlighting' | 'htmlMode' | 'languages' | 'streaming' | 'streamingRender' | 'strings'>> = {},
 ): Promise<MarkdownChromeElement> {
   await loadMarkdownDeps();
   const wrapper = await fixture<HTMLElement>(html`<div></div>`);
@@ -80,14 +75,14 @@ for (const tagName of tags) {
     it('leaves code blocks unchanged when the opt-in is absent', async () => {
       const el = await mount(tagName, { content: fencedContent });
       await waitForMarkdown(el, '[part="code-block"]');
-      expect(el.codeBlockChrome ?? false).to.equal(false);
+      expect(el.codeBlockHeader ?? false).to.equal(false);
       expect(headers(el)).to.have.length(0);
     });
 
     it('localizes the language and copy labels and copies the exact raw code text', async () => {
       const el = await mount(tagName, {
         content: fencedContent,
-        codeBlockChrome: true,
+        codeBlockHeader: true,
         withoutSyntaxHighlighting: true,
         strings: {
           codeRegionWithLanguage: '{language} source',
@@ -120,7 +115,7 @@ for (const tagName of tags) {
         '',
         '<pre data-fenced="true"><code>authored HTML</code></pre>',
       ].join('\n');
-      const el = await mount(tagName, { content, codeBlockChrome: true, withoutSyntaxHighlighting: true, htmlMode: 'trusted' });
+      const el = await mount(tagName, { content, codeBlockHeader: true, withoutSyntaxHighlighting: true, htmlMode: 'trusted' });
       await waitForMarkdown(el, '[part="code-block-header"]');
       expect(headers(el)).to.have.length(2);
       const blocks = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="code-block"]')];
@@ -134,7 +129,7 @@ for (const tagName of tags) {
     it('waits for a closing fence while streaming and adds chrome once the block settles', async () => {
       const el = await mount(tagName, {
         content: '```json\n{"open":true}',
-        codeBlockChrome: true,
+        codeBlockHeader: true,
         withoutSyntaxHighlighting: true,
         streaming: true,
         streamingRender: 'progressive',
@@ -151,16 +146,16 @@ for (const tagName of tags) {
     it('removes and restores the header cleanly when toggled and re-rendered', async () => {
       const el = await mount(tagName, {
         content: fencedContent,
-        codeBlockChrome: true,
+        codeBlockHeader: true,
         withoutSyntaxHighlighting: true,
       });
       await waitForMarkdown(el, '[part="code-block-header"]');
       expect(headers(el)).to.have.length(1);
 
-      el.codeBlockChrome = false;
+      el.codeBlockHeader = false;
       await el.updateComplete;
       await waitUntil(() => headers(el).length === 0);
-      el.codeBlockChrome = true;
+      el.codeBlockHeader = true;
       await el.updateComplete;
       await waitUntil(() => headers(el).length === 1);
 
@@ -174,7 +169,7 @@ for (const tagName of tags) {
       this.timeout(60_000);
       const el = await mount(tagName, {
         content: '```json\n{"value":"<b> & café 🚀"}\n```',
-        codeBlockChrome: true,
+        codeBlockHeader: true,
         languages: { json: jsonGrammar },
       });
       await waitForMarkdown(el, '[part="code-block-header"]');
@@ -196,66 +191,20 @@ for (const tagName of tags) {
 }
 
 for (const tagName of tags) {
-  describe(`${tagName} deprecated code-block-chrome spelling`, () => {
-    const usage = [{ tag: tagName, kind: 'property', name: 'codeBlockChrome' }] as const;
+  describe(`${tagName} canonical code-block-header spelling`, () => {
 
-    it('warns once, naming code-block-header, and still renders the header', async () => {
+    it('never warns for code-block-header', async () => {
       let headerCount = 0;
-      const warnings = await captureDeprecationWarnings(usage, async () => {
-        const el = await mount(tagName, { content: fencedContent, codeBlockChrome: true, withoutSyntaxHighlighting: true });
-        await waitForMarkdown(el, '[part="code-block-header"]');
-        headerCount = headers(el).length;
-        const second = await mount(tagName, { content: fencedContent, codeBlockChrome: true, withoutSyntaxHighlighting: true });
-        await second.updateComplete;
-      });
-      expect(headerCount).to.equal(1);
-      expect(warnings.map(({ key }) => key)).to.deep.equal([
-        `lyra-deprecated:${tagName}:property:codeBlockChrome`,
-      ]);
-      expect(warnings[0]!.message).to.contain('code-block-header');
-    });
-
-    it('warns when the code-block-chrome attribute is authored', async () => {
-      const warnings = await captureDeprecationWarnings(usage, async () => {
-        await loadMarkdownDeps();
-        const wrapper = await fixture<HTMLElement>(html`<div></div>`);
-        wrapper.innerHTML = `<${tagName} code-block-chrome></${tagName}>`;
-        await (wrapper.firstElementChild as MarkdownChromeElement).updateComplete;
-      });
-      expect(warnings).to.have.length(1);
-    });
-
-    it('never warns for code-block-header, whose value the alias follows silently', async () => {
-      let headerCount = 0;
-      let aliasValue = false;
-      const warnings = await captureDeprecationWarnings(usage, async () => {
+      const warnings = await captureDeprecationWarnings([], async () => {
         const el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
         await waitForMarkdown(el, '[part="code-block-header"]');
         headerCount = headers(el).length;
-        aliasValue = el.codeBlockChrome;
-        // Re-writing the value the alias already holds is not a change and never warns.
-        el.codeBlockChrome = true;
+        el.codeBlockHeader = true;
         await el.updateComplete;
       });
       expect(headerCount).to.equal(1);
-      expect(aliasValue).to.equal(true);
       expect(warnings).to.have.length(0);
     });
 
-    it('keeps code-block-chrome and code-block-header in step, the last write winning', async () => {
-      let el!: MarkdownChromeElement;
-      await captureDeprecationWarnings(usage, async () => {
-        el = await mount(tagName, { content: fencedContent, codeBlockHeader: true, withoutSyntaxHighlighting: true });
-        await waitForMarkdown(el, '[part="code-block-header"]');
-        el.codeBlockChrome = false;
-        await el.updateComplete;
-      });
-      expect(el.codeBlockHeader, 'the later alias write wins').to.equal(false);
-      await waitUntil(() => headers(el).length === 0, 'the alias write never removed the header');
-      el.codeBlockHeader = true;
-      await el.updateComplete;
-      expect(el.codeBlockChrome, 'a canonical write syncs back to the alias').to.equal(true);
-      await waitUntil(() => headers(el).length === 1, 'the canonical write never restored the header');
-    });
   });
 }

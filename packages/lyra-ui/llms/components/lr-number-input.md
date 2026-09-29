@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecated property** `steppers` / `steppers` since `21.1.0`; use property `without-steppers`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 23 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -31,6 +31,25 @@ own-disabled state retain their native meaning; validity and form submission fol
 disabled state.
 
 **Inherits:** all public surface from `lr-input`.
+
+**Additional inherited attributes:** `filled`, `help-text`, `match`, `title`, `with-hint`, and
+`with-label` retain their `lr-input` meanings.
+
+**Additional inherited slots:** `clear-icon`, `help-text`, `hide-password-icon`, `prefix`,
+`show-password-icon`, and `suffix`. Clear/password icon slots have no visible effect while their
+corresponding actions are absent.
+
+**Additional inherited CSS parts:** `form-control-help-text`, `form-control-input`,
+`password-toggle-button`, `prefix`, and `suffix`; conditional parts exist only when their input
+content or action is rendered.
+
+**Additional inherited theme properties:** `--lr-form-control-focus-shadow`,
+`--lr-form-control-required-color`, `--lr-form-control-required-content`,
+`--lr-form-control-required-offset`, `--lr-input-action-active-bg`,
+`--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
+`--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
+`--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`. These keep the same
+meaning as on `lr-input`; native-time picker hooks do not paint a numeric input.
 
 The inherited `--lr-input-*` theme inputs keep `lr-input`'s ancestor-theme precedence; the number
 subclass does not redeclare them on its host.
@@ -62,8 +81,7 @@ unchanged.
 Stepper switches:
 
 - `withoutSteppers: boolean = false` (attribute `without-steppers`, not reflected) — hides the
-  increment/decrement pair the control row renders by default. Deprecated alias: `steppers` (use
-  `without-steppers`, inverted: `steppers="false"` is `without-steppers`; kept in step, last write wins; removed in 23.0.0).
+  increment/decrement pair the control row renders by default.
 - `withoutSpinButtons: boolean = true` (attribute `without-spin-buttons`, reflected) — the same
   knob `lr-input` exposes, but **defaulted the other way here** (`lr-input`'s default is `false`),
   so the component's own steppers are never shown alongside the browser's built-in spin buttons.

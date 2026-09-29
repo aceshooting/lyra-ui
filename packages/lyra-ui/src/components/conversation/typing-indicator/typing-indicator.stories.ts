@@ -96,3 +96,14 @@ export const ReducedMotion: Story = {
     </div>
   `,
 };
+
+export const NamespacedMotionAndSize: Story = {
+  parameters: {
+    docs: { description: { story: 'The typing-indicator tokens control dot size, gap, duration and each stagger delay. Reduced-motion preferences continue to stop the animation.' } },
+  },
+  render: () => html`
+    <lr-typing-indicator shape="dots" label="Preparing a response"
+      style="--lr-typing-indicator-dot-size:var(--lr-space-m);--lr-typing-indicator-gap:var(--lr-space-s);--lr-typing-indicator-duration:1.2s ease-in-out;--lr-typing-indicator-dot-stagger-1:200ms;--lr-typing-indicator-dot-stagger-2:400ms"
+    ></lr-typing-indicator>
+  `,
+};

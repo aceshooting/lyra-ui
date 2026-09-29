@@ -3,7 +3,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -16,7 +15,6 @@ import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface LyraTranscriptEntry {
   id: string;
@@ -97,20 +95,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, srOnly, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { showTimestamps: 'withTimestamps' };
 
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Shows each entry's timestamp. */
   @property({ type: Boolean, attribute: 'with-timestamps' }) withTimestamps = false;
 
-  /**
-   * Deprecated alias of `with-timestamps` (`withTimestamps`), with identical behavior. Setting it
-   * logs a one-time development warning.
-   *
-   * @deprecated Use `with-timestamps`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
   /** Overrides the default `Intl.DateTimeFormat` short-time rendering. */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
   /** `> 0` renders only the newest N rows (host `entries` data is untouched); `0` explicitly

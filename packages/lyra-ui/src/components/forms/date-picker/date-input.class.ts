@@ -327,8 +327,6 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart error - The validation message.
  * @cssprop [--lr-date-input-color=inherit] - Trigger text color. Defaults to the inherited text
  *   color, and to `--lr-color-on-brand` under `appearance="accent"`.
- * @cssprop [--lr-date-input-text-color=inherit] - Deprecated alias of `--lr-date-input-color`,
- *   read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-date-input-padding-block=var(--lr-form-control-padding-block)] - Text input block padding, scaled by `size`.
  * @cssprop [--lr-date-input-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of the input row, scaled by `size`.
  * @cssprop [--lr-date-input-font-size=var(--lr-form-control-font-size)] - Font size of the text input, scaled by `size`.

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-source-card` (same section below)
@@ -37,8 +37,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
   `xs`/`2xs`) tightens the header and list padding/gap, for a panel rendered repeatedly down a
   message transcript — same convention as this list's own slotted `lr-source-card` children's
   `size`. Purely a density knob: the outer border and surface stay, so pair it with
-  `frame="plain"` to remove card chrome. Deprecated alias: `compact` (use `size="s"`; removed in
-  23.0.0)
+  `frame="plain"` to remove card chrome.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled outer
   container. `'plain'` removes that outer border, background, and corner radius so a list nested
@@ -83,16 +82,14 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
 - `heading: string = ''` — the source's display title, e.g. a filename, rendered as the `title`
-  button's text. Falls back to `"Untitled source"` when empty. Deprecated alias: `title` (use
-  `heading`; removed in 23.0.0)
+  button's text. Falls back to `"Untitled source"` when empty.
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the root padding and row gap, for the dense citation lists these cards
   usually render in. Purely a density knob: the border and background stay. `m` (the default) and
-  larger keep the full card padding. Deprecated alias: `compact` (use `size="s"`; removed in
-  23.0.0)
+  larger keep the full card padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card inside a
@@ -196,9 +193,7 @@ time.
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
-- `lr-source-card`'s deprecated `title` alias is also the browser's global tooltip attribute, so the
-  card strips a host-level `title` attribute right after reading it into `heading` — otherwise the
-  whole card would grow an unsolicited native tooltip repeating the title text on hover. Use
-  `heading` for the rendered title.
+- `lr-source-card` uses `heading` for the rendered title. The native host `title` attribute remains
+  an independent browser tooltip and does not update the heading.
 
 ---

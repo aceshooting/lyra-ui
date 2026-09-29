@@ -31,7 +31,7 @@ export const AllLooksAndModes = {
     ${Object.entries(LYRA_CHART_PALETTES).flatMap(([name, modes]) => ['light', 'dark'].map(mode => html`
       <section ${ref(element => { if (element) queueMicrotask(() => applyLyraStyleScope(element, { mode, overrides: getLyraChartPaletteTokens(name) })); })} style=${panel}>
         <h2 style="margin:0">${name} · ${mode}</h2>
-        <lr-lite-chart type="line" accessible-label="Regional totals" .labels=${['Jan', 'Feb', 'Mar', 'Apr']} .datasets=${series}></lr-lite-chart>
+        <lr-lite-chart type="line" aria-label="Regional totals" .labels=${['Jan', 'Feb', 'Mar', 'Apr']} .datasets=${series}></lr-lite-chart>
         <h3 style="margin:0">Sequential</h3>
         ${scale(modes[mode].sequential, ['0', '25', '50', '75', '100'])}
         <h3 style="margin:0">Diverging</h3>

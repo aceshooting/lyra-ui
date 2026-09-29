@@ -3,23 +3,18 @@ import './archive-viewer/archive-viewer.js';
 import './calendar-viewer/calendar-viewer.js';
 import './contact-viewer/contact-viewer.js';
 import './email-viewer/email-viewer.js';
-import './geojson-view/geojson-view.js';
+import './geojson-view/geojson-viewer.js';
 import './html-viewer/html-viewer.js';
 import './include/include.js';
 import './pptx-viewer/pptx-viewer.js';
 import type { LyraTextViewerTarget } from '../../internal/text-viewer-target.js';
-import { expectDeprecatedUsage } from '../../../test/expected-deprecations.js';
-
-// The deprecated `lr-geojson-view` alias must keep meeting this contract until its removal, so
-// its one-time connect warning is expected here.
-expectDeprecatedUsage('lr-geojson-view', 'component', 'lr-geojson-view');
 
 const TEXT_VIEWER_TAGS = [
   'lr-archive-viewer',
   'lr-calendar-viewer',
   'lr-contact-viewer',
   'lr-email-viewer',
-  'lr-geojson-view',
+  'lr-geojson-viewer',
   'lr-html-viewer',
   'lr-include',
   'lr-pptx-viewer',
@@ -32,7 +27,7 @@ it('keeps every text-viewer search API safe and eventful before content is loade
       <lr-calendar-viewer></lr-calendar-viewer>
       <lr-contact-viewer></lr-contact-viewer>
       <lr-email-viewer></lr-email-viewer>
-      <lr-geojson-view></lr-geojson-view>
+      <lr-geojson-viewer></lr-geojson-viewer>
       <lr-html-viewer></lr-html-viewer>
       <lr-include></lr-include>
       <lr-pptx-viewer></lr-pptx-viewer>

@@ -1192,10 +1192,23 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.measuredIndices.clear();
       this.pendingRowMeasurements.clear();
       this.indexedMeasurementIndexDirty = true;
+      // A new callback/source may keep both a row's identity and its DOM box unchanged. Restart
+      // observations with the cache: ResizeObserver will not redeliver an unchanged box otherwise.
+      // syncRowObservers() re-observes only the rendered window, deferring inside a resize delivery.
+      for (const row of this.observedRows.values())
+        this.rowResizeObserver?.unobserve(row);
+      this.observedRows.clear();
+      this.deferredRowObservations.clear();
     }
     if (changed.has('groups')) {
       this.measuredGroupHeights.clear();
       this.pendingGroupMeasurements.clear();
+      // A changed label or key need not resize a surviving marker. Re-arm its observation so the
+      // cleared height cache converges even when the marker retains both its index and DOM box.
+      for (const marker of this.observedGroups.values())
+        this.groupResizeObserver?.unobserve(marker);
+      this.observedGroups.clear();
+      this.deferredGroupObservations.clear();
     }
     if (changed.has('items') || changed.has('source') || changed.has('groups')) {
       this.recomputeGroups();

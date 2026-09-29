@@ -9,18 +9,18 @@ import {
   loadDocumentRenderer,
   registerDocumentRenderer,
   snapshotLyraDocumentRendererPayload,
-  type DocumentFile,
-  type DocumentRendererDefinition,
+  type LyraDocumentFile,
+  type LyraDocumentRendererDefinition,
   type LyraAvDocumentRendererPayload,
 } from './registry.js';
 import type { LyraAnchor, LyraHighlight } from './anchors.js';
 
-const PDF_FILE: DocumentFile = {
+const PDF_FILE: LyraDocumentFile = {
   name: 'report.pdf',
   mimeType: 'application/pdf',
   src: 'https://example.test/report.pdf',
 };
-const CSV_FILE: DocumentFile = {
+const CSV_FILE: LyraDocumentFile = {
   name: 'data.csv',
   mimeType: 'application/octet-stream',
   src: 'https://example.test/data.csv',
@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe('exact mimeType dispatch', () => {
   it('finds a renderer registered under an exact mimeType key', () => {
-    const def: DocumentRendererDefinition = { render: () => 'pdf-output' };
+    const def: LyraDocumentRendererDefinition = { render: () => 'pdf-output' };
     registerDocumentRenderer('application/pdf', def);
     expect(findDocumentRenderer(PDF_FILE)?.render?.(PDF_FILE)).to.equal('pdf-output');
   });
@@ -42,8 +42,8 @@ describe('exact mimeType dispatch', () => {
   });
 
   it('registering the same key twice overwrites the previous definition', () => {
-    const first: DocumentRendererDefinition = { render: () => 'first' };
-    const second: DocumentRendererDefinition = { render: () => 'second' };
+    const first: LyraDocumentRendererDefinition = { render: () => 'first' };
+    const second: LyraDocumentRendererDefinition = { render: () => 'second' };
     registerDocumentRenderer('application/pdf', first);
     registerDocumentRenderer('application/pdf', second);
     expect(findDocumentRenderer(PDF_FILE)?.render?.(PDF_FILE)).to.equal('second');
@@ -52,7 +52,7 @@ describe('exact mimeType dispatch', () => {
 
 describe('matches() shape-based fallback dispatch', () => {
   it('falls back to a matches() scan when no exact mimeType key matches', () => {
-    const def: DocumentRendererDefinition = {
+    const def: LyraDocumentRendererDefinition = {
       matches: (file) => file.name.toLowerCase().endsWith('.csv'),
       render: () => 'csv-output',
     };
@@ -61,23 +61,23 @@ describe('matches() shape-based fallback dispatch', () => {
   });
 
   it('an exact mimeType key match wins over a matches()-based entry', () => {
-    const shapeDef: DocumentRendererDefinition = { matches: () => true, render: () => 'shape' };
-    const exactDef: DocumentRendererDefinition = { render: () => 'exact' };
+    const shapeDef: LyraDocumentRendererDefinition = { matches: () => true, render: () => 'shape' };
+    const exactDef: LyraDocumentRendererDefinition = { render: () => 'exact' };
     registerDocumentRenderer('lyra:catch-all', shapeDef);
     registerDocumentRenderer('application/pdf', exactDef);
     expect(findDocumentRenderer(PDF_FILE)?.render?.(PDF_FILE)).to.equal('exact');
   });
 
   it('scans matches() entries in registration order, returning the first hit', () => {
-    const first: DocumentRendererDefinition = { matches: () => true, render: () => 'first' };
-    const second: DocumentRendererDefinition = { matches: () => true, render: () => 'second' };
+    const first: LyraDocumentRendererDefinition = { matches: () => true, render: () => 'first' };
+    const second: LyraDocumentRendererDefinition = { matches: () => true, render: () => 'second' };
     registerDocumentRenderer('lyra:first', first);
     registerDocumentRenderer('lyra:second', second);
     expect(findDocumentRenderer(CSV_FILE)?.render?.(CSV_FILE)).to.equal('first');
   });
 
   it('returns undefined when a non-empty registry has no exact key or matches() hit', () => {
-    const def: DocumentRendererDefinition = {
+    const def: LyraDocumentRendererDefinition = {
       matches: (file) => file.name.toLowerCase().endsWith('.csv'),
       render: () => 'csv-output',
     };
@@ -88,15 +88,15 @@ describe('matches() shape-based fallback dispatch', () => {
 
 describe('a custom registry (not the module-level default)', () => {
   it('dispatches against the passed-in registry instead of the default one', () => {
-    const customRegistry = new Map<string, DocumentRendererDefinition>();
-    const def: DocumentRendererDefinition = { render: () => 'custom' };
+    const customRegistry = new Map<string, LyraDocumentRendererDefinition>();
+    const def: LyraDocumentRendererDefinition = { render: () => 'custom' };
     customRegistry.set('application/pdf', def);
     expect(findDocumentRenderer(PDF_FILE, customRegistry)?.render?.(PDF_FILE)).to.equal('custom');
     expect(findDocumentRenderer(PDF_FILE)).to.be.undefined;
   });
 
   it('creates immutable instance snapshots that later registrations cannot mutate', () => {
-    const def: DocumentRendererDefinition = { render: () => 'x' };
+    const def: LyraDocumentRendererDefinition = { render: () => 'x' };
     registerDocumentRenderer('application/pdf', def);
     const snapshot = createDocumentRendererRegistry();
     expect(snapshot.get('application/pdf')?.render?.(PDF_FILE)).to.equal('x');
@@ -148,19 +148,19 @@ describe('a custom registry (not the module-level default)', () => {
 
 describe('loadDocumentRenderer()', () => {
   it('resolves a definition with no load() as itself', async () => {
-    const def: DocumentRendererDefinition = { render: () => 'x' };
+    const def: LyraDocumentRendererDefinition = { render: () => 'x' };
     expect((await loadDocumentRenderer(def)).render(PDF_FILE)).to.equal('x');
   });
 
   it('resolves a lazy definition via its load() function', async () => {
-    const resolved: DocumentRendererDefinition = { render: () => 'lazy-output' };
-    const def: DocumentRendererDefinition = { load: () => Promise.resolve(resolved) };
+    const resolved: LyraDocumentRendererDefinition = { render: () => 'lazy-output' };
+    const def: LyraDocumentRendererDefinition = { load: () => Promise.resolve(resolved) };
     expect((await loadDocumentRenderer(def)).render(PDF_FILE)).to.equal('lazy-output');
   });
 
   it('unwraps a { default } module-namespace shape from load()', async () => {
-    const resolved: DocumentRendererDefinition = { render: () => 'lazy-output' };
-    const def: DocumentRendererDefinition = { load: () => Promise.resolve({ default: resolved }) };
+    const resolved: LyraDocumentRendererDefinition = { render: () => 'lazy-output' };
+    const def: LyraDocumentRendererDefinition = { load: () => Promise.resolve({ default: resolved }) };
     expect((await loadDocumentRenderer(def)).render(PDF_FILE)).to.equal('lazy-output');
   });
 
@@ -174,7 +174,7 @@ describe('loadDocumentRenderer()', () => {
     const invalid = {
       capabilities: { search: true },
       load: () => Promise.resolve({ adapter }),
-    } as unknown as DocumentRendererDefinition;
+    } as unknown as LyraDocumentRendererDefinition;
     let rejection: unknown;
     await loadDocumentRenderer(invalid).catch((error: unknown) => {
       rejection = error;
@@ -184,7 +184,7 @@ describe('loadDocumentRenderer()', () => {
 
   it('calls load() at most once for the same definition, caching by identity', async () => {
     let callCount = 0;
-    const def: DocumentRendererDefinition = {
+    const def: LyraDocumentRendererDefinition = {
       load: () => {
         callCount++;
         return Promise.resolve({ render: () => 'x' });
@@ -197,7 +197,7 @@ describe('loadDocumentRenderer()', () => {
 
   it('does not cache a rejected load(), so a later call retries', async () => {
     let callCount = 0;
-    const def: DocumentRendererDefinition = {
+    const def: LyraDocumentRendererDefinition = {
       load: () => {
         callCount++;
         return callCount === 1 ? Promise.reject(new Error('boom')) : Promise.resolve({ render: () => 'x' });
@@ -210,7 +210,7 @@ describe('loadDocumentRenderer()', () => {
   });
 
   it('rejects when load() resolves to another lazy (non-direct) definition', async () => {
-    const def: DocumentRendererDefinition = {
+    const def: LyraDocumentRendererDefinition = {
       load: () => Promise.resolve({ load: () => Promise.resolve({ render: () => 'never reached' }) } as never),
     };
     let rejection: unknown;
@@ -230,11 +230,11 @@ describe('clearDocumentRenderers()', () => {
   });
 });
 
-describe('DocumentFile/DocumentRendererDefinition widening', () => {
-  it('DocumentFile accepts anchor/highlights/alt as optional fields', () => {
+describe('LyraDocumentFile/LyraDocumentRendererDefinition widening', () => {
+  it('LyraDocumentFile accepts anchor/highlights/alt as optional fields', () => {
     const anchor: LyraAnchor = { kind: 'page', page: 3 };
     const highlights: LyraHighlight[] = [{ id: 'cite-1', anchor }];
-    const file: import('./registry.js').DocumentFile = {
+    const file: import('./registry.js').LyraDocumentFile = {
       name: 'report.pdf',
       mimeType: 'application/pdf',
       src: 'https://example.test/report.pdf',
@@ -247,8 +247,8 @@ describe('DocumentFile/DocumentRendererDefinition widening', () => {
     expect(file.alt).to.equal('Annual report');
   });
 
-  it('DocumentRendererDefinition accepts an optional capabilities declaration', () => {
-    const def: import('./registry.js').DocumentRendererDefinition = {
+  it('LyraDocumentRendererDefinition accepts an optional capabilities declaration', () => {
+    const def: import('./registry.js').LyraDocumentRendererDefinition = {
       render: () => 'page renderer',
       capabilities: { anchors: ['page', 'text-quote'], textSelect: true },
     };
@@ -326,7 +326,7 @@ describe('payload and definition validation guards', () => {
   it('createDocumentRendererAdapter() rejects an invalid adapter definition', () => {
     const valid = {
       kind: 'document' as const,
-      adapt: (file: DocumentFile) => ({ kind: 'document' as const, file }),
+      adapt: (file: LyraDocumentFile) => ({ kind: 'document' as const, file }),
       capabilities: () => undefined,
       render: () => 'x',
     };
@@ -337,12 +337,12 @@ describe('payload and definition validation guards', () => {
   });
 
   it('adaptDocumentRenderer() rejects a still-lazy (load-only) definition', () => {
-    const lazy: DocumentRendererDefinition = { load: () => Promise.resolve({ render: () => 'x' }) };
+    const lazy: LyraDocumentRendererDefinition = { load: () => Promise.resolve({ render: () => 'x' }) };
     expect(() => adaptDocumentRenderer(lazy as never, PDF_FILE)).to.throw(TypeError);
   });
 
   it('adaptDocumentRenderer() defaults an unsupplied payload to a document-kind snapshot of the file', () => {
-    const definition: DocumentRendererDefinition = { render: (file) => file.name };
+    const definition: LyraDocumentRendererDefinition = { render: (file) => file.name };
     const adapted = adaptDocumentRenderer(definition, PDF_FILE);
     expect(adapted.payload.kind).to.equal('document');
     expect(adapted.payload.file.name).to.equal(PDF_FILE.name);
@@ -398,9 +398,9 @@ describe('LyraDocumentRendererPayload adapters', () => {
     expect(av.tracks[0]!.label[0]).to.equal('l');
   });
 
-  it('keeps an ordinary render(file) callback on the legacy DocumentFile path', () => {
-    let received: DocumentFile | undefined;
-    const definition: DocumentRendererDefinition = {
+  it('keeps an ordinary render(file) callback on the legacy LyraDocumentFile path', () => {
+    let received: LyraDocumentFile | undefined;
+    const definition: LyraDocumentRendererDefinition = {
       render: (file) => {
         received = file;
         return file.name;
@@ -447,10 +447,10 @@ describe('LyraDocumentRendererPayload adapters', () => {
   });
 
   it('snapshots adapter callbacks and freezes the factory-created adapter', () => {
-    let receivedFile: DocumentFile | undefined;
+    let receivedFile: LyraDocumentFile | undefined;
     const authoring = {
       kind: 'document' as const,
-      adapt: (file: DocumentFile) => {
+      adapt: (file: LyraDocumentFile) => {
         receivedFile = file;
         return { kind: 'document' as const, file };
       },
@@ -461,7 +461,7 @@ describe('LyraDocumentRendererPayload adapters', () => {
     authoring.render = () => 'mutated callback';
 
     expect(Object.isFrozen(adapter)).to.equal(true);
-    const rawFile: DocumentFile = {
+    const rawFile: LyraDocumentFile = {
       ...PDF_FILE,
       highlights: [
         { id: ' finding ', anchor: { kind: 'page', page: 2 } },
@@ -485,7 +485,7 @@ describe('LyraDocumentRendererPayload adapters', () => {
       }),
       render: (payload) => payload.cues.length,
     });
-    const definition: DocumentRendererDefinition = { adapter };
+    const definition: LyraDocumentRendererDefinition = { adapter };
     const omittedSearchableCue = snapshotLyraDocumentRendererPayload({
       kind: 'av',
       file: PDF_FILE,

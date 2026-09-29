@@ -7,13 +7,10 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated css-property** `--lr-message-parts-error-background` since `21.1.0`; use css-property `--lr-message-parts-error-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `element.setAttribute('aria-label', 'Message content');`; removal not before `24.0.0` — Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window.
-- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the built-in text and reasoning Markdown parts, which now always receive code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
-- **Deprecated property** `showReasoning` / `show-reasoning` since `21.1.0`; use property `without-reasoning`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,18 +32,13 @@ nested code direction cannot be overridden from outside with `::part()`.
 
 **Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: MessagePartsContentMode =
 'markdown'` (attribute `content-mode`, reflected) and `withoutReasoning: boolean = false` (attribute
-`without-reasoning`, reflected) — omits reasoning parts (deprecated alias: `show-reasoning`/
-`showReasoning`, use `without-reasoning`, removed in 23.0.0; inverted, so `show-reasoning="false"`
-equals `without-reasoning`);
+`without-reasoning`, reflected) — omits reasoning parts;
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
 and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to built-in text
 and reasoning Markdown parts while `contentMode="markdown"`. Progressive mode renders settled
 blocks during a streaming part and preserves the `plain` fallback by default; the header adds the
 source language label and localized copy action to built-in code blocks.
-`codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a deprecated equivalent
-enabling alias (removal not before 23.0.0; setting it logs a one-time development warning), and the
-parts' Markdown elements receive either option as `codeBlockHeader`. These settings do not replace
-the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
+These settings do not replace the `MessagePart.state` lifecycle or affect `contentMode="plain"`.
 `maxRenderedParts: number = 0` (attribute `max-rendered-parts`) — `0` (the default) renders every
 part, unbounded, matching every prior release; a positive value windows rendering to the newest N
 parts without touching the host's `parts` data. Citation ranks are unaffected by the window: they
@@ -151,8 +143,7 @@ emitted. Tool errors are never announced; only `error` parts are.
 `--lr-message-parts-audio-transcript-color` (default `var(--lr-color-text-quiet)`) controls an
 audio transcript's text color. Error parts have separate
 `--lr-message-parts-error-border-color` (default `var(--lr-color-danger)`),
-`--lr-message-parts-error-bg` (default `var(--lr-color-danger-quiet)`; deprecated alias:
-`--lr-message-parts-error-background`, removed in 23.0.0), and
+`--lr-message-parts-error-bg` (default `var(--lr-color-danger-quiet)`), and
 `--lr-message-parts-error-color` (default `var(--lr-color-danger)`) hooks. All five are inline
 fallbacks, so setting one on an ancestor rethemes only that state longhand.
 

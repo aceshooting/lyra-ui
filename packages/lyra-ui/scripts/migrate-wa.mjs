@@ -202,6 +202,7 @@ export function migrateFiles({
   exportDeprecations = [],
   lyraVersion = null,
   collectDiff = false,
+  compatibilityContext = null,
 }) {
   if (collectDiff) {
     // `git apply` rejects `a/../x`, so a patch is only produced for files below the working
@@ -214,7 +215,7 @@ export function migrateFiles({
       throw new Error(`--diff needs every target inside the working directory; run it from a common parent of ${outside.join(', ')}.`);
     }
   }
-  const contract = buildMigrationContract(inventory, { renameLedger, exportDeprecations, lyraVersion });
+  const contract = buildMigrationContract(inventory, { renameLedger, exportDeprecations, lyraVersion, compatibilityContext });
   const originals = new Map(files.map((file) => [file, fs.readFileSync(file, 'utf8')]));
   const diffs = [];
   const noteDiff = (file, original, content) => {
@@ -554,7 +555,7 @@ export function collectFiles(targets, extensions) {
   return [...files].sort();
 }
 
-export function run(argv) {
+export function run(argv, { compatibilityContext = null, currentExportDeprecations = null } = {}) {
   let options;
   try {
     options = parseArgs(argv);
@@ -581,7 +582,8 @@ export function run(argv) {
       dryRun: options.dryRun,
       origin: options.origin,
       renameLedger: packagedRuntime ? null : readRenameLedger(),
-      exportDeprecations: packagedRuntime ? [] : readExportDeprecations(),
+      exportDeprecations: packagedRuntime ? [] : currentExportDeprecations ?? readExportDeprecations(),
+      compatibilityContext,
       lyraVersion,
       reportPath: options.report ? path.resolve(options.report) : null,
       collectDiff: options.diff,
@@ -653,5 +655,15 @@ function invokedAsCli() {
 }
 
 if (invokedAsCli()) {
-  process.exitCode = run(process.argv.slice(2));
+  // Build-only history is never imported by the packed CLI, whose inventory is prevalidated.
+  if (packagedRuntime || process.argv.includes('--help') || process.argv.length < 3) {
+    process.exitCode = run(process.argv.slice(2));
+  } else {
+    const { readCurrentCompatibilityContext } = await import('./check-published-compatibility.mjs');
+    const { readComponentMetadataSources, assembleComponentMetadata } = await import('./component-metadata-source.mjs');
+    const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const compatibilityContext = await readCurrentCompatibilityContext(packageRoot);
+    process.exitCode = run(process.argv.slice(2), { compatibilityContext,
+      currentExportDeprecations: assembleComponentMetadata(readComponentMetadataSources(packageRoot)).exportDeprecations });
+  }
 }

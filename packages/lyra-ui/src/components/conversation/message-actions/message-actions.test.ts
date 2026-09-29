@@ -1389,7 +1389,7 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
     }
   });
 
-  it('still reaches that control through the deprecated regenerate-button__control part alias', async () => {
+  it('ignores the retired regenerate-button__control part', async () => {
     const style = document.createElement('style');
     style.textContent =
       'lr-message-actions.dense::part(regenerate-button__control) { min-inline-size: 24px; min-block-size: 24px; }';
@@ -1399,8 +1399,8 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
         html`<lr-message-actions class="dense" .controls=${['regenerate']}></lr-message-actions>`,
       )) as LyraMessageActions;
       const control = composedControl(regenerateButton(el));
-      expect(control.getBoundingClientRect().width).to.equal(24);
-      expect(control.getBoundingClientRect().height).to.equal(24);
+      expect(control.getBoundingClientRect().width).to.not.equal(24);
+      expect(control.getBoundingClientRect().height).to.not.equal(24);
     } finally {
       style.remove();
     }

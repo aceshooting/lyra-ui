@@ -7,13 +7,9 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
-- **Deprecated css-property** `--lr-chart-tooltip-text` since `21.1.0`; use css-property `--lr-chart-tooltip-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated event** `lr-point-click` since `21.1.0`; use event `addEventListener('lr-point-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
-- **Deprecated property** `beginAtZero` / `begin-at-zero` since `21.1.0`; use property `without-zero-baseline`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `legend` / `legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `showDataTable` / `show-data-table` since `21.1.0`; use property `with-data-table`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,8 +41,7 @@ apply when the component reconnects.
   previously assigned array or nested series data has no effect; create and reassign a new
   collection.
 - `withLegend: boolean = false` (attribute `with-legend`) — renders a wrapping DOM legend whose
-  buttons toggle box-series visibility without clipping long labels. Deprecated alias: `legend`
-  (use `with-legend`; removed in 23.0.0).
+  buttons toggle box-series visibility without clipping long labels.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,
   responsive DOM legend placement
 - `height: string = '280px'` — valid CSS height used as a private fallback only. A consumer-set
@@ -55,9 +50,7 @@ apply when the component reconnects.
 - `xLabel: string = ''` (attribute `x-label`) — category axis title, mirroring `yLabel`
 - `yLabel: string = ''` (attribute `y-label`)
 - `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets the value axis
-  start at the data minimum instead of always including zero. Deprecated alias: `begin-at-zero`
-  (`beginAtZero`, inverted: `begin-at-zero="false"` equals `without-zero-baseline`; removed in
-  23.0.0).
+  start at the data minimum instead of always including zero.
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
@@ -69,8 +62,7 @@ apply when the component reconnects.
   carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
   `statistic: 'median'` instead of discarding what the callback was handed.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
-  table. Deprecated alias: `show-data-table` (`showDataTable`; use `with-data-table`; removed in
-  23.0.0).
+  table.
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
@@ -87,7 +79,6 @@ change. Canvas work remains connected/visible-gated, while a rendered DOM legend
 its computed color swatches.
 
 **Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-activate`,
-`lr-point-click` (deprecated alias of `lr-point-activate`),
 `lr-legend-visibility-change-request` (cancelable proposed legend
 toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
@@ -97,9 +88,7 @@ proposal leaves state untouched and suppresses the commit event.
 
 `lr-point-activate` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose.
-Deprecated alias: `lr-point-click` (use `lr-point-activate`; removed in 23.0.0), fired right after it
-with an identical detail. Its
-`detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: LyraBoxPlotSummary |
+Its `detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: LyraBoxPlotSummary |
 null }`, where `value` is a fresh copy of that box's five-number summary (never the object you
 passed in `datasets`, which the underlying peer may annotate in place). A pointer click that misses every
 box emits nothing rather than reporting the nearest one.
@@ -129,7 +118,7 @@ bounded-alternative sampling notice)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-color` (deprecated alias `--lr-chart-tooltip-text`, removed in 23.0.0) — same
+`--lr-chart-tooltip-color` — same
 public host-level precedence, token names, and defaults as `lr-chart`
 (also `getComputedStyle`-resolved and CSS-color-validated on every draw; invalid expressions use
 concrete semantic fallbacks rather than retaining a prior canvas paint), but declared in its own stylesheet, not a

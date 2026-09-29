@@ -5,6 +5,7 @@ import { LyraDocsContainer } from './docs-container.js';
 import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
 import { normalizeStoryThemeName } from './theme-contract.js';
+import { installDocsPreloadRecovery } from './docs-load-boundaries.js';
 import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
 // The preview uses the exact stylesheet consumers import. Storybook-specific colors stay in the
 // manager theme; component previews never maintain a second, partial token palette.
@@ -53,13 +54,8 @@ setCustomElementsManifest(publicStorybookManifest(customElements));
 // (bundled into iframe.html) dispatches this event in exactly that case; reload once to pick up
 // the current build. Guarded via sessionStorage since reload re-executes this file from scratch,
 // so an in-memory flag would never survive the reload and could loop forever on a genuinely
-// broken deploy.
-window.addEventListener('vite:preloadError', () => {
-  if (!sessionStorage.getItem('lr-docs-reloaded-after-preload-error')) {
-    sessionStorage.setItem('lr-docs-reloaded-after-preload-error', '1');
-    window.location.reload();
-  }
-});
+// broken deploy. A mounted builder handles lazy-load errors locally to preserve its draft.
+installDocsPreloadRecovery(window);
 
 const LYRA_STORY_LOOKS = Object.freeze(['lyra', 'shadcn']);
 const LOOK_STYLE_ID = 'lr-storybook-look';

@@ -10,8 +10,6 @@ import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   FALLBACK_GRID_COLOR,
@@ -74,7 +72,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface LyraBoxPlotSummary {
   readonly min: number;
@@ -163,9 +160,6 @@ export interface LyraBoxPlotPointDetail {
 export interface LyraBoxPlotEventMap {
   /** A box was activated by pointer or keyboard. */
   'lr-point-activate': CustomEvent<LyraBoxPlotPointDetail>;
-  /** @deprecated Use `lr-point-activate`; removal not before 23.0.0. Fired right after it, from
-   *  the same activation, with an identical detail. */
-  'lr-point-click': CustomEvent<LyraBoxPlotPointDetail>;
   /** Canonical name for the legend-visibility veto point. */
   'lr-legend-visibility-change-request': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
@@ -329,8 +323,6 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  *   activates the keyboard-current box. `detail: { datasetIndex: number, index: number, label:
  *   string | undefined, value: LyraBoxPlotSummary | null }`, where `value` is that box's complete
  *   five-number summary. Mirrors `<lr-chart>`/`<lr-lite-chart>`'s event of the same name.
- * @event lr-point-click - Deprecated alias of `lr-point-activate`, fired right after it from the
- *   same activation with an identical detail; removal not before 23.0.0.
  * @event lr-datum-activate - Family-normalized box activation; the legacy detail plus `kind: 'box'`.
  * @slot data-table - An optional consumer-provided complete/paginated accessible table alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
@@ -344,8 +336,6 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - DOM legend label color.
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Canvas tooltip background.
  * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Canvas tooltip text color.
- * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Deprecated alias of `--lr-chart-tooltip-color`; removal not
- *   before 23.0.0.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Legend-item hover background.
  * @cssprop --lr-chart-legend-item-active-bg - Legend-item pressed background.
@@ -402,12 +392,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
-
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    legend: 'withLegend',
-    beginAtZero: ['withoutZeroBaseline', invertAlias, invertAlias],
-    showDataTable: 'withDataTable',
-  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-legend-visibility-change-request',
     'lr-legend-visibility-change',
@@ -442,15 +426,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    */
   @property({ type: Boolean, attribute: 'with-legend' }) withLegend = false;
 
-  /**
-   * Deliberately opt-in (default `false`), unlike `lr-chart`'s negative-polarity
-   * `withoutLegend` (legend shown by default): a box plot's single/few-series comparison usage is
-   * more often legend-redundant (category labels already identify each box) than `lr-chart`'s
-   * typical multi-dataset case.
-   *
-   * @deprecated Use `with-legend`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean }) legend = false;
   /** Logical placement for the optional DOM legend. Deliberately `'bottom'`, unlike `lr-chart`'s
    *  `'top'` default -- shared with `lr-lite-chart` via `chart-chrome.ts`'s
    *  `normalizeChartChromeLegendPosition()` default. */
@@ -466,19 +441,12 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   /** Lets the value axis start at the data minimum instead of always including zero. */
   @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
 
-  /** Deprecated inverted alias of `without-zero-baseline` (`withoutZeroBaseline`).
-   * @deprecated Use `without-zero-baseline`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Accessible chart name. A host `aria-label` wins. */
   @property() label: string | null = null;
   /** Accessible chart description. A generated five-number summary is used when unset. */
   @property() description: string | null = null;
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'with-data-table' }) withDataTable = false;
-
-  /** Makes the generated data table visible; it remains screen-reader available when false.
-   * @deprecated Use `with-data-table`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * Render a disclosure button above the accessible data table so a sighted reader can reveal the
@@ -817,7 +785,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       tooltipText: resolveCanvasColor(
         this,
         cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
-          cs.getPropertyValue('--lr-chart-tooltip-text').trim() ||
           cs.getPropertyValue('--_lr-chart-tooltip-color').trim(),
         FALLBACK_TOOLTIP_TEXT,
       ),
@@ -1317,7 +1284,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     }
     this.emit('lr-datum-activate', { ...datum, kind: 'box' });
     this.emit('lr-point-activate', { ...datum });
-    this.emit('lr-point-click', { ...datum });
   }
 
   /**

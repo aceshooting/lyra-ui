@@ -3,7 +3,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -29,7 +28,6 @@ import { styles } from './tool-call-block.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** `detail` for `lr-toggle`: the new expanded state, and the call it belongs to. */
 export interface ToolCallBlockToggleDetail {
@@ -131,8 +129,6 @@ function argsPresent(args: unknown): boolean {
  * @csspart error-label - The error section label.
  * @csspart empty - The message shown when there are no details yet.
  * @cssprop [--lr-tool-call-block-bg=var(--lr-color-surface)] - Card fill.
- * @cssprop [--lr-tool-call-block-background=var(--lr-color-surface)] - Deprecated alias of
- *   `--lr-tool-call-block-bg`; removal not before 23.0.0.
  * @cssprop [--lr-tool-call-block-border-color=var(--lr-color-border)] - Card edge and header/body divider.
  * @cssprop [--lr-tool-call-block-radius=var(--lr-radius)] - Card corner radius.
  * @cssprop [--lr-tool-call-block-accent=var(--lr-color-text-quiet)] - Status glyph colour; defaults per status (brand while running, success, danger on error, warning when denied, neutral while pending or incomplete).
@@ -177,9 +173,6 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    error: 'errorText',
-  };
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['redactedFields']);
@@ -231,10 +224,6 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   /** Error text. A non-empty string renders the error section. */
   @property({ attribute: 'error-text' }) errorText?: string;
-
-  /** Error text. A non-empty string renders the error section.
-   *  @deprecated Use `error-text`; removal not before 23.0.0. */
-  @property() error?: string;
 
   /** Dotted paths within `args`/`result`/`error` to mask; a bare `'args'`/`'result'`/`'error'`
    *  masks the whole branch, and a path with no match is a no-op. */

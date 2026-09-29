@@ -7,12 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated css-property** `--lr-stack-trace-background` since `21.1.0`; use css-property `--lr-stack-trace-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `collapseInternal` / `collapse-internal` since `21.1.0`; use property `expand-internal`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,16 +32,12 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
 
 - `trace: string = ''` — the raw stack trace text to parse and render.
 - `expandInternal: boolean = false` (attribute: `expand-internal`, reflected) — shows runs of
-  internal frames inline instead of folding them behind a count-labeled toggle. Deprecated alias:
-  `collapse-internal`/`collapseInternal` (use `expand-internal`; removed in 23.0.0) — inverted, so
-  `collapse-internal="false"` equals `expand-internal`
+  internal frames inline instead of folding them behind a count-labeled toggle.
 - `internalPatterns: readonly (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS` (attribute: false) —
   clone-owned, bounded, frozen file-path substrings/`RegExp`s that mark a frame as internal.
   Reassign a new array after changing the matcher sequence.
 - `withoutCopyButton: boolean = false` (attribute: `without-copy-button`, reflected) — hides the
-  copy-to-clipboard button for the raw trace text. Deprecated alias: `copyable` (use
-  `without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
-  `without-copy-button`
+  copy-to-clipboard button for the raw trace text.
 - `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
   internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)
   grows with content.
@@ -60,8 +53,7 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
   row in an error list, a side panel), the same density convention `lr-agent-run`,
   `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel` already
   pair with `frame`; `m` and larger keep the full padding. Purely density: the border, corner radius
-  and background stay, so reach for `frame="plain"` to drop the chrome. Deprecated alias: `compact`
-  (use `size="s"`; removed in 23.0.0)
+  and background stay, so reach for `frame="plain"` to drop the chrome.
 
 **Events:**
 
@@ -98,8 +90,7 @@ that size). The scoped color hooks avoid changing
 the shared quiet/brand tokens used by surrounding UI. `--lr-stack-trace-bg` (default
 `var(--lr-color-surface)`), `--lr-stack-trace-border-color` (default `var(--lr-color-border-subtle)`) and
 `--lr-stack-trace-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
-`::part(base)` override; `frame="plain"` still removes all three outright. Deprecated alias:
-`--lr-stack-trace-background` (use `--lr-stack-trace-bg`; removed in 23.0.0). Plus shared tokens
+`::part(base)` override; `frame="plain"` still removes all three outright. Plus shared tokens
 `--lr-color-border`/`-border-subtle`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.

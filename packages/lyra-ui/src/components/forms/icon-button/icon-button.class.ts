@@ -18,7 +18,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
@@ -180,19 +179,13 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   see `llms/shared.md`.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  * @cssprop [--lr-icon-button-bg=transparent] - Background fill of the native button.
- * @cssprop [--lr-icon-button-background=transparent] - Deprecated alias of `--lr-icon-button-bg`,
- *   read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-icon-button-bg-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  *   Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page
  *   background — so on a default page a hovered icon button painted itself the colour it was
  *   already sitting on and showed no hover at all.
- * @cssprop [--lr-icon-button-background-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
- *   Deprecated alias of `--lr-icon-button-bg-hover`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background fill while pressed: the same mix at the stronger `--lr-color-mix-active` share, so
  *   the pressed state is visibly more than the hover.
- * @cssprop [--lr-icon-button-background-active=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
- *   Deprecated alias of `--lr-icon-button-bg-active`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-icon-button-color=inherit] - Icon/text color of the native button.
  * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Icon/text color
  *   on hover.

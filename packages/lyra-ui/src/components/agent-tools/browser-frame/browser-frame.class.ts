@@ -4,9 +4,8 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './browser-frame.styles.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -23,7 +22,6 @@ const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
   ['idle', 'connecting', 'streaming', 'stalled'],
   'idle',
 );
-
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
@@ -98,8 +96,6 @@ export interface LyraBrowserFrameEventMap {
  * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
  * @cssprop [--lr-browser-frame-controller-bg=var(--lr-color-brand-quiet)] - Controller
  *   badge background.
- * @cssprop [--lr-browser-frame-controller-background=var(--lr-color-brand-quiet)] - Deprecated alias of
- *   `--lr-browser-frame-controller-bg`; removal not before 23.0.0.
  * @cssprop [--lr-browser-frame-controller-color=var(--lr-color-brand)] - Controller badge text
  *   color.
  * @cssprop [--lr-browser-frame-ping-click-color=var(--lr-color-brand)] - Click-ping border color.
@@ -143,10 +139,6 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    controls: ['withoutControls', invertAlias, invertAlias],
-  };
-
   private _frameSrc = '';
 
   @property({ attribute: 'frame-src' })
@@ -183,10 +175,6 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   /** Hides the built-in take-over/hand-back and stop buttons, for a read-only viewer. The
    *  `actions` slot still renders. */
   @property({ type: Boolean, attribute: 'without-controls', reflect: true }) withoutControls = false;
-
-  /** Whether the built-in take-over/hand-back and stop buttons render.
-   *  @deprecated Use `without-controls`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
   private hasDefaultSlotContent = false;
   // The unnamed default slot carrying fallback/live content -- read once from `firstUpdated()` in

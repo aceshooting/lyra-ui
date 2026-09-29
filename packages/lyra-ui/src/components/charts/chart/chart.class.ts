@@ -25,8 +25,6 @@ import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
 import {
   getOwnDataDescriptor,
@@ -83,7 +81,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export { seriesPalette } from './chart-colors.js';
 
@@ -1480,14 +1477,6 @@ export interface LyraChartEventMap {
     label: string | undefined;
     value: unknown;
   }>;
-  /** @deprecated Use `lr-point-activate`; removal not before 23.0.0. Fired right after it, from
-   *  the same activation, with an identical detail. */
-  'lr-point-click': CustomEvent<{
-    datasetIndex: number;
-    index: number;
-    label: string | undefined;
-    value: unknown;
-  }>;
   'lr-zoom': CustomEvent<{ zoomed: boolean }>;
   /** Canonical name for the legend-visibility veto point. */
   'lr-legend-visibility-change-request': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
@@ -1731,8 +1720,6 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   `label`). A primitive `id` is retained for application navigation and selection; unsafe or
  *   non-finite values are omitted. The heterogeneous event value is typed `unknown`; consumers
  *   must narrow the value itself before reading point fields.
- * @event lr-point-click - Deprecated alias of `lr-point-activate`, fired right after it from the
- *   same activation with an identical detail; removal not before 23.0.0.
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
  *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-activate` detail. For scatter/bubble
  *   points its `value` is the same `LyraChartPoint`, including a safe primitive `id` when present.
@@ -1811,8 +1798,6 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Tooltip text color. Resolved via
  *   `getComputedStyle` on every draw.
- * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Deprecated alias of `--lr-chart-tooltip-color`; removal not
- *   before 23.0.0.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
  *   `[part='canvas']` hover-state outline.
  * @cssprop [--lr-chart-canvas-hover-outline-color=var(--lr-chart-grid-color, var(--lr-color-border))] - Color of the
@@ -1929,13 +1914,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
-
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseChartSize(value as LyraSize)],
-    zoom: 'zoomable',
-    beginAtZero: ['withoutZeroBaseline', invertAlias, invertAlias],
-    showDataTable: 'withDataTable',
-  };
 
   constructor() {
     super();
@@ -2080,12 +2058,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   @property() size: LyraSize = 'm';
 
-  /** Compact cartesian plot: hide axes and remove automatic layout padding. Set height and
-   * withoutLegend for a small histogram/sparkline. Preserves data tables, tooltips and keyboard
-   * actions; radial charts ignore this setting. Explicit config options retain precedence.
-   * @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean }) compact = false;
-
   /** Whether `size` selects the compact plot tier. */
   private get compactPlot(): boolean {
     return isDenseChartSize(this.size);
@@ -2179,9 +2151,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *  peer (loaded on first demand), and shows the `reset-zoom-button` while zoomed. */
   @property({ type: Boolean }) zoomable = false;
 
-  /** Deprecated alias of `zoomable`, with identical behavior.
-   * @deprecated Use `zoomable`; removal not before 23.0.0. */
-  @property({ type: Boolean }) zoom = false;
   @property() height = '280px';
   @property({ attribute: 'x-label' }) xLabel: string | null = null;
   @property({ attribute: 'y-label' }) yLabel: string | null = null;
@@ -2189,20 +2158,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Lets a linear value axis start at the data minimum instead of always including zero. */
   @property({ type: Boolean, attribute: 'without-zero-baseline' }) withoutZeroBaseline = false;
 
-  /** Deprecated inverted alias of `without-zero-baseline` (`withoutZeroBaseline`).
-   * @deprecated Use `without-zero-baseline`; removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    attribute: 'begin-at-zero',
-    converter: trueDefaultBooleanConverter,
-  })
-  beginAtZero = true;
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'with-data-table' }) withDataTable = false;
-
-  /** Makes the generated data table visible; it remains screen-reader available when false.
-   * @deprecated Use `with-data-table`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * Render a disclosure button above the accessible data table so a sighted reader can reveal the
@@ -3607,7 +3564,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       cs.getPropertyValue('--_lr-chart-tooltip-bg').trim();
     const tooltipText =
       cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
-      cs.getPropertyValue('--lr-chart-tooltip-text').trim() ||
       cs.getPropertyValue('--_lr-chart-tooltip-color').trim();
     return {
       grid: resolveCanvasColor(this, grid, FALLBACK_GRID_COLOR),
@@ -4340,7 +4296,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             : 'point';
     this.emit('lr-datum-activate', { ...datum, kind });
     this.emit('lr-point-activate', { ...datum });
-    this.emit('lr-point-click', { ...datum });
   }
 
   private onCanvasFocus(): void {

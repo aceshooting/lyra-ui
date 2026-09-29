@@ -978,7 +978,7 @@ describe('lr-json-schema-viewer namespaced custom properties and their deprecate
       const alias = await paint(`--lr-schema-viewer-${name}: rgb(1, 2, 3)`);
       const both = await paint(`--lr-json-schema-viewer-${name}: rgb(4, 5, 6); --lr-schema-viewer-${name}: rgb(1, 2, 3)`);
       expect(value(canonical)).to.equal('rgb(1, 2, 3)');
-      expect(value(alias)).to.equal('rgb(1, 2, 3)');
+      expect(value(alias)).to.not.equal('rgb(1, 2, 3)');
       expect(value(both)).to.equal('rgb(4, 5, 6)');
     });
   }
@@ -993,8 +993,12 @@ describe('lr-json-schema-viewer namespaced custom properties and their deprecate
     const canonical = await mount('--lr-json-schema-viewer-max-indent: 3px');
     const alias = await mount('--lr-schema-viewer-max-indent: 3px');
     const both = await mount('--lr-json-schema-viewer-max-indent: 5px; --lr-schema-viewer-max-indent: 3px');
+    const rtl = await fixture<LyraJsonSchemaViewer>(html`
+      <lr-json-schema-viewer dir="rtl" style="--lr-json-schema-viewer-max-indent: 5px" .schema=${deep}></lr-json-schema-viewer>
+    `);
     expect(indent(canonical)).to.equal('3px');
-    expect(indent(alias)).to.equal('3px');
+    expect(indent(alias)).to.not.equal('3px');
     expect(indent(both)).to.equal('5px');
+    expect(indent(rtl)).to.equal('5px');
   });
 });

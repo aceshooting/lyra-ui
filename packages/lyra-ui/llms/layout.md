@@ -287,8 +287,7 @@ out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'
 fires, landing on the first surviving pane that can take it, otherwise on one of the split's own
 dividers, preferring one that stays enabled; focus anywhere other than the collapsing pane is untouched),
 `lr-toggle` (`detail: LyraMultiSplitToggleDetail = { expanded: boolean, open: boolean }`, where
-`expanded` is the proposed or forced drawer state; the deprecated `open` key carries the same value
-and is removed in 23.0.0) — Escape/backdrop close proposals are cancelable and fire before `open`
+`expanded` is the proposed or forced drawer state; the deprecated `open` key carries the same value; use `expanded` in new code) — Escape/backdrop close proposals are cancelable and fire before `open`
 changes; preventing the event or making a synchronous
 reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
 `floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
@@ -484,11 +483,9 @@ custom-handle content inside the separator; its assigned subtree is inert, so th
 the sole pointer/keyboard resize control). Under RTL, logical start/end and horizontal pointer/arrow
 behavior mirror together; vertical behavior does not invert.
 
-**CSS parts:** `base split-panel` (both tokens are on the same outer wrapper; `split-panel` is a
-deprecated alias of `base`, removal not before 23.0.0, so style `::part(base)`), `start panel` and
-`end panel` (each pane exposes its individual token plus the shared `panel` token), `divider`
-(focusable `role="separator"`, with value/min/max and disabled ARIA state). The deprecated part
-still matches until its removal; being a stylesheet selector, it logs no runtime warning.
+**CSS parts:** `base` (outer wrapper), `start panel` and `end panel` (each pane exposes its
+individual token plus the shared `panel` token), and `divider` (focusable `role="separator"`,
+with value/min/max and disabled ARIA state).
 
 **Themeable custom properties:** `--divider-width` (default `4px`), `--divider-hit-area` (requested
 default `12px`, with Lyra's `--lr-icon-button-size` minimum target remaining the floor), `--min`
@@ -562,7 +559,7 @@ position) survives the transition.
   `url()` are ignored.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
   `xs`/`2xs`) tightens header/body padding for constrained spaces; `m` and larger keep the regular
-  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0).
+  padding.
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
   CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
@@ -779,8 +776,7 @@ slide itself; they do not change the active slide or move focus away from it.
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
-  including an explicitly empty value. Deprecated alias: `accessible-label` (use `aria-label`;
-  removed in 23.0.0).
+  including an explicitly empty value.
 - `accessibleLabel?: string` (attribute: false) — fallback landmark name used while the host has no
   `aria-label`. Omitting it reads back `undefined` and uses the localized `carouselLabel` default;
   an explicitly empty value is used as-is.
@@ -1662,9 +1658,7 @@ availability remain valid after dispatch — or, while `controlled`, starts wait
 own re-render to reach that `order` instead. `preventDefault()` holds the move instead: the
 internal list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
 `:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
-Synchronous finalize/revert calls from the canceling listener are supported. Deprecated alias:
-`lr-reorder` (use `lr-reorder-request`; removed in 23.0.0) — it still fires right after the request
-with an equal detail, and either event may hold the move.
+Synchronous finalize/revert calls from the canceling listener are supported.
 
 **Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()` (or, while
 `controlled`, starts waiting for the host's own re-render instead of moving the DOM itself).
@@ -1716,8 +1710,7 @@ between rows.
 - `value: string = ''` — required unique, nonempty stable identifier included in the parent's
   `lr-reorder-request` order array.
 - `aria-label` (host attribute) — names the row and is appended to each repeated move action's
-  accessible name in place of the row content. Deprecated alias: `accessible-label` (use
-  `aria-label`; removed in 23.0.0).
+  accessible name in place of the row content.
 - `accessibleLabel?: string` (attribute: false) — explicit row identity used while the host has no
   `aria-label`; when neither is present the item derives a bounded accessible text projection from
   its row content.
@@ -1745,9 +1738,7 @@ call it the same way.
 as of 16.0.0 the move controls are composed `<lr-icon-button>`s: the old part names keep placement,
 rotation and activation, while background, radius, hover/press mixes, focus ring and hit-area floor
 come from `--lr-icon-button-*`, and the component's own `--lr-reorder-item-move-button-*` hooks still
-win over those defaults), `content` (default-slot wrapper). Deprecated aliases:
-`move-up-button__control` and `move-down-button__control` (use `move-up-button-control` and
-`move-down-button-control`; removed in 23.0.0).
+win over those defaults), `content` (default-slot wrapper).
 
 **Border reaches the composed move controls the same way background/color/radius do.** This
 component paints no resting border on either move control, so it relays no
@@ -2390,7 +2381,6 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   Requires a non-Shift modifier. Removing the attribute restores the empty default. See the shortcut
   behavior below.
 
-
 - `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
   one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
   throws (`el.mode = 'icon-only'` -> TypeError).
@@ -2436,8 +2426,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   existing output. This does not remove the button once the overlay is open: at that point it has
   been reparented inside the trapped `[part="panel"]` (see the CSS parts entry below) as the
   panel's only in-panel dismiss control, and hiding it there too would leave the open panel with no
-  in-panel way to close it at all besides Escape/backdrop. Deprecated alias: `hide-toggle`
-  (`hideToggle`; use `without-toggle`; removed in 23.0.0).
+  in-panel way to close it at all besides Escape/backdrop.
 - `trigger: HTMLElement | null = null` (attribute: false) — direct reference to an external element
   that opens this rail's mobile overlay (e.g. an application-chrome hamburger button used together
   with `withoutToggle`). When set (or resolved through `for`), closing the overlay by any path —
@@ -2509,8 +2498,7 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `resizable`; settable/gettable directly. A CSS length (`px`, `rem`, `em`, `vw`, `vh`) resolved
   live — `rem` against the document root, `em` against the rail — or a number of pixels; a plain
   numeric attribute value parses to a number, and a drag or keyboard resize writes a number. Unset
-  defers to `--lr-app-rail-width`'s own resolved width. Deprecated alias: `rail-width-px`
-  (`railWidthPx`, which reads the width back in pixels; use `rail-width`; removed in 23.0.0).
+  defers to `--lr-app-rail-width`'s own resolved width.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
   mount. Each field is restored only when the consumer has not assigned it on that same mount: an
@@ -2525,10 +2513,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   session-only.
 - `minRailWidth: number | string = 190` (attribute `min-rail-width`) — minimum `railWidth` a
   drag/keyboard resize can reach: a CSS length or a number of pixels, resolved like `railWidth`.
-  Deprecated alias: `min-rail-width-px` (`minRailWidthPx`; use `min-rail-width`; removed in 23.0.0).
+
 - `maxRailWidth: number | string = 440` (attribute `max-rail-width`) — maximum `railWidth` a
-  drag/keyboard resize can reach, resolved the same way. Deprecated alias: `max-rail-width-px`
-  (`maxRailWidthPx`; use `max-rail-width`; removed in 23.0.0).
+  drag/keyboard resize can reach, resolved the same way.
 - `dragging: boolean = false` (reflected, read-only as of 9.0.0) — `true` for the duration of an
   active pointer-driven resize drag (not a keyboard step); reflected so a consumer (or this
   component's own styles) can suppress `[part='base']`'s `transition: inline-size` during the drag,
@@ -2635,9 +2622,7 @@ content can then scroll/bleed both ways. `--lr-app-rail-bg` (default
 `--lr-app-rail-panel-bg` (default `var(--lr-color-surface-overlay)` — `[part="panel"]`'s
 background, the mobile overlay presentation; kept separate from `--lr-app-rail-bg`/
 `--lr-app-rail-overlay-color` since the panel is deliberately themed as a modal surface, not the
-docked rail chrome). Deprecated aliases: `--lr-app-rail-background` and
-`--lr-app-rail-panel-background` (use `--lr-app-rail-bg` and `--lr-app-rail-panel-bg`; removed in
-23.0.0). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
+docked rail chrome). `--lr-app-rail-header-padding` and `--lr-app-rail-footer-padding` (both default
 `var(--lr-space-m)`) retune `[part="header"]`/`[part="footer"]`'s padding independently.
 `--lr-app-rail-header-min-block-size` (default `auto`, the property's own initial value, so unset
 reproduces today's exact height) reserves a minimum height for `[part="header"]`, for content that
@@ -2886,7 +2871,7 @@ interpolated `{label}` (see Events below).
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated
-`open` key, removed in 23.0.0, carries the same value, matching `<lr-app-rail-group>`'s identical
+`open` key remains emitted and carries the same value, matching `<lr-app-rail-group>`'s identical
 event name and detail shape exactly). Call `preventDefault()` to keep the current state, or assign
 `expanded` from the listener to resolve it yourself; a write during the dispatch suppresses the
 default commit even when it assigns the value the property already held. Not emitted for a direct
@@ -3050,12 +3035,11 @@ never disagree with what is rendered inside it.
   pattern; an unnamed group falls back to a localized `Collapse`/`Expand` name.
 - `collapsed: boolean = false` (reflected) — whether the content is hidden. `collapsed` governs
   visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely from its
-  own chrome. Deprecated alias: `open` (its inverse, so `open="false"` equals `collapsed`; use
-  `collapsed`; removed in 23.0.0). Both reflect and stay in step; the last write wins.
+  own chrome.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
 control (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated `open`
-key, removed in 23.0.0, carries the same value). Call `preventDefault()` to keep the current state,
+key remains emitted and carries the same value). Call `preventDefault()` to keep the current state,
 or assign `collapsed` from the listener to resolve it yourself; a write during the dispatch
 suppresses the default commit even when it assigns the value the property already held. Not
 emitted for a direct `collapsed` write. `lr-toggle` — non-cancelable, emitted after `collapsed` is
@@ -3314,9 +3298,8 @@ is neutral. This is also the composition used for direct `<lr-dropdown-item>` ch
 **Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` rows, `<lr-menu-label>` captions, and
 `<hr>`/`<lr-divider>` separators), `header`, and `footer`. Header and footer are composed controls
 or explanatory regions outside the `role="menu"` list, so filters, counts, or footer actions do not
-violate the menu required-child contract. Any other default-slot content is deprecated (removal not
-before 23.0.0): it still renders, but inside `role="menu"` without a menu-item role and skipped by
-keyboard navigation, so move it to `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
+violate the menu required-child contract. Other default-slot content is unsupported: native slot projection does not grant it menu
+semantics or keyboard navigation. Put arbitrary content in `slot="header"` or `slot="footer"`. Content that `lr-dropdown`
 forwards into its own menu is not covered: its default slot mirrors `sl-dropdown`'s free-form
 content.
 
@@ -3439,9 +3422,7 @@ item the same owning `<lr-menu>` owns directly whose `group` matches is unchecke
 **Events:**
 
 - `lr-menu-item-change-request` — cancelable checkbox/radio-state proposal; never fired when
-  activating an already-checked radio. Deprecated alias: `lr-menu-item-change` (use
-  `lr-menu-item-change-request`; removed in 23.0.0) — it still fires right after the request with an
-  equal detail, and either event may veto.
+  activating an already-checked radio.
 - `lr-menu-item-state-change` — internal navigation repair signal with
   `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
   escape a menu or a composite wrapper as an apparent public event
@@ -3540,7 +3521,7 @@ while a link opening a new context can never lose the guard.
 the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **CSS parts:** the shared menu-item parts, except that the loading spinner is `spinner-base` (beside
-`spinner`). Deprecated alias: `spinner__base` (use `spinner-base`; removed in 23.0.0).
+`spinner`).
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
 `--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
@@ -3713,8 +3694,7 @@ docked case.
 
 - `placement: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
-  direction); `top`/`bottom` are block-direction and unaffected by RTL. Deprecated alias: `edge`
-  (use `placement`; removed in 23.0.0). Both reflect; the last write wins.
+  direction); `top`/`bottom` are block-direction and unaffected by RTL.
 - `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
@@ -3725,9 +3705,7 @@ docked case.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `withoutResize: boolean = false` (reflected, attribute `without-resize`) — when set, no drag handle
-  renders at all and the panel is a fixed size. Deprecated alias: `resizable` (its inverse, so
-  `resizable="false"` equals `without-resize`; use `without-resize`; removed in 23.0.0). Both
-  reflect; the last write wins.
+  renders at all and the panel is a fixed size.
 
 **Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
 the then-current resize detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
@@ -3739,7 +3717,7 @@ renders at the `280px` default, and `event.detail.size` reads `undefined`.
 **Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
 `LyraDockPanelResizeDetail = { extent: string }`, readonly
 `LyraDockPanelCollapseChangeDetail = { expanded: boolean, collapsed: boolean }` (the `collapsed`
-key is deprecated and removed in 23.0.0; `expanded` is its inverse), and `LyraDockPanelEventMap`.
+key remains emitted but is deprecated; use its inverse, `expanded`), and `LyraDockPanelEventMap`.
 The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
 private adapter over the library's canonical CSS-length resolver, with container/viewport units
 resolved in the host's owner realm.
@@ -4561,8 +4539,7 @@ grid-wide), `accessibleLabel: string | null = null` (attribute `aria-label`, fal
 localized grid name). `rowHeight` and `gap` take a number of pixels or a CSS length (`px`, `rem`,
 `em`, `vw`, `vh`), resolved to pixels when the grid renders — `rem` against the document root, `em`
 against the grid; a numeric attribute value parses to a number, and an unresolvable value falls back
-to the default. Deprecated alias: `locked` (use `readonly`; removed in 23.0.0). Both reflect and stay in step;
-the last write wins.
+to the default.
 
 **Events:** `lr-cell-move` (`detail: { cellId, position, previous }`), `lr-cell-resize`
 (`detail: { cellId, size, previous }`), `lr-collision`
@@ -4651,9 +4628,7 @@ source-card, document-preview, and entity-card primitives.
   label; an explicit empty string is preserved.
 - `communityLabel: string = ''` (attribute `community-label`) and
   `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to active
-  entity cards; `without-focus-button` hides each card's built-in focus action. Deprecated alias:
-  `show-focus-button`/`showFocusButton` (its inverse, so `show-focus-button="false"` equals `without-focus-button`;
-  use `without-focus-button`; removed in 23.0.0).
+  entity cards; `without-focus-button` hides each card's built-in focus action.
 
 Structured inputs cross a realm-neutral schema boundary. The component clones and freezes all
 accepted records, nested arrays, and entity property maps; ignores accessors, malformed records,
@@ -5290,9 +5265,7 @@ code migrating from `wa-page` should treat Lyra's always-finite `number` result 
 **Events:** `lr-nav-toggle-request` (cancelable; `detail: { open }` is the `navOpen` state proposed
 by `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
 click, Escape, or the default/custom navigation-toggle control, all of which route through those
-same methods. Call `preventDefault()` to leave `navOpen` unchanged.) Deprecated alias:
-`lr-nav-toggle` (use `lr-nav-toggle-request`; removed in 23.0.0) — it still fires right after the
-request with an equal detail, and either event may veto.
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this
@@ -6158,7 +6131,7 @@ hover opening.
 **Methods:** `focus(options?)` and `click()` forward to the link or button.
 
 **Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, open, source }`,
-where `expanded` is the new state, the deprecated `open` key (removed in 23.0.0) carries the same
+where `expanded` is the new state, the deprecated `open` key remains emitted and carries the same
 value, and `source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not
 cancelable,
 fired after an accepted change renders and never for initial markup. `user` covers click, Enter,
@@ -6210,7 +6183,6 @@ The item does not take the `size` ladder.
 </lr-navigation-menu-item>
 <lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
 ```
-
 
 - **`components-layout-menubar-contracts`** — Typed pass-through menu selection.
   Import: `@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js`.

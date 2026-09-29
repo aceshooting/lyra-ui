@@ -788,23 +788,11 @@ function normalizedGroupBy(
  * @cssprop [--indent-size=var(--lr-size-1-25rem)] - Tree-level indentation.
  * @cssprop [--max-height=var(--lr-size-30rem)] - Scroll viewport maximum height; `none` renders all.
  * @cssprop --lr-data-grid-control-active-bg - Pressed background for grid controls.
- * @cssprop --lr-data-grid-control-active-background - Deprecated alias of `--lr-data-grid-control-active-bg`;
- *   removal not before 23.0.0.
  * @cssprop --lr-data-grid-control-hover-bg - Hovered background for grid controls.
- * @cssprop --lr-data-grid-control-hover-background - Deprecated alias of `--lr-data-grid-control-hover-bg`;
- *   removal not before 23.0.0.
  * @cssprop --lr-data-grid-page-size-active-bg - Pressed page-size selector background.
- * @cssprop --lr-data-grid-page-size-active-background - Deprecated alias of `--lr-data-grid-page-size-active-bg`;
- *   removal not before 23.0.0.
  * @cssprop --lr-data-grid-row-active-bg - Pressed data-row background.
- * @cssprop --lr-data-grid-row-active-background - Deprecated alias of `--lr-data-grid-row-active-bg`;
- *   removal not before 23.0.0.
  * @cssprop --lr-data-grid-sortable-header-active-bg - Pressed sortable-header background.
- * @cssprop --lr-data-grid-sortable-header-active-background - Deprecated alias of `--lr-data-grid-sortable-header-active-bg`;
- *   removal not before 23.0.0.
  * @cssprop --lr-data-grid-sortable-header-hover-bg - Hovered sortable-header background.
- * @cssprop --lr-data-grid-sortable-header-hover-background - Deprecated alias of `--lr-data-grid-sortable-header-hover-bg`;
- *   removal not before 23.0.0.
  * @cssprop [--row-height=var(--lr-size-3-5rem)] - Estimated and minimum row height; overrides the
  *   size baseline and optional --lr-theme-table-row-height minimum, subject to the 24px and density target floors.
  * @cssprop --row-hover-background - Hovered-row background.
