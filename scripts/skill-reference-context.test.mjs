@@ -159,7 +159,11 @@ test('heading anchors retain text, Unicode and duplicate suffixes without markup
         '# <b>Safe</b> `Code`',
         '# Éléments 中文',
         '# <scr<script>ipt>',
+        '# <scrip<script>ignored</script>t>',
+        '# before <unclosed <tag',
+        '# 𐐀_12 -- 😀 A\tB',
         '[first](#safe-code) [duplicate](#safe-code-1) [unicode](#éléments-中文) [malformed](#ipt)',
+        '[nested](#ignoredt) [unclosed](#before-unclosed-tag) [codepoints](#𐐨_12-----ab)',
       ].join('\n'));
     }
     assert.equal(validateSharedTopicLinks(path.join(directory, 'shared')), true);

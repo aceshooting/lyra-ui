@@ -977,17 +977,22 @@ test('acknowledgements name the code, cover a whole opening tag, work in Lit tem
 });
 
 test('HTML comment boundaries keep following live markup and review acknowledgements visible', () => {
+  const comments = [
+    ['normal', '<!-- <lr-sample-panel heading-text="hidden"></lr-sample-panel> -->\n'
+      + '<!-- lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:lr-close-->\n'],
+    ['bang', '<!-- <lr-sample-panel heading-text="hidden"></lr-sample-panel> --!>\n'
+      + '<!-- lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:lr-close--!>\n'],
+  ];
   for (const file of ['comments.html', 'comments.ts']) {
-    for (const close of ['-->', '--!>']) {
-      const markup = `<!-- <lr-sample-panel heading-text="hidden"></lr-sample-panel> ${close}\n`
-        + `<!-- lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:lr-close${close}\n`
+    for (const [label, comment] of comments) {
+      const markup = comment
         + '<section @lr-close=${this.onClose}></section>\n'
         + '<lr-sample-panel heading-text="visible"></lr-sample-panel>';
       const input = file.endsWith('.ts') ? 'const view = html`' + markup + '`;' : markup;
       const result = run(input, file);
-      assert.ok(result.content.includes('heading-text="hidden"'), `${file} ${close}: comment content`);
-      assert.ok(!result.content.includes('heading-text="visible"'), `${file} ${close}: live attribute`);
-      assert.equal(result.acknowledged, 1, `${file} ${close}: acknowledgement`);
+      assert.ok(result.content.includes('heading-text="hidden"'), `${file} ${label}: comment content`);
+      assert.ok(!result.content.includes('heading-text="visible"'), `${file} ${label}: live attribute`);
+      assert.equal(result.acknowledged, 1, `${file} ${label}: acknowledgement`);
       assert.deepEqual(codesOf(result.warnings), ['3 NAME_GAINED_OWNER_REVIEW']);
     }
     for (const comment of ['<!-->', '<!--->']) {

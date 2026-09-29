@@ -133,12 +133,25 @@ function headingAnchors(text) {
   const anchors = new Set();
   const used = new Map();
   for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*#*$/gmu)) {
-    // Heading identifiers omit tags and retain only identifier characters in the same pass.
-    const base = match[1]
-      .toLowerCase()
-      .replace(/<[^>]*>|[^\p{L}\p{N}_ -]/gu, '')
-      .trim()
-      .replace(/\s/gu, '-');
+    // Construct an identifier from permitted code points; this is not HTML sanitization.
+    // Complete tag spans contribute no text, while an unmatched opener is ordinary punctuation.
+    const heading = match[1].toLowerCase();
+    const identifier = [];
+    let canCloseTag = true;
+    for (let index = 0; index < heading.length;) {
+      const character = String.fromCodePoint(heading.codePointAt(index));
+      if (character === '<' && canCloseTag) {
+        const end = heading.indexOf('>', index + 1);
+        if (end >= 0) {
+          index = end + 1;
+          continue;
+        }
+        canCloseTag = false;
+      }
+      if (/^[\p{L}\p{N}_ -]$/u.test(character)) identifier.push(character);
+      index += character.length;
+    }
+    const base = identifier.join('').trim().replaceAll(' ', '-');
     const count = used.get(base) ?? 0;
     used.set(base, count + 1);
     anchors.add(`${base}${count ? `-${count}` : ''}`);
